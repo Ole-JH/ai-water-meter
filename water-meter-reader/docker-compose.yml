@@ -1,0 +1,36 @@
+services:
+  water-meter-reader:
+    build: .
+    image: water-meter-reader:latest
+    container_name: water-meter-reader
+    restart: unless-stopped
+
+    # -----------------------------------------------------------------------
+    # Coral USB Accelerator — expose the entire USB bus so the Edge TPU
+    # runtime can claim the device.  The cgroup rule grants rw access to
+    # USB character devices (major 189) without full --privileged.
+    #
+    # For Coral M.2 / PCIe instead, comment out the usb lines and uncomment:
+    #   devices:
+    #     - /dev/apex_0:/dev/apex_0
+    # -----------------------------------------------------------------------
+    devices:
+      - /dev/bus/usb:/dev/bus/usb
+    device_cgroup_rules:
+      - "c 189:* rmw"
+
+    volumes:
+      # User-editable config — edit on the host, container reads it at startup
+      - ./config.yaml:/app/config.yaml:ro
+
+      # TFLite models compiled for Edge TPU
+      - /home/pi/models:/home/pi/models:ro
+
+      # Reference image — writable so the service can create it on first run
+      - /home/pi/meter_reference.jpg:/home/pi/meter_reference.jpg
+
+    environment:
+      - PYTHONUNBUFFERED=1
+
+    # Pass --debug to enable DEBUG-level logging
+    # command: ["python3", "meter_reader.py", "--debug"]

@@ -175,6 +175,71 @@ journalctl -u meter-reader -f
 
 ---
 
+## Running with Docker
+
+Docker is the recommended deployment method — it bundles the Edge TPU runtime and all Python dependencies so you never need to touch the host Python environment.
+
+### Prerequisites
+
+- Docker Engine ≥ 24 and the Compose plugin (`docker compose`) installed on the Pi.
+- Models already downloaded to `/home/pi/models/` on the host.
+- `config.yaml` edited with the correct ESP32 URL, MQTT broker, and ROI boxes (calibrate on the host first — see [Calibration](#calibration) above, then copy the updated `config.yaml` into the project directory).
+
+### Build and start
+
+```bash
+# From the water-meter-reader/ directory
+docker compose up -d --build
+docker compose logs -f
+```
+
+### Coral USB Accelerator
+
+The compose file passes the entire USB bus into the container and grants the `c 189:* rmw` cgroup rule so the Edge TPU runtime can claim the device without `--privileged`.
+
+If you are using a **Coral M.2 / PCIe** module instead, edit `docker-compose.yml`:
+
+```yaml
+    # comment out the USB lines:
+    # devices:
+    #   - /dev/bus/usb:/dev/bus/usb
+    # device_cgroup_rules:
+    #   - "c 189:* rmw"
+
+    # uncomment:
+    devices:
+      - /dev/apex_0:/dev/apex_0
+```
+
+### Reference image
+
+On first start the container writes `/home/pi/meter_reference.jpg` on the host (via the bind mount). If the file does not exist beforehand Docker will create it as a **directory**. Pre-create it to avoid this:
+
+```bash
+touch /home/pi/meter_reference.jpg
+docker compose up -d --build
+```
+
+### Debug logging
+
+Uncomment the `command` line in `docker-compose.yml`:
+
+```yaml
+    command: ["python3", "meter_reader.py", "--debug"]
+```
+
+then `docker compose up -d`.
+
+### Calibration inside Docker
+
+`roi.py --capture` opens an OpenCV window and requires a display — run it on the **host** (not in the container) during the calibration phase. Once `config.yaml` is finalised, restart the container to pick up the changes:
+
+```bash
+docker compose restart
+```
+
+---
+
 ## Troubleshooting
 
 | Symptom | Cause | Fix |
@@ -186,3 +251,6 @@ journalctl -u meter-reader -f
 | MQTT not receiving data | Wrong broker or topic | Verify `mqtt.broker` IP, port 1883 is open, and `state_topic` in HA matches `mqtt.topic` in `config.yaml` |
 | Service won't start | Wrong Python path | Check `ExecStart` path; confirm `which python3` on the Pi |
 | `ImportError: No module named 'pycoral'` | pycoral not installed for system Python | Run `pip3 install --break-system-packages pycoral` or use a venv |
+| Docker: `could not open file: /home/pi/meter_reference.jpg` (is a directory) | Docker auto-created a directory for the bind mount | `docker compose down && rm -rf /home/pi/meter_reference.jpg && touch /home/pi/meter_reference.jpg && docker compose up -d` |
+| Docker: `Error opening USB device` | Container cannot access Coral USB | Confirm `devices: - /dev/bus/usb:/dev/bus/usb` is in compose file and `device_cgroup_rules` is present |
+| Docker: no logs appearing | Buffered stdout | Ensure `PYTHONUNBUFFERED=1` is set (it is by default in the Dockerfile) |
