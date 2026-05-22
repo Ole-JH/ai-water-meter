@@ -1,0 +1,51 @@
+# Meter Reader Configuration
+# Secrets can be overridden via environment variables:
+#   CAMERA_URL, MQTT_HOST, MQTT_PORT, MQTT_USER, MQTT_PASS
+
+camera:
+  url: "http://192.168.1.100/camera/snapshot"   # ESPHome snapshot endpoint
+  timeout_seconds: 10
+
+mqtt:
+  host: "192.168.1.10"   # Your HA/Mosquitto broker
+  port: 1883
+  username: ""           # or use MQTT_USER env var
+  password: ""           # or use MQTT_PASS env var
+  tls: false
+
+# TFLite models — place files in the ./models/ directory
+# Download from: https://github.com/jomjol/AI-on-the-edge-device/tree/main/sd-card/config
+models:
+  digit: "dig-cont_11.tflite"     # digit classifier (0-9 + NaN)
+  analog: "ana-cont_11.tflite"    # analog pointer classifier (optional)
+
+interval_seconds: 60   # How often to poll the camera
+
+meters:
+  - name: "Gas Meter"
+    mqtt_topic: "meter/gas/value"
+    unit: "m³"
+    device_class: "gas"
+    state_class: "total_increasing"
+
+    # ROI definitions — pixel coordinates on the snapshot image
+    # Use the /snapshots/latest.jpg (mounted volume) to calibrate these
+    # digits: left-to-right, one entry per digit
+    digits:
+      - { x: 120, y: 85, w: 20, h: 32 }
+      - { x: 145, y: 85, w: 20, h: 32 }
+      - { x: 170, y: 85, w: 20, h: 32 }
+      - { x: 195, y: 85, w: 20, h: 32 }
+      - { x: 220, y: 85, w: 20, h: 32 }
+
+    # analogs: optional decimal dials, left-to-right
+    analogs: []
+
+  # Add more meters here (e.g. water, heat) if you have multiple cameras
+  # - name: "Water Meter"
+  #   mqtt_topic: "meter/water/value"
+  #   unit: "m³"
+  #   device_class: "water"
+  #   state_class: "total_increasing"
+  #   digits:
+  #     - { x: 50, y: 90, w: 20, h: 32 }

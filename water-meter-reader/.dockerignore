@@ -1,9 +1,0 @@
-__pycache__/
-*.pyc
-*.pyo
-*.egg-info/
-.env
-calibration_capture.jpg
-roi_test_output.jpg
-meter-reader.service
-README.md
