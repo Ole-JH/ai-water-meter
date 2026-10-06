@@ -48,6 +48,50 @@ namespace Shadowfall
             return false;
         }
 
+        /// <summary>
+        /// Tidies the bags: merges stacks, then orders equipment (best rarity first, by slot), gems, potions and
+        /// food, then materials. Empty slots end up at the back.
+        /// </summary>
+        public void Sort()
+        {
+            var items = new List<Item>();
+            foreach (var s in Slots) if (s != null) items.Add(s);
+            for (int i = 0; i < Slots.Length; i++) Slots[i] = null;
+            // merge stacks
+            var merged = new List<Item>();
+            foreach (var it in items)
+            {
+                if (it.Stackable)
+                    foreach (var m in merged)
+                    {
+                        if (m.Name != it.Name || m.Count >= m.MaxStack) continue;
+                        int move = System.Math.Min(it.Count, m.MaxStack - m.Count);
+                        m.Count += move;
+                        it.Count -= move;
+                        if (it.Count <= 0) break;
+                    }
+                if (it.Count > 0) merged.Add(it);
+            }
+            int Group(Item it) => it.Kind == ItemKind.Equipment ? 0 : it.Kind == ItemKind.Gem ? 1 : it.Kind == ItemKind.Consumable ? 2 : 3;
+            merged.Sort((a, b) =>
+            {
+                int c = Group(a).CompareTo(Group(b));
+                if (c != 0) return c;
+                if (a.Kind == ItemKind.Equipment)
+                {
+                    c = b.Rarity.CompareTo(a.Rarity);
+                    if (c != 0) return c;
+                    c = a.Slot.CompareTo(b.Slot);
+                    if (c != 0) return c;
+                    c = b.ItemLevel.CompareTo(a.ItemLevel);
+                    if (c != 0) return c;
+                }
+                return string.CompareOrdinal(a.Name, b.Name);
+            });
+            for (int i = 0; i < merged.Count && i < Slots.Length; i++) Slots[i] = merged[i];
+            NotifyChanged();
+        }
+
         public int CountOf(string name)
         {
             int n = 0;

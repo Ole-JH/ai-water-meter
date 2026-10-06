@@ -70,6 +70,8 @@ namespace Shadowfall
         Light torch;
         float currentSpeed;
         static readonly List<Combatant> buffer = new List<Combatant>();
+        static readonly RaycastHit[] rayHits = new RaycastHit[32];
+        float nextGoldCheck;
 
         // ---- Networking helpers
         public bool IsMoving => currentSpeed > 0.01f;
@@ -319,6 +321,7 @@ namespace Shadowfall
             UpdateHover();
             HandleInput();
             UpdateChannels(dt);
+            UpdateRecall();
             if (leapT < 0f)
             {
                 UpdateAction(dt);
@@ -359,9 +362,10 @@ namespace Shadowfall
             if (GameUI.I != null && GameUI.I.MouseOverUI) return;
 
             float bestEnemy = float.MaxValue, bestInter = float.MaxValue;
-            var hits = Physics.RaycastAll(ray, 400f);
-            foreach (var h in hits)
+            int hitCount = Physics.RaycastNonAlloc(ray, rayHits, 400f);
+            for (int i = 0; i < hitCount; i++)
             {
+                var h = rayHits[i];
                 var e = h.collider.GetComponentInParent<Enemy>();
                 if (e != null && !e.IsDead && h.distance < bestEnemy) { bestEnemy = h.distance; HoveredEnemy = e; continue; }
                 var it = h.collider.GetComponentInParent<Interactable>();
@@ -428,6 +432,7 @@ namespace Shadowfall
             if (GameInput.Down(GKey.Alpha3)) CastAbility(2, MouseGround);
             if (GameInput.Down(GKey.Alpha4)) CastAbility(3, MouseGround);
             if (GameInput.Down(GKey.Alpha5)) CastAbility(4, MouseGround);
+            if (GameInput.Down(GKey.R)) Recall();
             if (GameInput.Down(GKey.Q)) UseItemByName("Health Potion");
             if (GameInput.Down(GKey.E)) UseItemByName("Mana Potion");
         }
@@ -725,6 +730,7 @@ namespace Shadowfall
                 return;
             }
 
+            CancelRecall(null);
             Mana -= a.ManaCost;
             float cd = a.Cooldown;
             if (a.Id == AbilityId.Teleport) cd -= 1.2f * Tal("blink");
@@ -1133,6 +1139,83 @@ namespace Shadowfall
         }
 
         // =====================================================================================
+        // Recall (R): a short channel that takes you home, and back again
+        // =====================================================================================
+
+        public const float RecallTime = 3f, RecallCooldown = 20f;
+        public float RecallProgress => recallStart >= 0f ? Mathf.Clamp01((Time.time - recallStart) / RecallTime) : -1f;
+        public float RecallReadyIn => Mathf.Max(0f, recallReadyAt - Time.time);
+        public bool HasReturnPoint => returnPoint.HasValue;
+        float recallStart = -1f, recallReadyAt;
+        Vector3 recallFrom;
+        Vector3? returnPoint;
+        ParticleSystem recallFx;
+
+        /// <summary>
+        /// Outside town: channel for 3 s (moving or being hit interrupts), then go home. In town with a return
+        /// point: step straight back to where you recalled from (overworld only; the Catacombs can't be re-entered that way).
+        /// </summary>
+        public void Recall()
+        {
+            if (IsDead || recallStart >= 0f) return;
+            if (WorldGenerator.InTown(transform.position) && !Dungeon.Active)
+            {
+                if (!returnPoint.HasValue) { GameUI.Float(transform.position + Vector3.up * 2.5f, "You are already home", Color.gray, 0.8f); return; }
+                var back = returnPoint.Value;
+                returnPoint = null;
+                SpellFx.Column(transform.position, new Color(0.5f, 0.7f, 1f), 1f, 5f, 0.6f);
+                Sfx.Play2D("frost_cast", 0.5f);
+                TeleportTo(back);
+                return;
+            }
+            if (Time.time < recallReadyAt)
+            {
+                GameUI.Float(transform.position + Vector3.up * 2.5f, "Recall ready in " + Mathf.CeilToInt(RecallReadyIn) + "s", Color.gray, 0.8f);
+                return;
+            }
+            StopMoving();
+            action = Action.None;
+            AttackTarget = null;
+            StopGathering();
+            recallStart = Time.time;
+            recallFrom = transform.position;
+            castAnim = 0f;
+            view?.Action("Spellcast_Raise", RecallTime);
+            Sfx.Play("holy_cast", transform.position, 0.5f, 0.05f);
+            recallFx = SpellFx.Emit(new SpellFx.P
+            {
+                Rate = 40, Duration = RecallTime, Life = new Vector2(0.6f, 1f), Speed = new Vector2(0.1f, 0.3f), Size = new Vector2(0.06f, 0.12f),
+                Start = Color.white, Mid = new Color(0.55f, 0.75f, 1f), End = new Color(0.3f, 0.5f, 1f, 0f),
+                Shape = ParticleSystemShapeType.Circle, Radius = 0.9f, Velocity = new Vector3(0f, 2f, 0f),
+            }, transform.position, transform);
+        }
+
+        void CancelRecall(string why)
+        {
+            if (recallStart < 0f) return;
+            recallStart = -1f;
+            if (recallFx != null) SpellFx.Detach(recallFx);
+            recallFx = null;
+            if (why != null) GameUI.Float(transform.position + Vector3.up * 2.5f, why, new Color(1f, 0.6f, 0.4f), 0.8f);
+        }
+
+        void UpdateRecall()
+        {
+            if (recallStart < 0f) return;
+            if (path.Count > 0 || Factory.FlatDistance(transform.position, recallFrom) > 0.3f) { CancelRecall("Recall interrupted"); return; }
+            if (Time.time - recallStart < RecallTime) return;
+            CancelRecall(null);
+            recallReadyAt = Time.time + RecallCooldown;
+            bool fromDungeon = Dungeon.Active;
+            returnPoint = fromDungeon ? (Vector3?)null : transform.position;
+            SpellFx.Column(transform.position, new Color(0.5f, 0.7f, 1f), 1f, 6f, 0.6f);
+            if (fromDungeon) NetClient.I?.LeaveDungeon(true);
+            TeleportTo(GameManager.I.SpawnPoint);
+            Sfx.Play2D("holy_cast", 0.6f);
+            GameUI.Log(fromDungeon ? "You recall to Hollowmere." : "You recall to Hollowmere. Press R in town to return.", new Color(0.6f, 0.75f, 1f));
+        }
+
+        // =====================================================================================
         // Companions
         // =====================================================================================
 
@@ -1250,13 +1333,20 @@ namespace Shadowfall
             GameUI.Log("You drop " + item.Name + ".", Color.gray);
         }
 
+        /// <summary>Walking over gold (and potions) picks it up. Checked 10 times a second, not every frame.</summary>
         void AutoPickupGold()
         {
+            if (Time.time < nextGoldCheck) return;
+            nextGoldCheck = Time.time + 0.1f;
             for (int i = Interactable.All.Count - 1; i >= 0; i--)
             {
-                if (Interactable.All[i] is LootDrop drop && drop.Gold > 0 && drop.CanInteract &&
-                    Factory.FlatDistance(drop.Position, transform.position) < 1.6f)
-                    drop.Interact(this);
+                if (!(Interactable.All[i] is LootDrop drop) || !drop.CanInteract) continue;
+                if (Factory.FlatDistance(drop.Position, transform.position) >= 1.6f) continue;
+                var it = drop.Item;
+                bool vacuum = drop.Gold > 0 ||
+                    (it != null && (it.Kind == ItemKind.Gem || (it.Kind == ItemKind.Consumable && it.Name.EndsWith("Potion"))) &&
+                     (Inventory.FreeSlots > 0 || Inventory.IndexOf(it.Name) >= 0));
+                if (vacuum) drop.Interact(this);
             }
         }
 
@@ -1446,6 +1536,7 @@ namespace Shadowfall
 
         protected override void OnDamaged(Combatant source, int amount)
         {
+            CancelRecall("Recall interrupted");
             if (action == Action.Gather) StopGathering();
             CameraRig.Shake(Mathf.Clamp(amount / MaxHealth, 0.05f, 0.3f));
             Sfx.Play(amount > MaxHealth * 0.12f ? "hit_heavy" : "hit_armor", transform.position + Vector3.up, 0.55f, 0.1f);
@@ -1455,6 +1546,7 @@ namespace Shadowfall
 
         protected override void Die(Combatant killer)
         {
+            CancelRecall(null);
             path.Clear();
             action = Action.None;
             AttackTarget = null;

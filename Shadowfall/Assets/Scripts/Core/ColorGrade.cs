@@ -24,7 +24,7 @@ namespace Shadowfall
 
         void OnRenderImage(RenderTexture src, RenderTexture dst)
         {
-            if (mat == null) { Graphics.Blit(src, dst); return; }
+            if (mat == null || !GameSettings.ColorGrading) { Graphics.Blit(src, dst); return; }
             float n = DayNight.Night;
             mat.SetFloat(Saturation, Mathf.Lerp(0.68f, 0.55f, n));
             mat.SetFloat(Contrast, Mathf.Lerp(1.14f, 1.08f, n));

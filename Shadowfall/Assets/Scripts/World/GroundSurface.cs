@@ -321,6 +321,9 @@ namespace Shadowfall
         /// Thousands of vertex-colored grass blades, in 16x16 tile chunks so off-screen ones are culled.
         /// Blades take the color of the ground they grow from, so they blend in instead of looking pasted on.
         /// </summary>
+        /// <summary>All grass chunks (hidden on Low graphics).</summary>
+        public static GameObject GrassRoot { get; private set; }
+
         public void BuildGrass(Transform parent, WorldGrid grid, int seed)
         {
             var shader = Resources.Load<Shader>("Shaders/ShadowfallGrass");
@@ -329,6 +332,8 @@ namespace Shadowfall
             var mat = new Material(shader) { name = "Grass" };
             var rng = new System.Random(seed);
             var root = new GameObject("Grass").transform;
+            GrassRoot = root.gameObject;
+            GameSettings.Apply();
             root.SetParent(parent, false);
             root.gameObject.AddComponent<GrassWind>();
 

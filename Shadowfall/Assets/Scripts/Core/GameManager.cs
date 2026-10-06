@@ -90,6 +90,8 @@ namespace Shadowfall
             RenderSettings.fogEndDistance = 85f;
 
             gameObject.AddComponent<DayNight>().Init(sun, Cam);
+            GameSettings.Sun = sun;
+            GameSettings.Apply();
         }
 
         /// <summary>Called when the server accepts our login.</summary>

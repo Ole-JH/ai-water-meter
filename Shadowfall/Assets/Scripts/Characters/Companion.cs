@@ -82,7 +82,7 @@ namespace Shadowfall
         bool fights;
         CharacterView view;
         readonly List<Vector3> path = new List<Vector3>();
-        float repathAt, nextAttack, nextSpecial, nextHeal, speed, nextBark;
+        float repathAt, nextAttack, nextSpecial, nextHeal, speed, nextBark, nextPick;
         Enemy target;
         static readonly List<Combatant> buffer = new List<Combatant>();
 
@@ -127,8 +127,8 @@ namespace Shadowfall
 
             var hero = Player.I;
             bool combat = fights && hero != null && !hero.IsDead && !WorldGenerator.InTown(owner.position);
-            if (combat) PickTarget(hero);
-            else target = null;
+            if (!combat) target = null;
+            else if (Time.time >= nextPick || (target != null && target.IsDead)) { nextPick = Time.time + 0.25f; PickTarget(hero); }
 
             Vector3? goal = null;
             float stopAt = 0.4f;

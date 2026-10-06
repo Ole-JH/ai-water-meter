@@ -21,6 +21,7 @@ namespace Shadowfall
         // ---- windows
         bool showBags, showChar, showSkills, showQuests, showMap, showHelp, showTalents;
         Npc dialogNpc;
+        GUIStyle chatFieldStyle;
         CraftingStation craftStation;
 
         // ---- login
@@ -210,10 +211,17 @@ namespace Shadowfall
                 return;
             }
 
+            // World-space labels only matter when painting or clicking; OnGUI also runs for layout, key and
+            // mouse-move events, and projecting every nameplate for those is wasted work.
+            var et = Event.current.type;
+            bool paintOrClick = et == EventType.Repaint || et == EventType.MouseDown || et == EventType.MouseUp;
             DrawVignette();
-            DrawWorldOverlays(p);
-            DrawBubbles(p);
-            DrawFloatingText();
+            if (paintOrClick)
+            {
+                DrawWorldOverlays(p);
+                DrawBubbles(p);
+                DrawFloatingText();
+            }
             DrawUnitFrames(p);
             DrawPartyFrames(p);
             DrawMinimap(p);
@@ -240,6 +248,12 @@ namespace Shadowfall
             if (p.IsDead) DrawDeath(p);
 
             DrawBanner();
+            if (GameSettings.ShowFps && Event.current.type == EventType.Repaint)
+            {
+                float f = FpsMeter.Fps;
+                UISkin.Shadowed(new Rect(VW / 2 - 60, 4, 120, 20), Mathf.RoundToInt(f) + " fps", UISkin.SmallCenter,
+                    f >= 50f ? new Color(0.5f, 1f, 0.5f) : f >= 30f ? new Color(1f, 0.85f, 0.3f) : new Color(1f, 0.4f, 0.3f));
+            }
             DrawTooltip();
         }
 
@@ -284,6 +298,15 @@ namespace Shadowfall
             }
             GUI.color = new Color(1f, 1f, 1f, Mathf.Lerp(0.55f, 0.85f, DayNight.Night));
             GUI.DrawTexture(new Rect(0, 0, VW, VH), vignette, ScaleMode.StretchToFill);
+            // Low life: a red pulse at the screen edges (faster the closer to death).
+            var hero = Player.I;
+            if (hero != null && !hero.IsDead && hero.Health < hero.MaxHealth * 0.3f)
+            {
+                float danger = 1f - hero.Health / (hero.MaxHealth * 0.3f);
+                float pulse = 0.5f + 0.5f * Mathf.Sin(Time.time * Mathf.Lerp(4f, 9f, danger));
+                GUI.color = new Color(0.9f, 0.05f, 0.02f, (0.35f + 0.45f * danger) * (0.6f + 0.4f * pulse));
+                GUI.DrawTexture(new Rect(0, 0, VW, VH), vignette, ScaleMode.StretchToFill);
+            }
             GUI.color = Color.white;
         }
 
@@ -414,7 +437,7 @@ namespace Shadowfall
             var r = new Rect((VW - 440) / 2, y, 440, 128);
             UISkin.Box(r, UISkin.Parchment);
             Block(r);
-            GUI.Label(new Rect(r.x + 24, r.y + 14, r.width - 48, 54), text, new GUIStyle(UISkin.InkRich) { wordWrap = true, alignment = TextAnchor.MiddleCenter });
+            GUI.Label(new Rect(r.x + 24, r.y + 14, r.width - 48, 54), text, UISkin.V(UISkin.InkRich, wordWrap: true, alignment: TextAnchor.MiddleCenter));
             if (UISkin.Btn(new Rect(r.x + 50, r.y + 74, 150, 40), "Accept", UISkin.Button)) { accepted = true; return true; }
             if (UISkin.Btn(new Rect(r.xMax - 200, r.y + 74, 150, 40), "Decline", UISkin.Button)) return true;
             return false;
@@ -452,7 +475,7 @@ namespace Shadowfall
                         UISkin.SmallCenter, e.Elite ? Enemy.ChampionColor : LevelColor(e.Level, p.Level));
                 if (e.Elite)
                     UISkin.Shadowed(new Rect(g.x - 160, g.y + 8, 320, 20), string.Join("  \u2022  ", e.Affixes),
-                        new GUIStyle(UISkin.SmallCenter) { fontSize = 12 }, new Color(0.75f, 0.82f, 1f));
+                        UISkin.V(UISkin.SmallCenter, fontSize: 12), new Color(0.75f, 0.82f, 1f));
             }
 
             foreach (var rp in RemotePlayer.ById.Values)
@@ -492,6 +515,9 @@ namespace Shadowfall
 
                 if (it is LootDrop drop && drop.CanInteract)
                 {
+                    // Loot filter: plain white gear only gets a label while Alt is held (unless the option is on).
+                    if (drop.Item != null && drop.Item.Kind == ItemKind.Equipment && drop.Item.Rarity == Rarity.Common &&
+                        !GameSettings.ShowCommonLoot && !GameInput.Held(GKey.Alt) && it != p.HoveredInteractable) continue;
                     if (!WorldToGui(it.Position + Vector3.up * it.LabelHeight, out var g)) continue;
                     var text = drop.HoverText;
                     var size = UISkin.Small.CalcSize(new GUIContent(text));
@@ -582,7 +608,7 @@ namespace Shadowfall
                 bool elite = e != null && e.Elite;
                 UISkin.Shadowed(new Rect(t.x + 16, t.y + 12, 290, 24), target.DisplayName, UISkin.Heading, elite ? Enemy.ChampionColor : LevelColor(target.Level, p.Level));
                 UISkin.Shadowed(new Rect(t.x + 16, t.y + 12, 288, 24), (boss ? "<color=#ff9a3c>Boss</color>  " : elite ? "<color=#7fa6ff>Champion</color>  " : "") + "Level " + target.Level,
-                    new GUIStyle(UISkin.Small) { alignment = TextAnchor.UpperRight }, UISkin.Cream);
+                    UISkin.V(UISkin.Small, alignment: TextAnchor.UpperRight), UISkin.Cream);
                 if (elite)
                     UISkin.Shadowed(new Rect(t.x + 16, t.yMax + 4, 288, 20), e.Def.Name + "  -  " + string.Join(", ", e.Affixes), UISkin.Small, new Color(0.75f, 0.82f, 1f));
                 UISkin.Bar(new Rect(t.x + 16, t.y + 44, 288, 20), target.Health / target.MaxHealth, "Red",
@@ -594,7 +620,7 @@ namespace Shadowfall
         {
             const float slot = 58, gap = 8;
             var kit = p.Kit;
-            int count = kit.Length + 2;
+            int count = kit.Length + 3;
             float barW = count * (slot + gap) - gap + 24;
             float x0 = (VW - barW) / 2 + 12, y0 = VH - slot - 46;
 
@@ -654,6 +680,27 @@ namespace Shadowfall
                 if (r.Contains(Event.current.mousePosition)) tooltip = "<b>" + potions[i] + "</b>  [" + keys[i] + "]\nYou have " + n + ".";
                 if (ClickedIn(r) == 0) p.UseItemByName(potions[i]);
             }
+
+            // Recall
+            {
+                var r = new Rect(x0 + (kit.Length + 2) * (slot + gap) + 8, y0, slot, slot);
+                UISkin.Box(r, UISkin.Slot);
+                bool home = WorldGenerator.InTown(p.transform.position) && !Dungeon.Active;
+                bool usable = home ? p.HasReturnPoint : p.RecallReadyIn <= 0f;
+                UISkin.IconInSlot(r, UISkin.Icon("teleport"), usable ? Color.white : new Color(0.4f, 0.4f, 0.4f), 6);
+                UISkin.Shadowed(new Rect(r.x + 5, r.y + 2, r.width, 18), "R", UISkin.Small, UISkin.Gold, 2);
+                if (!home && p.RecallReadyIn > 0f)
+                    UISkin.Shadowed(new Rect(r.x, r.y + 16, r.width, 26), Mathf.CeilToInt(p.RecallReadyIn).ToString(), UISkin.LabelCenter, Color.white, 2);
+                if (r.Contains(Event.current.mousePosition))
+                    tooltip = home ? (p.HasReturnPoint ? "<b>Return</b>  [R]\nStep back to where you recalled from." : "<b>Recall</b>  [R]\nYou are already in Hollowmere.")
+                                   : "<b>Recall to Hollowmere</b>  [R]\nChannel for " + Player.RecallTime + " seconds (moving or taking damage interrupts). " +
+                                     "Press R in town afterwards to return to the same spot (not into the Catacombs).";
+                if (ClickedIn(r) == 0) p.Recall();
+            }
+
+            // Recall channel bar
+            if (p.RecallProgress >= 0f)
+                UISkin.Bar(new Rect(VW / 2 - 140, y0 - 96, 280, 18), p.RecallProgress, "Blue", "Recalling...", new Color(0.4f, 0.6f, 1f));
 
             // XP bar inside the action bar frame
             UISkin.Bar(new Rect(x0, y0 + slot + 10, barW - 24, 16), (float)p.Xp / p.XpToNext, "Purple",
@@ -771,10 +818,10 @@ namespace Shadowfall
             UISkin.IconInSlot(new Rect(frame.x + 16, r.yMax + 40, 24, 24), UISkin.Icon("gold"), Color.white, 0);
             UISkin.Shadowed(new Rect(frame.x + 44, r.yMax + 40, 100, 24), p.Gold.ToString(), UISkin.Label, new Color(1f, 0.85f, 0.3f));
             UISkin.Shadowed(new Rect(frame.x + 16, r.yMax + 40, frame.width - 32, 24), net.PlayersOnline + " online",
-                new GUIStyle(UISkin.Small) { alignment = TextAnchor.MiddleRight }, UISkin.Muted);
+                UISkin.V(UISkin.Small, alignment: TextAnchor.MiddleRight), UISkin.Muted);
             bool dark = DayNight.Night > 0.5f;
             UISkin.Shadowed(new Rect(frame.x + 16, r.yMax + 64, frame.width - 32, 22), DayNight.Phase + "   " + DayNight.Clock,
-                new GUIStyle(UISkin.Small) { alignment = TextAnchor.MiddleCenter }, dark ? new Color(0.65f, 0.75f, 1f) : new Color(1f, 0.85f, 0.5f));
+                UISkin.V(UISkin.Small, alignment: TextAnchor.MiddleCenter), dark ? new Color(0.65f, 0.75f, 1f) : new Color(1f, 0.85f, 0.5f));
         }
 
         void Dot(Rect clip, Vector2 pos, Color c, float size)
@@ -829,6 +876,9 @@ namespace Shadowfall
         /// The chat box reads key events itself instead of using a focused GUI.TextField, whose focus handling
         /// is unreliable (in WebGL the box would open but never receive the typed characters).
         /// </summary>
+        readonly System.Collections.Generic.List<string> chatHistory = new System.Collections.Generic.List<string>();
+        int historyIndex = -1;
+
         void HandleChatKeys()
         {
             var e = Event.current;
@@ -841,9 +891,24 @@ namespace Shadowfall
                 return;
             }
 
-            if (enter)
+            if (e.keyCode == KeyCode.UpArrow || e.keyCode == KeyCode.DownArrow)
+            {
+                // Recall what you said before (newest first).
+                if (chatHistory.Count > 0)
+                {
+                    historyIndex = Mathf.Clamp(historyIndex + (e.keyCode == KeyCode.UpArrow ? 1 : -1), -1, chatHistory.Count - 1);
+                    chatText = historyIndex < 0 ? "" : chatHistory[chatHistory.Count - 1 - historyIndex];
+                }
+            }
+            else if (enter)
             {
                 string text = chatText.Trim();
+                if (text.Length > 0 && (chatHistory.Count == 0 || chatHistory[chatHistory.Count - 1] != text))
+                {
+                    chatHistory.Add(text);
+                    if (chatHistory.Count > 30) chatHistory.RemoveAt(0);
+                }
+                historyIndex = -1;
                 if (text.StartsWith("/r ") && !string.IsNullOrEmpty(replyTo)) text = "/w " + replyTo + " " + text.Substring(3);
                 NetClient.I.SendChat(text);
                 chatText = "";
@@ -900,7 +965,7 @@ namespace Shadowfall
                 var r = new Rect(x - 8, y + lines * lh + 12, w + 16, 34);
                 Block(r);
                 UISkin.Box(r, UISkin.Field);
-                var style = new GUIStyle(UISkin.Field) { normal = { background = null }, clipping = TextClipping.Clip };
+                var style = chatFieldStyle ?? (chatFieldStyle = new GUIStyle(UISkin.Field) { normal = { background = null }, clipping = TextClipping.Clip });
                 bool empty = chatText.Length == 0;
                 string caret = Time.unscaledTime % 1f < 0.55f ? "|" : " ";
                 string shown = chatText;
@@ -970,8 +1035,14 @@ namespace Shadowfall
             float fy = r.yMax - 44;
             UISkin.IconInSlot(new Rect(r.x + 20, fy, 26, 26), UISkin.Icon("gold"), Color.white, 0);
             UISkin.Shadowed(new Rect(r.x + 50, fy, 200, 26), p.Gold + " gold", UISkin.Label, new Color(1f, 0.85f, 0.3f));
-            UISkin.Shadowed(new Rect(r.x + 20, fy, w - 40, 26), p.Inventory.FreeSlots + " free slots",
-                new GUIStyle(UISkin.Small) { alignment = TextAnchor.MiddleRight }, UISkin.Muted);
+            UISkin.Shadowed(new Rect(r.x + 20, fy, w - 40 - 86, 26), p.Inventory.FreeSlots + " free slots",
+                UISkin.V(UISkin.Small, alignment: TextAnchor.MiddleRight), UISkin.Muted);
+            if (UISkin.Btn(new Rect(r.xMax - 20 - 76, fy - 4, 76, 32), "Sort", UISkin.Button))
+            {
+                socketGem = -1;
+                p.Inventory.Sort();
+                Sfx.Play2D("ui_click", 0.4f);
+            }
         }
 
         void Sell(Player p, int index)
@@ -1091,7 +1162,7 @@ namespace Shadowfall
             DrawItemSlot(r, item, p, SlotIcon(slot));
             string label = item != null ? "<color=#" + Item.Hex(item.NameColor) + ">" + item.Name + "</color>" : "<color=#7a6e5e>" + Item.SlotName(slot) + "</color>";
             var lr = labelLeft ? new Rect(r.x - 108, r.y + 6, 102, 48) : new Rect(r.xMax + 8, r.y + 6, 102, 48);
-            GUI.Label(lr, label, new GUIStyle(UISkin.RichSmall) { alignment = labelLeft ? TextAnchor.UpperRight : TextAnchor.UpperLeft });
+            GUI.Label(lr, label, UISkin.V(UISkin.RichSmall, alignment: labelLeft ? TextAnchor.UpperRight : TextAnchor.UpperLeft));
             if (item != null && r.Contains(Event.current.mousePosition))
                 tooltip = item.Tooltip(p) + "\n<color=#998877>Click to unequip</color>";
             if (item != null && item.Sockets > 0) DrawSocketPips(r, item);
@@ -1117,7 +1188,7 @@ namespace Shadowfall
                 var ir = new Rect(r.x + 22, y, 40, 40);
                 UISkin.IconInSlot(ir, UISkin.Icon(UISkin.SkillIcon(s)), Color.white, 0);
                 UISkin.Shadowed(new Rect(r.x + 72, y, 160, 22), s.ToString(), UISkin.Label, UISkin.Cream);
-                UISkin.Shadowed(new Rect(r.x + 72, y, 330, 22), "<b>" + lvl + "</b> / 99", new GUIStyle(UISkin.Label) { alignment = TextAnchor.UpperRight }, UISkin.Gold);
+                UISkin.Shadowed(new Rect(r.x + 72, y, 330, 22), "<b>" + lvl + "</b> / 99", UISkin.V(UISkin.Label, alignment: TextAnchor.UpperRight), UISkin.Gold);
                 UISkin.Bar(new Rect(r.x + 72, y + 24, 330, 14), lvl >= 99 ? 1f : (float)(xp - cur) / Mathf.Max(1, next - cur), "Green", null, SkillSet.SkillColor(s));
                 y += 48;
             }
@@ -1198,13 +1269,14 @@ namespace Shadowfall
 
         void DrawHelp()
         {
-            var r = new Rect((VW - 600) / 2, 60, 600, 700);
+            var r = new Rect((VW - 600) / 2, 40, 600, Mathf.Min(800, VH - 50));
             if (UISkin.Window(r, "How to Play", true, true)) showHelp = false;
             Block(r);
-            GUI.Label(new Rect(r.x + 28, r.y + 58, 544, 570),
+            GUI.Label(new Rect(r.x + 28, r.y + 58, 544, r.height - 200),
                 "<b>Combat</b>\n" +
                 "Left-click the ground to move (hold to keep walking). Left-click a monster to attack it; Shift+click attacks in place.\n" +
-                "<b>1-5</b> your class's abilities (right-click casts ability 2),  <b>Q / E</b> health / mana potions,  mouse wheel zooms.\n\n" +
+                "<b>1-5</b> your class's abilities (right-click casts ability 2),  <b>Q / E</b> health / mana potions,  <b>R</b> recall to town (and back),  " +
+                "<b>Alt</b> shows every item on the ground,  mouse wheel zooms.\n\n" +
                 "<b>Windows</b>\n" +
                 "<b>I</b> bags   <b>C</b> character   <b>T</b> talents   <b>K</b> skills   <b>L</b> quests   <b>M</b> map   <b>Enter</b> chat   <b>Esc</b> close\n" +
                 "<b>Camera:</b> middle-drag or arrow keys rotate and tilt,  <b>Space</b> resets\n\n" +
@@ -1222,6 +1294,23 @@ namespace Shadowfall
                 "North: Whisperwood (1-7)    East: Goblin Encampment (3-10)\n" +
                 "West: Ironvein Quarry (3-15)    South: Forsaken Graveyard (6-11)\n" +
                 "Far south: Crypt of the Lich (boss)", UISkin.InkRich);
+            // Settings
+            float sy = r.yMax - 128;
+            GUI.Label(new Rect(r.x + 28, sy, 120, 26), "<b>Graphics</b>", UISkin.InkRich);
+            for (int i = 0; i < GameSettings.QualityNames.Length; i++)
+            {
+                var br = new Rect(r.x + 130 + i * 104, sy - 4, 98, 32);
+                bool on = GameSettings.Quality == i;
+                if (UISkin.Btn(br, on ? "> " + GameSettings.QualityNames[i] + " <" : GameSettings.QualityNames[i], UISkin.Button) && !on)
+                    GameSettings.Quality = i;
+            }
+            if (new Rect(r.x + 130, sy - 4, 310, 32).Contains(Event.current.mousePosition))
+                tooltip = "<b>Low</b>: no shadows or grass, fewer lights and particles, no color grade.\n<b>Medium</b>: hard shadows, fewer lights.\n<b>High</b>: everything.";
+            sy += 38;
+            bool fps = GUI.Toggle(new Rect(r.x + 28, sy, 200, 26), GameSettings.ShowFps, (GameSettings.ShowFps ? "[x]" : "[  ]") + " Show FPS", UISkin.InkRich);
+            if (fps != GameSettings.ShowFps) GameSettings.ShowFps = fps;
+            bool common = GUI.Toggle(new Rect(r.x + 230, sy, 330, 26), GameSettings.ShowCommonLoot, (GameSettings.ShowCommonLoot ? "[x]" : "[  ]") + " Label common items (else hold Alt)", UISkin.InkRich);
+            if (common != GameSettings.ShowCommonLoot) GameSettings.ShowCommonLoot = common;
             GUI.Label(new Rect(r.x + 28, r.yMax - 48, 120, 26), "<b>Volume</b>", UISkin.InkRich);
             float v = GUI.HorizontalSlider(new Rect(r.x + 130, r.yMax - 40, 300, 20), Sfx.Volume, 0f, 1f);
             if (Mathf.Abs(v - Sfx.Volume) > 0.001f) Sfx.Volume = v;
@@ -1303,7 +1392,7 @@ namespace Shadowfall
                     UISkin.Shadowed(new Rect(r.x + 26, y, 420, 28), "For Sale", UISkin.Heading, UISkin.Gold);
                     if (shop.Rotates)
                         GUI.Label(new Rect(r.x + 200, y + 4, 244, 24), "New stock in " + Mathf.CeilToInt(shop.SecondsUntilRestock / 60f) + " min",
-                            new GUIStyle(UISkin.Ink14) { alignment = TextAnchor.UpperRight });
+                            UISkin.V(UISkin.Ink14, alignment: TextAnchor.UpperRight));
                     y += 36;
                     for (int i = 0; i < shop.Items.Count; i++)
                         y = ShopRow(p, r, y, shop, i);

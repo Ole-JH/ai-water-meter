@@ -69,7 +69,7 @@ namespace Shadowfall
                 UISkin.Box(icon, UISkin.Slot);
                 UISkin.IconInSlot(icon, UISkin.Icon(t.Icon), rank > 0 ? Color.white : new Color(0.5f, 0.5f, 0.5f), 4);
                 UISkin.Shadowed(new Rect(row.x + 74, row.y + 8, 300, 24), t.Name, UISkin.Label, rank > 0 ? UISkin.Gold : UISkin.Cream);
-                GUI.Label(new Rect(row.x + 74, row.y + 32, row.width - 170, 36), t.Description, new GUIStyle(UISkin.RichSmall) { wordWrap = true });
+                GUI.Label(new Rect(row.x + 74, row.y + 32, row.width - 170, 36), t.Description, UISkin.V(UISkin.RichSmall, wordWrap: true));
                 // rank pips
                 for (int i = 0; i < t.MaxRank; i++)
                 {

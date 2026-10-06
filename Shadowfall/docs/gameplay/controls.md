@@ -12,6 +12,8 @@
 | ++"Right click"++ (hold) | Your class's second ability toward the cursor (Holy Bolt, Throwing Axe, Fireball or Multishot) |
 | ++1++ – ++5++ | Your class's five abilities (see [Items & progression](progression.md#classes-and-abilities)) |
 | ++q++ / ++e++ | Drink a health / mana potion |
+| ++r++ | Recall to Hollowmere: a 3 s channel (moving, casting or taking damage interrupts it; 20 s cooldown). Press ++r++ again in town to step back to where you left (not into the Catacombs) |
+| ++alt++ (hold) | Show labels for every item on the ground, including plain white gear when the loot filter hides it |
 
 ## Camera
 
@@ -36,6 +38,7 @@
 | ++f1++ or ++h++ | Help |
 | ++enter++ or ++slash++ | Chat. `/p` party, `/w name` whisper, `/r` reply, `/invite name`, `/leave`, `/who` |
 | ++esc++ | Close windows |
+| ++arrow-up++ / ++arrow-down++ in chat | Recall the messages you sent before |
 
 ## Inventory
 
@@ -44,4 +47,21 @@
 - **Left click** a gem, then an item with an empty socket, to socket it. Right click cancels.
 - **Shift + right click** drops an item on the ground.
 - Click an equipped item in the character window to unequip it.
+- **Sort** (bottom of the bags) merges stacks and orders your bags: equipment by rarity, then gems, potions and food, then materials.
+- Gold, potions and gems are picked up automatically when you walk over them.
 - Hover over an item to compare it with what you're wearing (damage per second and armor difference).
+
+## Settings
+
+The help window (++f1++) has the settings:
+
+- **Graphics**: *Low* turns off shadows, grass and the color grade and halves particle effects; *Medium* uses hard shadows and fewer lights; *High* is everything. Try Low on laptops or if the frame rate drops.
+- **Show FPS** puts a frame counter at the top of the screen.
+- **Label common items**: when off, plain white gear on the ground has no label unless you hold ++alt++ or hover it.
+- **Volume**.
+
+Settings are remembered in your browser.
+
+## Warnings
+
+When your life drops below 30%, the edges of the screen pulse red, faster the closer you are to death.

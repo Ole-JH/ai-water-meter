@@ -316,6 +316,7 @@ namespace Shadowfall
         {
             activeVisual = new GameObject("Ripples");
             activeVisual.transform.SetParent(transform, false);
+            activeVisual.AddComponent<FishingRipple>();
             var c = new Color(0.75f, 0.9f, 1f);
             Factory.Prim(PrimitiveType.Cylinder, activeVisual.transform, new Vector3(0, 0.02f, 0), new Vector3(1.2f, 0.01f, 1.2f), c, false, Mat.Glow(c * 0.6f));
             Factory.Prim(PrimitiveType.Sphere, activeVisual.transform, new Vector3(0, 0.1f, 0), new Vector3(0.25f, 0.1f, 0.25f), Color.white, false, Mat.Glow(Color.white));
@@ -332,24 +333,19 @@ namespace Shadowfall
             respawnAt = Time.time + Random.Range(10f, 20f);
             activeVisual.SetActive(false);
             depletedVisual.SetActive(true);
+            StartCoroutine(RegrowLater());
             if (Kind == ResourceKind.Tree) GameUI.Log("The tree falls.", Color.gray);
             if (Kind == ResourceKind.Rock) GameUI.Log("You have mined the rock clean.", Color.gray);
         }
 
-        void Update()
+        // No Update(): there are hundreds of nodes. Regrowth is a coroutine and only fishing spots animate (FishingRipple).
+        System.Collections.IEnumerator RegrowLater()
         {
-            if (Kind == ResourceKind.FishingSpot && activeVisual != null)
-            {
-                float s = 1f + Mathf.Sin(Time.time * 3f + transform.position.x) * 0.15f;
-                activeVisual.transform.localScale = new Vector3(s, 1f, s);
-            }
-            if (Depleted && Time.time >= respawnAt)
-            {
-                Depleted = false;
-                charges = maxCharges;
-                activeVisual.SetActive(true);
-                depletedVisual.SetActive(false);
-            }
+            while (Time.time < respawnAt) yield return new WaitForSeconds(Mathf.Max(0.1f, respawnAt - Time.time));
+            Depleted = false;
+            charges = maxCharges;
+            activeVisual.SetActive(true);
+            depletedVisual.SetActive(false);
         }
 
         public override void Interact(Player p) => p.StartGathering(this);
@@ -651,6 +647,16 @@ namespace Shadowfall
         {
             GameUI.I.OpenDialog(this);
             if (view != null) { if (Role == NpcRole.QuestGiver) view.Cheer(); else view.Interact(); }
+        }
+    }
+
+    /// <summary>The bobbing ripple on a fishing spot.</summary>
+    public class FishingRipple : MonoBehaviour
+    {
+        void Update()
+        {
+            float s = 1f + Mathf.Sin(Time.time * 3f + transform.position.x) * 0.15f;
+            transform.localScale = new Vector3(s, 1f, s);
         }
     }
 }

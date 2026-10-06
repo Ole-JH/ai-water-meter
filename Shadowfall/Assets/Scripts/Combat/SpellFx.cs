@@ -94,8 +94,9 @@ namespace Shadowfall
             main.stopAction = follow == null ? ParticleSystemStopAction.Destroy : ParticleSystemStopAction.None;
 
             var em = ps.emission;
-            em.rateOverTime = p.Rate;
-            if (p.Burst > 0) em.SetBursts(new[] { new ParticleSystem.Burst(0f, (short)p.Burst) });
+            float scale = GameSettings.ParticleScale;
+            em.rateOverTime = p.Rate * scale;
+            if (p.Burst > 0) em.SetBursts(new[] { new ParticleSystem.Burst(0f, (short)Mathf.Max(1, Mathf.RoundToInt(p.Burst * scale))) });
 
             var shape = ps.shape;
             shape.enabled = true;

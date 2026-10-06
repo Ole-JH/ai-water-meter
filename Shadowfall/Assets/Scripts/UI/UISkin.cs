@@ -33,6 +33,28 @@ namespace Shadowfall
             return t;
         }
 
+        static readonly Dictionary<(GUIStyle, int, int, int, int, Font), GUIStyle> variants = new Dictionary<(GUIStyle, int, int, int, int, Font), GUIStyle>();
+
+        /// <summary>
+        /// A cached copy of <paramref name="baseStyle"/> with a few properties changed. Use this instead of
+        /// <c>new GUIStyle(...)</c> inside OnGUI, which runs several times per frame and would allocate every time.
+        /// </summary>
+        public static GUIStyle V(GUIStyle baseStyle, int fontSize = 0, TextAnchor? alignment = null, bool? wordWrap = null,
+            FontStyle? fontStyle = null, Font font = null)
+        {
+            var key = (baseStyle, fontSize, alignment.HasValue ? (int)alignment.Value : -1, wordWrap.HasValue ? (wordWrap.Value ? 1 : 0) : -1,
+                fontStyle.HasValue ? (int)fontStyle.Value : -1, font);
+            if (variants.TryGetValue(key, out var s)) return s;
+            s = new GUIStyle(baseStyle);
+            if (fontSize > 0) s.fontSize = fontSize;
+            if (alignment.HasValue) s.alignment = alignment.Value;
+            if (wordWrap.HasValue) s.wordWrap = wordWrap.Value;
+            if (fontStyle.HasValue) s.fontStyle = fontStyle.Value;
+            if (font != null) s.font = font;
+            variants[key] = s;
+            return s;
+        }
+
         /// <summary>Call from OnGUI (GUI.skin is only valid there).</summary>
         public static void Init()
         {

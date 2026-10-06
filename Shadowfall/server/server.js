@@ -1079,13 +1079,23 @@ function tick() {
   if (tickCount % 50 === 0) cleanupInstances(t);
 
   const online = [...sessions.values()].filter((s) => s.inWorld);
+  // Each monster's snapshot entry is built once per tick and shared by every player who can see it.
+  const entries = new Map();
+  const entry = (m) => {
+    let e = entries.get(m.id);
+    if (!e) {
+      e = { id: m.id, n: m.type, l: m.level, x: r2(m.x), z: r2(m.z), ry: Math.round(m.ry), hp: Math.ceil(m.hp), mhp: m.maxHp, ar: m.armor, sl: t < m.slowUntil, st: t < m.stunUntil,
+        ...(m.elite ? { el: m.elite.name, af: m.elite.affixes.join(","), sh: t < m.shieldUntil } : {}) };
+      entries.set(m.id, e);
+    }
+    return e;
+  };
   for (const s of online) {
     const ms = [];
     const inst = s.inst || 0;
     for (const m of monsters.values()) {
       if (m.inst !== inst || dist(m.x, m.z, s.x, s.z) > MONSTER_VIEW) continue;
-      ms.push({ id: m.id, n: m.type, l: m.level, x: r2(m.x), z: r2(m.z), ry: Math.round(m.ry), hp: Math.ceil(m.hp), mhp: m.maxHp, ar: m.armor, sl: t < m.slowUntil, st: t < m.stunUntil,
-        ...(m.elite ? { el: m.elite.name, af: m.elite.affixes.join(","), sh: t < m.shieldUntil } : {}) });
+      ms.push(entry(m));
     }
     const ps = [];
     for (const o of online) {

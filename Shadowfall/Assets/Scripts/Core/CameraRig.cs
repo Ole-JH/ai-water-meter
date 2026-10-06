@@ -98,7 +98,7 @@ namespace Shadowfall
             transform.SetPositionAndRotation(pos, rot);
 
             // Keep shadows sharp when zoomed in, but still covering the view when zoomed out or tilted.
-            QualitySettings.shadowDistance = 30f + distance * (2.6f - pitch / 60f);
+            QualitySettings.shadowDistance = (30f + distance * (2.6f - pitch / 60f)) * GameSettings.ShadowDistanceScale;
         }
 
         void HandleInput(float dt)
