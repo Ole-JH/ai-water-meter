@@ -839,8 +839,12 @@ namespace Shadowfall
                 if (m.id != net.MyId && m.di == net.DungeonId && !RemotePlayer.ById.ContainsKey(m.id)) Dot(r, toMap(new Vector3(m.x, 0, m.z)), new Color(0.35f, 1f, 0.45f), 6);
 
             // Hero: an arrow pointing where we face.
+            // (Not GUIUtility.RotateAroundPivot: that pivots in unscaled screen space, so with the UI scale the
+            // arrow would orbit around the wrong point. Rotate around the map centre as it appears on screen.)
             var saved = GUI.matrix;
-            GUIUtility.RotateAroundPivot(p.transform.eulerAngles.y, r.center);
+            Vector3 pivot = saved.MultiplyPoint3x4(new Vector3(r.center.x, r.center.y, 0f));
+            GUI.matrix = Matrix4x4.TRS(pivot, Quaternion.Euler(0f, 0f, p.transform.eulerAngles.y), Vector3.one) *
+                         Matrix4x4.TRS(-pivot, Quaternion.identity, Vector3.one) * saved;
             GUI.color = new Color(1f, 0.95f, 0.8f);
             GUI.DrawTexture(new Rect(r.center.x - 8, r.center.y - 9, 16, 18), Minimap.Arrow);
             GUI.matrix = saved;
