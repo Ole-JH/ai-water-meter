@@ -8,7 +8,7 @@ namespace Shadowfall
     /// </summary>
     public class LoginShowcase : MonoBehaviour
     {
-        public static readonly Vector3 Spot = new Vector3(80.5f, 0f, 76.5f);
+        public static readonly Vector3 Spot = new Vector3(144.5f, 0f, 140.5f);
 
         /// <summary>Where the camera should look (null when no preview is shown).</summary>
         public static Vector3? Focus => I != null && I.view != null ? Spot : (Vector3?)null;

@@ -15,8 +15,8 @@ namespace Shadowfall
 
         static readonly Vector3[] candidates =
         {
-            new Vector3(85.5f, 0f, 75.5f), new Vector3(75.5f, 0f, 75.5f), new Vector3(85.5f, 0f, 85.5f),
-            new Vector3(84.5f, 0f, 73.5f), new Vector3(76.5f, 0f, 73.5f), new Vector3(74.5f, 0f, 77.5f),
+            new Vector3(149.5f, 0f, 139.5f), new Vector3(139.5f, 0f, 139.5f), new Vector3(149.5f, 0f, 149.5f),
+            new Vector3(148.5f, 0f, 137.5f), new Vector3(140.5f, 0f, 137.5f), new Vector3(138.5f, 0f, 141.5f),
         };
 
         public static void Spawn()
@@ -30,7 +30,7 @@ namespace Shadowfall
             s.DisplayName = "Stash";
             s.InteractRange = 2f;
             s.AddClickCollider(0.7f, 1.1f);
-            float face = Mathf.Atan2(80.5f - pos.x, 77.5f - pos.z) * Mathf.Rad2Deg; // toward the square
+            float face = Mathf.Atan2(144.5f - pos.x, 141.5f - pos.z) * Mathf.Rad2Deg; // toward the square
             if (ArtLibrary.Spawn("Props/chest", go.transform, Vector3.zero, 1.25f, ArtLibrary.Fit.Width, face) == null)
                 Factory.Prim(PrimitiveType.Cube, go.transform, new Vector3(0, 0.45f, 0), new Vector3(1.2f, 0.9f, 0.8f), new Color(0.4f, 0.28f, 0.14f));
             var l = new GameObject("StashLight").AddComponent<Light>();

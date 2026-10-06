@@ -1439,7 +1439,7 @@ namespace Shadowfall
                 level = Level, xp = Xp, gold = Gold + (NetClient.I != null ? NetClient.I.EscrowGold : 0), look = Look,
                 stash = stash.ToArray(),
                 talents = SaveTalents(),
-                companions = OwnedCompanions.ToArray(), companion = ActiveCompanion ?? "",
+                companions = OwnedCompanions.ToArray(), companion = ActiveCompanion ?? "", wv = WorldGenerator.LayoutVersion,
                 str = Strength, dex = Dexterity, intel = Intelligence, vit = Vitality, statPoints = StatPoints,
                 x = transform.position.x, z = transform.position.z,
                 hp = IsDead ? MaxHealth : Health, mana = Mana,
@@ -1506,6 +1506,7 @@ namespace Shadowfall
                         Inventory.Equipped[it.Slot] = it;
 
             var pos = new Vector3(s.x, 0, s.z);
+            if (s.wv < 3) pos = WorldGenerator.Map(pos); // saved on the smaller world: same place in the new layout
             if (s.x > 0 && WorldGrid.Instance.IsWalkable(pos)) transform.position = pos;
             RecalculateStats();
             Health = s.hp > 0 ? Mathf.Min(s.hp, MaxHealth) : MaxHealth;

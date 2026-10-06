@@ -1,21 +1,23 @@
 # The world
 
-The map is 160 × 160 tiles, with the walled village of **Hollowmere** (57 × 57 tiles) at its centre. Cobbled cross streets lead from the four gates to the central plaza with the well. Each quarter is its own district:
+The map is 288 × 288 tiles, with the walled village of **Hollowmere** (57 × 57 tiles) at its centre. Cobbled cross streets lead from the four gates to the central plaza with the well. Each quarter is its own district:
 
 - **North-west:** the Prancing Boar tavern (Innkeeper Rosie), the windmill, and Forester Wren by the north gate.
 - **North-east:** the church with Sister Mae, Jenkins, and Captain Aldric at the north gate; the fountain sits on the north street.
 - **South-west:** the market hall with Merchant Lysa and Curio Dealer Vex's stalls, and Thomas's fenced farm.
 - **South-east:** the smithy (Smith Gorrin, Weaponsmith Hilda, Armorer Brann), the training yard and Beastmaster Orla's animal pen.
 
-The stash chest stands by the plaza. A road leaves each gate. Monsters never follow you inside the walls.
+The stash chest stands by the plaza. A long road leaves each gate. Monsters never follow you inside the walls. Press ++r++ to recall to the village from anywhere.
+
+The four zones start a short walk outside the walls and stretch about 115 tiles to the mountains at the edge of the world, getting tougher the farther out you go. Five lakes have fishing spots.
 
 | Zone | Direction | Monsters (level) | Resources |
 | --- | --- | --- | --- |
 | **Hollowmere Village** | Centre | Safe zone | Anvil (Smithing), campfire (Cooking), vendor, healer, quest givers |
-| **Whisperwood** | North | Dire Wolf (1–7), Bandit | Oak → Willow → Yew trees further north; trout and salmon lakes |
-| **Goblin Encampment** | East | Goblin, Goblin Shaman (3–9), **Goblin Warchief** (10, boss) | Campfire |
-| **Ironvein Quarry** | West | Bandit (3–5), Rock Golem (8–15) | Copper → Iron → Mithril rocks further west |
-| **Forsaken Graveyard** | South | Skeleton, Skeleton Archer, Zombie (6–11) | — |
+| **Whisperwood** | North | Dire Wolf (1–7), Bandit (5–8) | Oak → Willow → Yew trees further north; trout and salmon lakes |
+| **Goblin Encampment** | East | Goblin, Goblin Shaman (3–10), Bandit, **Goblin Warchief** (10, boss) and, in the war camp farther north-east, a second **Warchief** (13) | Campfires |
+| **Ironvein Quarry** | West | Bandit (3–9), Rock Golem (8–16) | Copper → Iron → Mithril rocks further west |
+| **Forsaken Graveyard** | South | Skeleton, Skeleton Archer, Zombie (6–12); the Catacombs entrance | A murky mere in the south-east |
 | **Crypt of the Lich** | Far south | Skeletons (11–13), **Lich King** (16, raid boss) | — |
 
 ## NPCs

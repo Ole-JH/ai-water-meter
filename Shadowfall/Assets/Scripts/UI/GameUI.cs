@@ -1283,7 +1283,11 @@ namespace Shadowfall
             }
 
             string[] zones = { "Whisperwood", "Goblin Encampment", "Forsaken Graveyard", "Ironvein Quarry", "Hollowmere", "Crypt of the Lich", "The Catacombs" };
-            Vector3[] centers = { new Vector3(80, 0, 125), new Vector3(128, 0, 80), new Vector3(80, 0, 40), new Vector3(32, 0, 80), new Vector3(80, 0, 80), new Vector3(80, 0, 15), Dungeon.Entrance + new Vector3(0, 0, -6) };
+            Vector3[] centers =
+            {
+                WorldGenerator.Map(new Vector3(80, 0, 128)), WorldGenerator.Map(new Vector3(130, 0, 80)), WorldGenerator.Map(new Vector3(80, 0, 42)),
+                WorldGenerator.Map(new Vector3(30, 0, 80)), WorldGenerator.Map(new Vector3(80, 0, 80)), new Vector3(144.5f, 0, 18), Dungeon.Entrance + new Vector3(0, 0, -6),
+            };
             Dot(r, toMap(Dungeon.Entrance), new Color(1f, 0.55f, 0.3f), 12);
             for (int i = 0; i < zones.Length; i++)
             {

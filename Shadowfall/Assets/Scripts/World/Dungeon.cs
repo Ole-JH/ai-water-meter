@@ -13,7 +13,7 @@ namespace Shadowfall
     {
         public static readonly Vector3 Origin = new Vector3(1000f, 0f, 1000f);
         /// <summary>The Catacombs entrance in the graveyard (must match CATACOMBS in server.js).</summary>
-        public static readonly Vector3 Entrance = new Vector3(104.5f, 0f, 27.5f);
+        public static readonly Vector3 Entrance = new Vector3(168.5f, 0f, 62.5f); // = WorldGenerator.Map(104.5, 27.5)
         public const int Depths = 3;
 
         public static bool Active => root != null;

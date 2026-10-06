@@ -26,7 +26,7 @@ namespace Shadowfall
         void Awake()
         {
             I = this;
-            focus = new Vector3(80f, 0f, 80f);
+            focus = new Vector3(WorldGenerator.Center, 0f, WorldGenerator.Center);
         }
 
         public static void Shake(float amount)
@@ -79,7 +79,7 @@ namespace Shadowfall
                 yawGoal = yaw = Time.time * 4f;
                 pitchGoal = pitch = 48f;
                 distanceGoal = distance = 24f;
-                focus = new Vector3(80f, 0f, 80f);
+                focus = new Vector3(WorldGenerator.Center, 0f, WorldGenerator.Center);
             }
 
             float k = 1f - Mathf.Exp(-dt * 12f);

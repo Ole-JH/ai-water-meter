@@ -9,7 +9,7 @@ const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
 const { WebSocketServer } = require("ws");
-const { MONSTERS, SPAWNERS, TOWN } = require("./content");
+const { MONSTERS, SPAWNERS, TOWN, SPAWN } = require("./content");
 const dungeonGen = require("./dungeon");
 
 const PORT = parseInt(process.env.PORT || "7341", 10);
@@ -581,8 +581,8 @@ function completeLogin(s) {
   s.name = acc.name;
   s.inWorld = true;
   s.lvl = acc.save && acc.save.level ? acc.save.level : 1;
-  s.x = acc.save && acc.save.x ? acc.save.x : 80.5;
-  s.z = acc.save && acc.save.z ? acc.save.z : 77.5;
+  s.x = acc.save && acc.save.x ? acc.save.x : SPAWN.x;
+  s.z = acc.save && acc.save.z ? acc.save.z : SPAWN.z;
   acc.lastLogin = new Date().toISOString();
   safeSend(s, JSON.stringify({ t: "welcome", id: s.id, hasSave: !!acc.save, save: acc.save || undefined, now: Date.now() }));
   broadcast({ t: "sys", msg: `${acc.name} has entered the world.` });
@@ -798,7 +798,7 @@ const partyHandlers = {
 
 const instances = new Map();
 let nextInstanceId = 1;
-const CATACOMBS = { x: 104.5, z: 27.5, depths: 3, name: "The Catacombs" }; // entrance, matches the client
+const CATACOMBS = { x: 168.5, z: 62.5, depths: 3, name: "The Catacombs" }; // entrance, matches Dungeon.Entrance on the client
 const DUNGEON_TYPES = [["Skeleton", "Zombie"], ["Skeleton", "Skeleton Archer", "Zombie"], ["Skeleton", "Skeleton Archer", "Zombie", "Skeleton"]];
 
 const partyKey = (s) => { const p = partyOf(s); return p ? "p" + p.id : "s" + s.id; };
@@ -859,7 +859,7 @@ function enterInstance(s, inst) {
 function leaveInstance(s, toTown) {
   if (trades.has(s.id)) closeTrade(trades.get(s.id), "The trade was cancelled.");
   s.inst = 0;
-  [s.x, s.z] = toTown ? [80.5, 77.5] : [CATACOMBS.x, CATACOMBS.z - 2.5];
+  [s.x, s.z] = toTown ? [SPAWN.x, SPAWN.z] : [CATACOMBS.x, CATACOMBS.z - 2.5];
   safeSend(s, JSON.stringify({ t: "dungeon", id: 0, x: s.x, z: s.z }));
 }
 
@@ -1134,7 +1134,7 @@ function tick() {
 const wss = new WebSocketServer({ server, path: "/ws", maxPayload: 512 * 1024 });
 
 wss.on("connection", (ws, req) => {
-  const s = { id: nextSessionId++, ws, inWorld: false, x: 80.5, z: 77.5, ry: 0, hp: 1, mhp: 1, lvl: 1, alive: true };
+  const s = { id: nextSessionId++, ws, inWorld: false, x: SPAWN.x, z: SPAWN.z, ry: 0, hp: 1, mhp: 1, lvl: 1, alive: true };
   sessions.set(s.id, s);
   ws.on("pong", () => { s.alive = true; });
   ws.on("message", (data, isBinary) => {

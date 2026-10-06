@@ -15,8 +15,8 @@ const URL = `ws://localhost:${PORT}/ws`;
 const DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), "shadowfall-test-"));
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-// A fake 160x160 world: open field with a 4-cell wall around the edge.
-const W = 160, H = 160;
+// A fake 288x288 world (the real size): open field with a 4-cell wall around the edge.
+const W = 288, H = 288;
 const bytes = Buffer.alloc((W * H) / 8);
 for (let y = 0; y < H; y++)
   for (let x = 0; x < W; x++)
@@ -84,15 +84,15 @@ async function main() {
     assert.ok(b.find("welcome"), "Bob logs in");
 
     // Stand next to the wolves north of town
-    state(a, 80, 113);
-    state(b, 81, 113);
+    state(a, 144, 182);
+    state(b, 145, 182);
     await sleep(1500);
     const snap = a.all("snap").at(-1);
     assert.ok(snap.m.length > 0, "snapshot contains monsters");
     assert.ok(snap.p.some((p) => p.name === "Bob"), "snapshot contains the other player");
     assert.ok(a.all("matk").length > 0, "monsters attack players");
 
-    const wolf = snap.m.slice().sort((p, q) => Math.hypot(p.x - 80, p.z - 113) - Math.hypot(q.x - 80, q.z - 113))[0];
+    const wolf = snap.m.slice().sort((p, q) => Math.hypot(p.x - 144, p.z - 182) - Math.hypot(q.x - 144, q.z - 182))[0];
     a.ws.send(JSON.stringify({ t: "hit", mid: wolf.id, dmg: 5 }));
     b.ws.send(JSON.stringify({ t: "hit", mid: wolf.id, dmg: 999999 })); // capped, but enough to kill a wolf
     await sleep(300);
@@ -101,8 +101,8 @@ async function main() {
     assert.ok(a.find("kill").xp > 0, "kill grants xp");
 
     a.ws.send(JSON.stringify({ t: "chat", msg: "hello <b>there</b>" }));
-    a.ws.send(JSON.stringify({ t: "fx", k: "fireball", x: 80, z: 113, tx: 85, tz: 118 }));
-    a.ws.send(JSON.stringify({ t: "save", save: { level: 3, xp: 10, gold: 55, x: 80, z: 113 } }));
+    a.ws.send(JSON.stringify({ t: "fx", k: "fireball", x: 144, z: 182, tx: 149, tz: 187 }));
+    a.ws.send(JSON.stringify({ t: "save", save: { level: 3, xp: 10, gold: 55, x: 144, z: 182 } }));
     await sleep(300);
     assert.strictEqual(b.find("chat")?.msg, "hello bthere/b", "chat is relayed and sanitised");
     assert.ok(b.find("fx"), "spell effects are relayed");
@@ -110,7 +110,7 @@ async function main() {
 
     // ---- parties
     const d = await connect("Dana", "secret4");
-    state(d, 82, 113);
+    state(d, 146, 182);
     a.ws.send(JSON.stringify({ t: "pinvite", name: "bob" }));
     await sleep(200);
     assert.strictEqual(b.find("pinv")?.name, "Alice", "Bob receives Alice's invitation");
@@ -131,7 +131,7 @@ async function main() {
 
     // Dana never hits the wolf but is nearby and in the party: she shares the kill.
     const snap2 = b.all("snap").at(-1);
-    const wolf2 = snap2.m.filter((x) => x.id !== wolf.id).sort((p, q) => Math.hypot(p.x - 80, p.z - 113) - Math.hypot(q.x - 80, q.z - 113))[0];
+    const wolf2 = snap2.m.filter((x) => x.id !== wolf.id).sort((p, q) => Math.hypot(p.x - 144, p.z - 182) - Math.hypot(q.x - 144, q.z - 182))[0];
     b.ws.send(JSON.stringify({ t: "hit", mid: wolf2.id, dmg: 999999 }));
     await sleep(300);
     assert.ok(d.all("kill").some((k) => k.mid === wolf2.id), "nearby party member shares kill credit");
@@ -144,8 +144,8 @@ async function main() {
       assert.ok(a.all("snap").at(-1).m.find((x) => x.id === wolf3.id)?.st, "stunned monsters are flagged in snapshots");
     }
     // ---- companions are shown to other players (unknown ids are dropped)
-    state(a, 80, 113, { cp: "hound" });
-    state(b, 81, 113, { cp: "dragon" });
+    state(a, 144, 182, { cp: "hound" });
+    state(b, 145, 182, { cp: "dragon" });
     await sleep(300);
     assert.strictEqual(b.all("snap").at(-1).p.find((x) => x.name === "Alice")?.cp, "hound", "companions are relayed");
     assert.strictEqual(a.all("snap").at(-1).p.find((x) => x.name === "Bob")?.cp, "", "unknown companions are rejected");
@@ -187,7 +187,7 @@ async function main() {
     d.ws.close();
 
     // ---- dungeons: Bob enters the Catacombs from the graveyard entrance
-    state(b, 104.5, 27.5);
+    state(b, 168.5, 62.5);
     await sleep(150);
     b.ws.send(JSON.stringify({ t: "denter" }));
     await sleep(400);
@@ -214,7 +214,7 @@ async function main() {
     assert.strictEqual(w.hasSave, true, "character was saved");
     assert.strictEqual(w.save.gold, 55, "save data round-trips");
 
-    const mismatch = await connect("Carl", "1234", "160x160-deadbeef", bytes, 2);
+    const mismatch = await connect("Carl", "1234", "288x288-deadbeef", bytes, 2);
     assert.match(mismatch.find("error").err, /previous version of the world/, "a changed world is refused while others play on the old one");
 
     again.ws.close();
@@ -245,7 +245,7 @@ async function main() {
     await sleep(700);
     try {
       const e = await connect("Erin", "secret5", hash2, bytes2, 2); // the world was replaced above
-      state(e, 80, 113);
+      state(e, 144, 182);
       await sleep(1200);
       const champ = e.all("snap").at(-1).m.find((m) => m.el);
       assert.ok(champ, "elite monsters appear in snapshots");

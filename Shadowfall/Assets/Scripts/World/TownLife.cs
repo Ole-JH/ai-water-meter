@@ -28,7 +28,7 @@ namespace Shadowfall
                 Walker.Create(root, child ? "Child" : "Villager", look, RandomTownPoint(rng), child ? 2.6f : 1.5f, Walker.Kind.Villager);
             }
             var t = WorldGenerator.Town;
-            Vector3[] gates = { new Vector3(80.5f, 0, t.yMin + 2.5f), new Vector3(t.xMax - 2.5f, 0, 80.5f), new Vector3(80.5f, 0, t.yMax - 2.5f), new Vector3(t.xMin + 2.5f, 0, 80.5f) };
+            Vector3[] gates = { new Vector3(t.center.x + 0.5f, 0, t.yMin + 2.5f), new Vector3(t.xMax - 2.5f, 0, t.center.y + 0.5f), new Vector3(t.center.x + 0.5f, 0, t.yMax - 2.5f), new Vector3(t.xMin + 2.5f, 0, t.center.y + 0.5f) };
             for (int i = 0; i < 3; i++)
             {
                 var guard = Walker.Create(root, "Guard", new CharacterLook { Model = "Characters/Knight", Height = 2f, Tint = new Color(0.85f, 0.85f, 0.9f), Weapon = "sword" },
@@ -37,7 +37,7 @@ namespace Shadowfall
                 guard.RouteIndex = i;
             }
             Walker.Create(root, "Hound", new CharacterLook { Model = "Monsters/Wolf", Height = 0.85f, Anims = AnimSet.Wolf, RunSpeed = 5f, Tint = new Color(0.55f, 0.45f, 0.38f) },
-                new Vector3(79.5f, 0, 79.5f), 2.5f, Walker.Kind.Dog);
+                new Vector3(143.5f, 0, 142.5f), 2.5f, Walker.Kind.Dog);
         }
 
         static readonly List<Vector3> townPoints = new List<Vector3>();

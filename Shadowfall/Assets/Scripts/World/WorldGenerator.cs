@@ -8,15 +8,32 @@ namespace Shadowfall
     /// </summary>
     public class WorldGenerator
     {
-        public const int W = 160, H = 160;
+        public const int W = 288, H = 288;
+        /// <summary>The world's centre (the middle of Hollowmere's plaza).</summary>
+        public const float Center = 144f;
+        /// <summary>
+        /// The zones were designed on the original 160-tile map centred on 80. <see cref="Map(float)"/> turns those
+        /// design coordinates into world coordinates: the town (within 29 tiles of the centre) just moves with the
+        /// centre, and everything farther out is spread <see cref="Stretch"/> times as far, so each zone has
+        /// about twice the room. Saves from before the bigger world are converted with it too.
+        /// </summary>
+        public const float Stretch = 2.25f;
+        const float Inner = 29f;
+        public static float Map(float v)
+        {
+            float d = v - 80f, a = Mathf.Abs(d);
+            return Center + (a <= Inner ? d : Mathf.Sign(d) * (Inner + (a - Inner) * Stretch));
+        }
+        public static Vector3 Map(Vector3 p) => new Vector3(Map(p.x), p.y, Map(p.z));
+        static int MapI(float v) => Mathf.RoundToInt(Map(v));
         public const int Seed = 20261006;
-        public static readonly RectInt Town = new RectInt(52, 52, 57, 57); // cells 52..108
+        public static readonly RectInt Town = new RectInt(116, 116, 57, 57); // cells 116..172
         /// <summary>Bumped whenever the walkable layout changes; lets an updated client hand the server the new world map.</summary>
-        public const int LayoutVersion = 2;
-        public static readonly RectInt Crypt = new RectInt(68, 4, 25, 19);  // cells 68..92, 4..22
+        public const int LayoutVersion = 3;
+        public static readonly RectInt Crypt = new RectInt(132, 9, 25, 19);  // cells 132..156, 9..27
 
         public Texture2D MapTexture { get; private set; }
-        public Vector3 SpawnPoint => new Vector3(80.5f, 0f, 77.5f);
+        public Vector3 SpawnPoint => new Vector3(144.5f, 0f, 141.5f);
 
         WorldGrid grid;
         Color[] pixels;
@@ -51,7 +68,7 @@ namespace Shadowfall
             if (Dungeon.Contains(p)) return Dungeon.ZoneName;
             if (InTown(p)) return "Hollowmere Village";
             if (InCrypt(p)) return "Crypt of the Lich";
-            float dx = p.x - 80f, dz = p.z - 80f;
+            float dx = p.x - Center, dz = p.z - Center;
             if (Mathf.Abs(dz) > Mathf.Abs(dx)) return dz > 0 ? "Whisperwood" : "Forsaken Graveyard";
             return dx > 0 ? "Goblin Encampment" : "Ironvein Quarry";
         }
@@ -76,8 +93,11 @@ namespace Shadowfall
 
             PaintBase();
             PaintRoads();
-            BuildLake(new Vector2(55, 125), 8f, 0);
-            BuildLake(new Vector2(112, 138), 6f, 1);
+            BuildLake(new Vector2(Map(55), Map(125)), 11f, 0);
+            BuildLake(new Vector2(Map(112), Map(138)), 9f, 1);
+            BuildLake(new Vector2(Map(140), Map(122)), 8f, 1);   // north-east woods
+            BuildLake(new Vector2(Map(28), Map(130)), 8f, 1);    // north-west, by the quarry
+            BuildLake(new Vector2(Map(132), Map(40)), 7f, 0);    // south-east, a murky graveyard mere
             BuildBorder();
             BuildTown();
             BuildForest();
@@ -113,7 +133,7 @@ namespace Shadowfall
             for (int y = 0; y < H; y++)
                 for (int x = 0; x < W; x++)
                 {
-                    float dx = x - 80f, dz = y - 80f;
+                    float dx = (x - Center) / Stretch, dz = (y - Center) / Stretch;
                     float wn = Mathf.Pow(Mathf.Max(0, dz), 3), ws = Mathf.Pow(Mathf.Max(0, -dz), 3);
                     float we = Mathf.Pow(Mathf.Max(0, dx), 3), ww = Mathf.Pow(Mathf.Max(0, -dx), 3);
                     float sum = wn + ws + we + ww + 0.0001f;
@@ -150,8 +170,8 @@ namespace Shadowfall
         /// <summary>Cobbled parts of the village: the two cross streets between the gates and the central square.</summary>
         static bool IsTownStreet(int x, int y)
         {
-            bool cross = (x >= 78 && x <= 82) || (y >= 78 && y <= 82);
-            bool square = x >= 72 && x <= 88 && y >= 72 && y <= 88;
+            bool cross = (x >= 142 && x <= 146) || (y >= 142 && y <= 146);
+            bool square = x >= 136 && x <= 152 && y >= 136 && y <= 152;
             return cross || square;
         }
 
@@ -162,7 +182,7 @@ namespace Shadowfall
             float b = Mathf.PerlinNoise(x * 0.12f + 31f, y * 0.12f + 71f);
             var w = new float[GroundSurface.Layers];
             // Whisperwood: meadow grass giving way to dark forest floor deeper in.
-            float deep = Mathf.Clamp01((y - 100f) / 40f);
+            float deep = Mathf.Clamp01((y - Map(100f)) / (40f * Stretch));
             float forest = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((a - 0.45f) * 4f + deep));
             w[GroundSurface.Grass] += north * (1f - forest);
             w[GroundSurface.Forest] += north * forest;
@@ -175,12 +195,12 @@ namespace Shadowfall
             w[GroundSurface.Dry] += east * (1f - trampled);
             w[GroundSurface.Dirt] += east * trampled;
             // Ironvein Quarry: gravel and rock with scrubby dry grass.
-            float rock = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((a - 0.35f) * 3f + Mathf.Clamp01((40f - x) / 30f)));
+            float rock = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((a - 0.35f) * 3f + Mathf.Clamp01((Map(40f) - x) / (30f * Stretch))));
             w[GroundSurface.Gravel] += west * rock;
             w[GroundSurface.Dry] += west * (1f - rock) * 0.6f;
             w[GroundSurface.Dirt] += west * (1f - rock) * 0.4f;
             // Green meadow around the village.
-            float meadow = 1f - Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(34f, 50f, Vector2.Distance(new Vector2(x, y), new Vector2(80f, 80f))));
+            float meadow = 1f - Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(34f, 50f, Vector2.Distance(new Vector2(x, y), new Vector2(Center, Center))));
             for (int i = 0; i < w.Length; i++) w[i] *= 1f - meadow;
             w[GroundSurface.Grass] += meadow;
             surface.SetWeights(x, y, w);
@@ -192,20 +212,20 @@ namespace Shadowfall
         {
             // Smooth centerlines for the ground shader (the tiles below stay the walkable/reserved road).
             var n = new System.Collections.Generic.List<Vector2>();
-            for (int i = Town.yMax - 1; i < H - 6; i++) n.Add(new Vector2(Mathf.Round(80 + Mathf.Sin(i * 0.08f) * 4f) + 0.5f, i + 0.5f));
+            for (int i = Town.yMax - 1; i < H - 6; i++) n.Add(new Vector2(Mathf.Round(Center + Mathf.Sin(i * 0.05f) * 6f) + 0.5f, i + 0.5f));
             var so = new System.Collections.Generic.List<Vector2>();
-            for (int i = Town.yMin; i > 6; i--) so.Add(new Vector2(Mathf.Round(80 + Mathf.Sin(i * 0.1f) * 3f) + 0.5f, i + 0.5f));
+            for (int i = Town.yMin; i > 6; i--) so.Add(new Vector2(Mathf.Round(Center + Mathf.Sin(i * 0.06f) * 5f) + 0.5f, i + 0.5f));
             var e = new System.Collections.Generic.List<Vector2>();
-            for (int i = Town.xMax - 1; i < W - 6; i++) e.Add(new Vector2(i + 0.5f, Mathf.Round(80 + Mathf.Sin(i * 0.09f) * 4f) + 0.5f));
+            for (int i = Town.xMax - 1; i < W - 6; i++) e.Add(new Vector2(i + 0.5f, Mathf.Round(Center + Mathf.Sin(i * 0.055f) * 6f) + 0.5f));
             var wst = new System.Collections.Generic.List<Vector2>();
-            for (int i = Town.xMin; i > 6; i--) wst.Add(new Vector2(i + 0.5f, Mathf.Round(80 + Mathf.Sin(i * 0.07f) * 4f) + 0.5f));
+            for (int i = Town.xMin; i > 6; i--) wst.Add(new Vector2(i + 0.5f, Mathf.Round(Center + Mathf.Sin(i * 0.045f) * 6f) + 0.5f));
             foreach (var line in new[] { n, so, e, wst }) surface.AddRoad(Smooth(line));
 
             // Four roads leading out of the gates, gently meandering.
-            for (int i = Town.yMax; i < H - 6; i++) RoadDot(80 + Mathf.Sin(i * 0.08f) * 4f, i);         // north
-            for (int i = Town.yMin; i > 6; i--) RoadDot(80 + Mathf.Sin(i * 0.1f) * 3f, i);              // south
-            for (int i = Town.xMax; i < W - 6; i++) RoadDot(i, 80 + Mathf.Sin(i * 0.09f) * 4f);         // east
-            for (int i = Town.xMin; i > 6; i--) RoadDot(i, 80 + Mathf.Sin(i * 0.07f) * 4f);             // west
+            for (int i = Town.yMax; i < H - 6; i++) RoadDot(Center + Mathf.Sin(i * 0.05f) * 6f, i);         // north
+            for (int i = Town.yMin; i > 6; i--) RoadDot(Center + Mathf.Sin(i * 0.06f) * 5f, i);              // south
+            for (int i = Town.xMax; i < W - 6; i++) RoadDot(i, Center + Mathf.Sin(i * 0.055f) * 6f);         // east
+            for (int i = Town.xMin; i > 6; i--) RoadDot(i, Center + Mathf.Sin(i * 0.045f) * 6f);             // west
         }
 
         /// <summary>Averages neighbouring points so the rounded tile steps become a smooth curve.</summary>
@@ -341,19 +361,19 @@ namespace Shadowfall
             // Palisade with gates at the centre of each side (cells 78..82)
             for (int i = x0; i <= x1; i++)
             {
-                if (i >= 78 && i <= 82) continue;
+                if (i >= 142 && i <= 146) continue;
                 Palisade(i, y0, wood);
                 Palisade(i, y1, wood);
             }
             for (int i = y0 + 1; i < y1; i++)
             {
-                if (i >= 78 && i <= 82) continue;
+                if (i >= 142 && i <= 146) continue;
                 Palisade(x0, i, wood);
                 Palisade(x1, i, wood);
             }
             // Gate towers
-            foreach (var g in new[] { new Vector2(77, y0), new Vector2(83, y0), new Vector2(77, y1), new Vector2(83, y1),
-                                      new Vector2(x0, 77), new Vector2(x0, 83), new Vector2(x1, 77), new Vector2(x1, 83) })
+            foreach (var g in new[] { new Vector2(141, y0), new Vector2(147, y0), new Vector2(141, y1), new Vector2(147, y1),
+                                      new Vector2(x0, 141), new Vector2(x0, 147), new Vector2(x1, 141), new Vector2(x1, 147) })
             {
                 if (Art("Buildings/building_tower_A_blue", new Vector3(g.x + 0.5f, 0, g.y + 0.5f), 5.2f, ArtLibrary.Fit.Height, VR(0, 4) * 90f) != null) continue;
                 Factory.Prim(PrimitiveType.Cube, deco, new Vector3(g.x + 0.5f, 2f, g.y + 0.5f), new Vector3(1.4f, 4f, 1.4f), wood * 0.85f);
@@ -362,33 +382,33 @@ namespace Shadowfall
             }
 
             // ---- buildings
-            House(new RectInt(57, 89, 8, 7), new Color(0.75f, 0.68f, 0.55f), new Color(0.55f, 0.2f, 0.15f), "Buildings/building_tavern_blue", 90f);
-            House(new RectInt(56, 98, 8, 8), new Color(0.72f, 0.65f, 0.55f), new Color(0.5f, 0.3f, 0.2f), "Buildings/building_windmill_blue", 135f);
-            House(new RectInt(67, 99, 6, 6), new Color(0.72f, 0.62f, 0.5f), new Color(0.3f, 0.45f, 0.25f), "Buildings/building_home_A_green", 180f);
-            House(new RectInt(57, 83, 6, 5), new Color(0.72f, 0.65f, 0.55f), new Color(0.3f, 0.35f, 0.55f), "Buildings/building_home_A_blue", 90f);
-            House(new RectInt(92, 95, 10, 8), new Color(0.75f, 0.73f, 0.68f), new Color(0.3f, 0.32f, 0.45f), "Buildings/building_church_blue", 180f);
-            House(new RectInt(86, 99, 6, 6), new Color(0.7f, 0.65f, 0.55f), new Color(0.25f, 0.3f, 0.5f), "Buildings/building_home_B_blue", 180f);
-            House(new RectInt(99, 84, 6, 6), new Color(0.7f, 0.64f, 0.55f), new Color(0.3f, 0.35f, 0.55f), "Buildings/building_home_B_blue", 270f);
-            House(new RectInt(56, 67, 7, 7), new Color(0.74f, 0.66f, 0.52f), new Color(0.55f, 0.25f, 0.2f), "Buildings/building_market_blue", 90f);
-            House(new RectInt(93, 66, 7, 6), new Color(0.6f, 0.55f, 0.5f), new Color(0.35f, 0.25f, 0.18f), "Buildings/building_blacksmith_blue", -90f);
+            House(new RectInt(121, 153, 8, 7), new Color(0.75f, 0.68f, 0.55f), new Color(0.55f, 0.2f, 0.15f), "Buildings/building_tavern_blue", 90f);
+            House(new RectInt(120, 162, 8, 8), new Color(0.72f, 0.65f, 0.55f), new Color(0.5f, 0.3f, 0.2f), "Buildings/building_windmill_blue", 135f);
+            House(new RectInt(131, 163, 6, 6), new Color(0.72f, 0.62f, 0.5f), new Color(0.3f, 0.45f, 0.25f), "Buildings/building_home_A_green", 180f);
+            House(new RectInt(121, 147, 6, 5), new Color(0.72f, 0.65f, 0.55f), new Color(0.3f, 0.35f, 0.55f), "Buildings/building_home_A_blue", 90f);
+            House(new RectInt(156, 159, 10, 8), new Color(0.75f, 0.73f, 0.68f), new Color(0.3f, 0.32f, 0.45f), "Buildings/building_church_blue", 180f);
+            House(new RectInt(150, 163, 6, 6), new Color(0.7f, 0.65f, 0.55f), new Color(0.25f, 0.3f, 0.5f), "Buildings/building_home_B_blue", 180f);
+            House(new RectInt(163, 148, 6, 6), new Color(0.7f, 0.64f, 0.55f), new Color(0.3f, 0.35f, 0.55f), "Buildings/building_home_B_blue", 270f);
+            House(new RectInt(120, 131, 7, 7), new Color(0.74f, 0.66f, 0.52f), new Color(0.55f, 0.25f, 0.2f), "Buildings/building_market_blue", 90f);
+            House(new RectInt(157, 130, 7, 6), new Color(0.6f, 0.55f, 0.5f), new Color(0.35f, 0.25f, 0.18f), "Buildings/building_blacksmith_blue", -90f);
 
             // Well in the middle of the plaza
-            if (Art("Buildings/building_well_blue", new Vector3(80.5f, 0, 80.5f), 2.3f, ArtLibrary.Fit.Width) == null)
+            if (Art("Buildings/building_well_blue", new Vector3(144.5f, 0, 144.5f), 2.3f, ArtLibrary.Fit.Width) == null)
             {
-                Factory.Prim(PrimitiveType.Cylinder, deco, new Vector3(80.5f, 0.5f, 80.5f), new Vector3(1.8f, 0.5f, 1.8f), new Color(0.5f, 0.48f, 0.45f));
-                Factory.Prim(PrimitiveType.Cylinder, deco, new Vector3(80.5f, 1.01f, 80.5f), new Vector3(1.4f, 0.01f, 1.4f), waterC);
+                Factory.Prim(PrimitiveType.Cylinder, deco, new Vector3(144.5f, 0.5f, 144.5f), new Vector3(1.8f, 0.5f, 1.8f), new Color(0.5f, 0.48f, 0.45f));
+                Factory.Prim(PrimitiveType.Cylinder, deco, new Vector3(144.5f, 1.01f, 144.5f), new Vector3(1.4f, 0.01f, 1.4f), waterC);
             }
-            grid.BlockRect(80, 80, 80, 80);
+            grid.BlockRect(144, 144, 144, 144);
 
             // Fountain on the north street
-            grid.BlockRect(79, 95, 81, 97);
-            if (Art("Town/fountain-round", new Vector3(80.5f, 0, 96.5f), 3.2f, ArtLibrary.Fit.Width) == null)
-                Factory.Prim(PrimitiveType.Cylinder, deco, new Vector3(80.5f, 0.4f, 96.5f), new Vector3(3f, 0.4f, 3f), new Color(0.55f, 0.53f, 0.5f));
+            grid.BlockRect(143, 159, 145, 161);
+            if (Art("Town/fountain-round", new Vector3(144.5f, 0, 160.5f), 3.2f, ArtLibrary.Fit.Width) == null)
+                Factory.Prim(PrimitiveType.Cylinder, deco, new Vector3(144.5f, 0.4f, 160.5f), new Vector3(3f, 0.4f, 3f), new Color(0.55f, 0.53f, 0.5f));
 
             // Market stalls west of the plaza
             for (int i = 0; i < 3; i++)
             {
-                var p = new Vector3(66.5f + i * 2f, 0, 74.5f);
+                var p = new Vector3(130.5f + i * 2f, 0, 138.5f);
                 grid.SetBlocked((int)p.x, (int)p.z, true);
                 if (Art(i % 2 == 0 ? "Town/stall-red" : "Town/stall-green", p, 1.8f, ArtLibrary.Fit.Width) != null) continue;
                 Factory.Prim(PrimitiveType.Cube, deco, p + Vector3.up * 0.4f, new Vector3(1.4f, 0.8f, 1f), wood);
@@ -396,48 +416,48 @@ namespace Shadowfall
             }
 
             // Farm plot (south-west) and Orla's animal pen (south-east): fenced, with a gap to walk in
-            FencedPlot(new RectInt(56, 55, 13, 7), 62, true, wood);
-            FencedPlot(new RectInt(99, 57, 6, 5), 101, false, wood);
+            FencedPlot(new RectInt(120, 119, 13, 7), 126, true, wood);
+            FencedPlot(new RectInt(163, 121, 6, 5), 165, false, wood);
 
             // Training yard (south): posts and banners
-            for (int y = 55; y < 62; y++)
-                for (int x = 84; x < 96; x++)
+            for (int y = 119; y < 126; y++)
+                for (int x = 148; x < 160; x++)
                     surface.Set(x, y, GroundSurface.Dirt, 0.8f);
-            foreach (var px in new[] { 86.5f, 89.5f, 92.5f })
+            foreach (var px in new[] { 150.5f, 153.5f, 156.5f })
             {
-                grid.SetBlocked((int)px, 58, true);
-                if (Art("Town/pillar-wood", new Vector3(px, 0, 58.5f), 2f, ArtLibrary.Fit.Height) == null)
-                    Factory.Prim(PrimitiveType.Cylinder, deco, new Vector3(px, 1f, 58.5f), new Vector3(0.4f, 1f, 0.4f), wood);
+                grid.SetBlocked((int)px, 122, true);
+                if (Art("Town/pillar-wood", new Vector3(px, 0, 122.5f), 2f, ArtLibrary.Fit.Height) == null)
+                    Factory.Prim(PrimitiveType.Cylinder, deco, new Vector3(px, 1f, 122.5f), new Vector3(0.4f, 1f, 0.4f), wood);
             }
 
             // ---- crafting stations and people
-            CraftingStation.Create(SkillType.Smithing, new Vector3(91.5f, 0, 66.5f), root);
-            CraftingStation.Create(SkillType.Cooking, new Vector3(74.5f, 0, 86.5f), root);
+            CraftingStation.Create(SkillType.Smithing, new Vector3(155.5f, 0, 130.5f), root);
+            CraftingStation.Create(SkillType.Cooking, new Vector3(138.5f, 0, 150.5f), root);
 
-            Npc.Create("Captain Aldric", "Captain of the Guard", NpcRole.QuestGiver, new Vector3(84.5f, 0, 104.5f), new Color(0.6f, 0.15f, 0.12f),
+            Npc.Create("Captain Aldric", "Captain of the Guard", NpcRole.QuestGiver, new Vector3(148.5f, 0, 168.5f), new Color(0.6f, 0.15f, 0.12f),
                 "Stay sharp, traveller. These are dark days for Hollowmere.", npcs, true, null, false);
-            Npc.Create("Forester Wren", "Woodcutting & Fishing", NpcRole.QuestGiver, new Vector3(75.5f, 0, 103.5f), new Color(0.25f, 0.45f, 0.2f),
+            Npc.Create("Forester Wren", "Woodcutting & Fishing", NpcRole.QuestGiver, new Vector3(139.5f, 0, 167.5f), new Color(0.25f, 0.45f, 0.2f),
                 "The forest provides, if you know how to ask.", npcs, false, null, false);
-            Npc.Create("Smith Gorrin", "Blacksmith", NpcRole.QuestGiver, new Vector3(90.5f, 0, 69.5f), new Color(0.35f, 0.3f, 0.28f),
+            Npc.Create("Smith Gorrin", "Blacksmith", NpcRole.QuestGiver, new Vector3(154.5f, 0, 133.5f), new Color(0.35f, 0.3f, 0.28f),
                 "Bring me ore and I'll teach you to work it.", npcs, true, null, false);
-            Npc.Create("Merchant Lysa", "General Goods", NpcRole.Vendor, new Vector3(64.5f, 0, 70.5f), new Color(0.55f, 0.3f, 0.6f),
+            Npc.Create("Merchant Lysa", "General Goods", NpcRole.Vendor, new Vector3(128.5f, 0, 134.5f), new Color(0.55f, 0.3f, 0.6f),
                 "Potions! Fresh potions! I also buy anything you drag out of those monsters.", npcs, false, null, false).SellsAs(VendorKind.General);
-            Npc.Create("Sister Mae", "Healer", NpcRole.Healer, new Vector3(96.5f, 0, 92.5f), new Color(0.9f, 0.9f, 0.85f),
+            Npc.Create("Sister Mae", "Healer", NpcRole.Healer, new Vector3(160.5f, 0, 156.5f), new Color(0.9f, 0.9f, 0.85f),
                 "The Light watches over you, child. Let me tend your wounds.", npcs, false, null, false);
-            Npc.Create("Thomas", "Farmer", NpcRole.QuestGiver, new Vector3(70.5f, 0, 59.5f), new Color(0.45f, 0.55f, 0.3f),
+            Npc.Create("Thomas", "Farmer", NpcRole.QuestGiver, new Vector3(134.5f, 0, 123.5f), new Color(0.45f, 0.55f, 0.3f),
                 "Morning! Don't mind the mud. Bandits ran off with half my harvest again.", npcs, false, false, false);
-            Npc.Create("Jenkins", "Butler of Automation", NpcRole.QuestGiver, new Vector3(88.5f, 0, 90.5f), new Color(0.08f, 0.08f, 0.1f),
+            Npc.Create("Jenkins", "Butler of Automation", NpcRole.QuestGiver, new Vector3(152.5f, 0, 154.5f), new Color(0.08f, 0.08f, 0.1f),
                 "Good day. I have taken the liberty of automating the village. Nearly all of it. The rest is merely failing.", npcs, false, false, false)
                 .DressAsButler();
-            Npc.Create("Armorer Brann", "Armor", NpcRole.Vendor, new Vector3(98.5f, 0, 74.5f), new Color(0.45f, 0.42f, 0.4f),
+            Npc.Create("Armorer Brann", "Armor", NpcRole.Vendor, new Vector3(162.5f, 0, 138.5f), new Color(0.45f, 0.42f, 0.4f),
                 "Helms, mail, boots. Everything a body needs to stay a body.", npcs, true, false, false).SellsAs(VendorKind.Armor);
-            Npc.Create("Weaponsmith Hilda", "Weapons", NpcRole.Vendor, new Vector3(90.5f, 0, 75.5f), new Color(0.55f, 0.3f, 0.2f),
+            Npc.Create("Weaponsmith Hilda", "Weapons", NpcRole.Vendor, new Vector3(154.5f, 0, 139.5f), new Color(0.55f, 0.3f, 0.2f),
                 "Looking for something with an edge? You've come to the right woman.", npcs, true, false, false).SellsAs(VendorKind.Weapons);
-            Npc.Create("Innkeeper Rosie", "Food & Drink", NpcRole.Vendor, new Vector3(66.5f, 0, 91.5f), new Color(0.75f, 0.45f, 0.35f),
+            Npc.Create("Innkeeper Rosie", "Food & Drink", NpcRole.Vendor, new Vector3(130.5f, 0, 155.5f), new Color(0.75f, 0.45f, 0.35f),
                 "Welcome to the Prancing Boar! Sit, eat, drink, and don't start any fights.", npcs, false, true, false).SellsAs(VendorKind.Food);
-            Npc.Create("Curio Dealer Vex", "Rings & Amulets", NpcRole.Vendor, new Vector3(71.5f, 0, 70.5f), new Color(0.3f, 0.2f, 0.45f),
+            Npc.Create("Curio Dealer Vex", "Rings & Amulets", NpcRole.Vendor, new Vector3(135.5f, 0, 134.5f), new Color(0.3f, 0.2f, 0.45f),
                 "Trinkets with a past. Some of them even have a future.", npcs, false, true, false).SellsAs(VendorKind.Curios);
-            Npc.Create("Beastmaster Orla", "Companions for Hire", NpcRole.Vendor, new Vector3(102.5f, 0, 64.5f), new Color(0.4f, 0.3f, 0.2f),
+            Npc.Create("Beastmaster Orla", "Companions for Hire", NpcRole.Vendor, new Vector3(166.5f, 0, 128.5f), new Color(0.4f, 0.3f, 0.2f),
                 "Hounds, blades, spells and stone. Nobody should walk these roads alone.", npcs, false, false, false).SellsAs(VendorKind.Companions);
 
             if (art)
@@ -445,15 +465,15 @@ namespace Shadowfall
                 // Lantern posts around the plaza and along the streets (visual only).
                 var posts = new System.Collections.Generic.List<Vector3>
                 {
-                    new Vector3(71.6f, 0, 71.6f), new Vector3(89.4f, 0, 71.6f), new Vector3(71.6f, 0, 89.4f), new Vector3(89.4f, 0, 89.4f),
-                    new Vector3(77.6f, 0, 77.6f), new Vector3(83.4f, 0, 77.6f), new Vector3(77.6f, 0, 83.4f), new Vector3(83.4f, 0, 83.4f),
+                    new Vector3(135.6f, 0, 135.6f), new Vector3(153.4f, 0, 135.6f), new Vector3(135.6f, 0, 153.4f), new Vector3(153.4f, 0, 153.4f),
+                    new Vector3(141.6f, 0, 141.6f), new Vector3(147.4f, 0, 141.6f), new Vector3(141.6f, 0, 147.4f), new Vector3(147.4f, 0, 147.4f),
                 };
-                foreach (float d in new[] { 57.5f, 65.5f, 93.5f, 102.5f })
+                foreach (float d in new[] { 121.5f, 129.5f, 157.5f, 166.5f })
                 {
-                    posts.Add(new Vector3(77.4f, 0, d));
-                    posts.Add(new Vector3(83.6f, 0, d));
-                    posts.Add(new Vector3(d, 0, 77.4f));
-                    posts.Add(new Vector3(d, 0, 83.6f));
+                    posts.Add(new Vector3(141.4f, 0, d));
+                    posts.Add(new Vector3(147.6f, 0, d));
+                    posts.Add(new Vector3(d, 0, 141.4f));
+                    posts.Add(new Vector3(d, 0, 147.6f));
                 }
                 foreach (var lp in posts)
                 {
@@ -467,20 +487,20 @@ namespace Shadowfall
                     l.intensity = 1.4f;
                     NightLight.Add(l, 0.15f);
                 }
-                Art("Town/cart", new Vector3(68.5f, 0, 77.0f), 2.2f, ArtLibrary.Fit.Width, 35f);
-                Art("Props/barrel_small_stack", new Vector3(63.5f, 0, 75.6f), 1.0f);
-                Art("Props/box_stacked", new Vector3(73.4f, 0, 75.0f), 1.0f, ArtLibrary.Fit.Height, 15f);
-                Art("Props/barrel_large", new Vector3(89.0f, 0, 66.6f), 0.9f);
-                Art("Props/crates_stacked", new Vector3(91.0f, 0, 72.6f), 1.1f, ArtLibrary.Fit.Height, 20f);
-                Art("Props/barrel_large", new Vector3(94.5f, 0, 56.0f), 1f);
-                Art("Town/banner-red", new Vector3(96.0f, 0, 61.0f), 3f, ArtLibrary.Fit.Height, 270f);
-                Art("Props/barrel_small_stack", new Vector3(65.5f, 0, 88.0f), 1.0f);
-                Art("Town/hedge", new Vector3(91.5f, 0, 93.5f), 1.2f, ArtLibrary.Fit.Height, 90f);
+                Art("Town/cart", new Vector3(132.5f, 0, 141.0f), 2.2f, ArtLibrary.Fit.Width, 35f);
+                Art("Props/barrel_small_stack", new Vector3(127.5f, 0, 139.6f), 1.0f);
+                Art("Props/box_stacked", new Vector3(137.4f, 0, 139.0f), 1.0f, ArtLibrary.Fit.Height, 15f);
+                Art("Props/barrel_large", new Vector3(153.0f, 0, 130.6f), 0.9f);
+                Art("Props/crates_stacked", new Vector3(155.0f, 0, 136.6f), 1.1f, ArtLibrary.Fit.Height, 20f);
+                Art("Props/barrel_large", new Vector3(158.5f, 0, 120.0f), 1f);
+                Art("Town/banner-red", new Vector3(160.0f, 0, 125.0f), 3f, ArtLibrary.Fit.Height, 270f);
+                Art("Props/barrel_small_stack", new Vector3(129.5f, 0, 152.0f), 1.0f);
+                Art("Town/hedge", new Vector3(155.5f, 0, 157.5f), 1.2f, ArtLibrary.Fit.Height, 90f);
                 // Banners by the gates
-                Art("Town/banner-green", new Vector3(76.6f, 0, Town.yMax - 2.5f), 3f, ArtLibrary.Fit.Height, 180f);
-                Art("Town/banner-green", new Vector3(84.4f, 0, Town.yMax - 2.5f), 3f, ArtLibrary.Fit.Height, 180f);
-                Art("Town/banner-red", new Vector3(76.6f, 0, Town.yMin + 2.5f), 3f, ArtLibrary.Fit.Height, 0f);
-                Art("Town/banner-red", new Vector3(84.4f, 0, Town.yMin + 2.5f), 3f, ArtLibrary.Fit.Height, 0f);
+                Art("Town/banner-green", new Vector3(140.6f, 0, Town.yMax - 2.5f), 3f, ArtLibrary.Fit.Height, 180f);
+                Art("Town/banner-green", new Vector3(148.4f, 0, Town.yMax - 2.5f), 3f, ArtLibrary.Fit.Height, 180f);
+                Art("Town/banner-red", new Vector3(140.6f, 0, Town.yMin + 2.5f), 3f, ArtLibrary.Fit.Height, 0f);
+                Art("Town/banner-red", new Vector3(148.4f, 0, Town.yMin + 2.5f), 3f, ArtLibrary.Fit.Height, 0f);
             }
         }
 
@@ -551,22 +571,23 @@ namespace Shadowfall
 
         void BuildForest()
         {
-            for (int y = 96; y < H - 5; y++)
+            int forestFrom = MapI(96);
+            for (int y = forestFrom; y < H - 5; y++)
                 for (int x = 5; x < W - 5; x++)
                 {
-                    float dx = x - 80f, dz = y - 80f;
+                    float dx = x - Center, dz = y - Center;
                     if (Mathf.Abs(dz) < Mathf.Abs(dx) * 0.8f) continue;
                     float density = 0.05f + Mathf.PerlinNoise(x * 0.08f, y * 0.08f) * 0.08f;
                     if (Random.value > density || !Free(x, y) || !SpacedFrom(x, y, 1)) continue;
-                    int tier = y < 115 ? 0 : y < 136 ? (Random.value < 0.7f ? 1 : 0) : (Random.value < 0.6f ? 2 : 1);
+                    int tier = y < Map(115) ? 0 : y < Map(136) ? (Random.value < 0.7f ? 1 : 0) : (Random.value < 0.6f ? 2 : 1);
                     ResourceNode.Create(ResourceKind.Tree, tier, new Vector3(x + 0.5f, 0, y + 0.5f), nodes);
                     Paint(x, y, pixels[Idx(x, y)] * 0.7f);
                     surface.Set(x, y, GroundSurface.Forest, 0.6f);
                 }
             // Scattered decorative pines elsewhere
-            for (int i = 0; i < 260; i++)
+            for (int i = 0; i < 700; i++)
             {
-                int x = Random.Range(6, W - 6), y = Random.Range(6, 96);
+                int x = Random.Range(6, W - 6), y = Random.Range(6, forestFrom);
                 if (!Free(x, y) || !SpacedFrom(x, y, 2) || InCrypt(new Vector3(x, 0, y))) continue;
                 if (ZoneAt(new Vector3(x, 0, y)) == "Ironvein Quarry" && Random.value < 0.7f) continue;
                 Pine(new Vector3(x + 0.5f, 0, y + 0.5f), ZoneAt(new Vector3(x, 0, y)) == "Forsaken Graveyard");
@@ -607,7 +628,12 @@ namespace Shadowfall
 
         void BuildGoblinCamp()
         {
-            var center = new Vector3(128.5f, 0, 80.5f);
+            GoblinCamp(new Vector3(MapI(128) + 0.5f, 0, MapI(80) + 0.5f));
+            GoblinCamp(new Vector3(MapI(146) + 0.5f, 0, MapI(104) + 0.5f));
+        }
+
+        void GoblinCamp(Vector3 center)
+        {
             var hide = new Color(0.55f, 0.42f, 0.28f);
             for (int i = 0; i < 7; i++)
             {
@@ -650,11 +676,12 @@ namespace Shadowfall
         void BuildGraveyard()
         {
             var stone = new Color(0.55f, 0.55f, 0.55f);
-            for (int row = 0; row < 6; row++)
-                for (int col = 0; col < 12; col++)
+            int gx = (int)Center - 26, gy = MapI(30);
+            for (int row = 0; row < 11; row++)
+                for (int col = 0; col < 18; col++)
                 {
-                    if (col == 5 || col == 6) continue; // aisle for the road
-                    int x = 64 + col * 3 + Random.Range(0, 2), y = 30 + row * 4 + Random.Range(0, 2);
+                    if (col == 8 || col == 9) continue; // aisle for the road
+                    int x = gx + col * 3 + Random.Range(0, 2), y = gy + row * 4 + Random.Range(0, 2);
                     if (!Free(x, y)) continue;
                     var p = new Vector3(x + 0.5f, 0, y + 0.5f);
                     bool cross = Random.value < 0.3f;
@@ -692,7 +719,7 @@ namespace Shadowfall
                     surface.Tint(x, y, new Color(0.55f, 0.55f, 0.65f));
                     Reserve(x, y);
                     bool edge = x == Crypt.xMin || x == Crypt.xMax - 1 || y == Crypt.yMin || y == Crypt.yMax - 1;
-                    if (!edge || (y == Crypt.yMax - 1 && x >= 78 && x <= 82)) continue;
+                    if (!edge || (y == Crypt.yMax - 1 && x >= 142 && x <= 146)) continue;
                     grid.SetBlocked(x, y, true);
                     float shade = (x + y) % 2 == 0 ? Random.Range(0.85f, 1.1f) : 1f;
                     bool sideX = y == Crypt.yMin || y == Crypt.yMax - 1;
@@ -703,7 +730,7 @@ namespace Shadowfall
                 }
             // pillars and braziers
             var fire = new Color(0.3f, 0.85f, 1f);
-            foreach (var p in new[] { new Vector3(74.5f, 0, 18.5f), new Vector3(86.5f, 0, 18.5f), new Vector3(74.5f, 0, 9.5f), new Vector3(86.5f, 0, 9.5f) })
+            foreach (var p in new[] { new Vector3(138.5f, 0, 23.5f), new Vector3(150.5f, 0, 23.5f), new Vector3(138.5f, 0, 14.5f), new Vector3(150.5f, 0, 14.5f) })
             {
                 if (Art("Graveyard/pillar-large", p, 3f, ArtLibrary.Fit.Height) != null)
                     Art("Graveyard/fire-basket", p + Vector3.up * 3f, 0.7f, ArtLibrary.Fit.Height, 0f, false);
@@ -721,33 +748,33 @@ namespace Shadowfall
                 grid.SetBlocked((int)p.x, (int)p.z, true);
             }
             // throne
-            if (Art("Graveyard/altar-stone", new Vector3(80.5f, 0, 6.2f), 4.5f, ArtLibrary.Fit.Width) != null)
+            if (Art("Graveyard/altar-stone", new Vector3(144.5f, 0, 11.2f), 4.5f, ArtLibrary.Fit.Width) != null)
             {
-                Art("Graveyard/candle-multiple", new Vector3(77.8f, 0, 7.4f), 0.8f, ArtLibrary.Fit.Height, 0f, false);
-                Art("Graveyard/candle-multiple", new Vector3(83.2f, 0, 7.4f), 0.8f, ArtLibrary.Fit.Height, 90f, false);
-                Art("Graveyard/coffin", new Vector3(73.5f, 0, 6.5f), 2f, ArtLibrary.Fit.Width, 90f);
-                Art("Graveyard/coffin", new Vector3(87.5f, 0, 6.5f), 2f, ArtLibrary.Fit.Width, 90f);
+                Art("Graveyard/candle-multiple", new Vector3(141.8f, 0, 12.4f), 0.8f, ArtLibrary.Fit.Height, 0f, false);
+                Art("Graveyard/candle-multiple", new Vector3(147.2f, 0, 12.4f), 0.8f, ArtLibrary.Fit.Height, 90f, false);
+                Art("Graveyard/coffin", new Vector3(137.5f, 0, 11.5f), 2f, ArtLibrary.Fit.Width, 90f);
+                Art("Graveyard/coffin", new Vector3(151.5f, 0, 11.5f), 2f, ArtLibrary.Fit.Width, 90f);
             }
-            else Factory.Prim(PrimitiveType.Cube, deco, new Vector3(80.5f, 0.3f, 6.5f), new Vector3(5f, 0.6f, 2f), wall * 1.2f);
-            Factory.Prim(PrimitiveType.Cube, deco, new Vector3(80.5f, 2f, 5.5f), new Vector3(2f, 3.5f, 0.6f), new Color(0.25f, 0.1f, 0.35f));
-            grid.BlockRect(78, 5, 83, 6);
+            else Factory.Prim(PrimitiveType.Cube, deco, new Vector3(144.5f, 0.3f, 11.5f), new Vector3(5f, 0.6f, 2f), wall * 1.2f);
+            Factory.Prim(PrimitiveType.Cube, deco, new Vector3(144.5f, 2f, 10.5f), new Vector3(2f, 3.5f, 0.6f), new Color(0.25f, 0.1f, 0.35f));
+            grid.BlockRect(142, 10, 147, 11);
         }
 
         void BuildQuarry()
         {
             for (int y = 8; y < H - 8; y++)
-                for (int x = 6; x < 64; x++)
+                for (int x = 6; x < MapI(64); x++)
                 {
-                    float dx = x - 80f, dz = y - 80f;
+                    float dx = x - Center, dz = y - Center;
                     if (Mathf.Abs(dx) < Mathf.Abs(dz) * 0.9f) continue;
                     if (Random.value > 0.035f || !Free(x, y) || !SpacedFrom(x, y, 1)) continue;
-                    int tier = x > 42 ? 0 : x > 22 ? (Random.value < 0.75f ? 1 : 0) : (Random.value < 0.6f ? 2 : 1);
+                    int tier = x > Map(42) ? 0 : x > Map(22) ? (Random.value < 0.75f ? 1 : 0) : (Random.value < 0.6f ? 2 : 1);
                     ResourceNode.Create(ResourceKind.Rock, tier, new Vector3(x + 0.5f, 0, y + 0.5f), nodes);
                 }
             // Big boulders
-            for (int i = 0; i < 40; i++)
+            for (int i = 0; i < 110; i++)
             {
-                int x = Random.Range(8, 60), y = Random.Range(40, 120);
+                int x = Random.Range(8, MapI(60)), y = Random.Range(MapI(40), MapI(120));
                 if (ZoneAt(new Vector3(x, 0, y)) != "Ironvein Quarry" || !Free(x, y) || !SpacedFrom(x, y, 2)) continue;
                 float s = Random.Range(1.5f, 2.6f);
                 float shade = Random.Range(0.85f, 1.1f);
@@ -808,6 +835,9 @@ namespace Shadowfall
                 for (int x = 5; x < W - 5; x++)
                 {
                     if (!Free(x, y)) continue;
+                    // The world is big: thin out the small props far from the village to keep the object count sane.
+                    float far = Mathf.Max(Mathf.Abs(x - Center), Mathf.Abs(y - Center));
+                    if (far > 60f && vr.NextDouble() < Mathf.Lerp(0.35f, 0.6f, (far - 60f) / 80f)) continue;
                     var p = new Vector3(x + (float)vr.NextDouble(), 0, y + (float)vr.NextDouble());
                     string zone = ZoneAt(p);
                     double r = vr.NextDouble();

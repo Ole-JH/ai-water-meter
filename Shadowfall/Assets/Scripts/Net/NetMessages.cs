@@ -116,5 +116,6 @@ namespace Shadowfall
         public SlotSave[] stash;
         public string[] companions;   // hired companion ids
         public string companion;      // the one following (empty = none)
+        public int wv;                // WorldGenerator.LayoutVersion when saved (older positions get converted)
     }
 }

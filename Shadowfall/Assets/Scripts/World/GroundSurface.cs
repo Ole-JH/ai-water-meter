@@ -351,7 +351,10 @@ namespace Shadowfall
                             if (x < 4 || z < 4 || x >= W - 4 || z >= H - 4 || grid.IsBlocked(x, z)) continue;
                             // Patchy meadows: dense clumps and bare spots.
                             float patch = Mathf.Clamp01(Mathf.PerlinNoise(x * 0.09f + 3.1f, z * 0.09f + 8.7f) * 1.7f - 0.35f);
-                            int tufts = (int)(5f * patch + rng.NextDouble());
+                            // Thinner far from the village: the world is large and grass is mostly seen up close in town and on the roads.
+                            float far = Mathf.Max(Mathf.Abs(x - W * 0.5f), Mathf.Abs(z - H * 0.5f));
+                            float keep = far < 60f ? 1f : Mathf.Lerp(1f, 0.45f, (far - 60f) / 80f);
+                            int tufts = (int)(5f * patch * keep + rng.NextDouble());
                             for (int t = 0; t < tufts; t++)
                             {
                                 float px = x + (float)rng.NextDouble(), pz = z + (float)rng.NextDouble();

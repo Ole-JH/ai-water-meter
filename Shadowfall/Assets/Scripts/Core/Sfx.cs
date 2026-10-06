@@ -190,7 +190,7 @@ namespace Shadowfall
         {
             var p = Player.I;
             var cam = GameManager.I != null ? GameManager.I.Cam : null;
-            var pos = p != null ? p.transform.position : new Vector3(80f, 0f, 80f);
+            var pos = p != null ? p.transform.position : new Vector3(WorldGenerator.Center, 0f, WorldGenerator.Center);
             ears.position = pos + Vector3.up * 1.6f;
             if (cam != null) ears.rotation = Quaternion.Euler(0f, cam.transform.eulerAngles.y, 0f);
 
