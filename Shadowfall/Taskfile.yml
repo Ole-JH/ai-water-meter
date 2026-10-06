@@ -1,0 +1,166 @@
+# Shadowfall task runner — https://taskfile.dev
+# Install: https://taskfile.dev/installation/   then run `task` to list everything.
+version: "3"
+
+vars:
+  SERVER_DIR: server
+  # Path to the Unity editor binary, e.g.
+  #   macOS:   /Applications/Unity/Hub/Editor/6000.0.23f1/Unity.app/Contents/MacOS/Unity
+  #   Windows: C:/Program Files/Unity/Hub/Editor/6000.0.23f1/Editor/Unity.exe
+  #   Linux:   ~/Unity/Hub/Editor/6000.0.23f1/Editor/Unity
+  UNITY: '{{.UNITY_PATH | default "unity"}}'
+  MKDOCS_IMAGE: squidfunk/mkdocs-material:9
+  DOCS_PORT: '{{.DOCS_PORT | default "8000"}}'
+
+tasks:
+  default:
+    desc: List all tasks
+    silent: true
+    cmds:
+      - task --list
+
+  # ---------------------------------------------------------------- setup
+
+  setup:
+    desc: Install everything needed for local development (server deps)
+    cmds:
+      - task: server:install
+
+  # ---------------------------------------------------------------- server
+
+  server:install:
+    desc: Install the Node.js server dependencies
+    dir: "{{.SERVER_DIR}}"
+    sources: [package.json, package-lock.json]
+    cmds:
+      - npm ci
+
+  server:dev:
+    desc: Run the game server locally with auto-reload (http://localhost:8080)
+    dir: "{{.SERVER_DIR}}"
+    deps: [server:install]
+    env:
+      PORT: '{{.PORT | default "8080"}}'
+      DATA_DIR: ./data
+    cmds:
+      - npm run dev
+
+  server:test:
+    desc: Run the server end-to-end smoke test (spins up a throwaway server)
+    dir: "{{.SERVER_DIR}}"
+    deps: [server:install]
+    cmds:
+      - npm test
+
+  # ---------------------------------------------------------------- client (Unity)
+
+  client:check:
+    desc: Compile the game scripts with the .NET SDK (no Unity needed)
+    cmds:
+      - dotnet build tools/compile-check -nologo -clp:NoSummary
+
+  client:build:
+    desc: Headless Unity WebGL build into server/public (set UNITY_PATH to your Unity editor)
+    cmds:
+      - '"{{.UNITY}}" -batchmode -quit -nographics -projectPath "{{.ROOT_DIR}}" -buildTarget WebGL -executeMethod Shadowfall.EditorTools.ShadowfallBuild.BuildWebGL -logFile -'
+
+  # ---------------------------------------------------------------- docker
+
+  up:
+    desc: Build and start the server container in the background (http://localhost:8080)
+    dir: "{{.SERVER_DIR}}"
+    cmds:
+      - docker compose up -d --build
+      - echo "Shadowfall is running on http://localhost:8080"
+
+  down:
+    desc: Stop the server container
+    dir: "{{.SERVER_DIR}}"
+    cmds:
+      - docker compose down
+
+  restart:
+    desc: Restart the server container (e.g. after a new WebGL build)
+    dir: "{{.SERVER_DIR}}"
+    cmds:
+      - docker compose restart
+
+  logs:
+    desc: Follow the server logs
+    dir: "{{.SERVER_DIR}}"
+    cmds:
+      - docker compose logs -f --tail=100
+
+  ps:
+    desc: Show container status and health
+    dir: "{{.SERVER_DIR}}"
+    cmds:
+      - docker compose ps
+      - curl -fsS http://localhost:8080/healthz && echo
+
+  docker:build:
+    desc: Build the server image only (tag shadowfall-server:latest)
+    dir: "{{.SERVER_DIR}}"
+    cmds:
+      - docker build -t shadowfall-server:latest .
+
+  deploy:
+    desc: Full release - build the WebGL client, then rebuild and restart the container
+    cmds:
+      - task: client:build
+      - task: up
+
+  # ---------------------------------------------------------------- data
+
+  world:reset:
+    desc: Forget the uploaded world map (do this after changing world generation)
+    prompt: This deletes server/data/world.json. Characters are kept. Continue?
+    cmds:
+      - rm -f {{.SERVER_DIR}}/data/world.json
+      - echo "World map removed. Restart the server; the next client to log in uploads the new map."
+
+  backup:
+    desc: Archive server/data (accounts, characters, world) into backups/
+    vars:
+      STAMP:
+        sh: date +%Y%m%d-%H%M%S
+    cmds:
+      - mkdir -p backups
+      - tar -czf backups/shadowfall-data-{{.STAMP}}.tar.gz -C {{.SERVER_DIR}} data
+      - echo "Wrote backups/shadowfall-data-{{.STAMP}}.tar.gz"
+
+  # ---------------------------------------------------------------- docs
+
+  docs:serve:
+    desc: Preview the documentation site with live reload (http://localhost:8000)
+    cmds:
+      - |
+        if command -v mkdocs >/dev/null 2>&1; then
+          mkdocs serve -a 0.0.0.0:{{.DOCS_PORT}}
+        else
+          docker run --rm -it -p {{.DOCS_PORT}}:8000 -v "{{.ROOT_DIR}}:/docs" {{.MKDOCS_IMAGE}}
+        fi
+
+  docs:build:
+    desc: Build the static documentation site into site/
+    cmds:
+      - |
+        if command -v mkdocs >/dev/null 2>&1; then
+          mkdocs build --strict
+        else
+          docker run --rm -v "{{.ROOT_DIR}}:/docs" {{.MKDOCS_IMAGE}} build --strict
+        fi
+
+  docs:install:
+    desc: Install mkdocs-material locally with pip (optional - docs tasks fall back to Docker)
+    cmds:
+      - pip install -r docs/requirements.txt
+
+  # ---------------------------------------------------------------- CI
+
+  ci:
+    desc: Everything that can run without Unity - server tests, C# compile check, docs build
+    cmds:
+      - task: server:test
+      - task: client:check
+      - task: docs:build

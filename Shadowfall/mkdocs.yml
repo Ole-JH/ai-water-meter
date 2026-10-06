@@ -1,0 +1,86 @@
+site_name: Shadowfall
+site_description: An online, browser-playable top-down action RPG built with Unity — Diablo meets WoW meets RuneScape.
+docs_dir: docs
+site_dir: site
+
+theme:
+  name: material
+  icon:
+    logo: material/sword-cross
+  favicon: assets/favicon.svg
+  palette:
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: deep orange
+      accent: amber
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: deep orange
+      accent: amber
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - navigation.indexes
+    - navigation.footer
+    - search.highlight
+    - search.suggest
+    - content.code.copy
+    - content.tabs.link
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.keys
+  - pymdownx.snippets
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+
+nav:
+  - Home: index.md
+  - Getting started:
+      - Quick start: getting-started/quickstart.md
+      - Unity project: getting-started/unity.md
+  - Gameplay:
+      - Controls: gameplay/controls.md
+      - The world: gameplay/world.md
+      - Items & progression: gameplay/progression.md
+  - Deployment:
+      - Docker: deployment/docker.md
+      - HTTPS & reverse proxy: deployment/reverse-proxy.md
+      - Operations: deployment/operations.md
+  - Architecture:
+      - Overview: architecture/overview.md
+      - Network protocol: architecture/protocol.md
+      - Code map: architecture/code-map.md
+  - Development:
+      - Taskfile commands: development/taskfile.md
+      - Extending the game: development/extending.md
+      - Testing: development/testing.md
+  - Troubleshooting: troubleshooting.md

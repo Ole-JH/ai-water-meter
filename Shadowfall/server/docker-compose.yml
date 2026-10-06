@@ -1,0 +1,11 @@
+services:
+  shadowfall:
+    build: .
+    container_name: shadowfall
+    restart: unless-stopped
+    ports:
+      - "8080:8080"          # open http://your-server:8080 in a browser
+    volumes:
+      - ./data:/data         # accounts, characters and the world map
+      - ./public:/app/public:ro   # the Unity WebGL build
+    stop_grace_period: 10s
