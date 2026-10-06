@@ -103,8 +103,13 @@ namespace Shadowfall.EditorTools
         /// (-nographics) there is no GPU, so the pixels are lost and every model renders white.
         /// Readable textures keep a CPU copy that gets saved with the asset.
         /// </summary>
+        // Bump to force one re-import of every model (e.g. after fixing something that broke their textures).
+        const string ArtImportVersion = "2-imageconversion";
+
         static void MakeModelTexturesReadable()
         {
+            string marker = Path.GetFullPath(Path.Combine(Application.dataPath, "..", "Library", "ShadowfallArtImport.txt"));
+            bool forceAll = !File.Exists(marker) || File.ReadAllText(marker).Trim() != ArtImportVersion;
             int changed = 0;
             AssetDatabase.StartAssetEditing();
             try
@@ -117,10 +122,14 @@ namespace Shadowfall.EditorTools
                     if (importer == null) continue;
                     var so = new SerializedObject(importer);
                     var readable = so.FindProperty("importSettings.texturesReadable");
-                    if (readable == null || readable.boolValue) continue;
-                    readable.boolValue = true;
-                    so.ApplyModifiedPropertiesWithoutUndo();
-                    importer.SaveAndReimport();
+                    bool needsReadable = readable != null && !readable.boolValue;
+                    if (!needsReadable && !forceAll) continue;
+                    if (needsReadable)
+                    {
+                        readable.boolValue = true;
+                        so.ApplyModifiedPropertiesWithoutUndo();
+                    }
+                    AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
                     changed++;
                 }
             }
@@ -128,6 +137,7 @@ namespace Shadowfall.EditorTools
             {
                 AssetDatabase.StopAssetEditing();
             }
+            File.WriteAllText(marker, ArtImportVersion);
             if (changed > 0) Debug.Log("[Shadowfall] Re-imported " + changed + " models with readable textures.");
         }
     }
