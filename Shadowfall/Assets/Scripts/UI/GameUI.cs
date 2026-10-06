@@ -185,6 +185,7 @@ namespace Shadowfall
                 return;
             }
 
+            DrawVignette();
             DrawWorldOverlays(p);
             DrawFloatingText();
             DrawUnitFrames(p);
@@ -298,6 +299,33 @@ namespace Shadowfall
             var sp = GameManager.I.Cam.WorldToScreenPoint(world);
             gui = new Vector2(sp.x / scale, (Screen.height - sp.y) / scale);
             return sp.z > 0f;
+        }
+
+        static Texture2D vignette;
+
+        /// <summary>Darkened screen edges, Diablo style. Stronger at night.</summary>
+        void DrawVignette()
+        {
+            if (Event.current.type != EventType.Repaint) return;
+            if (vignette == null)
+            {
+                const int n = 128;
+                vignette = new Texture2D(n, n, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp, name = "Vignette" };
+                var px = new Color32[n * n];
+                for (int y = 0; y < n; y++)
+                    for (int x = 0; x < n; x++)
+                    {
+                        float dx = (x + 0.5f) / n * 2f - 1f, dy = (y + 0.5f) / n * 2f - 1f;
+                        float d = Mathf.Sqrt(dx * dx * 0.8f + dy * dy);
+                        float a = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.55f, 1.35f, d));
+                        px[y * n + x] = new Color(0f, 0f, 0.02f, a);
+                    }
+                vignette.SetPixels32(px);
+                vignette.Apply();
+            }
+            GUI.color = new Color(1f, 1f, 1f, Mathf.Lerp(0.55f, 0.85f, DayNight.Night));
+            GUI.DrawTexture(new Rect(0, 0, VW, VH), vignette, ScaleMode.StretchToFill);
+            GUI.color = Color.white;
         }
 
         void Plate(Rect r, float frac, Color c)
@@ -578,7 +606,7 @@ namespace Shadowfall
         void DrawMinimap(Player p)
         {
             const float size = 200, span = 60;
-            var frame = new Rect(VW - size - 34, 12, size + 22, size + 92);
+            var frame = new Rect(VW - size - 34, 12, size + 22, size + 116);
             UISkin.Box(frame, UISkin.Panel);
             Block(frame);
             var r = new Rect(frame.x + 11, frame.y + 11, size, size);
@@ -607,6 +635,9 @@ namespace Shadowfall
             UISkin.Shadowed(new Rect(frame.x + 44, r.yMax + 40, 100, 24), p.Gold.ToString(), UISkin.Label, new Color(1f, 0.85f, 0.3f));
             UISkin.Shadowed(new Rect(frame.x + 16, r.yMax + 40, frame.width - 32, 24), net.PlayersOnline + " online",
                 new GUIStyle(UISkin.Small) { alignment = TextAnchor.MiddleRight }, UISkin.Muted);
+            bool dark = DayNight.Night > 0.5f;
+            UISkin.Shadowed(new Rect(frame.x + 16, r.yMax + 64, frame.width - 32, 22), DayNight.Phase + "   " + DayNight.Clock,
+                new GUIStyle(UISkin.Small) { alignment = TextAnchor.MiddleCenter }, dark ? new Color(0.65f, 0.75f, 1f) : new Color(1f, 0.85f, 0.5f));
         }
 
         void Dot(Rect clip, Vector2 pos, Color c, float size)
@@ -622,7 +653,7 @@ namespace Shadowfall
         void DrawQuestTracker(Player p)
         {
             if (p.Quests.Active.Count == 0) return;
-            float x = VW - 330, y = 318;
+            float x = VW - 330, y = 342;
             UISkin.Shadowed(new Rect(x, y, 300, 26), "Quests", UISkin.Heading, UISkin.Gold);
             y += 28;
             foreach (var q in p.Quests.Active)

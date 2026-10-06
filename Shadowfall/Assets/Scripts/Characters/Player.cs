@@ -285,7 +285,9 @@ namespace Shadowfall
                 if (view == null) model?.CastPose(Mathf.Clamp01(castAnim));
                 if (castAnim >= 1f) castAnim = -1f;
             }
-            torch.intensity = 1.5f + Mathf.PerlinNoise(Time.time * 3f, 0f) * 0.4f;
+            // Brighter and wider at night: the hero's torch is the main light source in the dark.
+            torch.intensity = (1.5f + Mathf.PerlinNoise(Time.time * 3f, 0f) * 0.4f) * Mathf.Lerp(0.6f, 1.3f, DayNight.Night);
+            torch.range = Mathf.Lerp(11f, 16f, DayNight.Night);
         }
 
         void UpdateHover()

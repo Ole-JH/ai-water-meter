@@ -12,7 +12,17 @@
 | ++"Right click"++ (hold) | Fireball toward the cursor |
 | ++1++ – ++5++ | Abilities: Cleave, Fireball, Frost Nova, Holy Light, Meteor |
 | ++q++ / ++e++ | Drink a health / mana potion |
-| Mouse wheel | Zoom |
+
+## Camera
+
+| Input | Action |
+| --- | --- |
+| Mouse wheel | Zoom in and out |
+| ++"Middle mouse"++ drag | Rotate (side to side) and tilt (up and down) |
+| ++arrow-left++ / ++arrow-right++ | Rotate |
+| ++arrow-up++ / ++arrow-down++ | Tilt |
+| ++w++ ++a++ ++s++ ++d++ | Pan the camera away from your hero (up to 30 m) |
+| ++space++ | Back to the classic Diablo view, centered on your hero |
 
 ## Windows
 

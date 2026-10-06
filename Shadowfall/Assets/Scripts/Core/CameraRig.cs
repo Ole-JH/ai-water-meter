@@ -2,13 +2,27 @@ using UnityEngine;
 
 namespace Shadowfall
 {
-    /// <summary>Diablo-style high-angle follow camera with scroll-wheel zoom and screen shake.</summary>
+    /// <summary>
+    /// Diablo-style high-angle follow camera that the player can also steer freely:
+    /// mouse wheel zooms, middle mouse drag (or the arrow keys) rotates and tilts,
+    /// W/A/S/D pans away from the hero, and Space snaps back to the default view.
+    /// </summary>
     public class CameraRig : MonoBehaviour
     {
         public static CameraRig I;
         public Transform Target;
-        public float Distance = 20f, MinDistance = 10f, MaxDistance = 32f, Pitch = 55f;
+
+        public const float DefaultPitch = 55f, DefaultYaw = 0f, DefaultDistance = 20f;
+        public float MinDistance = 6f, MaxDistance = 42f, MinPitch = 22f, MaxPitch = 85f, MaxPan = 30f;
+
+        public float Yaw => yaw;
+
+        float yaw = DefaultYaw, pitch = DefaultPitch, distance = DefaultDistance;            // smoothed
+        float yawGoal = DefaultYaw, pitchGoal = DefaultPitch, distanceGoal = DefaultDistance; // input targets
+        Vector3 pan, panGoal;
         Vector3 focus;
+        Vector2 lastMouse;
+        bool dragging;
         float shake;
 
         void Awake()
@@ -22,31 +36,105 @@ namespace Shadowfall
             if (I != null) I.shake = Mathf.Max(I.shake, amount);
         }
 
+        /// <summary>Back to the classic view centered on the hero.</summary>
+        public void ResetView()
+        {
+            yawGoal = Mathf.Round(yaw / 360f) * 360f + DefaultYaw;
+            pitchGoal = DefaultPitch;
+            distanceGoal = DefaultDistance;
+            panGoal = Vector3.zero;
+        }
+
         void LateUpdate()
         {
-            float dt = Time.deltaTime;
+            float dt = Time.unscaledDeltaTime;
             if (Target != null)
             {
+                HandleInput(dt);
                 focus = Vector3.Lerp(focus, Target.position, 1f - Mathf.Exp(-dt * 10f));
-                bool overUI = GameUI.I != null && (GameUI.I.MouseOverUI || GameUI.I.ChatOpen);
-                float scroll = GameInput.Scroll;
-                if (!overUI && Mathf.Abs(scroll) > 0.01f)
-                    Distance = Mathf.Clamp(Distance - Mathf.Sign(scroll) * 2f, MinDistance, MaxDistance);
             }
             else
             {
                 // Slow orbit over the village while on the login screen.
-                focus = new Vector3(80f + Mathf.Sin(Time.time * 0.1f) * 6f, 0f, 78f + Mathf.Cos(Time.time * 0.1f) * 6f);
+                dragging = false;
+                panGoal = pan = Vector3.zero;
+                yawGoal = yaw = Time.time * 4f;
+                pitchGoal = pitch = 48f;
+                distanceGoal = distance = 24f;
+                focus = new Vector3(80f, 0f, 80f);
             }
 
-            var rot = Quaternion.Euler(Pitch, 0f, 0f);
-            var pos = focus + Vector3.up * 1f + rot * new Vector3(0f, 0f, -Distance);
+            float k = 1f - Mathf.Exp(-dt * 12f);
+            yaw = Mathf.Lerp(yaw, yawGoal, k);
+            pitch = Mathf.Lerp(pitch, pitchGoal, k);
+            distance = Mathf.Lerp(distance, distanceGoal, k);
+            pan = Vector3.Lerp(pan, panGoal, k);
+
+            var center = focus + pan;
+            center.x = Mathf.Clamp(center.x, 4f, WorldGenerator.W - 4f);
+            center.z = Mathf.Clamp(center.z, 4f, WorldGenerator.H - 4f);
+
+            var rot = Quaternion.Euler(pitch, yaw, 0f);
+            var pos = center + Vector3.up * 1f + rot * new Vector3(0f, 0f, -distance);
             if (shake > 0f)
             {
                 pos += Random.insideUnitSphere * shake * 0.6f;
                 shake = Mathf.Max(0f, shake - dt * 1.5f);
             }
             transform.SetPositionAndRotation(pos, rot);
+
+            // Keep shadows sharp when zoomed in, but still covering the view when zoomed out or tilted.
+            QualitySettings.shadowDistance = 30f + distance * (2.6f - pitch / 60f);
+        }
+
+        void HandleInput(float dt)
+        {
+            var ui = GameUI.I;
+            bool overUI = ui != null && ui.MouseOverUI;
+            bool typing = ui != null && ui.KeyboardCaptured;
+
+            // Zoom
+            float scroll = GameInput.Scroll;
+            if (!overUI && Mathf.Abs(scroll) > 0.01f)
+                distanceGoal = Mathf.Clamp(distanceGoal - Mathf.Sign(scroll) * distanceGoal * 0.12f, MinDistance, MaxDistance);
+
+            // Middle mouse drag: rotate (side to side) and tilt (up and down)
+            var mouse = GameInput.MousePosition;
+            if (GameInput.MiddleHeld && (dragging || !overUI))
+            {
+                if (dragging)
+                {
+                    var d = mouse - lastMouse;
+                    yawGoal += d.x * 0.25f;
+                    pitchGoal = Mathf.Clamp(pitchGoal - d.y * 0.2f, MinPitch, MaxPitch);
+                }
+                dragging = true;
+            }
+            else dragging = false;
+            lastMouse = mouse;
+
+            if (typing) return;
+
+            // Arrow keys: rotate and tilt
+            if (GameInput.Held(GKey.Left)) yawGoal += 90f * dt;
+            if (GameInput.Held(GKey.Right)) yawGoal -= 90f * dt;
+            if (GameInput.Held(GKey.Up)) pitchGoal = Mathf.Clamp(pitchGoal + 45f * dt, MinPitch, MaxPitch);
+            if (GameInput.Held(GKey.Down)) pitchGoal = Mathf.Clamp(pitchGoal - 45f * dt, MinPitch, MaxPitch);
+
+            // W/A/S/D: pan, relative to where the camera is looking
+            var move = Vector3.zero;
+            if (GameInput.Held(GKey.W)) move.z += 1f;
+            if (GameInput.Held(GKey.S)) move.z -= 1f;
+            if (GameInput.Held(GKey.D)) move.x += 1f;
+            if (GameInput.Held(GKey.A)) move.x -= 1f;
+            if (move != Vector3.zero)
+            {
+                move = Quaternion.Euler(0f, yaw, 0f) * move.normalized;
+                panGoal += move * (8f + distance * 0.8f) * dt;
+                if (panGoal.magnitude > MaxPan) panGoal = panGoal.normalized * MaxPan;
+            }
+
+            if (GameInput.Down(GKey.Space)) ResetView();
         }
     }
 }

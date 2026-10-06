@@ -36,6 +36,7 @@ namespace Shadowfall
         public string name, msg, err, k;
         public float x, z, tx, tz, dmg;
         public bool hasSave;
+        public double now;      // server clock (ms since 1970) in "welcome", for the day/night cycle
         public SaveData save;
         public NetMonster[] m;
         public NetPlayer[] p;

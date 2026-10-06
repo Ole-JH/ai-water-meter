@@ -20,6 +20,8 @@ namespace Shadowfall
         Color[] pixels;
         bool[] reserved; // no trees / rocks here (roads, town, water)
         Transform root, nodes, npcs, deco;
+        GroundSurface surface;    // splat-mapped ground, grass and water (visual only)
+        bool fancyGround;         // terrain shaders available
         bool art;                 // CC0 models available (falls back to primitives if not)
         System.Random vr;         // visual-only randomness: never touches the layout RNG, so the
                                   // walkability grid (and the server's world hash) stays the same
@@ -62,6 +64,9 @@ namespace Shadowfall
             nodes = Factory.Empty("Resources", root, Vector3.zero);
             npcs = Factory.Empty("NPCs", root, Vector3.zero);
             deco = Factory.Empty("Decoration", root, Vector3.zero);
+            surface = new GroundSurface(W, H);
+            surface.ExcludeRoads(Town);
+            fancyGround = GroundSurface.Supported;
 
             PaintBase();
             PaintRoads();
@@ -74,6 +79,7 @@ namespace Shadowfall
             BuildGraveyard();
             BuildCrypt();
             BuildQuarry();
+            surface.Bake();
             ScatterDetail();
             BuildGround();
             if (art) StaticBatchingUtility.Combine(deco.gameObject);
@@ -109,6 +115,7 @@ namespace Shadowfall
                     if (sum < 1f) c = Color.Lerp(new Color(0.3f, 0.42f, 0.2f), c, sum);
                     float n = Mathf.PerlinNoise(x * 0.15f, y * 0.15f) * 0.25f + Mathf.PerlinNoise(x * 0.6f, y * 0.6f) * 0.1f;
                     pixels[Idx(x, y)] = c * (0.85f + n);
+                    BaseSurface(x, y, wn / sum, ws / sum, we / sum, ww / sum);
                 }
 
             for (int y = Town.yMin; y < Town.yMax; y++)
@@ -117,16 +124,75 @@ namespace Shadowfall
                     float n = Mathf.PerlinNoise(x * 0.9f, y * 0.9f) * 0.15f;
                     Paint(x, y, cobbleC * (0.9f + n));
                     Reserve(x, y);
+                    surface.Set(x, y, GroundSurface.Cobble);
+                    if (Mathf.PerlinNoise(x * 0.21f + 9f, y * 0.21f) > 0.66f) surface.Set(x, y, GroundSurface.Dirt, 0.45f); // worn patches
                 }
+        }
+
+        /// <summary>Which ground textures a tile gets, from how much it belongs to each zone.</summary>
+        void BaseSurface(int x, int y, float north, float south, float east, float west)
+        {
+            float a = Mathf.PerlinNoise(x * 0.07f + 11f, y * 0.07f + 5f);
+            float b = Mathf.PerlinNoise(x * 0.12f + 31f, y * 0.12f + 71f);
+            var w = new float[GroundSurface.Layers];
+            // Whisperwood: meadow grass giving way to dark forest floor deeper in.
+            float deep = Mathf.Clamp01((y - 100f) / 40f);
+            float forest = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((a - 0.45f) * 4f + deep));
+            w[GroundSurface.Grass] += north * (1f - forest);
+            w[GroundSurface.Forest] += north * forest;
+            // Forsaken Graveyard: dead grass with bare dirt.
+            float bare = b > 0.62f ? 0.6f : 0f;
+            w[GroundSurface.Dead] += south * (1f - bare);
+            w[GroundSurface.Dirt] += south * bare;
+            // Goblin Encampment: dry steppe with trampled dirt.
+            float trampled = b > 0.6f ? 0.7f : 0f;
+            w[GroundSurface.Dry] += east * (1f - trampled);
+            w[GroundSurface.Dirt] += east * trampled;
+            // Ironvein Quarry: gravel and rock with scrubby dry grass.
+            float rock = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((a - 0.35f) * 3f + Mathf.Clamp01((40f - x) / 30f)));
+            w[GroundSurface.Gravel] += west * rock;
+            w[GroundSurface.Dry] += west * (1f - rock) * 0.6f;
+            w[GroundSurface.Dirt] += west * (1f - rock) * 0.4f;
+            // Green meadow around the village.
+            float meadow = 1f - Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(20f, 36f, Vector2.Distance(new Vector2(x, y), new Vector2(80f, 80f))));
+            for (int i = 0; i < w.Length; i++) w[i] *= 1f - meadow;
+            w[GroundSurface.Grass] += meadow;
+            surface.SetWeights(x, y, w);
+            float t = 0.9f + Mathf.PerlinNoise(x * 0.045f + 3f, y * 0.045f) * 0.2f;
+            surface.Tint(x, y, new Color(t, t * (0.97f + b * 0.06f), t * 0.97f));
         }
 
         void PaintRoads()
         {
+            // Smooth centerlines for the ground shader (the tiles below stay the walkable/reserved road).
+            var n = new System.Collections.Generic.List<Vector2>();
+            for (int i = Town.yMax - 1; i < H - 6; i++) n.Add(new Vector2(Mathf.Round(80 + Mathf.Sin(i * 0.08f) * 4f) + 0.5f, i + 0.5f));
+            var so = new System.Collections.Generic.List<Vector2>();
+            for (int i = Town.yMin; i > 6; i--) so.Add(new Vector2(Mathf.Round(80 + Mathf.Sin(i * 0.1f) * 3f) + 0.5f, i + 0.5f));
+            var e = new System.Collections.Generic.List<Vector2>();
+            for (int i = Town.xMax - 1; i < W - 6; i++) e.Add(new Vector2(i + 0.5f, Mathf.Round(80 + Mathf.Sin(i * 0.09f) * 4f) + 0.5f));
+            var wst = new System.Collections.Generic.List<Vector2>();
+            for (int i = Town.xMin; i > 6; i--) wst.Add(new Vector2(i + 0.5f, Mathf.Round(80 + Mathf.Sin(i * 0.07f) * 4f) + 0.5f));
+            foreach (var line in new[] { n, so, e, wst }) surface.AddRoad(Smooth(line));
+
             // Four roads leading out of the gates, gently meandering.
             for (int i = Town.yMax; i < H - 6; i++) RoadDot(80 + Mathf.Sin(i * 0.08f) * 4f, i);         // north
             for (int i = Town.yMin; i > 6; i--) RoadDot(80 + Mathf.Sin(i * 0.1f) * 3f, i);              // south
             for (int i = Town.xMax; i < W - 6; i++) RoadDot(i, 80 + Mathf.Sin(i * 0.09f) * 4f);         // east
             for (int i = Town.xMin; i > 6; i--) RoadDot(i, 80 + Mathf.Sin(i * 0.07f) * 4f);             // west
+        }
+
+        /// <summary>Averages neighbouring points so the rounded tile steps become a smooth curve.</summary>
+        static System.Collections.Generic.List<Vector2> Smooth(System.Collections.Generic.List<Vector2> pts)
+        {
+            var o = new System.Collections.Generic.List<Vector2>(pts.Count);
+            for (int i = 0; i < pts.Count; i++)
+            {
+                Vector2 sum = Vector2.zero; int c = 0;
+                for (int j = Mathf.Max(0, i - 3); j <= Mathf.Min(pts.Count - 1, i + 3); j++) { sum += pts[j]; c++; }
+                o.Add(sum / c);
+            }
+            return o;
         }
 
         void RoadDot(float cx, float cy)
@@ -155,18 +221,25 @@ namespace Shadowfall
                         Paint(x, y, waterC * (0.9f + Mathf.PerlinNoise(x * 0.5f, y * 0.5f) * 0.2f));
                         grid.SetBlocked(x, y, true);
                         Reserve(x, y);
+                        surface.Set(x, y, GroundSurface.Sand);
+                        surface.Tint(x, y, new Color(0.55f, 0.6f, 0.6f)); // darker lake bed
                     }
                     else if (d < edge + 1.5f)
                     {
                         Paint(x, y, new Color(0.55f, 0.5f, 0.35f)); // sandy shore
                         Reserve(x, y);
+                        surface.Set(x, y, GroundSurface.Sand, 0.85f);
                     }
                 }
 
-            // Water surface plane for a bit of shine
+            surface.AddLake(center, radius);
+            // Water surface plane for a bit of shine (the water shader version is built with the ground)
+            if (!fancyGround)
+            {
             var water = Factory.Prim(PrimitiveType.Cylinder, deco, new Vector3(center.x, -0.02f, center.y),
                 new Vector3(radius * 2f + 1f, 0.01f, radius * 2f + 1f), waterC);
             water.GetComponent<Renderer>().sharedMaterial.SetFloat("_Glossiness", 0.8f);
+            }
 
             // Fishing spots on water cells next to the shore
             int placed = 0;
@@ -199,6 +272,7 @@ namespace Shadowfall
                     if (edge >= 4) continue;
                     grid.SetBlocked(x, y, true);
                     Paint(x, y, mountain * (0.8f + Mathf.PerlinNoise(x * 0.4f, y * 0.4f) * 0.3f));
+                    surface.Set(x, y, GroundSurface.Gravel);
                 }
             // Chunky cliffs along the edge
             for (int i = 0; i < W; i += 3)
@@ -332,7 +406,8 @@ namespace Shadowfall
                     l.type = LightType.Point;
                     l.color = new Color(1f, 0.75f, 0.4f);
                     l.range = 6f;
-                    l.intensity = 1.2f;
+                    l.intensity = 1.4f;
+                    NightLight.Add(l, 0.15f);
                 }
                 Art("Town/cart", new Vector3(73.5f, 0, 73.0f), 2.2f, ArtLibrary.Fit.Width, 35f);
                 Art("Props/barrel_small_stack", new Vector3(69.0f, 0, 76.6f), 1.0f);
@@ -359,6 +434,15 @@ namespace Shadowfall
                 // A few props in the yard (inside the blocked footprint).
                 Art(Pick("Props/barrel_large", "Props/barrel_small_stack"), new Vector3(r.xMin + 0.5f, 0, r.yMin + 0.5f), 1f, ArtLibrary.Fit.Height, VR(0, 360));
                 Art(Pick("Props/crates_stacked", "Props/box_stacked"), new Vector3(r.xMax - 0.5f, 0, r.yMax - 0.5f), 1.1f, ArtLibrary.Fit.Height, VR(0, 360));
+                // Warm glow from the windows after dark
+                var glow = new GameObject("WindowLight").AddComponent<Light>();
+                glow.transform.SetParent(deco, false);
+                glow.transform.position = c + Vector3.up * 2.2f;
+                glow.type = LightType.Point;
+                glow.color = new Color(1f, 0.7f, 0.35f);
+                glow.range = 7.5f;
+                glow.intensity = 1.1f;
+                NightLight.Add(glow, 0f);
                 return;
             }
             Factory.Prim(PrimitiveType.Cube, deco, c + Vector3.up * 1.5f, new Vector3(r.width, 3f, r.height), wall);
@@ -384,6 +468,7 @@ namespace Shadowfall
                     int tier = y < 115 ? 0 : y < 136 ? (Random.value < 0.7f ? 1 : 0) : (Random.value < 0.6f ? 2 : 1);
                     ResourceNode.Create(ResourceKind.Tree, tier, new Vector3(x + 0.5f, 0, y + 0.5f), nodes);
                     Paint(x, y, pixels[Idx(x, y)] * 0.7f);
+                    surface.Set(x, y, GroundSurface.Forest, 0.6f);
                 }
             // Scattered decorative pines elsewhere
             for (int i = 0; i < 260; i++)
@@ -465,6 +550,7 @@ namespace Shadowfall
                     {
                         int px = (int)center.x + x, py = (int)center.z + y;
                         Paint(px, py, Color.Lerp(pixels[Idx(px, py)], dirtC * 0.9f, 0.5f));
+                        surface.Set(px, py, GroundSurface.Dirt, 0.65f * Mathf.Clamp01((15f * 15f - (x * x + y * y)) / 60f));
                     }
         }
 
@@ -496,6 +582,8 @@ namespace Shadowfall
                         Factory.Prim(PrimitiveType.Cube, deco, p + Vector3.up * 0.5f, new Vector3(0.8f, 1f, 0.25f), stone * Random.Range(0.8f, 1.1f))
                             .transform.rotation = Quaternion.Euler(Random.Range(-8f, 8f), 0, Random.Range(-8f, 8f));
                     Paint(x, y - 1, new Color(0.25f, 0.2f, 0.15f));
+                    surface.Set(x, y - 1, GroundSurface.Dirt, 0.8f);
+                    surface.Tint(x, y - 1, new Color(0.8f, 0.78f, 0.75f));
                     grid.SetBlocked(x, y, true);
                 }
         }
@@ -507,6 +595,8 @@ namespace Shadowfall
                 for (int x = Crypt.xMin; x < Crypt.xMax; x++)
                 {
                     Paint(x, y, new Color(0.18f, 0.17f, 0.2f) * (0.9f + Mathf.PerlinNoise(x, y) * 0.2f));
+                    surface.Set(x, y, GroundSurface.Cobble);
+                    surface.Tint(x, y, new Color(0.55f, 0.55f, 0.65f));
                     Reserve(x, y);
                     bool edge = x == Crypt.xMin || x == Crypt.xMax - 1 || y == Crypt.yMin || y == Crypt.yMax - 1;
                     if (!edge || (y == Crypt.yMax - 1 && x >= 78 && x <= 82)) continue;
@@ -533,6 +623,7 @@ namespace Shadowfall
                 l.color = fire;
                 l.range = 9f;
                 l.intensity = 1.5f;
+                NightLight.Add(l, 1f, 1.1f);
                 grid.SetBlocked((int)p.x, (int)p.z, true);
             }
             // throne
@@ -626,6 +717,14 @@ namespace Shadowfall
                     var p = new Vector3(x + (float)vr.NextDouble(), 0, y + (float)vr.NextDouble());
                     string zone = ZoneAt(p);
                     double r = vr.NextDouble();
+                    float road = surface.RoadWeight(p.x, p.z);
+                    if (road > 0.05f && road < 0.6f)
+                    {
+                        // Stones and weeds along the edges of the roads
+                        if (r < 0.07) Art(Pick("Nature/rock_smallA", "Nature/rock_smallC", "Nature/rock_smallFlatA", "Nature/rock_smallE"), p, VR(0.25f, 0.5f), ArtLibrary.Fit.Width, VR(0, 360), false);
+                        continue;
+                    }
+                    if (fancyGround && r < 0.10 && IsGrassModelRoll(zone, r)) continue; // blade grass replaces the 3D tufts
                     switch (zone)
                     {
                         case "Whisperwood":
@@ -650,6 +749,19 @@ namespace Shadowfall
                 }
         }
 
+        /// <summary>True when this roll would have placed one of the 3D grass tufts in <see cref="ScatterDetail"/>.</summary>
+        static bool IsGrassModelRoll(string zone, double r)
+        {
+            switch (zone)
+            {
+                case "Whisperwood": return r < 0.10;
+                case "Goblin Encampment": return r < 0.05;
+                case "Ironvein Quarry": return r >= 0.04 && r < 0.06;
+                case "Forsaken Graveyard": return r < 0.04;
+                default: return false;
+            }
+        }
+
         // ------------------------------------------------------------------ ground
 
         void BuildGround()
@@ -662,6 +774,13 @@ namespace Shadowfall
             };
             MapTexture.SetPixels(pixels);
             MapTexture.Apply();
+
+            if (fancyGround && surface.BuildGround(root) != null)
+            {
+                surface.BuildWater(root);
+                surface.BuildGrass(root, grid, Seed ^ 0x6a55);
+                return;
+            }
 
             var ground = GameObject.CreatePrimitive(PrimitiveType.Quad);
             ground.name = "Ground";

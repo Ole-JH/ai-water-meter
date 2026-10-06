@@ -5,7 +5,7 @@ using UnityEngine.InputSystem;
 
 namespace Shadowfall
 {
-    public enum GKey { Alpha1, Alpha2, Alpha3, Alpha4, Alpha5, Q, E, I, B, C, K, L, M, H, Escape, Shift, Alt, Space, F1 }
+    public enum GKey { Alpha1, Alpha2, Alpha3, Alpha4, Alpha5, Q, E, I, B, C, K, L, M, H, Escape, Shift, Alt, Space, F1, W, A, S, D, Left, Right, Up, Down, Backspace }
 
     /// <summary>
     /// Thin input wrapper so the project works with either the legacy Input Manager
@@ -19,6 +19,7 @@ namespace Shadowfall
         public static bool LeftHeld => Input.GetMouseButton(0);
         public static bool RightDown => Input.GetMouseButtonDown(1);
         public static bool RightHeld => Input.GetMouseButton(1);
+        public static bool MiddleHeld => Input.GetMouseButton(2);
         public static float Scroll => Input.mouseScrollDelta.y;
 
         public static bool Down(GKey k)
@@ -62,6 +63,15 @@ namespace Shadowfall
                 case GKey.Escape: return KeyCode.Escape;
                 case GKey.Space: return KeyCode.Space;
                 case GKey.F1: return KeyCode.F1;
+                case GKey.W: return KeyCode.W;
+                case GKey.A: return KeyCode.A;
+                case GKey.S: return KeyCode.S;
+                case GKey.D: return KeyCode.D;
+                case GKey.Left: return KeyCode.LeftArrow;
+                case GKey.Right: return KeyCode.RightArrow;
+                case GKey.Up: return KeyCode.UpArrow;
+                case GKey.Down: return KeyCode.DownArrow;
+                case GKey.Backspace: return KeyCode.Backspace;
                 default: return KeyCode.None;
             }
         }
@@ -71,6 +81,7 @@ namespace Shadowfall
         public static bool LeftHeld => Mouse.current != null && Mouse.current.leftButton.isPressed;
         public static bool RightDown => Mouse.current != null && Mouse.current.rightButton.wasPressedThisFrame;
         public static bool RightHeld => Mouse.current != null && Mouse.current.rightButton.isPressed;
+        public static bool MiddleHeld => Mouse.current != null && Mouse.current.middleButton.isPressed;
         public static float Scroll
         {
             get
@@ -126,6 +137,15 @@ namespace Shadowfall
                 case GKey.Escape: return Key.Escape;
                 case GKey.Space: return Key.Space;
                 case GKey.F1: return Key.F1;
+                case GKey.W: return Key.W;
+                case GKey.A: return Key.A;
+                case GKey.S: return Key.S;
+                case GKey.D: return Key.D;
+                case GKey.Left: return Key.LeftArrow;
+                case GKey.Right: return Key.RightArrow;
+                case GKey.Up: return Key.UpArrow;
+                case GKey.Down: return Key.DownArrow;
+                case GKey.Backspace: return Key.Backspace;
                 default: return Key.None;
             }
         }

@@ -479,7 +479,8 @@ namespace Shadowfall
 
         void Update()
         {
-            if (fireLight != null) fireLight.intensity = 1.3f + Mathf.PerlinNoise(Time.time * 6f, transform.position.x) * 0.8f;
+            if (fireLight != null)
+                fireLight.intensity = (1.3f + Mathf.PerlinNoise(Time.time * 6f, transform.position.x) * 0.8f) * Mathf.Lerp(0.7f, 1.4f, DayNight.Night);
         }
 
         public override void Interact(Player p) => GameUI.I.OpenCrafting(this);

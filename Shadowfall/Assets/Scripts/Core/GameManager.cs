@@ -72,6 +72,7 @@ namespace Shadowfall
             sun.shadowStrength = 0.75f;
             QualitySettings.shadowDistance = 70f;
             QualitySettings.shadowCascades = 2;
+            QualitySettings.pixelLightCount = 6; // lanterns and torches at night
 
             RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Trilight;
             RenderSettings.ambientSkyColor = new Color(0.5f, 0.55f, 0.68f);
@@ -82,6 +83,8 @@ namespace Shadowfall
             RenderSettings.fogColor = new Color(0.05f, 0.05f, 0.07f);
             RenderSettings.fogStartDistance = 42f;
             RenderSettings.fogEndDistance = 95f;
+
+            gameObject.AddComponent<DayNight>().Init(sun, Cam);
         }
 
         /// <summary>Called when the server accepts our login.</summary>

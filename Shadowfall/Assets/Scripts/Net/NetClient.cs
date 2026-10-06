@@ -162,6 +162,7 @@ namespace Shadowfall
 
                 case "welcome":
                     MyId = m.id;
+                    DayNight.SyncServerTime(m.now);
                     State = ConnState.InWorld;
                     Status = "";
                     nextSave = Time.time + 20f;

@@ -498,7 +498,7 @@ function completeLogin(s) {
   s.x = acc.save && acc.save.x ? acc.save.x : 80.5;
   s.z = acc.save && acc.save.z ? acc.save.z : 77.5;
   acc.lastLogin = new Date().toISOString();
-  safeSend(s, JSON.stringify({ t: "welcome", id: s.id, hasSave: !!acc.save, save: acc.save || undefined }));
+  safeSend(s, JSON.stringify({ t: "welcome", id: s.id, hasSave: !!acc.save, save: acc.save || undefined, now: Date.now() }));
   broadcast({ t: "sys", msg: `${acc.name} has entered the world.` });
   log(`${acc.name} logged in (${sessions.size} connected)`);
 }
