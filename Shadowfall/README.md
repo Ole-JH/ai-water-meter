@@ -8,9 +8,9 @@ An **online, browser-playable top-down action RPG** built with Unity: Diablo-sty
 ## Quick start
 
 ```bash
-# 1. Build the browser client in Docker (needs your Unity license file, the free one works):
-mkdir -p unity-license && cp /path/to/Unity_lic.ulf unity-license/
-task client:build  # or open this folder in Unity 6 and choose Shadowfall > Build WebGL
+# 1. Build the browser client in Docker (no Unity install needed)
+task license:activate   # once: sign in to Unity Hub in your browser, get a free license
+task client:build       # or open this folder in Unity 6 and choose Shadowfall > Build WebGL
 # 2. Run the server
 task up            # or: cd server && docker compose up -d --build
 # 3. Play

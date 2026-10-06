@@ -11,6 +11,7 @@ Common commands are defined in `Taskfile.yml` and run with [Task](https://taskfi
 | `task client:build` | Build the WebGL client **in Docker** into `server/public` (needs a Unity license) |
 | `task client:build:local` | Same, with a locally installed Unity editor (needs `UNITY_PATH`) |
 | `task client:clean-cache` | Delete the Docker build's Unity import cache |
+| `task license:activate` | Get a free Unity Personal license through Unity Hub in your browser (port 6080) |
 | `task up` / `task down` / `task restart` | Start, stop or restart the Docker container |
 | `task logs` / `task ps` | Follow logs; show status and health |
 | `task docker:build` | Build the server image only |
@@ -28,6 +29,7 @@ Common commands are defined in `Taskfile.yml` and run with [Task](https://taskfi
 | `UNITY_LICENSE`, `UNITY_SERIAL`, `UNITY_EMAIL`, `UNITY_PASSWORD` | — | `client:build` (license options) |
 | `PORT` | `7341` | `server:dev` |
 | `SHADOWFALL_PORT` | `7341` | Host port for `up` and `ps` |
+| `LICENSE_HELPER_PORT`, `LICENSE_HELPER_BIND`, `VNC_PASSWORD` | `6080`, `0.0.0.0`, random | `license:activate` |
 | `DOCS_PORT` | `8000` | `docs:serve` |
 
 ```bash

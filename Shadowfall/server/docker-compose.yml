@@ -30,6 +30,24 @@ services:
       - ..:/project                          # the Unity project (Shadowfall/)
       - unity-library:/project/Library       # import cache: makes rebuilds much faster
 
+  # One-time helper: Unity Hub in a container, shown in your browser via noVNC, to get a free
+  # Unity Personal license file into ../unity-license. Run: task license:activate
+  license-helper:
+    profiles: ["license"]
+    build: ../tools/license-helper
+    image: shadowfall-license-helper
+    shm_size: "1gb"
+    ports:
+      # Set LICENSE_HELPER_BIND=127.0.0.1 to reach it only through an SSH tunnel.
+      - "${LICENSE_HELPER_BIND:-0.0.0.0}:${LICENSE_HELPER_PORT:-6080}:6080"
+    environment:
+      HOST_UID: ${HOST_UID:-1000}
+      HOST_GID: ${HOST_GID:-1000}
+      VNC_PASSWORD: ${VNC_PASSWORD:-}
+      LICENSE_HELPER_PORT: ${LICENSE_HELPER_PORT:-6080}
+    volumes:
+      - ../unity-license:/out
+
 volumes:
   unity-library:
     name: shadowfall-unity-library

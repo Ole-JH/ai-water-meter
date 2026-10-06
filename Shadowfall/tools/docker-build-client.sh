@@ -2,7 +2,8 @@
 # Builds the Unity WebGL client inside a GameCI unityci/editor container and writes it to
 # server/public. Run through: task client:build   (or: docker compose --profile build run --rm client-builder)
 #
-# License (Unity requires one, even the free Personal license). Provide ONE of:
+# License (Unity requires one, even the free Personal license). Easiest: task license:activate
+# Or provide ONE of:
 #   1. unity-license/Unity_lic.ulf in the project root (copy it from a machine where Unity Hub is signed in)
 #   2. UNITY_LICENSE env var containing the .ulf file contents
 #   3. UNITY_SERIAL + UNITY_EMAIL + UNITY_PASSWORD (Unity Pro / Plus serial)
@@ -29,7 +30,8 @@ elif [[ -n "${UNITY_SERIAL:-}" && -n "${UNITY_EMAIL:-}" && -n "${UNITY_PASSWORD:
   SERIAL_ACTIVATED=1
 else
   cat >&2 <<'EOF'
-[client-build] No Unity license found. Provide one of:
+[client-build] No Unity license found. Easiest: run  task license:activate  (Unity Hub in your browser).
+Or provide one of:
   - unity-license/Unity_lic.ulf in the Shadowfall folder. Find it on a machine signed in to Unity Hub:
       Windows: C:\ProgramData\Unity\Unity_lic.ulf
       macOS:   /Library/Application Support/Unity/Unity_lic.ulf

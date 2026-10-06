@@ -27,4 +27,7 @@
     See [Operations → Resetting a character's password](deployment/operations.md#resetting-a-characters-password).
 
 ??? question "Docker client build: *“No Unity license found”* or activation errors"
-    See [Building the client in Docker → License](deployment/docker-client-build.md#1-provide-a-unity-license). A Personal `.ulf` is tied to the account that activated it. If Unity rejects it, sign in to Unity Hub again on your machine to refresh it, then copy it again.
+    See [Building the client in Docker → License](deployment/docker-client-build.md#1-provide-a-unity-license). The easiest fix is `task license:activate`. If Unity rejects an existing license file, get a fresh one the same way.
+
+??? question "`task license:activate`: the sign-in doesn't come back to Unity Hub"
+    After you sign in, Firefox (inside the desktop) has to open a `unityhub://` link. If it shows a dialog, choose **Open link** / **Unity Hub**. If nothing happens, close Firefox and click **Sign in** in the Hub again. Unity Hub's log is at `/tmp/unityhub.log` in the container (`docker exec -it <container> cat /tmp/unityhub.log`).

@@ -19,15 +19,14 @@ This gets you from a fresh checkout to playing in the browser.
 
 === "Docker (no Unity install)"
 
-    Unity needs a license even in Docker; the free Personal license works. Copy your license file into the project, then build:
+    Unity needs a license even in Docker; the free Personal license works. Get one in your browser (once), then build:
 
     ```bash
-    mkdir -p unity-license
-    cp "/path/to/Unity_lic.ulf" unity-license/   # see below for where to find it
+    task license:activate   # opens Unity Hub in your browser; saves unity-license/Unity_lic.ulf
     task client:build
     ```
 
-    See [Building the client in Docker](../deployment/docker-client-build.md) for where the license file lives and other license options.
+    See [Building the client in Docker](../deployment/docker-client-build.md) for details and other license options.
 
 === "Unity editor"
 

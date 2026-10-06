@@ -81,6 +81,18 @@ tasks:
     cmds:
       - '"{{.UNITY}}" -batchmode -quit -nographics -projectPath "{{.ROOT_DIR}}" -buildTarget WebGL -executeMethod Shadowfall.EditorTools.ShadowfallBuild.BuildWebGL -logFile -'
 
+  license:activate:
+    desc: Get a free Unity Personal license in your browser (temporary Unity Hub on port 6080)
+    dir: "{{.SERVER_DIR}}"
+    env:
+      HOST_UID:
+        sh: id -u
+      HOST_GID:
+        sh: id -g
+    cmds:
+      - docker compose --profile license build license-helper
+      - docker compose --profile license run --rm --service-ports license-helper
+
   client:clean-cache:
     desc: Delete the Docker build's Unity import cache (next build re-imports everything)
     cmds:

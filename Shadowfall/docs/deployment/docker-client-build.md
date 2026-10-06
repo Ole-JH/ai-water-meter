@@ -12,9 +12,43 @@ flowchart LR
 
 ## 1. Provide a Unity license
 
-The Unity editor won't run without a license, even in batch mode in a container. The free **Personal** license works. Pick one of these options:
+The Unity editor won't run without a license, even in batch mode in a container. The free **Personal** license works. Personal licenses can only be activated by signing in to Unity Hub; there's no command-line activation. The first option below runs Unity Hub for you in a container, so you don't have to install anything:
 
-=== "License file (Personal, recommended)"
+=== "In your browser (Personal, nothing to install)"
+
+    ```bash
+    task license:activate
+    ```
+
+    This starts a temporary container running **Unity Hub on a virtual desktop**, which you use from your web browser (noVNC). The command prints a link with a one-time password:
+
+    ```text
+    http://<this-server>:6080/vnc.html?autoconnect=1&resize=scale&password=Xk3...
+    ```
+
+    1. Open the link. You'll see Unity Hub; scroll to the bottom of the terms and click **Agree**.
+    2. Click **Sign in**. Firefox opens inside the desktop; sign in to your Unity account. When Firefox asks to open the `unityhub` link, allow it. You're then back in the Hub, signed in.
+    3. Open **Preferences** (gear icon) **→ Licenses → Add → Get a free personal license**. Skip any offer to install an editor.
+
+    As soon as Unity Hub writes the license, it's saved to `unity-license/Unity_lic.ulf` (readable only by you) and the container stops and removes itself. Press ++ctrl+c++ to cancel at any time.
+
+    | Setting | Default | Purpose |
+    | --- | --- | --- |
+    | `LICENSE_HELPER_PORT` | `6080` | Port for the browser desktop |
+    | `LICENSE_HELPER_BIND` | `0.0.0.0` | Set to `127.0.0.1` to only allow access through an SSH tunnel |
+    | `VNC_PASSWORD` | random | Fixed password instead of a random one |
+
+    !!! tip "Most private: SSH tunnel"
+        The desktop is password-protected, but it's served over plain HTTP. On a remote server, prefer keeping it private:
+
+        ```bash
+        # on the server
+        LICENSE_HELPER_BIND=127.0.0.1 task license:activate
+        # on your computer
+        ssh -L 6080:localhost:6080 you@your-server   # then open the printed link with localhost
+        ```
+
+=== "License file (from an existing Unity Hub)"
 
     1. On any computer, install [Unity Hub](https://unity.com/download), sign in, and activate a Personal license (**Preferences → Licenses → Add**).
     2. Copy the activated license file into the project as `unity-license/Unity_lic.ulf`:
