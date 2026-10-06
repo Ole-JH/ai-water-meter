@@ -15,8 +15,8 @@ namespace Shadowfall
         // ---- state read by gameplay code
         public bool MouseOverUI { get; private set; }
         public bool ChatOpen { get; private set; }
-        public bool KeyboardCaptured => ChatOpen || Player.I == null || tradeGoldFocused;
-        public bool BlocksWorldInput => Player.I == null || Player.I.IsDead || showMap;
+        public bool KeyboardCaptured => ChatOpen || Player.I == null || tradeGoldFocused || menu != MenuPage.None;
+        public bool BlocksWorldInput => Player.I == null || Player.I.IsDead || showMap || menu != MenuPage.None;
 
         // ---- windows
         bool showBags, showChar, showSkills, showQuests, showMap, showHelp, showTalents;
@@ -141,10 +141,10 @@ namespace Shadowfall
 
             if (!ChatOpen)
             {
-                bool before = showBags | showChar | showSkills | showQuests | showMap | showHelp | showTalents;
+                bool before = showBags | showChar | showSkills | showQuests | showMap | showHelp | showTalents | menu != MenuPage.None;
                 bool questsBefore = showQuests;
                 WindowKeys();
-                bool after = showBags | showChar | showSkills | showQuests | showMap | showHelp | showTalents;
+                bool after = showBags | showChar | showSkills | showQuests | showMap | showHelp | showTalents | menu != MenuPage.None;
                 if (showQuests && !questsBefore) Sfx.Play2D("book", 0.5f);
                 else if (after != before) Sfx.Play2D(after ? "ui_open" : "ui_close", 0.4f);
             }
@@ -167,7 +167,10 @@ namespace Shadowfall
                 {
                     if (dialogNpc != null || craftStation != null) { dialogNpc = null; craftStation = null; }
                     else if (tradeOpen) NetClient.I?.CancelTrade();
-                    else showBags = showChar = showSkills = showQuests = showMap = showHelp = showTalents = showStash = false;
+                    else if (menu != MenuPage.None) menu = menu == MenuPage.Main ? MenuPage.None : MenuPage.Main;
+                    else if (showBags | showChar | showSkills | showQuests | showMap | showHelp | showTalents | showStash)
+                        showBags = showChar = showSkills = showQuests = showMap = showHelp = showTalents = showStash = false;
+                    else menu = MenuPage.Main; // nothing to close: open the game menu
                 }
             }
         }
@@ -246,6 +249,7 @@ namespace Shadowfall
             if (menuPlayer != null) DrawPlayerMenu();
             DrawOffers();
             if (p.IsDead) DrawDeath(p);
+            if (menu != MenuPage.None) DrawGameMenu(p);
 
             DrawBanner();
             if (GameSettings.ShowFps && Event.current.type == EventType.Repaint)
@@ -745,8 +749,8 @@ namespace Shadowfall
 
         void DrawMenuButtons()
         {
-            string[] icons = { "bags", "character", "talents", "skills", "quests", "map", "help" };
-            string[] tips = { "Bags  [I]", "Character  [C]", "Talents  [T]", "Skills  [K]", "Quest Log  [L]", "World Map  [M]", "Help  [F1]" };
+            string[] icons = { "bags", "character", "talents", "skills", "quests", "map", "help", "menu" };
+            string[] tips = { "Bags  [I]", "Character  [C]", "Talents  [T]", "Skills  [K]", "Quest Log  [L]", "World Map  [M]", "Help  [F1]", "Game Menu  [Esc]\nSettings, log out" };
             const float s = 44, gap = 6;
             float w = icons.Length * (s + gap) - gap;
             var r = new Rect(VW - w - 20, VH - s - 18, w, s);
@@ -765,7 +769,8 @@ namespace Shadowfall
                         case 3: showSkills = !showSkills; break;
                         case 4: showQuests = !showQuests; break;
                         case 5: showMap = !showMap; break;
-                        default: showHelp = !showHelp; break;
+                        case 6: showHelp = !showHelp; break;
+                        default: menu = menu == MenuPage.None ? MenuPage.Main : MenuPage.None; break;
                     }
                 }
                 UISkin.IconInSlot(b, UISkin.Icon(icons[i]), Color.white, 5);
@@ -1304,16 +1309,16 @@ namespace Shadowfall
 
         void DrawHelp()
         {
-            var r = new Rect((VW - 600) / 2, 40, 600, Mathf.Min(800, VH - 50));
+            var r = new Rect((VW - 600) / 2, 40, 600, Mathf.Min(720, VH - 50));
             if (UISkin.Window(r, "How to Play", true, true)) showHelp = false;
             Block(r);
-            GUI.Label(new Rect(r.x + 28, r.y + 58, 544, r.height - 200),
+            GUI.Label(new Rect(r.x + 28, r.y + 58, 544, r.height - 110),
                 "<b>Combat</b>\n" +
                 "Left-click the ground to move (hold to keep walking). Left-click a monster to attack it; Shift+click attacks in place.\n" +
                 "<b>1-5</b> your class's abilities (right-click casts ability 2),  <b>Q / E</b> health / mana potions,  <b>R</b> recall to town (and back),  " +
                 "<b>Alt</b> shows every item on the ground,  mouse wheel zooms.\n\n" +
                 "<b>Windows</b>\n" +
-                "<b>I</b> bags   <b>C</b> character   <b>T</b> talents   <b>K</b> skills   <b>L</b> quests   <b>M</b> map   <b>Enter</b> chat   <b>Esc</b> close\n" +
+                "<b>I</b> bags   <b>C</b> character   <b>T</b> talents   <b>K</b> skills   <b>L</b> quests   <b>M</b> map   <b>Enter</b> chat   <b>Esc</b> close / game menu\n" +
                 "<b>Camera:</b> middle-drag or arrow keys rotate and tilt,  <b>Space</b> resets\n\n" +
                 "<b>Chat & parties</b>\n" +
                 "<b>/p</b> party chat,  <b>/w name</b> whisper,  <b>/r</b> reply,  <b>/invite name</b>,  <b>/leave</b>,  <b>/who</b>. " +
@@ -1329,27 +1334,7 @@ namespace Shadowfall
                 "North: Whisperwood (1-7)    East: Goblin Encampment (3-10)\n" +
                 "West: Ironvein Quarry (3-15)    South: Forsaken Graveyard (6-11)\n" +
                 "Far south: Crypt of the Lich (boss)", UISkin.InkRich);
-            // Settings
-            float sy = r.yMax - 128;
-            GUI.Label(new Rect(r.x + 28, sy, 120, 26), "<b>Graphics</b>", UISkin.InkRich);
-            for (int i = 0; i < GameSettings.QualityNames.Length; i++)
-            {
-                var br = new Rect(r.x + 130 + i * 104, sy - 4, 98, 32);
-                bool on = GameSettings.Quality == i;
-                if (UISkin.Btn(br, on ? "> " + GameSettings.QualityNames[i] + " <" : GameSettings.QualityNames[i], UISkin.Button) && !on)
-                    GameSettings.Quality = i;
-            }
-            if (new Rect(r.x + 130, sy - 4, 310, 32).Contains(Event.current.mousePosition))
-                tooltip = "<b>Low</b>: no shadows or grass, fewer lights and particles, no color grade.\n<b>Medium</b>: hard shadows, fewer lights.\n<b>High</b>: everything.";
-            sy += 38;
-            bool fps = GUI.Toggle(new Rect(r.x + 28, sy, 200, 26), GameSettings.ShowFps, (GameSettings.ShowFps ? "[x]" : "[  ]") + " Show FPS", UISkin.InkRich);
-            if (fps != GameSettings.ShowFps) GameSettings.ShowFps = fps;
-            bool common = GUI.Toggle(new Rect(r.x + 230, sy, 330, 26), GameSettings.ShowCommonLoot, (GameSettings.ShowCommonLoot ? "[x]" : "[  ]") + " Label common items (else hold Alt)", UISkin.InkRich);
-            if (common != GameSettings.ShowCommonLoot) GameSettings.ShowCommonLoot = common;
-            GUI.Label(new Rect(r.x + 28, r.yMax - 48, 120, 26), "<b>Volume</b>", UISkin.InkRich);
-            float v = GUI.HorizontalSlider(new Rect(r.x + 130, r.yMax - 40, 300, 20), Sfx.Volume, 0f, 1f);
-            if (Mathf.Abs(v - Sfx.Volume) > 0.001f) Sfx.Volume = v;
-            GUI.Label(new Rect(r.x + 446, r.yMax - 48, 80, 26), Mathf.RoundToInt(Sfx.Volume * 100) + "%", UISkin.InkRich);
+            GUI.Label(new Rect(r.x + 28, r.yMax - 44, 544, 26), "Graphics, sound and other settings: press <b>Esc</b> and choose <b>Settings</b>.", UISkin.InkRich);
         }
 
         void DrawDeath(Player p)

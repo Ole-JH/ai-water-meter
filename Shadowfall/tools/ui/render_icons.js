@@ -76,6 +76,7 @@ const ICONS = {
   stash: ['lorc/locked-chest', '#4a3524', '#f3e3c8'],
   trade: ['delapouite/shaking-hands', '#4a3524', '#f3e3c8'],
   companions: ['lorc/paw', '#4a3524', '#f3e3c8'],
+  menu: ['lorc/cog', '#4a3524', '#f3e3c8'],
   // companions
   companion_hound: ['lorc/wolf-head', '#5a3a20', '#ffe6c8'],
   companion_squire: ['lorc/visored-helm', '#3b4a66', '#eef2ff'],

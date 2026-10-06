@@ -128,7 +128,7 @@ namespace Shadowfall
             bool hasStatus = !string.IsNullOrEmpty(net.Status);
             string status = hasStatus ? net.Status : "New name? Your hero is created with this class when you first log in. Existing heroes keep their class.";
             var statusStyle = UISkin.V(UISkin.SmallCenter, wordWrap: true);
-            bool error = hasStatus && !busy;
+            bool error = hasStatus && !busy && net.Status != NetClient.LoggedOutMessage;
             UISkin.Shadowed(new Rect(x - 10, y, fw + 20, 40), status, statusStyle, error ? new Color(1f, 0.55f, 0.45f) : hasStatus ? UISkin.Gold : UISkin.Muted);
 
             // Footer: build version + art status, handy when checking that a new build is really live.

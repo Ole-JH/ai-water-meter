@@ -37,7 +37,7 @@
 | ++m++ | World map |
 | ++f1++ or ++h++ | Help |
 | ++enter++ or ++slash++ | Chat. `/p` party, `/w name` whisper, `/r` reply, `/invite name`, `/leave`, `/who` |
-| ++esc++ | Close windows |
+| ++esc++ | Close the open windows; with nothing open, the **game menu** (also the cog button at the bottom right): Resume, Settings, How to Play, Log Out |
 | ++arrow-up++ / ++arrow-down++ in chat | Recall the messages you sent before |
 
 ## Inventory
@@ -53,7 +53,7 @@
 
 ## Settings
 
-The help window (++f1++) has the settings:
+The settings are in the game menu (++esc++ → **Settings**):
 
 - **Graphics**: *Low* turns off shadows, grass and the color grade and halves particle effects; *Medium* uses hard shadows and fewer lights; *High* is everything. Try Low on laptops or if the frame rate drops.
 - **Show FPS** puts a frame counter at the top of the screen.
@@ -65,3 +65,7 @@ Settings are remembered in your browser.
 ## Warnings
 
 When your life drops below 30%, the edges of the screen pulse red, faster the closer you are to death.
+
+## Logging out
+
+++esc++ → **Log Out** saves your character on the server and returns to the login screen, where you can log in again or with another character. You can't log out within 6 seconds of taking damage, so you can't escape a fight by logging off.

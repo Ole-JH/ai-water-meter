@@ -59,6 +59,15 @@ namespace Shadowfall
             socket.Connect(url);
         }
 
+        public const string LoggedOutMessage = "You have logged out. Farewell, hero.";
+
+        /// <summary>Saves, leaves the world and returns to the login screen.</summary>
+        public void LogOut()
+        {
+            if (Trading) CancelTrade();
+            Disconnect(LoggedOutMessage);
+        }
+
         public void Disconnect(string reason)
         {
             if (State == ConnState.InWorld) SaveNow();
