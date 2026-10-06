@@ -77,7 +77,14 @@ const server = http.createServer((req, res) => {
     else if (name.endsWith(".br")) { encoding = "br"; name = name.slice(0, -3); }
     const headers = { "Content-Type": MIME[path.extname(name).toLowerCase()] || "application/octet-stream" };
     if (encoding) headers["Content-Encoding"] = encoding;
-    headers["Cache-Control"] = name.endsWith(".html") ? "no-cache" : "public, max-age=3600";
+    // Always revalidate, so a new client build shows up on the next page load (304 if unchanged).
+    headers["Cache-Control"] = "no-cache";
+    headers["Last-Modified"] = st.mtime.toUTCString();
+    const since = Date.parse(req.headers["if-modified-since"] || "");
+    if (!Number.isNaN(since) && Math.floor(st.mtimeMs / 1000) <= Math.floor(since / 1000)) {
+      res.writeHead(304, { "Cache-Control": "no-cache", "Last-Modified": headers["Last-Modified"] });
+      return res.end();
+    }
     res.writeHead(200, headers);
     fs.createReadStream(file).pipe(res);
   });

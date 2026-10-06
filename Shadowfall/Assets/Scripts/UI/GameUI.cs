@@ -282,6 +282,10 @@ namespace Shadowfall
             y += 54;
             string status = string.IsNullOrEmpty(net.Status) ? "New name? Your character is created when you first log in." : net.Status;
             UISkin.Shadowed(new Rect(r.x + 20, y, w - 40, 26), status, UISkin.SmallCenter, string.IsNullOrEmpty(net.Status) ? UISkin.Muted : UISkin.Gold);
+            // Build version + art status, handy when checking that a new build is really live.
+            string art = ArtLibrary.Available ? "3D art loaded" : "<color=#ff8866>3D art missing (glTFast?)</color>";
+            UISkin.Shadowed(new Rect(8, VH - 26, VW - 16, 22), "Build " + Application.version + "   " + art,
+                new GUIStyle(UISkin.Small) { alignment = TextAnchor.LowerRight }, UISkin.Muted);
             DrawTooltip();
         }
 

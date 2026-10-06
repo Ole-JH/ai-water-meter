@@ -22,6 +22,9 @@ namespace Shadowfall.EditorTools
 
             string outDir = Path.GetFullPath(Path.Combine(Application.dataPath, "..", "server", "public"));
             Directory.CreateDirectory(outDir);
+            // Start from a clean Build folder so stale files from older builds never get served.
+            string buildDir = Path.Combine(outDir, "Build");
+            if (Directory.Exists(buildDir)) Directory.Delete(buildDir, true);
 
             PlayerSettings.productName = "Shadowfall";
             PlayerSettings.companyName = "Shadowfall";
@@ -29,6 +32,8 @@ namespace Shadowfall.EditorTools
             PlayerSettings.WebGL.compressionFormat = WebGLCompressionFormat.Gzip; // server.js sends Content-Encoding headers
             PlayerSettings.WebGL.decompressionFallback = false;
             PlayerSettings.WebGL.template = "PROJECT:Shadowfall";
+            PlayerSettings.WebGL.nameFilesAsHashes = true;  // new file names per build: browsers can't mix old and new
+            PlayerSettings.bundleVersion = System.DateTime.UtcNow.ToString("yyyy.MM.dd-HHmm"); // shown on the login screen
 
             var report = BuildPipeline.BuildPlayer(new BuildPlayerOptions
             {
