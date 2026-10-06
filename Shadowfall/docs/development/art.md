@@ -44,6 +44,19 @@ task ui:icons      # re-render icons (needs playwright-core and CHROMIUM_PATH)
 
 To use another model, add a line to `MODELS` in `tools/art/build_art.py`, listing the animations to keep, and reference its path from code. For example, to give the Goblin Warchief a different model, change its entry in `CharacterLook` (`Assets/Scripts/Characters/CharacterView.cs`).
 
+## Spell effects
+
+`SpellFx` (`Assets/Scripts/Combat/SpellFx.cs`) builds effects from Unity particle systems and a few procedural meshes, all drawn with the soft `Shadowfall/Fx` shader (additive glow, or alpha for smoke):
+
+- **Fireball:** fire, ember and smoke trail with its own light; fiery explosion with sparks, smoke, a shock ring and a light flash.
+- **Frost Nova:** ice shards and frost mist bursting outward, expanding rings, ice crystals erupting from the ground.
+- **Holy Light / level up:** a column of golden light, rising sparkles and a ring.
+- **Meteor:** blazing trail, pulsing target ring, huge explosion, lingering ground fire, dust and flying rocks.
+- **Cleave:** a sweeping arc with sparks. Casting makes motes gather in the hero's hand.
+- **Hits:** blood, bone chips or stone sparks depending on the target; dust when monsters die.
+
+Characters also squash briefly when hit and lunge forward on melee attacks (`CharacterView`).
+
 ## Sound
 
 All sound effects are **CC0**: Kenney's RPG Audio, Impact Sounds and Interface Sounds, and rubberduck's CC0 packs from OpenGameArt (creatures, general SFX, bangs). Sword swings, spells, the level-up and quest fanfares, and the wind, cricket and fire loops are synthesized by `tools/audio/build_audio.py`.

@@ -54,6 +54,8 @@ namespace Shadowfall
         float delay, t, damage;
         Combatant owner;
         GameObject marker;
+        ParticleSystem[] trails;
+        float nextPulse;
         static readonly System.Collections.Generic.List<Combatant> buffer = new System.Collections.Generic.List<Combatant>();
 
         public static void Cast(Combatant owner, Vector3 target, float damage, float delay = 0.8f)
@@ -67,6 +69,8 @@ namespace Shadowfall
             m.damage = damage;
             m.owner = owner;
             Sfx.Play("meteor_fall", target, 0.8f, 0.05f, 50f);
+            m.trails = SpellFx.AttachTrail(go.transform, SpellFx.Trail.Fire, c, 1.6f);
+            if (m.trails != null) go.transform.localScale = Vector3.one * 0.9f;
             m.marker = Factory.Prim(PrimitiveType.Cylinder, null, new Vector3(target.x, 0.03f, target.z), new Vector3(8f, 0.01f, 8f),
                 new Color(0.6f, 0.1f, 0.05f), false, Mat.Glow(new Color(0.5f, 0.08f, 0.02f)));
         }
@@ -76,16 +80,33 @@ namespace Shadowfall
             t += Time.deltaTime;
             var start = target + new Vector3(-4f, 14f, -4f);
             transform.position = Vector3.Lerp(start, target, Mathf.Clamp01(t / delay));
-            if (t < delay) return;
+            if (t < delay)
+            {
+                if (Time.time >= nextPulse) { nextPulse = Time.time + 0.25f; SpellFx.Ring(target, new Color(1f, 0.3f, 0.05f), 4f, 0.3f); }
+                return;
+            }
+            if (trails != null) foreach (var tr in trails) SpellFx.Detach(tr);
 
             if (owner != null) // null = another player's meteor (cosmetic only)
             {
                 Combatant.Overlap(target, 4f, owner.Faction, buffer);
                 foreach (var c in buffer) c.TakeDamage(damage * Random.Range(0.9f, 1.1f), owner, false);
             }
-            FxPulse.Burst(target, new Color(1f, 0.45f, 0.1f), 4f, 0.45f);
-            FxPulse.Ring(target, new Color(1f, 0.25f, 0.05f), 4.5f, 0.5f);
-            FxPulse.Sparks(target + Vector3.up * 0.5f, new Color(1f, 0.6f, 0.1f), 14);
+            if (SpellFx.Ready)
+            {
+                SpellFx.Explosion(target + Vector3.up * 0.5f, new Color(1f, 0.4f, 0.05f), 4f, true);
+                SpellFx.GroundFire(target, 2.2f, 1.5f);
+                SpellFx.Dust(target, 3f, new Color(0.3f, 0.25f, 0.2f));
+                for (int i = 0; i < 10; i++) // flying rocks
+                    FxPulse.Spawn(target + Vector3.up * 0.5f, new Color(0.25f, 0.18f, 0.12f), Vector3.one * Random.Range(0.15f, 0.35f), Vector3.one * 0.05f, Random.Range(0.6f, 1f), PrimitiveType.Cube)
+                        .WithVelocity(new Vector3(Random.Range(-6f, 6f), Random.Range(5f, 9f), Random.Range(-6f, 6f)));
+            }
+            else
+            {
+                FxPulse.Burst(target, new Color(1f, 0.45f, 0.1f), 4f, 0.45f);
+                FxPulse.Ring(target, new Color(1f, 0.25f, 0.05f), 4.5f, 0.5f);
+                FxPulse.Sparks(target + Vector3.up * 0.5f, new Color(1f, 0.6f, 0.1f), 14);
+            }
             CameraRig.Shake(0.35f);
             Sfx.Play("boom", target, 1f, 0.08f, 60f);
             Sfx.Play("rubble", target, 0.6f, 0.1f, 40f);

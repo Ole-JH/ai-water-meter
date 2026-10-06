@@ -318,7 +318,8 @@ namespace Shadowfall
             LastDamagedTime = Time.time;
             GameUI.Float(transform.position + Vector3.up * (Height + 0.2f), crit ? dmg + "!" : dmg.ToString(),
                 crit ? new Color(1f, 0.85f, 0.2f) : Color.white, crit ? 1.5f : 1f);
-            FxPulse.Sparks(Center, new Color(0.7f, 0.05f, 0.05f), 3);
+            bool bones = Def.Name.StartsWith("Skeleton") || Def.Name == "Lich King", stone = Def.Name == "Rock Golem";
+            SpellFx.Hit(Center, bones ? new Color(0.9f, 0.88f, 0.8f) : stone ? new Color(0.6f, 0.55f, 0.5f) : new Color(0.55f, 0.03f, 0.03f), !bones && !stone, crit ? 16 : 9);
             Sfx.Play(crit ? "hit_heavy" : Voice(Def, "hit"), Center, crit ? 0.7f : 0.5f, 0.12f);
             view?.Hit();
             if (source is Player) NetClient.I?.SendHit(NetId, dmg, crit);
@@ -344,7 +345,8 @@ namespace Shadowfall
             var deathVoice = Voice(Def, "die");
             if (deathVoice != null) Sfx.Play(deathVoice, Center, Def.Boss ? 1f : 0.6f, 0.1f, Def.Boss ? 80f : 40f);
             if (Def.Boss) Sfx.Play2D("gong", 0.7f);
-            FxPulse.Burst(Center, Factory.Shade(Def.Color, 0.6f), 0.8f, 0.3f);
+            if (SpellFx.Ready) SpellFx.Dust(transform.position, Def.Boss ? 2.5f : 1.2f);
+            else FxPulse.Burst(Center, Factory.Shade(Def.Color, 0.6f), 0.8f, 0.3f);
         }
 
         protected override void Die(Combatant killer) { /* deaths are decided by the server */ }

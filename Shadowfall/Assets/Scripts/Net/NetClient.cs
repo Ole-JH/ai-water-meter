@@ -346,17 +346,17 @@ namespace Shadowfall
                     bool boss = e.Def.Boss;
                     if (targetIsMe && p != null && !p.IsDead)
                         Projectile.Fire(e, from, p.transform.position + Vector3.up, 13f, m.dmg, e.Def.ProjectileColor,
-                            boss ? 0.7f : 0.35f, boss ? 1.8f : 0f, 18f);
+                            boss ? 0.7f : 0.35f, boss ? 1.8f : 0f, 18f).WithTrail(e.Def.Name == "Skeleton Archer" ? SpellFx.Trail.Arrow : SpellFx.Trail.Magic);
                     else
-                        Projectile.FireVisual(from, to, 13f, e.Def.ProjectileColor, boss ? 0.7f : 0.35f, 18f);
+                        Projectile.FireVisual(from, to, 13f, e.Def.ProjectileColor, boss ? 0.7f : 0.35f, 18f)
+                            .WithTrail(e.Def.Name == "Skeleton Archer" ? SpellFx.Trail.Arrow : SpellFx.Trail.Magic);
                     break;
 
                 case "nova":
                     Sfx.Play("frost_cast", e != null ? e.transform.position : targetPos, 0.9f, 0.05f, 50f);
                     var c = new Color(0.4f, 0.85f, 1f);
                     var center = e != null ? e.transform.position : targetPos;
-                    FxPulse.Ring(center, c, 6f, 0.6f);
-                    FxPulse.Burst(center + Vector3.up, c, 2f, 0.4f);
+                    SpellFx.FrostNova(center, 6f);
                     if (p != null && !p.IsDead && Factory.FlatDistance(p.transform.position, center) < 6.5f) p.TakeDamage(m.dmg, e);
                     break;
 
@@ -376,27 +376,27 @@ namespace Shadowfall
             {
                 case "fireball":
                     Sfx.Play("fire_cast", from, 0.5f, 0.1f);
-                    Projectile.FireVisual(from + Vector3.up * 1.2f, to + Vector3.up * 1.2f, 20f, new Color(1f, 0.45f, 0.1f), 0.5f, 22f);
+                    Projectile.FireVisual(from + Vector3.up * 1.2f, to + Vector3.up * 1.2f, 20f, new Color(1f, 0.45f, 0.1f), 0.5f, 22f).WithTrail(SpellFx.Trail.Fire);
                     break;
                 case "nova":
                     Sfx.Play("frost_cast", from, 0.7f);
-                    FxPulse.Ring(from, new Color(0.45f, 0.8f, 1f), 6f, 0.45f);
+                    SpellFx.FrostNova(from, 6f);
                     break;
                 case "heal":
                     Sfx.Play("holy_cast", from, 0.6f, 0.02f);
-                    FxPulse.Spawn(from + Vector3.up, new Color(1f, 0.95f, 0.5f), new Vector3(2f, 0.05f, 2f), new Vector3(0.2f, 5f, 0.2f), 0.7f, PrimitiveType.Cylinder);
+                    SpellFx.HolyLight(from);
                     break;
                 case "meteor":
                     MeteorFx.Cast(null, to, 0f);
                     break;
                 case "cleave":
                     Sfx.Play("swing_heavy", from, 0.6f);
-                    FxPulse.Ring(from, new Color(0.9f, 0.85f, 0.75f), 2.5f, 0.25f);
+                    var dir = Factory.Flat(to - from);
+                    SpellFx.Cleave(from, dir.sqrMagnitude > 0.001f ? Quaternion.LookRotation(dir) : Quaternion.identity, 3.4f, new Color(0.9f, 0.85f, 0.75f));
                     break;
                 case "levelup":
                     Sfx.Play("levelup", from, 0.7f, 0f);
-                    FxPulse.Ring(from, new Color(1f, 0.85f, 0.2f), 4f, 0.8f);
-                    FxPulse.Spawn(from + Vector3.up, new Color(1f, 0.9f, 0.4f), new Vector3(1.5f, 0.1f, 1.5f), new Vector3(0.2f, 8f, 0.2f), 0.9f, PrimitiveType.Cylinder);
+                    SpellFx.LevelUp(from);
                     break;
             }
         }

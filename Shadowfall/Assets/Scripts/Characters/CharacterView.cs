@@ -211,9 +211,32 @@ namespace Shadowfall
             else anim.CrossFade(clip, fade);
         }
 
+        // Procedural "juice" on top of the clips: a squash when hit, a short lunge on melee attacks.
+        float punch, lungeStart = -1f;
+        Vector3 baseScale = Vector3.zero;
+
+        void Juice()
+        {
+            if (Root == null) return;
+            var t = Root.transform;
+            if (baseScale == Vector3.zero) baseScale = t.localScale;
+            punch = Mathf.MoveTowards(punch, 0f, Time.deltaTime * 6f);
+            float p = punch * punch;
+            t.localScale = new Vector3(baseScale.x * (1f + 0.12f * p), baseScale.y * (1f - 0.1f * p), baseScale.z * (1f + 0.12f * p));
+            float lunge = 0f;
+            if (lungeStart >= 0f && !dead)
+            {
+                float k = (Time.time - lungeStart) / 0.32f;
+                if (k >= 1f) lungeStart = -1f;
+                else lunge = Mathf.Sin(k * Mathf.PI) * 0.35f;
+            }
+            t.localPosition = new Vector3(0f, t.localPosition.y, lunge);
+        }
+
         /// <summary>Call every frame with the character's current ground speed.</summary>
         public void UpdateLocomotion(float speed)
         {
+            Juice();
             if (anim == null || dead || Time.time < actionUntil) return;
             if (speed < 0.2f) Play(look.Anims.Idle, 0.15f);
             else if (speed < look.RunSpeed * 0.45f) Play(look.Anims.Walk, 0.15f, Mathf.Clamp(speed / (look.RunSpeed * 0.3f), 0.6f, 1.5f));
@@ -239,6 +262,7 @@ namespace Shadowfall
             var attacks = look.Anims.Attacks;
             if (attacks == null || attacks.Length == 0) return;
             Action(attacks[attackIndex++ % attacks.Length], maxDuration);
+            lungeStart = Time.time;
         }
 
         public void Cast() => Action(look.Anims.Cast, 0.7f);
@@ -249,6 +273,7 @@ namespace Shadowfall
 
         public void Hit()
         {
+            punch = 1f;
             if (Time.time < actionUntil) return; // don't interrupt attacks
             Action(look.Anims.Hit, 0.4f);
         }

@@ -104,10 +104,11 @@ namespace Shadowfall
             Sfx.Play(stone ? "step_stone" : "step_grass", pos, stone ? 0.35f : 0.45f, 0.1f, 20f);
         }
 
-        void AnimCast()
+        void AnimCast(Color? glow = null)
         {
             castAnim = 0f;
             view?.Cast();
+            if (glow.HasValue && view != null) SpellFx.CastGlow(view.Hand, glow.Value, 0.35f);
         }
 
         void Awake()
@@ -257,8 +258,7 @@ namespace Shadowfall
                 GameUI.Banner("LEVEL UP!  You are now level " + Level, new Color(1f, 0.85f, 0.2f));
                 Sfx.Play2D("levelup", 0.8f);
                 GameUI.Log("You have reached level " + Level + "! You have " + StatPoints + " attribute points to spend (C).", new Color(1f, 0.85f, 0.2f));
-                FxPulse.Ring(transform.position, new Color(1f, 0.85f, 0.2f), 4f, 0.8f);
-                FxPulse.Spawn(transform.position + Vector3.up, new Color(1f, 0.9f, 0.4f), new Vector3(1.5f, 0.1f, 1.5f), new Vector3(0.2f, 8f, 0.2f), 0.9f, PrimitiveType.Cylinder);
+                SpellFx.LevelUp(transform.position);
                 foreach (var a in AbilityDef.All)
                     if (a.RequiredLevel == Level) GameUI.Log("New ability unlocked: " + a.Name + " [" + a.Key + "]", a.Color);
                 NetClient.I?.SendFx("levelup", transform.position, transform.position);
@@ -594,26 +594,24 @@ namespace Shadowfall
                         c.TakeDamage(Random.Range(MinDamage, MaxDamage) * MeleeMultiplier * 1.7f * (crit ? 2f : 1f), this, crit);
                         if (LifeOnHit > 0) Heal(LifeOnHit, false);
                     }
-                    var arc = FxPulse.Spawn(transform.position + transform.forward * 1.5f + Vector3.up * 0.9f, a.Color,
-                        new Vector3(0.5f, 0.06f, 0.5f), new Vector3(5.5f, 0.06f, 3f), 0.22f, PrimitiveType.Cylinder);
-                    arc.transform.rotation = transform.rotation;
+                    SpellFx.Cleave(transform.position, transform.rotation, 3.4f, a.Color);
                     NetClient.I?.SendFx("cleave", transform.position, transform.position + transform.forward);
                     break;
                 }
                 case AbilityId.Fireball:
                 {
-                    AnimCast();
+                    AnimCast(a.Color);
                     Sfx.Play("fire_cast", transform.position + Vector3.up, 0.6f, 0.1f);
                     bool crit = Random.value * 100f < CritChance;
                     float dmg = 14f * SpellMultiplier * Random.Range(0.9f, 1.1f) * (crit ? 2f : 1f);
                     Projectile.Fire(this, transform.position + Vector3.up * 1.2f + transform.forward * 0.6f,
-                        new Vector3(aim.x, 1.2f, aim.z), 20f, dmg, a.Color, 0.5f, 2.2f, 22f, crit);
+                        new Vector3(aim.x, 1.2f, aim.z), 20f, dmg, a.Color, 0.5f, 2.2f, 22f, crit).WithTrail(SpellFx.Trail.Fire);
                     NetClient.I?.SendFx("fireball", transform.position, aim);
                     break;
                 }
                 case AbilityId.FrostNova:
                 {
-                    AnimCast();
+                    AnimCast(a.Color);
                     Sfx.Play("frost_cast", transform.position, 0.8f);
                     Sfx.Play("shatter", transform.position, 0.5f);
                     Overlap(transform.position, 6f, Faction, buffer);
@@ -622,24 +620,22 @@ namespace Shadowfall
                         c.TakeDamage(12f * SpellMultiplier * Random.Range(0.9f, 1.1f), this);
                         if (c is Enemy e) e.Slow(4f);
                     }
-                    FxPulse.Ring(transform.position, a.Color, 6f, 0.45f);
-                    FxPulse.Burst(transform.position + Vector3.up * 0.5f, a.Color, 1.5f, 0.3f);
+                    SpellFx.FrostNova(transform.position, 6f);
                     NetClient.I?.SendFx("nova", transform.position, transform.position);
                     break;
                 }
                 case AbilityId.Heal:
                 {
-                    AnimCast();
+                    AnimCast(a.Color);
                     Sfx.Play("holy_cast", transform.position, 0.7f, 0.02f);
                     Heal(MaxHealth * 0.35f + TotInt * 3f);
-                    FxPulse.Spawn(transform.position + Vector3.up, a.Color, new Vector3(2f, 0.05f, 2f), new Vector3(0.2f, 5f, 0.2f), 0.7f, PrimitiveType.Cylinder);
-                    FxPulse.Ring(transform.position, a.Color, 2f, 0.5f);
+                    SpellFx.HolyLight(transform.position);
                     NetClient.I?.SendFx("heal", transform.position, transform.position);
                     break;
                 }
                 case AbilityId.Meteor:
                 {
-                    AnimCast();
+                    AnimCast(a.Color);
                     float range = Factory.FlatDistance(transform.position, aim);
                     Vector3 target = range > 16f ? transform.position + Factory.Flat(aim - transform.position).normalized * 16f : aim;
                     MeteorFx.Cast(this, new Vector3(target.x, 0f, target.z), 70f * SpellMultiplier);
@@ -888,6 +884,7 @@ namespace Shadowfall
             if (action == Action.Gather) StopGathering();
             CameraRig.Shake(Mathf.Clamp(amount / MaxHealth, 0.05f, 0.3f));
             Sfx.Play(amount > MaxHealth * 0.12f ? "hit_heavy" : "hit_armor", transform.position + Vector3.up, 0.55f, 0.1f);
+            SpellFx.Hit(transform.position + Vector3.up * 1.2f, new Color(0.55f, 0.03f, 0.03f), true, 6);
             if (Health > 0f && amount > MaxHealth * 0.04f) view?.Hit();
         }
 
@@ -914,7 +911,7 @@ namespace Shadowfall
             path.Clear();
             GameUI.Log("You awaken in Hollowmere. You lost " + lost + " gold.", new Color(1f, 0.6f, 0.3f));
             NetClient.I?.SaveNow();
-            FxPulse.Ring(transform.position, new Color(1f, 1f, 0.8f), 3f, 0.8f);
+            SpellFx.HolyLight(transform.position);
             Sfx.Play2D("holy_cast", 0.6f);
         }
     }

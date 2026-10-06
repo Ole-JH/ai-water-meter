@@ -25,6 +25,7 @@
 | `Characters/HumanoidModel.cs` | Blocky procedural humanoid with walk and attack animation |
 | `Characters/Abilities.cs` | Ability definitions and the meteor effect |
 | `Combat/Combatant.cs` | Base class for health, armor, damage numbers and area queries |
+| `Combat/SpellFx.cs` | Particle and mesh effects for spells, hits, explosions, level-ups |
 | `Combat/Projectile.cs` | Damaging and cosmetic projectiles |
 | `Items/VendorStock.cs` | What each vendor sells, prices and restocking |
 | `Items/*` | `Item` model and tooltips, random gear generator, inventory |

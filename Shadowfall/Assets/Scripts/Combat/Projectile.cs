@@ -12,6 +12,9 @@ namespace Shadowfall
         Color color;
         bool crit, visualOnly;
         System.Action<Combatant> onHit;
+        ParticleSystem[] trails;
+        SpellFx.Trail trailKind = SpellFx.Trail.Magic;
+        float size;
         static readonly List<Combatant> buffer = new List<Combatant>();
 
         public static Projectile Fire(Combatant owner, Vector3 from, Vector3 toward, float speed, float damage,
@@ -34,11 +37,35 @@ namespace Shadowfall
             p.hitRadius = size * 0.5f + 0.2f;
             p.crit = crit;
             p.onHit = onHit;
+            p.size = size;
             return p;
         }
 
+        /// <summary>Adds a particle trail (fire, magic or arrow) and the matching impact effect.</summary>
+        public Projectile WithTrail(SpellFx.Trail kind)
+        {
+            trailKind = kind;
+            trails = SpellFx.AttachTrail(transform, kind, color, size);
+            if (trails != null) transform.localScale *= kind == SpellFx.Trail.Arrow ? 0.4f : 0.6f; // the particles carry the look
+            return this;
+        }
+
+        void Impact(float radius)
+        {
+            if (trails != null)
+            {
+                foreach (var t in trails) SpellFx.Detach(t);
+                trails = null;
+                if (trailKind == SpellFx.Trail.Arrow) SpellFx.Hit(transform.position, color, false, 6);
+                else SpellFx.Explosion(transform.position, color, Mathf.Max(0.6f, radius), trailKind == SpellFx.Trail.Fire);
+                return;
+            }
+            FxPulse.Burst(transform.position, color, Mathf.Max(0.5f, radius), 0.3f);
+            FxPulse.Sparks(transform.position, color, 4);
+        }
+
         /// <summary>Cosmetic projectile (another player's spell) that never deals damage.</summary>
-        public static void FireVisual(Vector3 from, Vector3 toward, float speed, Color color, float size, float range)
+        public static Projectile FireVisual(Vector3 from, Vector3 toward, float speed, Color color, float size, float range)
         {
             var go = Factory.Prim(PrimitiveType.Sphere, null, from, Vector3.one * size, color, false, Mat.Glow(color));
             go.name = "Projectile (visual)";
@@ -49,7 +76,9 @@ namespace Shadowfall
             p.speed = speed;
             p.life = Mathf.Min(range, Mathf.Max(0.5f, d.magnitude)) / speed;
             p.color = color;
+            p.size = size;
             p.visualOnly = true;
+            return p;
         }
 
         void Update()
@@ -58,15 +87,15 @@ namespace Shadowfall
             transform.position += dir * step;
             life -= Time.deltaTime;
 
-            // Trail sparkle
-            if (Random.value < 0.5f)
+            // Trail sparkle (only without particle trails)
+            if (trails == null && Random.value < 0.5f)
                 FxPulse.Spawn(transform.position, color, Vector3.one * 0.18f, Vector3.zero, 0.25f, PrimitiveType.Cube);
 
             if (visualOnly)
             {
                 if (life <= 0f || !WorldGrid.Instance.IsWalkable(transform.position))
                 {
-                    FxPulse.Burst(transform.position, color, 1.2f, 0.3f);
+                    Impact(trailKind == SpellFx.Trail.Fire ? 1.6f : 0.8f);
                     Sfx.Play("explosion", transform.position, 0.35f, 0.15f);
                     Destroy(gameObject);
                 }
@@ -96,16 +125,18 @@ namespace Shadowfall
                     c.TakeDamage(c == direct ? damage : damage * 0.6f, owner, crit);
                     onHit?.Invoke(c);
                 }
-                FxPulse.Burst(transform.position, color, aoe * 0.8f, 0.3f);
+                Impact(aoe * 0.8f);
                 Sfx.Play("explosion", transform.position, 0.5f, 0.15f);
             }
-            else if (direct != null)
+            else
             {
-                direct.TakeDamage(damage, owner, crit);
-                onHit?.Invoke(direct);
-                FxPulse.Burst(transform.position, color, 0.5f, 0.2f);
+                if (direct != null)
+                {
+                    direct.TakeDamage(damage, owner, crit);
+                    onHit?.Invoke(direct);
+                }
+                Impact(0.5f);
             }
-            FxPulse.Sparks(transform.position, color, 4);
             Destroy(gameObject);
         }
     }
