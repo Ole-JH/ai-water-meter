@@ -75,10 +75,26 @@ if [[ -d "$PROJECT/Library" && "$(cat "$HASH_FILE" 2>/dev/null)" != "$MANIFEST_H
 fi
 mkdir -p "$PROJECT/Library" && echo "$MANIFEST_HASH" > "$HASH_FILE"
 
+run_unity_build() {
+  unity-editor -batchmode -nographics -quit -logFile /dev/stdout \
+    -projectPath "$PROJECT" -buildTarget WebGL \
+    -executeMethod Shadowfall.EditorTools.ShadowfallBuild.BuildWebGL 2>&1 | tee /tmp/unity-build.log
+}
+
 log "Building WebGL (the first build imports the project and takes a while; later builds reuse the Library cache)"
-if ! unity-editor -batchmode -nographics -quit -logFile /dev/stdout \
-  -projectPath "$PROJECT" -buildTarget WebGL \
-  -executeMethod Shadowfall.EditorTools.ShadowfallBuild.BuildWebGL 2>&1 | tee /tmp/unity-build.log; then
+BUILD_OK=1
+run_unity_build || BUILD_OK=0
+# Right after packages change, Unity's script compilation pipeline sometimes trips over its own freshly
+# rebuilt cache (InvalidCastException in EditorCompilation, "dag couldn't be loaded", CS2001 missing
+# package sources). A second run, with the caches in place, gets past it.
+if [[ $BUILD_OK == 0 ]] && grep -q -e "InvalidCastException" -e "dag couldn't be loaded" -e "error CS2001" /tmp/unity-build.log; then
+  log "Unity's script compilation cache was in a bad state - retrying the build once"
+  rm -rf "$PROJECT/Library/Bee" 2>/dev/null || true
+  BUILD_OK=1
+  run_unity_build || BUILD_OK=0
+fi
+if [[ $BUILD_OK == 0 ]]; then
+  grep -E "error CS[0-9]+" /tmp/unity-build.log | sort -u | head -20 >&2 || true
   if grep -q -e "Machine bindings don't match" -e "No valid Unity Editor license" /tmp/unity-build.log; then
     cat >&2 <<'EOF'
 
