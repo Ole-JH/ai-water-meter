@@ -253,7 +253,7 @@ namespace Shadowfall
                 SpellFx.Explosion(target + Vector3.up * 0.5f, color, radius, false);
                 SpellFx.Column(target, color, radius * 0.6f, 9f, 0.9f);
                 Sfx.Play("boom", target, 0.8f, 0.08f, 60f);
-                Sfx.Play("bell", target, 0.7f, 0.05f, 50f);
+                Sfx.Play("holy_bolt", target, 0.8f, 0.05f, 50f);
             }
             else if (SpellFx.Ready)
             {
@@ -314,7 +314,7 @@ namespace Shadowfall
             }
             else
             {
-                Sfx.Play("swing", pos, 0.6f, 0.2f);
+                Sfx.Play("bow", pos, 0.6f, 0.1f);
             }
         }
 

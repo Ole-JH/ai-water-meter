@@ -768,7 +768,7 @@ namespace Shadowfall
                     AbilityFx.ThrowingAxe(pos);
                     bool crit = RollCrit();
                     Projectile.Fire(this, pos + Vector3.up * 1.2f + transform.forward * 0.6f, new Vector3(aim.x, 1.2f, aim.z), 22f,
-                        WeaponHit(1.1f) * (crit ? CritDamage : 1f), AbilityFx.Steel, 0.4f, 0f, 18f, crit, OnHitDealt).WithTrail(SpellFx.Trail.Arrow);
+                        WeaponHit(1.1f) * (crit ? CritDamage : 1f), AbilityFx.Steel, 0.4f, 0f, 18f, crit, OnHitDealt).WithTrail(SpellFx.Trail.Arrow).WithShape(Projectile.Shape.Axe);
                     net?.SendFx("axe", pos, aim);
                     break;
                 }
@@ -823,7 +823,7 @@ namespace Shadowfall
                     bool crit = RollCrit();
                     float dmg = (9f + (MinDamage + MaxDamage) * 0.3f) * HolyMultiplier * Random.Range(0.9f, 1.1f) * (crit ? CritDamage : 1f);
                     Projectile.Fire(this, pos + Vector3.up * 1.2f + transform.forward * 0.6f, new Vector3(aim.x, 1.2f, aim.z), 22f, dmg, a.Color, 0.45f, 0f, 20f, crit,
-                        c => { Heal(MaxHealth * 0.03f, false); OnHitDealt(c); }).WithTrail(SpellFx.Trail.Magic);
+                        c => { Heal(MaxHealth * 0.03f, false); OnHitDealt(c); }).WithTrail(SpellFx.Trail.Magic).WithShape(Projectile.Shape.Spear);
                     net?.SendFx("holybolt", pos, aim);
                     break;
                 }
@@ -967,7 +967,7 @@ namespace Shadowfall
                 case AbilityId.Multishot:
                 {
                     view?.Shoot();
-                    Sfx.Play("swing", pos + Vector3.up, 0.5f, 0.25f);
+                    Sfx.Play("bow", pos + Vector3.up, 0.6f, 0.1f);
                     int arrows = 5 + Tal("volley") + (HasPower("multishot_plus") ? 3 : 0);
                     var dir = Factory.Flat(aim - pos);
                     if (dir.sqrMagnitude < 0.01f) dir = transform.forward;
@@ -976,7 +976,7 @@ namespace Shadowfall
                         var d = Quaternion.Euler(0f, (i - (arrows - 1) / 2f) * 10f, 0f) * dir.normalized;
                         bool crit = RollCrit();
                         Projectile.Fire(this, pos + Vector3.up * 1.2f + d * 0.6f, pos + Vector3.up * 1.2f + d * 10f, 26f,
-                            WeaponHit(0.75f * (HasPower("set_nightstalker") ? 1.5f : 1f)) * (crit ? CritDamage : 1f), AbilityFx.Steel, 0.25f, 0f, 16f, crit, OnHitDealt).WithTrail(SpellFx.Trail.Arrow);
+                            WeaponHit(0.75f * (HasPower("set_nightstalker") ? 1.5f : 1f)) * (crit ? CritDamage : 1f), AbilityFx.Steel, 0.25f, 0f, 16f, crit, OnHitDealt).WithTrail(SpellFx.Trail.Arrow).WithShape(Projectile.Shape.Arrow);
                     }
                     net?.SendFx("multi", pos, aim);
                     break;
@@ -1164,7 +1164,7 @@ namespace Shadowfall
                 var back = returnPoint.Value;
                 returnPoint = null;
                 SpellFx.Column(transform.position, new Color(0.5f, 0.7f, 1f), 1f, 5f, 0.6f);
-                Sfx.Play2D("frost_cast", 0.5f);
+                Sfx.Play2D("blink", 0.6f);
                 TeleportTo(back);
                 return;
             }

@@ -229,12 +229,12 @@ namespace Shadowfall
                 else
                 {
                     view?.Shoot();
-                    Sfx.Play("swing", transform.position, 0.35f, 0.25f);
+                    Sfx.Play("bow", transform.position, 0.4f, 0.12f);
                     int arrows = Def.Special == "volley" ? 2 : 1;
                     for (int i = 0; i < arrows; i++)
                     {
                         var side = transform.right * (i - (arrows - 1) * 0.5f) * 0.6f;
-                        Projectile.Fire(hero, from + side, at + side, 26f, dmg, Def.Color, 0.22f, 0f, Def.Range + 4f).WithTrail(SpellFx.Trail.Arrow);
+                        Projectile.Fire(hero, from + side, at + side, 26f, dmg, Def.Color, 0.22f, 0f, Def.Range + 4f).WithTrail(SpellFx.Trail.Arrow).WithShape(Projectile.Shape.Arrow);
                     }
                 }
                 return;

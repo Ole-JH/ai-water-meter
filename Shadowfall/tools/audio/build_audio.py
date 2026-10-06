@@ -133,6 +133,78 @@ def seamless(x, fade=0.5):
     return np.concatenate([tail * (1 - w) + head * w, body])
 
 
+def choir(freqs, sec, rng, attack=0.25, release=0.9):
+    """Detuned, vibrato'd voices with a few soft harmonics: an angelic pad."""
+    tt = t(sec)
+    n = len(tt)
+    x = np.zeros(n)
+    for f in freqs:
+        for detune in (-0.004, 0.0, 0.005):
+            vib = 1 + 0.004 * np.sin(2 * np.pi * rng.uniform(4.5, 5.5) * tt + rng.uniform(0, 6))
+            ph = 2 * np.pi * np.cumsum(f * (1 + detune) * vib) / SR
+            x += np.sin(ph) + 0.35 * np.sin(2 * ph) + 0.12 * np.sin(3 * ph)
+    x = lowpass(x, 2600) * env(n, attack, release, 1.5)
+    x += bandnoise(n, 5000, 11000, rng) * env(n, 0.2, 0.8) * 0.15 * np.max(np.abs(x)) / 3
+    return x
+
+
+def class_spells(rng):
+    """Sounds for the class abilities (appended last so the earlier clips keep their random sequence)."""
+    s = {}
+    # Holy Bolt: a quick rising shimmer "whoosh" of light.
+    for i in range(2):
+        sec = 0.5
+        tt = t(sec)
+        n = len(tt)
+        sweep = np.linspace(700, 1500, n) * rng.uniform(0.95, 1.05)
+        ph = 2 * np.pi * np.cumsum(sweep) / SR
+        tone = (np.sin(ph) + 0.4 * np.sin(2 * ph) + 0.2 * np.sin(3.01 * ph)) * np.exp(-tt * 7)
+        air = lowpass(highpass(rng.standard_normal(n), 1500), np.linspace(7000, 2500, n)) * env(n, 0.01, 0.35)
+        s.setdefault("holy_bolt", []).append(norm(tone * 0.5 + air * 0.6 + crackle(n, 400, rng) * np.exp(-tt * 9) * 0.2, 0.7))
+    # Lightning: dense crackle over a buzzing arc.
+    for i in range(2):
+        sec = 0.55
+        tt = t(sec)
+        n = len(tt)
+        f = 90 * (1 + 0.3 * lowpass(rng.standard_normal(n), 30))
+        buzz = np.sign(np.sin(2 * np.pi * np.cumsum(f) / SR)) * 0.4
+        x = highpass(buzz, 300) * env(n, 0.002, 0.4) + crackle(n, 2500, rng) * env(n, 0.002, 0.45) * 1.5
+        x += bandnoise(n, 2000, 9000, rng) * np.exp(-tt * 10) * 0.8
+        s.setdefault("zap", []).append(norm(x, 0.75))
+    # Throwing axe: a spinning whoosh (noise chopped by the rotation).
+    for i in range(2):
+        sec = 0.5
+        tt = t(sec)
+        n = len(tt)
+        spin = 0.5 + 0.5 * np.sin(2 * np.pi * rng.uniform(13, 17) * tt) ** 2
+        x = lowpass(highpass(rng.standard_normal(n), 400), 2800) * spin * np.sin(np.linspace(0, np.pi, n)) ** 0.8
+        s.setdefault("throw", []).append(norm(x, 0.65))
+    # Bow: a plucked string (Karplus-Strong) and a short release whoosh.
+    for i in range(3):
+        sec = 0.45
+        n = int(SR * sec)
+        period = int(SR / rng.uniform(95, 125))
+        buf = rng.uniform(-1, 1, period)
+        out = np.zeros(n)
+        for k in range(n):
+            out[k] = buf[k % period]
+            buf[k % period] = 0.5 * (buf[k % period] + buf[(k + 1) % period]) * 0.994
+        whoosh = lowpass(highpass(rng.standard_normal(n), 1200), 5000) * env(n, 0.005, 0.25) * 0.5
+        s.setdefault("bow", []).append(norm(out + whoosh, 0.6))
+    # Smoke bomb: a soft low "poof" and a hiss.
+    n = int(SR * 0.7)
+    tt = t(0.7)
+    x = lowpass(rng.standard_normal(n), 700) * np.exp(-tt * 7) + bandnoise(n, 3000, 8000, rng) * env(n, 0.02, 0.5) * 0.3
+    s["poof"] = [norm(x, 0.7)]
+    # Teleport / blink: a fast rising sweep with sparkle.
+    n = int(SR * 0.4)
+    tt = t(0.4)
+    ph = 2 * np.pi * np.cumsum(np.linspace(250, 2600, n)) / SR
+    x = (np.sin(ph) + 0.3 * np.sin(2 * ph)) * env(n, 0.01, 0.2) + crackle(n, 600, rng) * env(n, 0.05, 0.3) * 0.3
+    s["blink"] = [norm(x, 0.6)]
+    return s
+
+
 # ----------------------------------------------------------------------------- synthesized sounds
 
 def synth(rng):
@@ -163,11 +235,8 @@ def synth(rng):
     hiss = bandnoise(n, 3000, 9000, rng) * env(n, 0.005, 0.8)
     s["frost_cast"] = [norm(shimmer * 0.4 + hiss + crackle(n, 300, rng) * np.exp(-tt * 4) * 0.4, 0.75)]
 
-    # Holy light: bright major chord of bells + soft shimmer.
-    n = int(SR * 2.0)
-    x = sum(bell(f, 2.0, decay=1.2) * a for f, a in ((523.25, 1), (659.25, 0.8), (783.99, 0.7), (1046.5, 0.5)))
-    x += bandnoise(n, 4000, 10000, rng) * env(n, 0.3, 1.5) * 0.08
-    s["holy_cast"] = [norm(x, 0.7)]
+    # Holy light: a soft, swelling choir-like chord with a high shimmer (no bells: those read as a clock tower).
+    s["holy_cast"] = [norm(choir((261.63, 329.63, 392.0, 523.25), 1.4, rng), 0.6)]
 
     # Level up: ascending arpeggio.
     notes = (392.0, 493.88, 587.33, 783.99, 987.77)
@@ -284,7 +353,9 @@ def main():
             ffmpeg_to_ogg(z.read(member), os.path.join(OUT, f"{key}_{i}.ogg"), False)
             count += 1
 
-    for key, clips in synth(np.random.default_rng(7)).items():
+    clips_by_key = synth(np.random.default_rng(7))
+    clips_by_key.update(class_spells(np.random.default_rng(11)))
+    for key, clips in clips_by_key.items():
         for i, x in enumerate(clips):
             ffmpeg_to_ogg(wav_bytes(x), os.path.join(OUT, f"{key}_{i}.ogg"), True)
             count += 1

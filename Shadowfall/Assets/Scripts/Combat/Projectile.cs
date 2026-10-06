@@ -41,6 +41,39 @@ namespace Shadowfall
             return p;
         }
 
+        public enum Shape { Orb, Spear, Arrow, Axe }
+
+        /// <summary>
+        /// Changes the projectile's body so each class's missiles read differently: a lance of light (Holy Bolt),
+        /// a thin arrow (Rogue, ranger) or a real spinning axe (Throwing Axe). Call after <see cref="WithTrail"/>.
+        /// </summary>
+        public Projectile WithShape(Shape shape)
+        {
+            if (shape == Shape.Orb) return this;
+            transform.rotation = Quaternion.LookRotation(dir);
+            var r = GetComponent<Renderer>();
+            switch (shape)
+            {
+                case Shape.Spear:
+                    transform.localScale = new Vector3(0.16f, 0.16f, 1.1f);
+                    break;
+                case Shape.Arrow:
+                    transform.localScale = new Vector3(0.06f, 0.06f, 0.75f);
+                    break;
+                case Shape.Axe:
+                    transform.localScale = Vector3.one;
+                    var axe = ArtLibrary.Spawn("Weapons/Axe", transform, Vector3.zero, 0.75f, ArtLibrary.Fit.Height, 0f, false, false, true);
+                    if (axe != null)
+                    {
+                        if (r != null) r.enabled = false;
+                        axe.AddComponent<Spinner>();
+                    }
+                    else transform.localScale = new Vector3(0.35f, 0.08f, 0.35f);
+                    break;
+            }
+            return this;
+        }
+
         /// <summary>Adds a particle trail (fire, magic or arrow) and the matching impact effect.</summary>
         public Projectile WithTrail(SpellFx.Trail kind)
         {
@@ -96,7 +129,8 @@ namespace Shadowfall
                 if (life <= 0f || !WorldGrid.Instance.IsWalkable(transform.position))
                 {
                     Impact(trailKind == SpellFx.Trail.Fire ? 1.6f : 0.8f);
-                    Sfx.Play("explosion", transform.position, 0.35f, 0.15f);
+                    if (trailKind == SpellFx.Trail.Fire) Sfx.Play("explosion", transform.position, 0.35f, 0.15f);
+                    else if (trailKind == SpellFx.Trail.Arrow) Sfx.Play("hit_flesh", transform.position, 0.25f, 0.15f);
                     Destroy(gameObject);
                 }
                 return;
@@ -139,5 +173,11 @@ namespace Shadowfall
             }
             Destroy(gameObject);
         }
+    }
+
+    /// <summary>Tumbles a thrown weapon end over end.</summary>
+    public class Spinner : MonoBehaviour
+    {
+        void Update() => transform.Rotate(Vector3.right, 1100f * Time.deltaTime, Space.Self);
     }
 }

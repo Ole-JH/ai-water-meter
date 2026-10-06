@@ -27,7 +27,7 @@ namespace Shadowfall
             SpellFx.Ring(front, Gold, 1.4f, 0.3f);
         }
 
-        public static void HolyBolt(Vector3 from, Vector3 to) => Sfx.Play("holy_cast", from, 0.35f, 0.15f);
+        public static void HolyBolt(Vector3 from, Vector3 to) => Sfx.Play("holy_bolt", from + Vector3.up, 0.6f, 0.1f);
 
         public static void Consecration(Vector3 at)
         {
@@ -37,14 +37,13 @@ namespace Shadowfall
 
         public static void DivineShield(Vector3 at)
         {
-            Sfx.Play("bell", at, 0.6f, 0.05f);
             Sfx.Play("holy_cast", at, 0.7f, 0.02f);
             SpellFx.Column(at, Gold, 1.3f, 6f, 1f);
             SpellFx.Ring(at, Gold, 2.2f, 0.6f);
             SpellFx.HolyLight(at);
         }
 
-        public static void ThrowingAxe(Vector3 from) => Sfx.Play("swing", from + Vector3.up, 0.6f, 0.15f);
+        public static void ThrowingAxe(Vector3 from) => Sfx.Play("throw", from + Vector3.up, 0.7f, 0.12f);
 
         public static void Whirl(Vector3 at, Quaternion facing)
         {
@@ -83,11 +82,11 @@ namespace Shadowfall
             SpellFx.Flash(to, Storm, 6f, 2.5f, 0.25f);
         }
 
-        public static void ChainCast(Vector3 from) => Sfx.Play("shatter", from + Vector3.up, 0.45f, 0.2f);
+        public static void ChainCast(Vector3 from) => Sfx.Play("zap", from + Vector3.up, 0.6f, 0.12f);
 
         public static void Teleport(Vector3 from, Vector3 to)
         {
-            Sfx.Play("frost_cast", from, 0.5f, 0.2f);
+            Sfx.Play("blink", from, 0.6f, 0.1f);
             foreach (var p in new[] { from, to })
             {
                 SpellFx.Column(p, Arcane, 0.9f, 4f, 0.4f);
@@ -109,13 +108,13 @@ namespace Shadowfall
         /// <summary>Cosmetic arrows (the local hero fires real ones).</summary>
         public static void Multishot(Vector3 from, Vector3 to, int arrows)
         {
-            Sfx.Play("swing", from + Vector3.up, 0.5f, 0.25f);
+            Sfx.Play("bow", from + Vector3.up, 0.6f, 0.1f);
             var dir = Facing(from, to);
             for (int i = 0; i < arrows; i++)
             {
                 float a = (i - (arrows - 1) / 2f) * 10f;
                 var d = Quaternion.Euler(0f, a, 0f) * dir * Vector3.forward;
-                Projectile.FireVisual(from + Vector3.up * 1.2f, from + Vector3.up * 1.2f + d * 10f, 26f, Steel, 0.25f, 16f).WithTrail(SpellFx.Trail.Arrow);
+                Projectile.FireVisual(from + Vector3.up * 1.2f, from + Vector3.up * 1.2f + d * 10f, 26f, Steel, 0.25f, 16f).WithTrail(SpellFx.Trail.Arrow).WithShape(Projectile.Shape.Arrow);
             }
         }
 
@@ -132,8 +131,7 @@ namespace Shadowfall
 
         public static void SmokeBomb(Vector3 at)
         {
-            Sfx.Play("explosion", at, 0.45f, 0.2f);
-            Sfx.Play("sizzle", at, 0.5f, 0.1f);
+            Sfx.Play("poof", at, 0.7f, 0.1f);
             SpellFx.Emit(new SpellFx.P
             {
                 Burst = 40, Duration = 0.1f, Life = new Vector2(1.6f, 2.6f), Speed = new Vector2(0.8f, 2.2f), Size = new Vector2(1.2f, 2f),
@@ -152,14 +150,14 @@ namespace Shadowfall
                 case "bash": ShieldBash(from, to); return true;
                 case "holybolt":
                     HolyBolt(from, to);
-                    Projectile.FireVisual(from + Vector3.up * 1.2f, to + Vector3.up * 1.2f, 22f, Gold, 0.45f, 20f).WithTrail(SpellFx.Trail.Magic);
+                    Projectile.FireVisual(from + Vector3.up * 1.2f, to + Vector3.up * 1.2f, 22f, Gold, 0.45f, 20f).WithTrail(SpellFx.Trail.Magic).WithShape(Projectile.Shape.Spear);
                     return true;
                 case "consecrate": Consecration(from); GroundEffect.Spawn(GroundEffect.Kind.Consecration, null, from, 4f, 6f, 0f); return true;
                 case "dshield": DivineShield(from); return true;
                 case "judgement": MeteorFx.CastJudgement(null, to, 0f, 3.5f, 0f); return true;
                 case "axe":
                     ThrowingAxe(from);
-                    Projectile.FireVisual(from + Vector3.up * 1.2f, to + Vector3.up * 1.2f, 22f, Steel, 0.4f, 18f).WithTrail(SpellFx.Trail.Arrow);
+                    Projectile.FireVisual(from + Vector3.up * 1.2f, to + Vector3.up * 1.2f, 22f, Steel, 0.4f, 18f).WithTrail(SpellFx.Trail.Arrow).WithShape(Projectile.Shape.Axe);
                     return true;
                 case "whirl": Whirl(from, Facing(from, to)); return true;
                 case "leap": LeapLand(to, 3f); return true;
