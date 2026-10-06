@@ -9,8 +9,8 @@
 | ++shift++ + ++"Left click"++ | Attack in place, toward the cursor |
 | ++"Left click"++ on an NPC, tree, rock, fishing spot, anvil or campfire | Walk over and interact |
 | ++"Left click"++ on a loot label | Pick it up. Gold is picked up automatically when you walk over it |
-| ++"Right click"++ (hold) | Fireball toward the cursor |
-| ++1++ – ++5++ | Abilities: Cleave, Fireball, Frost Nova, Holy Light, Meteor |
+| ++"Right click"++ (hold) | Your class's second ability toward the cursor (Holy Bolt, Throwing Axe, Fireball or Multishot) |
+| ++1++ – ++5++ | Your class's five abilities (see [Items & progression](progression.md#classes-and-abilities)) |
 | ++q++ / ++e++ | Drink a health / mana potion |
 
 ## Camera
@@ -29,6 +29,7 @@
 | --- | --- |
 | ++i++ or ++b++ | Bags (inventory) |
 | ++c++ | Character: equipment, attributes, stats |
+| ++t++ | Talents: spend a point per level |
 | ++k++ | Skills: professions and abilities |
 | ++l++ | Quest log |
 | ++m++ | World map |
@@ -39,7 +40,8 @@
 ## Inventory
 
 - **Left click** an item to equip it, or use it if it's a potion or food.
-- **Right click** an item while trading with a vendor to sell it.
+- **Right click** an item while talking to a vendor to sell it, while the stash is open to store it, or while trading to offer it.
+- **Left click** a gem, then an item with an empty socket, to socket it. Right click cancels.
 - **Shift + right click** drops an item on the ground.
 - Click an equipped item in the character window to unequip it.
 - Hover over an item to compare it with what you're wearing (damage per second and armor difference).

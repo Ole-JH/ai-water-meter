@@ -38,6 +38,7 @@ namespace Shadowfall
             GridHash = WorldGrid.Instance.Hash();
             TownLife.Spawn(null);                  // visual only: after the hash, so it can never affect it
             CatacombsEntrance.Spawn();
+            StashChest.Spawn();
             gameObject.AddComponent<Ambience>();
 
             gameObject.AddComponent<NetClient>();

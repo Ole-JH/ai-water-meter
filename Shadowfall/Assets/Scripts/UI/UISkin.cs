@@ -206,6 +206,7 @@ namespace Shadowfall
                     case EquipSlot.Amulet: return "amulet";
                 }
             }
+            if (it.Kind == ItemKind.Gem) return "gem";
             string n = it.Name ?? "";
             if (n == "Health Potion") return "health_potion";
             if (n == "Mana Potion") return "mana_potion";
@@ -221,20 +222,11 @@ namespace Shadowfall
 
         /// <summary>Materials share one icon and are tinted by their item color (copper, iron, mithril...).</summary>
         public static Color IconTint(Item it) =>
+            it != null && it.Kind == ItemKind.Gem ? it.IconColor :
             it != null && ((it.Kind == ItemKind.Material && (it.Name.Contains("Ore") || it.Name.Contains("Logs"))) || it.Name == "Mulled Wine")
                 ? Color.Lerp(Color.white, it.IconColor, 0.65f) : Color.white;
 
-        public static string AbilityIcon(AbilityId id)
-        {
-            switch (id)
-            {
-                case AbilityId.Cleave: return "cleave";
-                case AbilityId.Fireball: return "fireball";
-                case AbilityId.FrostNova: return "frostnova";
-                case AbilityId.Heal: return "heal";
-                default: return "meteor";
-            }
-        }
+        public static string AbilityIcon(AbilityId id) => AbilityDef.Get(id).Icon;
 
         public static string SkillIcon(SkillType s) => s.ToString().ToLower();
 

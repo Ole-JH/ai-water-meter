@@ -2,26 +2,37 @@
 
 ## Character level
 
-Monsters and quests give XP. Each level grants **5 attribute points** (spend them in the character window, ++c++) and refills your health and mana.
+Monsters and quests give XP. Each level grants **5 attribute points** (spend them in the character window, ++c++), **1 talent point** (++t++) and refills your health and mana. Each class starts with different attributes (the Barbarian is strongest, the Mage smartest, the Rogue quickest, the Knight toughest).
 
 | Attribute | Effect |
 | --- | --- |
-| Strength | +2% melee damage per point |
-| Dexterity | +0.15% critical hit chance and +0.25 armor per point |
-| Intelligence | +2.5% spell damage and +3 mana per point |
+| Strength | +2% weapon damage per point for Knights and Barbarians; Knight holy power |
+| Dexterity | +0.15% critical hit chance and +0.25 armor per point; +2% weapon damage per point for Rogues |
+| Intelligence | +2.5% spell damage and +3 mana per point; +2% weapon damage per point for Mages; Knight holy power |
 | Vitality | +6 life per point |
 
 Armor reduces incoming damage by `armor / (100 + armor)`.
 
-## Abilities
+## Classes and abilities
 
-| Key | Ability | Level | Effect |
-| --- | --- | --- | --- |
-| 1 | Cleave | 1 | 170% weapon damage in a frontal arc |
-| 2 / RMB | Fireball | 1 | Exploding projectile; scales with Intelligence |
-| 3 | Frost Nova | 3 | Damages and slows all nearby enemies by 50% |
-| 4 | Holy Light | 5 | Heals 35% of max life + 3 × Intelligence |
-| 5 | Meteor | 8 | Large delayed area of effect at the target location |
+Your class is picked on the login screen when the character is **created** and stays with it. Each class has its own five abilities on ++1++–++5++; the right mouse button casts ability 2. Abilities unlock at levels 1, 1, 3, 5 and 8.
+
+| Class | Main attribute | 1 | 2 / RMB | 3 (lv 3) | 4 (lv 5) | 5 (lv 8) |
+| --- | --- | --- | --- | --- | --- | --- |
+| Knight | Strength + Vitality | Shield Bash: 140% weapon damage, stuns 1.5 s | Holy Bolt: projectile, heals 3% life per hit | Consecration: burning holy ground that heals you | Divine Shield: 50% less damage for 6 s, heals 20% | Judgement: hammer of light, area damage + stun |
+| Barbarian | Strength | Cleave: 170% weapon damage in an arc | Throwing Axe: 110% weapon damage | Whirlwind: spin for 2.5 s while moving, 60% weapon damage per tick | Leap: jump up to 10 m, 200% weapon damage slam + slow | War Cry: +40% damage, +30% armor for 10 s |
+| Mage | Intelligence | Chain Lightning: jumps to 4 more enemies | Fireball: exploding projectile | Frost Nova: damage + 50% slow | Teleport: blink up to 12 m | Meteor: huge delayed area hit |
+| Rogue | Dexterity | Twin Strike: two quick 90% hits, +15% crit | Multishot: fan of 5 arrows, 75% each | Fan of Knives: 120% all around + slow | Smoke Bomb: monsters lose you for 4 s, heal 10% | Rain of Arrows: 3 s of arrows on an area |
+
+Weapon attacks scale with the class's main attribute (+2% per point); spells with Intelligence (and, for the Knight's holy spells, Strength + Intelligence). Stuns are sent to the server (`stun`), which freezes the monster; bosses shrug off 60% of a stun. Smoke Bomb tells the server to hide you (`vanish`): monsters drop you as a target and ignore you until it ends.
+
+## Talents
+
+You get **one talent point per level** from level 2. Open the talent window with ++t++. Each class has six talents with 3–5 ranks: three general passives (life, armor, damage, crit, mana regeneration, movement speed) and three that improve specific abilities (longer stuns, bigger Consecration, extra Multishot arrows, shorter Teleport cooldown and so on). Talents can be reset in Hollowmere for 25 gold per level.
+
+## Buffs
+
+Divine Shield, War Cry and Smoke Bomb show as icons above the action bar with their remaining time; hover for details.
 
 ## Loot
 
@@ -32,11 +43,60 @@ Equipment drops in eight slots: weapon, helm, chest, gloves, legs, boots, ring a
 | Common | White | 0 | Base item |
 | Magic | Blue | 1–2 | Prefix/suffix name, e.g. *Swift Broadsword of the Bear* |
 | Rare | Yellow | 3–4 | Random name, e.g. *Doom Bite*, short loot beam |
-| Legendary | Orange | 5 | Unique name, boosted stats, tall loot beam |
+| Legendary | Orange | 5 | Unique name, boosted stats, a **legendary power**, tall loot beam |
+| Set | Green | 4 | One of four class sets (helm, chest, gloves, boots), tall loot beam |
 
 Possible affixes: Strength, Dexterity, Intelligence, Vitality, Life, Mana, Armor, Critical Chance, Attack Speed, Life per Hit, Movement Speed, Life Regeneration and Mana Regeneration.
 
-Item level equals the monster's level. Higher item levels roll bigger numbers and better base types, and you need roughly the item's level to equip it. Bosses always drop Rare or better.
+Item level equals the monster's level. Higher item levels roll bigger numbers and better base types, and you need roughly the item's level to equip it. Bosses always drop Rare or better, and sometimes a set piece. Elites drop 2–3 magic-or-better items.
+
+### Legendary powers
+
+Legendaries usually roll a power for the class that found them:
+
+| Power | Class |
+| --- | --- |
+| Fireball splits into three | Mage |
+| Whirlwind slows everything it hits | Barbarian |
+| Multishot fires 3 extra arrows | Rogue |
+| Divine Shield stuns nearby enemies for 2 s | Knight |
+| Killed enemies explode for 60% weapon damage | Any |
+| Heal 5% life on kill | Any |
+| Every 5th hit unleashes chain lightning | Any |
+| +25% damage to elites and bosses | Any |
+
+### Sets
+
+| Set | Class | 2 pieces | 4 pieces |
+| --- | --- | --- | --- |
+| Lightbringer's Oath | Knight | +15% armor, +10% life | Holy Bolt, Consecration and Judgement +40% damage |
+| Wrath of the Ancients | Barbarian | +12% attack speed | Whirlwind +60% damage and 1 s longer |
+| Regalia of the Tempest | Mage | +30% mana regeneration | Chain Lightning jumps 3 more times, +30% damage |
+| Nightstalker's Garb | Rogue | +8% critical chance | Multishot and Rain of Arrows +50% damage |
+
+Set pieces drop for your own class 75% of the time. The tooltip shows which pieces you wear and which bonuses are active.
+
+### Gems and sockets
+
+Weapons, helms, chests and legs can roll **0–2 sockets** (shown as small diamonds on the slot). Gems drop from elites, bosses and occasionally normal monsters, and Curio Dealer Vex sells Chipped gems.
+
+| Gem | Stat | Chipped / Flawless / Perfect |
+| --- | --- | --- |
+| Ruby | Strength | +3 / +6 / +10 |
+| Emerald | Dexterity | +3 / +6 / +10 |
+| Sapphire | Intelligence | +3 / +6 / +10 |
+| Topaz | Vitality | +3 / +6 / +10 |
+| Diamond | Maximum life | +12 / +24 / +40 |
+
+Click a gem in your bags, then click an item (in the bags or worn) with an empty socket. Vex fuses three gems of the same kind and quality into the next quality (50 gold for Flawless, 250 for Perfect).
+
+## Stash
+
+The stash chest by the village square holds 40 items and is saved with your character. Click it to open it; right-click items in your bags to store them and click stashed items to take them back.
+
+## Trading
+
+Click another player's name and choose **Trade** (you must be within 10 m). Right-click items in your bags to offer them, set an amount of gold, then press **Accept**. Any change to either offer resets both acceptances; the trade completes when both players accept the same offers. Moving apart, entering a dungeon or logging out cancels it, and offered items go back to your bags.
 
 ## Professions
 

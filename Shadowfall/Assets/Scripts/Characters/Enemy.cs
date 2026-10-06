@@ -54,7 +54,7 @@ namespace Shadowfall
         public int NetId;
         public EnemyDef Def;
         public float LastSeen;
-        public bool Slowed;
+        public bool Slowed, Stunned;
         public bool Elite { get; private set; }
         public string[] Affixes { get; private set; } = new string[0];
         public bool Shielded { get; private set; }
@@ -148,6 +148,8 @@ namespace Shadowfall
             // Keep our locally-predicted damage for a moment so health bars don't flicker back up.
             Health = Time.time - LastDamagedTime < 0.4f ? Mathf.Min(Health, m.hp) : m.hp;
             Slowed = m.sl;
+            if (m.st && !Stunned && !IsDead) GameUI.Float(transform.position + Vector3.up * (Height + 0.6f), "Stunned", new Color(1f, 0.9f, 0.4f), 0.8f);
+            Stunned = m.st;
             if (Elite && m.sh && !Shielded) Sfx.Play("frost_cast", transform.position, 0.5f, 0.1f);
             Shielded = m.sh;
             netPos = new Vector3(m.x, 0, m.z);
@@ -394,6 +396,11 @@ namespace Shadowfall
             if (!IsDead) NetClient.I?.SendSlow(NetId, duration);
         }
 
+        public void Stun(float duration)
+        {
+            if (!IsDead) NetClient.I?.SendStun(NetId, duration);
+        }
+
         /// <summary>Server says this monster died.</summary>
         public void NetDie()
         {
@@ -424,10 +431,11 @@ namespace Shadowfall
             for (int i = 0; i < items; i++)
             {
                 float r = Random.value;
-                var rarity = r < 0.03f ? Rarity.Legendary : r < 0.33f ? Rarity.Rare : Rarity.Magic;
+                var rarity = r < 0.04f ? Rarity.Legendary : r < 0.08f ? Rarity.Set : r < 0.36f ? Rarity.Rare : Rarity.Magic;
                 LootDrop.Spawn(pos, ItemDatabase.RandomEquipment(level, 0.5f, rarity), 0);
             }
             if (Random.value < 0.5f) { var hp = ItemDatabase.HealthPotion(); hp.Count = 2; LootDrop.Spawn(pos, hp, 0); }
+            if (Random.value < 0.4f) LootDrop.Spawn(pos, ItemPowers.RandomGem(level), 0);
         }
 
         public static void RollLoot(EnemyDef def, int level, Vector3 pos)
@@ -440,9 +448,12 @@ namespace Shadowfall
                 for (int i = 0; i < n; i++) LootDrop.Spawn(pos, ItemDatabase.RandomEquipment(level + 1, 1f, i == 0 ? Rarity.Rare : (Rarity?)null), 0);
                 if (def.Name == "Lich King" && Random.value < 0.5f)
                     LootDrop.Spawn(pos, ItemDatabase.RandomEquipment(level + 2, 1f, Rarity.Legendary), 0);
+                if (Random.value < 0.35f) LootDrop.Spawn(pos, ItemDatabase.RandomEquipment(level + 1, 1f, Rarity.Set), 0);
+                LootDrop.Spawn(pos, ItemPowers.RandomGem(level + 6), 0);
             }
             else if (Random.value < 0.22f) LootDrop.Spawn(pos, ItemDatabase.RandomEquipment(level), 0);
             if (Random.value < 0.12f) LootDrop.Spawn(pos, Random.value < 0.6f ? ItemDatabase.HealthPotion() : ItemDatabase.ManaPotion(), 0);
+            if (Random.value < 0.035f) LootDrop.Spawn(pos, ItemPowers.RandomGem(level), 0);
         }
     }
 }

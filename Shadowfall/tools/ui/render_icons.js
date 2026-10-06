@@ -16,6 +16,26 @@ const ICONS = {
   frostnova: ['lorc/frozen-orb', '#1f5f8f', '#e6f8ff'],
   heal: ['delapouite/healing', '#8c7418', '#fffbe0'],
   meteor: ['lorc/meteor-impact', '#6e1810', '#ffd9b0'],
+  // Knight
+  shield_bash: ['delapouite/shield-bash', '#3b4a66', '#eef2ff'],
+  holy_bolt: ['lorc/sun-radiations', '#8c7418', '#fffbe0'],
+  consecration: ['lorc/sun', '#9a6a10', '#fff4c8'],
+  divine_shield: ['lorc/bell-shield', '#2f5a8a', '#f0f8ff'],
+  judgement: ['lorc/hammer-drop', '#7a5a10', '#fff2c0'],
+  // Barbarian
+  throwing_axe: ['lorc/axe-swing', '#6a3420', '#ffeede'],
+  whirlwind: ['lorc/whirlwind', '#7a2a22', '#fff2e0'],
+  leap: ['delapouite/jump-across', '#5a3a20', '#ffe6c8'],
+  war_cry: ['lorc/shouting', '#8a2a18', '#ffe0c8'],
+  // Mage
+  chain_lightning: ['lorc/lightning-arc', '#2a3a8a', '#e6f0ff'],
+  teleport: ['lorc/teleport', '#3e2c6e', '#efe6ff'],
+  // Rogue
+  twin_strike: ['lorc/crossed-swords', '#2c4a34', '#e6ffe9'],
+  multishot: ['lorc/striking-arrows', '#3a4a2a', '#f0ffe0'],
+  fan_of_knives: ['lorc/spinning-blades', '#2a3a3a', '#e6fbff'],
+  smoke_bomb: ['lorc/hood', '#2a2a32', '#e6e6f0'],
+  rain_of_arrows: ['lorc/arrow-scope', '#3a3a20', '#fffbe0'],
   // consumables
   health_potion: ['delapouite/health-potion', null, '#ff6a5c'],
   mana_potion: ['delapouite/magic-potion', null, '#6fa8ff'],
@@ -38,6 +58,7 @@ const ICONS = {
   logs: ['delapouite/log', null, '#d29a5c'],
   ore: ['faithtoken/ore', null, '#d9c1a5'],
   gold: ['delapouite/two-coins', null, '#ffd24a'],
+  gem: ['lorc/emerald', null, '#ffffff'],
   // skills
   woodcutting: ['lorc/wood-axe', '#3f6a2a', '#eaffd8'],
   mining: ['lorc/mining', '#5e5348', '#f0e6da'],
@@ -51,6 +72,9 @@ const ICONS = {
   quests: ['lorc/scroll-unfurled', '#4a3524', '#f3e3c8'],
   map: ['lorc/treasure-map', '#4a3524', '#f3e3c8'],
   help: ['sbed/help', '#4a3524', '#f3e3c8'],
+  talents: ['delapouite/upgrade', '#4a3524', '#f3e3c8'],
+  stash: ['lorc/locked-chest', '#4a3524', '#f3e3c8'],
+  trade: ['delapouite/shaking-hands', '#4a3524', '#f3e3c8'],
   // hero classes
   knight: ['delapouite/knight-banner', '#3b4a66', '#eef2ff'],
   barbarian: ['delapouite/barbarian', '#6a3420', '#ffeede'],

@@ -48,6 +48,7 @@ namespace Shadowfall
                 UISkin.Shadowed(new Rect(tx, hy, tw, 44), heroNames[sel], nameStyle, UISkin.Gold, 2);
                 UISkin.Shadowed(new Rect(tx, hy + 42, tw, 26), heroRoles[sel].ToUpper(), new GUIStyle(UISkin.Small) { fontSize = 14, font = UISkin.Title ?? UISkin.Bold }, UISkin.Muted);
                 UISkin.Shadowed(new Rect(tx, hy + 66, tw, 28), heroBlurbs[sel], new GUIStyle(UISkin.Label) { fontSize = 18, fontStyle = FontStyle.Italic }, UISkin.Cream);
+                UISkin.Shadowed(new Rect(tx, hy + 96, tw, 24), ClassKits.Role(heroNames[sel]), new GUIStyle(UISkin.Small) { fontSize = 15 }, UISkin.Muted);
             }
 
             // ---- the panel
@@ -96,7 +97,7 @@ namespace Shadowfall
                     loginLook = heroNames[i];
                     Sfx.Play2D("ui_click", 0.35f);
                 }
-                if (hover) tooltip = "<b>" + heroNames[i] + "</b>  -  " + heroRoles[i] + "\n" + heroBlurbs[i];
+                if (hover) tooltip = "<b>" + heroNames[i] + "</b>  -  " + heroRoles[i] + "\n" + heroBlurbs[i] + "\n<color=#c8a060>" + ClassKits.Role(heroNames[i]) + "</color>";
             }
             y += card + 42;
             if (!wide)
@@ -125,7 +126,7 @@ namespace Shadowfall
             y += 62;
 
             bool hasStatus = !string.IsNullOrEmpty(net.Status);
-            string status = hasStatus ? net.Status : "New name? Your character is created when you first log in.";
+            string status = hasStatus ? net.Status : "New name? Your hero is created with this class when you first log in. Existing heroes keep their class.";
             var statusStyle = new GUIStyle(UISkin.SmallCenter) { wordWrap = true };
             bool error = hasStatus && !busy;
             UISkin.Shadowed(new Rect(x - 10, y, fw + 20, 40), status, statusStyle, error ? new Color(1f, 0.55f, 0.45f) : hasStatus ? UISkin.Gold : UISkin.Muted);

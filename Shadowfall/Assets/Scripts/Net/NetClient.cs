@@ -7,9 +7,9 @@ namespace Shadowfall
     /// Talks to the Shadowfall server: login, world snapshots (monsters + other players),
     /// combat events, chat, spell effects and character saves.
     /// </summary>
-    public class NetClient : MonoBehaviour
+    public partial class NetClient : MonoBehaviour
     {
-        public const int ProtocolVersion = 2;
+        public const int ProtocolVersion = 3;
         public static NetClient I;
 
         public enum ConnState { Offline, Connecting, LoggingIn, InWorld }
@@ -66,7 +66,8 @@ namespace Shadowfall
             bool wasInWorld = State == ConnState.InWorld;
             State = ConnState.Offline;
             Party = new NetPartyMember[0];
-            PartyInvite = QuestOffer = null;
+            PartyInvite = QuestOffer = TradeInvite = null;
+            DropTrade(); // the save above already counted anything in the trade window
             DungeonId = 0;
             Dungeon.Exit();
             Status = reason;
@@ -93,6 +94,17 @@ namespace Shadowfall
         public void SendSlow(int monsterId, float duration)
         {
             if (State == ConnState.InWorld) Send(new SlowMsg { mid = monsterId, dur = duration });
+        }
+
+        public void SendStun(int monsterId, float duration)
+        {
+            if (State == ConnState.InWorld) Send(new StunMsg { mid = monsterId, dur = duration });
+        }
+
+        /// <summary>Smoke Bomb: monsters lose track of us for a while.</summary>
+        public void SendVanish(float duration)
+        {
+            if (State == ConnState.InWorld) Send(new VanishMsg { dur = duration });
         }
 
         public void SendChat(string text)
@@ -282,6 +294,9 @@ namespace Shadowfall
                     PartyLeader = m.id;
                     if (!wasInParty && InParty) GameUI.Log("You joined a party. Type /p to talk to your party.", PartyColor);
                     break;
+                case "tinv": case "topen": case "tupd": case "tok": case "tdone": case "tclose":
+                    HandleTrade(m);
+                    break;
                 case "pinv":
                     PartyInvite = new Offer { From = m.id, Name = m.name, Time = Time.time };
                     GameUI.Log(m.name + " invites you to join a party.", PartyColor);
@@ -395,6 +410,7 @@ namespace Shadowfall
             if (Enemy.ById.TryGetValue(m.mid, out var e)) e.NetDie();
             if (!p.IsDead)
             {
+                ItemPowers.OnKill(p, pos);
                 p.AddXp(m.xp);
                 p.Quests.OnKill(def.Name);
                 if (!string.IsNullOrEmpty(m.el))
@@ -500,6 +516,9 @@ namespace Shadowfall
                 case "levelup":
                     Sfx.Play("levelup", from, 0.7f, 0f);
                     SpellFx.LevelUp(from);
+                    break;
+                default:
+                    AbilityFx.Remote(m.k, from, to);
                     break;
             }
         }

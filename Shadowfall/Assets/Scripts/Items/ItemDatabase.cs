@@ -80,6 +80,7 @@ namespace Shadowfall
             if (name == "Health Potion") return HealthPotion();
             if (name == "Mana Potion") return ManaPotion();
             if (name.StartsWith("Cooked")) return Food(name);
+            if (ItemPowers.ParseGem(name, out var gemType, out int gemTier)) return ItemPowers.Gem(gemType, gemTier);
             return Material(name);
         }
 
@@ -105,6 +106,8 @@ namespace Shadowfall
             EquipSlot.Weapon, EquipSlot.Weapon, EquipSlot.Helm, EquipSlot.Chest, EquipSlot.Gloves,
             EquipSlot.Legs, EquipSlot.Boots, EquipSlot.Ring, EquipSlot.Amulet
         };
+
+        static readonly EquipSlot[] setSlots = { EquipSlot.Helm, EquipSlot.Chest, EquipSlot.Gloves, EquipSlot.Boots };
 
         static readonly string[][] weaponBases =
         {
@@ -165,7 +168,8 @@ namespace Shadowfall
         public static Rarity RollRarity(float bonus)
         {
             float r = Random.value;
-            if (r < 0.015f + bonus * 0.06f) return Rarity.Legendary;
+            if (r < 0.01f + bonus * 0.04f) return Rarity.Legendary;
+            if (r < 0.02f + bonus * 0.08f) return Rarity.Set;
             if (r < 0.10f + bonus * 0.25f) return Rarity.Rare;
             if (r < 0.40f + bonus * 0.3f) return Rarity.Magic;
             return Rarity.Common;
@@ -177,6 +181,8 @@ namespace Shadowfall
             itemLevel = Mathf.Max(1, itemLevel);
             var slot = forcedSlot ?? slots[Random.Range(0, slots.Length)];
             var rarity = forced ?? RollRarity(rarityBonus);
+            if (rarity == Rarity.Set && forcedSlot == null) slot = setSlots[Random.Range(0, setSlots.Length)];
+            if (rarity == Rarity.Set && System.Array.IndexOf(setSlots, slot) < 0) rarity = Rarity.Legendary;
             int tier = Mathf.Clamp(itemLevel / 6, 0, 3);
 
             var item = new Item
@@ -185,7 +191,7 @@ namespace Shadowfall
                 RequiredLevel = Mathf.Max(1, itemLevel - 2),
             };
 
-            float rarityMul = rarity == Rarity.Legendary ? 1.35f : rarity == Rarity.Rare ? 1.15f : 1f;
+            float rarityMul = rarity >= Rarity.Legendary ? 1.35f : rarity == Rarity.Rare ? 1.15f : 1f;
 
             if (slot == EquipSlot.Weapon)
             {
@@ -209,7 +215,7 @@ namespace Shadowfall
             }
 
             int affixes = rarity == Rarity.Common ? 0 : rarity == Rarity.Magic ? Random.Range(1, 3) :
-                rarity == Rarity.Rare ? Random.Range(3, 5) : 5;
+                rarity == Rarity.Rare ? Random.Range(3, 5) : rarity == Rarity.Set ? 4 : 5;
             if ((slot == EquipSlot.Ring || slot == EquipSlot.Amulet) && affixes < 5) affixes++;
 
             var pool = new List<Stat>((Stat[])System.Enum.GetValues(typeof(Stat)));
@@ -238,7 +244,18 @@ namespace Shadowfall
                     var names = legendaryNames[slot];
                     item.Name = names[Random.Range(0, names.Length)];
                     item.Flavor = legendaryFlavor[Random.Range(0, legendaryFlavor.Length)];
+                    ItemPowers.GiveLegendaryPower(item, Player.I != null ? Player.I.Look : null);
                     break;
+                case Rarity.Set:
+                    ItemPowers.MakeSetPiece(item, Player.I != null ? Player.I.Look : null);
+                    break;
+            }
+
+            // Sockets: weapons, helms, chests and legs can roll up to two.
+            if (slot == EquipSlot.Weapon || slot == EquipSlot.Helm || slot == EquipSlot.Chest || slot == EquipSlot.Legs)
+            {
+                float r = Random.value, bonus = rarity >= Rarity.Rare ? 0.15f : 0f;
+                item.Sockets = r < 0.06f + bonus ? 2 : r < 0.3f + bonus ? 1 : 0;
             }
 
             int rarityValue = rarity == Rarity.Common ? 1 : rarity == Rarity.Magic ? 3 : rarity == Rarity.Rare ? 7 : 20;

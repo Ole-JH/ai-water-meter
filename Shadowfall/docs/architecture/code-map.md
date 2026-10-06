@@ -24,15 +24,19 @@
 | `Characters/Enemy.cs` | `EnemyDef` (looks) and the `Enemy` network proxy (interpolation, hit prediction, death, personal loot) |
 | `Characters/CharacterView.cs` | Animated model wrapper (`AnimSet`, `CharacterLook`) for heroes, NPCs and monsters |
 | `Characters/HumanoidModel.cs` | Blocky procedural humanoid with walk and attack animation |
-| `Characters/Abilities.cs` | Ability definitions and the meteor effect |
+| `Characters/Abilities.cs` | Ability definitions, class kits and starting stats (`ClassKits`), talents, buffs, meteor/Judgement and ground effects (Consecration, Rain of Arrows) |
 | `Combat/Combatant.cs` | Base class for health, armor, damage numbers and area queries |
 | `Combat/SpellFx.cs` | Particle and mesh effects for spells, hits, explosions, level-ups |
 | `Combat/Projectile.cs` | Damaging and cosmetic projectiles |
+| `Combat/AbilityFx.cs` | Look and sound of each class ability, shared by the hero and other players' relayed casts; `LightningBolt` |
+| `Items/ItemPowers.cs` | Legendary powers, the four class sets and their bonuses, gems (stats, colors, fusing), loot hooks |
+| `World/StashChest.cs` | The stash chest in Hollowmere |
 | `Items/VendorStock.cs` | What each vendor sells, prices and restocking |
 | `Items/*` | `Item` model and tooltips, random gear generator, inventory |
 | `Progression/SkillSet.cs` | RuneScape-style professions and XP curve |
 | `Progression/Quests.cs` | Quest definitions (chains per NPC) and quest log |
 | `Net/NetClient.cs` | Login flow, message dispatch, state and save sending |
+| `Net/NetClient.Trade.cs` | Player trading: escrow, offers, accept/cancel |
 | `Net/NetMessages.cs` | All wire message and save-data classes |
 | `Net/WebSocketConnection.cs` | Polling WebSocket (`.jslib` in WebGL, `ClientWebSocket` elsewhere) |
 | `Net/RemotePlayer.cs` | Other players: interpolation, appearance, animation |
@@ -40,13 +44,14 @@
 | `UI/Speech.cs` | Speech bubbles (chat and NPC chatter) |
 | `UI/GameUI.cs` | HUD, windows, dialogs, vendor, crafting, chat, minimap, tooltips |
 | `UI/GameUI.Login.cs` | Login screen |
+| `UI/GameUI.Items.cs` | Talent window, buff icons, gem sockets, stash and trade windows |
 | `UI/LoginShowcase.cs` | Live, lit hero preview in the village square behind the login screen |
 
 ## Server (`server/`)
 
 | File | Responsibility |
 | --- | --- |
-| `server.js` | Static file host, WebSocket sessions, accounts, world grid and A*, monster AI, snapshots, persistence |
+| `server.js` | Static file host, WebSocket sessions, accounts, world grid and A*, monster AI (slows, stuns, vanished heroes), parties, trades, snapshots, persistence |
 | `content.js` | Monster stats, spawner table, town safe-zone rectangle |
 | `dungeon.js` | Dungeon level generator (rooms, corridors, start, stairs, boss, chests, packs) |
 | `test/smoke.js` | End-to-end test with two fake clients |

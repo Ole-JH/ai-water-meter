@@ -14,6 +14,7 @@ namespace Shadowfall
         public int l;          // level
         public float x, z, ry, hp, mhp, ar;
         public bool sl;        // slowed
+        public bool st;        // stunned
         public string el, af;  // elite name and comma-separated affixes (empty for normal monsters)
         public bool sh;        // elite shield up (immune)
     }
@@ -48,6 +49,8 @@ namespace Shadowfall
         public int[] rooms;            // x, y, w, h per room
         public float[] start, exit, stairs, boss, chests;
         public SaveData save;
+        public string[] items;         // trade offers: items as JSON
+        public int gold;
         public NetMonster[] m;
         public NetPlayer[] p;
     }
@@ -58,6 +61,8 @@ namespace Shadowfall
     [Serializable] public class WorldMsg { public string t = "world"; public string hash, cells; public int w, h; }
     [Serializable] public class HitMsg { public string t = "hit"; public int mid, dmg; public bool crit; }
     [Serializable] public class SlowMsg { public string t = "slow"; public int mid; public float dur; }
+    [Serializable] public class StunMsg { public string t = "stun"; public int mid; public float dur; }
+    [Serializable] public class VanishMsg { public string t = "vanish"; public float dur; }
     [Serializable] public class ChatMsg { public string t = "chat"; public string msg; }
     [Serializable] public class FxMsg { public string t = "fx"; public string k; public float x, z, tx, tz; }
     [Serializable] public class SaveMsg { public string t = "save"; public SaveData save; }
@@ -87,6 +92,7 @@ namespace Shadowfall
 
     /// <summary>Party commands: pinvite (name), paccept, pdecline, pleave, pkick (id), pshare (q).</summary>
     [Serializable] public class PartyCmd { public string t, name, q; public int id; }
+    [Serializable] public class TradeCmd { public string t; public int id, gold; public string[] items; }
 
     // ---------------------------------------------------------------- character save (stored by the server)
 
@@ -98,11 +104,13 @@ namespace Shadowfall
     {
         public int level, xp, gold, str, dex, intel, vit, statPoints;
         public string look;
+        public string[] talents;   // "id:rank"
         public float x, z, hp, mana;
         public int[] skillXp;
         public string[] completedQuests;
         public QuestSave[] activeQuests;
         public SlotSave[] inventory;
         public Item[] equipped;
+        public SlotSave[] stash;
     }
 }

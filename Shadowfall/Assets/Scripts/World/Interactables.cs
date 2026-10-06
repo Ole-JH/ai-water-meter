@@ -98,7 +98,7 @@ namespace Shadowfall
                 if (Item.Rarity >= Rarity.Rare)
                 {
                     // Loot beam
-                    float h = Item.Rarity == Rarity.Legendary ? 9f : 3.5f;
+                    float h = Item.Rarity >= Rarity.Legendary ? 9f : 3.5f;
                     var beam = Factory.Prim(PrimitiveType.Cylinder, transform, new Vector3(0, h * 0.5f, 0), new Vector3(0.12f, h * 0.5f, 0.12f), rc, false, Mat.Glow(rc));
                     beam.GetComponent<Renderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
                 }

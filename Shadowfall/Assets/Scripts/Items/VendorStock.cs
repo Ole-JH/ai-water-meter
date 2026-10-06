@@ -57,6 +57,7 @@ namespace Shadowfall
                     for (int i = 0; i < 5; i++)
                         Items.Add(ItemDatabase.RandomEquipment(playerLevel + Random.Range(0, 2), 0f,
                             Random.value < 0.25f ? Rarity.Rare : Rarity.Magic, Random.value < 0.5f ? EquipSlot.Ring : EquipSlot.Amulet));
+                    for (int i = 0; i < 2; i++) Items.Add(ItemPowers.Gem(ItemPowers.GemTypes[Random.Range(0, ItemPowers.GemTypes.Length)], 0));
                     break;
             }
         }

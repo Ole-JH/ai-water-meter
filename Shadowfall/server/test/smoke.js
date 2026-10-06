@@ -29,7 +29,7 @@ function connect(name, pass, hash = HASH) {
   return new Promise((resolve, reject) => {
     const ws = new WebSocket(URL);
     const c = { ws, msgs: [], find: (t) => c.msgs.find((m) => m.t === t), all: (t) => c.msgs.filter((m) => m.t === t) };
-    ws.on("open", () => ws.send(JSON.stringify({ t: "hello", name, pass, hash, ver: 2 })));
+    ws.on("open", () => ws.send(JSON.stringify({ t: "hello", name, pass, hash, ver: 3 })));
     ws.on("error", reject);
     ws.on("message", (d) => {
       const m = JSON.parse(d);
@@ -119,6 +119,44 @@ async function main() {
     b.ws.send(JSON.stringify({ t: "hit", mid: wolf2.id, dmg: 999999 }));
     await sleep(300);
     assert.ok(d.all("kill").some((k) => k.mid === wolf2.id), "nearby party member shares kill credit");
+
+    // ---- class abilities: stun (Shield Bash, Judgement) and vanish (Smoke Bomb)
+    const wolf3 = b.all("snap").at(-1).m.find((x) => x.id !== wolf.id && x.id !== wolf2.id);
+    if (wolf3) {
+      a.ws.send(JSON.stringify({ t: "stun", mid: wolf3.id, dur: 2 }));
+      await sleep(250);
+      assert.ok(a.all("snap").at(-1).m.find((x) => x.id === wolf3.id)?.st, "stunned monsters are flagged in snapshots");
+    }
+    // ---- trading between Alice and Bob (standing next to each other)
+    const aliceId = a.find("welcome").id, bobId = b.find("welcome").id;
+    a.ws.send(JSON.stringify({ t: "treq", id: bobId }));
+    await sleep(200);
+    assert.strictEqual(b.find("tinv")?.name, "Alice", "Bob receives the trade request");
+    b.ws.send(JSON.stringify({ t: "tacc" }));
+    await sleep(200);
+    assert.strictEqual(a.find("topen")?.id, bobId, "the trade window opens for Alice");
+    assert.strictEqual(b.find("topen")?.id, aliceId, "the trade window opens for Bob");
+    a.ws.send(JSON.stringify({ t: "toffer", items: ['{"Name":"Sword"}'], gold: 0 }));
+    b.ws.send(JSON.stringify({ t: "toffer", items: [], gold: 25 }));
+    await sleep(200);
+    assert.strictEqual(b.find("tupd")?.items[0], '{"Name":"Sword"}', "offers are relayed");
+    a.ws.send(JSON.stringify({ t: "tok" }));
+    await sleep(100);
+    b.ws.send(JSON.stringify({ t: "toffer", items: [], gold: 30 })); // a change resets acceptance
+    a.ws.send(JSON.stringify({ t: "tok" }));
+    await sleep(100);
+    assert.ok(!a.find("tdone"), "the trade does not finish until both accept");
+    b.ws.send(JSON.stringify({ t: "tok" }));
+    await sleep(200);
+    assert.strictEqual(a.find("tdone")?.gold, 30, "Alice receives Bob's gold");
+    assert.strictEqual(b.find("tdone")?.items[0], '{"Name":"Sword"}', "Bob receives Alice's item");
+
+    const danaId = d.find("welcome").id;
+    d.ws.send(JSON.stringify({ t: "vanish", dur: 3 }));
+    await sleep(400);
+    const seen = a.msgs.length;
+    await sleep(1200);
+    assert.ok(!a.msgs.slice(seen).some((m) => m.t === "matk" && m.tid === danaId), "vanished heroes are not attacked");
 
     d.ws.send(JSON.stringify({ t: "pleave" }));
     await sleep(200);

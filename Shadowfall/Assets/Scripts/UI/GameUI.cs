@@ -15,11 +15,11 @@ namespace Shadowfall
         // ---- state read by gameplay code
         public bool MouseOverUI { get; private set; }
         public bool ChatOpen { get; private set; }
-        public bool KeyboardCaptured => ChatOpen || Player.I == null;
+        public bool KeyboardCaptured => ChatOpen || Player.I == null || tradeGoldFocused;
         public bool BlocksWorldInput => Player.I == null || Player.I.IsDead || showMap;
 
         // ---- windows
-        bool showBags, showChar, showSkills, showQuests, showMap, showHelp;
+        bool showBags, showChar, showSkills, showQuests, showMap, showHelp, showTalents;
         Npc dialogNpc;
         CraftingStation craftStation;
 
@@ -140,10 +140,10 @@ namespace Shadowfall
 
             if (!ChatOpen)
             {
-                bool before = showBags | showChar | showSkills | showQuests | showMap | showHelp;
+                bool before = showBags | showChar | showSkills | showQuests | showMap | showHelp | showTalents;
                 bool questsBefore = showQuests;
                 WindowKeys();
-                bool after = showBags | showChar | showSkills | showQuests | showMap | showHelp;
+                bool after = showBags | showChar | showSkills | showQuests | showMap | showHelp | showTalents;
                 if (showQuests && !questsBefore) Sfx.Play2D("book", 0.5f);
                 else if (after != before) Sfx.Play2D(after ? "ui_open" : "ui_close", 0.4f);
             }
@@ -159,12 +159,14 @@ namespace Shadowfall
                 if (GameInput.Down(GKey.C)) showChar = !showChar;
                 if (GameInput.Down(GKey.K)) showSkills = !showSkills;
                 if (GameInput.Down(GKey.L)) showQuests = !showQuests;
+                if (GameInput.Down(GKey.T)) showTalents = !showTalents;
                 if (GameInput.Down(GKey.M)) showMap = !showMap;
                 if (GameInput.Down(GKey.F1) || GameInput.Down(GKey.H)) showHelp = !showHelp;
                 if (GameInput.Down(GKey.Escape))
                 {
                     if (dialogNpc != null || craftStation != null) { dialogNpc = null; craftStation = null; }
-                    else showBags = showChar = showSkills = showQuests = showMap = showHelp = false;
+                    else if (tradeOpen) NetClient.I?.CancelTrade();
+                    else showBags = showChar = showSkills = showQuests = showMap = showHelp = showTalents = showStash = false;
                 }
             }
         }
@@ -217,6 +219,7 @@ namespace Shadowfall
             DrawMinimap(p);
             DrawQuestTracker(p);
             DrawActionBar(p);
+            DrawBuffs(p);
             DrawMenuButtons();
             DrawLog(true);
 
@@ -224,6 +227,10 @@ namespace Shadowfall
             if (showChar) DrawCharacter(p);
             if (showSkills) DrawSkills(p);
             if (showQuests) DrawQuestLog(p);
+            if (showTalents) DrawTalents(p);
+            if (showStash) DrawStash(p);
+            if (tradeOpen) DrawTrade(p);
+            else tradeGoldFocused = false;
             if (dialogNpc != null) DrawDialog(p);
             if (craftStation != null) DrawCrafting(p);
             if (showHelp) DrawHelp();
@@ -355,7 +362,7 @@ namespace Shadowfall
             if (rp == null) { menuPlayer = null; return; }
             var net = NetClient.I;
             bool canInvite = !net.IsPartyMember(rp.Id) && (!net.InParty || net.IsLeader);
-            var r = new Rect(menuPos.x - 100, menuPos.y + 10, 200, 60 + (canInvite ? 44 : 0) + 88);
+            var r = new Rect(menuPos.x - 100, menuPos.y + 10, 200, 60 + (canInvite ? 44 : 0) + 132);
             UISkin.Box(r, UISkin.PanelPlain);
             Block(r);
             UISkin.Shadowed(new Rect(r.x, r.y + 12, r.width, 24), rp.Name, UISkin.HeadingCenter, UISkin.Gold);
@@ -366,6 +373,8 @@ namespace Shadowfall
                 y += 44;
             }
             if (UISkin.Btn(new Rect(r.x + 16, y, r.width - 32, 38), "Whisper", UISkin.Button)) { OpenChat("/w " + rp.Name + " "); menuPlayer = null; }
+            y += 44;
+            if (UISkin.Btn(new Rect(r.x + 16, y, r.width - 32, 38), "Trade", UISkin.Button)) { net.RequestTrade(rp.Id); menuPlayer = null; }
             y += 44;
             if (UISkin.Btn(new Rect(r.x + 16, y, r.width - 32, 38), "Close", UISkin.Button)) menuPlayer = null;
             if (Event.current.type == EventType.MouseDown && !r.Contains(Event.current.mousePosition)) menuPlayer = null;
@@ -381,6 +390,13 @@ namespace Shadowfall
             {
                 if (Time.time - inv.Time > 60f) net.AnswerPartyInvite(false);
                 else if (OfferBox(y, "<b>" + inv.Name + "</b> invites you to join a party.", out bool yes)) net.AnswerPartyInvite(yes);
+                y += 140;
+            }
+            var ti = net.TradeInvite;
+            if (ti != null)
+            {
+                if (Time.time - ti.Time > 60f) net.AnswerTradeInvite(false);
+                else if (OfferBox(y, "<b>" + ti.Name + "</b> wants to trade with you.", out bool yes)) net.AnswerTradeInvite(yes);
                 y += 140;
             }
             var q = net.QuestOffer;
@@ -574,7 +590,8 @@ namespace Shadowfall
         void DrawActionBar(Player p)
         {
             const float slot = 58, gap = 8;
-            int count = AbilityDef.All.Length + 2;
+            var kit = p.Kit;
+            int count = kit.Length + 2;
             float barW = count * (slot + gap) - gap + 24;
             float x0 = (VW - barW) / 2 + 12, y0 = VH - slot - 46;
 
@@ -587,9 +604,9 @@ namespace Shadowfall
             UISkin.Box(bg, UISkin.Panel);
             Block(bg);
 
-            for (int i = 0; i < AbilityDef.All.Length; i++)
+            for (int i = 0; i < kit.Length; i++)
             {
-                var a = AbilityDef.All[i];
+                var a = kit[i];
                 var r = new Rect(x0 + i * (slot + gap), y0, slot, slot);
                 bool locked = p.Level < a.RequiredLevel;
                 UISkin.Box(r, UISkin.Slot);
@@ -625,7 +642,7 @@ namespace Shadowfall
             string[] icons = { "health_potion", "mana_potion" };
             for (int i = 0; i < 2; i++)
             {
-                var r = new Rect(x0 + (AbilityDef.All.Length + i) * (slot + gap) + 4, y0, slot, slot);
+                var r = new Rect(x0 + (kit.Length + i) * (slot + gap) + 4, y0, slot, slot);
                 int n = p.Inventory.CountOf(potions[i]);
                 UISkin.Box(r, UISkin.Slot);
                 UISkin.IconInSlot(r, UISkin.Icon(icons[i]), n > 0 ? Color.white : new Color(0.4f, 0.4f, 0.4f), 6);
@@ -678,8 +695,8 @@ namespace Shadowfall
 
         void DrawMenuButtons()
         {
-            string[] icons = { "bags", "character", "skills", "quests", "map", "help" };
-            string[] tips = { "Bags  [I]", "Character  [C]", "Skills  [K]", "Quest Log  [L]", "World Map  [M]", "Help  [F1]" };
+            string[] icons = { "bags", "character", "talents", "skills", "quests", "map", "help" };
+            string[] tips = { "Bags  [I]", "Character  [C]", "Talents  [T]", "Skills  [K]", "Quest Log  [L]", "World Map  [M]", "Help  [F1]" };
             const float s = 44, gap = 6;
             float w = icons.Length * (s + gap) - gap;
             var r = new Rect(VW - w - 20, VH - s - 18, w, s);
@@ -694,13 +711,16 @@ namespace Shadowfall
                     {
                         case 0: showBags = !showBags; break;
                         case 1: showChar = !showChar; break;
-                        case 2: showSkills = !showSkills; break;
-                        case 3: showQuests = !showQuests; break;
-                        case 4: showMap = !showMap; break;
+                        case 2: showTalents = !showTalents; break;
+                        case 3: showSkills = !showSkills; break;
+                        case 4: showQuests = !showQuests; break;
+                        case 5: showMap = !showMap; break;
                         default: showHelp = !showHelp; break;
                     }
                 }
                 UISkin.IconInSlot(b, UISkin.Icon(icons[i]), Color.white, 5);
+                if (i == 2 && Player.I != null && Player.I.TalentPoints > 0)
+                    UISkin.Shadowed(new Rect(b.xMax - 16, b.y - 4, 20, 20), Player.I.TalentPoints.ToString(), UISkin.SmallCenter, new Color(0.8f, 0.6f, 1f), 2);
                 if (b.Contains(Event.current.mousePosition)) tooltip = tips[i];
             }
         }
@@ -903,7 +923,7 @@ namespace Shadowfall
             const float cell = 50, gap = 4;
             float w = cols * (cell + gap) - gap + 40, h = rows * (cell + gap) + 112;
             var r = new Rect(VW - w - 20, VH - h - 82, w, h);
-            if (UISkin.Window(r, "Bags")) showBags = false;
+            if (UISkin.Window(r, "Bags")) { showBags = false; socketGem = -1; }
             Block(r);
 
             bool vendor = dialogNpc != null && dialogNpc.Role == NpcRole.Vendor;
@@ -913,14 +933,34 @@ namespace Shadowfall
                 var item = p.Inventory.Slots[i];
                 DrawItemSlot(cr, item, p);
                 if (item == null) continue;
+                if (i == socketGem)
+                {
+                    GUI.color = new Color(1f, 1f, 1f, 0.35f + Mathf.PingPong(Time.time, 0.4f));
+                    GUI.DrawTexture(new Rect(cr.x + 2, cr.y + 2, cr.width - 4, 3), UISkin.White);
+                    GUI.DrawTexture(new Rect(cr.x + 2, cr.yMax - 5, cr.width - 4, 3), UISkin.White);
+                    GUI.color = Color.white;
+                }
+                if (item.Kind == ItemKind.Equipment && item.Sockets > 0) DrawSocketPips(cr, item);
                 if (cr.Contains(Event.current.mousePosition))
                     tooltip = item.Tooltip(p, item.Kind == ItemKind.Equipment ? p.Inventory.GetEquipped(item.Slot) : null) +
-                              "\n<color=#998877>" + (vendor ? "Right-click to sell" : "Left-click to use / equip.  Shift+Right-click to drop") + "</color>";
+                              "\n<color=#998877>" + BagHint(item, vendor) + "</color>";
                 int click = ClickedIn(cr);
-                if (click == 0) p.UseItem(i);
+                if (click == 0)
+                {
+                    if (socketGem >= 0 && item.Kind == ItemKind.Equipment) { p.SocketGem(socketGem, item); socketGem = -1; }
+                    else if (item.Kind == ItemKind.Gem)
+                    {
+                        socketGem = socketGem == i ? -1 : i;
+                        if (socketGem >= 0) Log("Click an item (in your bags or worn) with an empty socket. Right-click to cancel.", item.IconColor);
+                    }
+                    else p.UseItem(i);
+                }
                 else if (click == 1)
                 {
-                    if (vendor) Sell(p, i);
+                    if (socketGem >= 0) socketGem = -1;
+                    else if (tradeOpen) NetClient.I.OfferItem(i);
+                    else if (showStash) StashItem(p, i);
+                    else if (vendor) Sell(p, i);
                     else if (Event.current.shift) p.DropItem(i);
                 }
             }
@@ -1051,7 +1091,12 @@ namespace Shadowfall
             GUI.Label(lr, label, new GUIStyle(UISkin.RichSmall) { alignment = labelLeft ? TextAnchor.UpperRight : TextAnchor.UpperLeft });
             if (item != null && r.Contains(Event.current.mousePosition))
                 tooltip = item.Tooltip(p) + "\n<color=#998877>Click to unequip</color>";
-            if (item != null && ClickedIn(r) == 0) p.Unequip(slot);
+            if (item != null && item.Sockets > 0) DrawSocketPips(r, item);
+            if (item != null && ClickedIn(r) == 0)
+            {
+                if (socketGem >= 0) { p.SocketGem(socketGem, item); socketGem = -1; p.RecalculateStats(); }
+                else p.Unequip(slot);
+            }
         }
 
         void DrawSkills(Player p)
@@ -1076,7 +1121,7 @@ namespace Shadowfall
             y += 6;
             UISkin.Shadowed(new Rect(r.x + 22, y, 380, 24), "Abilities", UISkin.Heading, UISkin.Gold);
             y += 30;
-            foreach (var a in AbilityDef.All)
+            foreach (var a in p.Kit)
             {
                 bool locked = p.Level < a.RequiredLevel;
                 UISkin.IconInSlot(new Rect(r.x + 22, y, 30, 30), UISkin.Icon(UISkin.AbilityIcon(a.Id)), locked ? new Color(0.4f, 0.4f, 0.4f) : Color.white, 0);
@@ -1150,19 +1195,22 @@ namespace Shadowfall
 
         void DrawHelp()
         {
-            var r = new Rect((VW - 600) / 2, 80, 600, 620);
+            var r = new Rect((VW - 600) / 2, 60, 600, 700);
             if (UISkin.Window(r, "How to Play", true, true)) showHelp = false;
             Block(r);
-            GUI.Label(new Rect(r.x + 28, r.y + 58, 544, 490),
+            GUI.Label(new Rect(r.x + 28, r.y + 58, 544, 570),
                 "<b>Combat</b>\n" +
                 "Left-click the ground to move (hold to keep walking). Left-click a monster to attack it; Shift+click attacks in place.\n" +
-                "Right-click casts Fireball.  <b>1-5</b> abilities,  <b>Q / E</b> health / mana potions,  mouse wheel zooms.\n\n" +
+                "<b>1-5</b> your class's abilities (right-click casts ability 2),  <b>Q / E</b> health / mana potions,  mouse wheel zooms.\n\n" +
                 "<b>Windows</b>\n" +
-                "<b>I</b> bags   <b>C</b> character   <b>K</b> skills   <b>L</b> quests   <b>M</b> map   <b>Enter</b> chat   <b>Esc</b> close\n" +
+                "<b>I</b> bags   <b>C</b> character   <b>T</b> talents   <b>K</b> skills   <b>L</b> quests   <b>M</b> map   <b>Enter</b> chat   <b>Esc</b> close\n" +
                 "<b>Camera:</b> middle-drag or arrow keys rotate and tilt,  <b>Space</b> resets\n\n" +
                 "<b>Chat & parties</b>\n" +
                 "<b>/p</b> party chat,  <b>/w name</b> whisper,  <b>/r</b> reply,  <b>/invite name</b>,  <b>/leave</b>,  <b>/who</b>. " +
-                "Click a player's name to invite them. Party members nearby share kills; share quests from the quest log.\n\n" +
+                "Click a player's name to invite them or trade. Party members nearby share kills; share quests from the quest log.\n\n" +
+                "<b>Loot</b>\n" +
+                "Legendaries (orange) carry unique powers; set pieces (green) grant bonuses at 2 and 4 pieces. Click a gem, then an item with a socket. " +
+                "Vex fuses three gems into a better one. Keep spare loot in the stash chest in the square.\n\n" +
                 "<b>The world</b>\n" +
                 "Villagers with a <b>!</b> have quests; return to them when you see a <b>?</b>. Click trees, rocks and fishing spots to gather. " +
                 "Smith at the anvil and cook at campfires. Sell loot to Merchant Lysa.\n\n" +
@@ -1194,7 +1242,7 @@ namespace Shadowfall
         void DrawDialog(Player p)
         {
             var npc = dialogNpc;
-            float height = npc.Role == NpcRole.Vendor && npc.Shop != null ? 330 + npc.Shop.Items.Count * 54 : 520;
+            float height = npc.Role == NpcRole.Vendor && npc.Shop != null ? 330 + npc.Shop.Items.Count * 54 + (npc.Shop.Kind == VendorKind.Curios ? 54 : 0) : 520;
             var r = new Rect(14, 120, 470, Mathf.Min(height, VH - 140));
             if (UISkin.Window(r, npc.DisplayName, true, true)) { dialogNpc = null; return; }
             Block(r);
@@ -1262,10 +1310,17 @@ namespace Shadowfall
                         for (int i = 0; i < p.Inventory.Slots.Length; i++)
                         {
                             var it = p.Inventory.Slots[i];
-                            if (it == null || it.Kind == ItemKind.Consumable) continue;
+                            if (it == null || it.Kind == ItemKind.Consumable || it.Kind == ItemKind.Gem) continue;
                             if (it.Kind == ItemKind.Equipment && it.Rarity != Rarity.Common) continue;
                             Sell(p, i);
                         }
+                    }
+                    if (shop.Kind == VendorKind.Curios)
+                    {
+                        y += 54;
+                        if (UISkin.Btn(new Rect(r.x + (r.width - 340) / 2, y, 340, 46), "Fuse Three Gems", UISkin.Button)) p.CombineGems();
+                        if (new Rect(r.x + (r.width - 340) / 2, y, 340, 46).Contains(Event.current.mousePosition))
+                            tooltip = "Three Chipped gems of a kind become one Flawless gem (50 gold).\nThree Flawless become one Perfect (250 gold).";
                     }
                     break;
                 }

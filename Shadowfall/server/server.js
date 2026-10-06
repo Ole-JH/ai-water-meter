@@ -17,7 +17,7 @@ const DATA_DIR = path.resolve(process.env.DATA_DIR || path.join(__dirname, "data
 const PUBLIC_DIR = path.resolve(process.env.PUBLIC_DIR || path.join(__dirname, "public"));
 const CHAR_DIR = path.join(DATA_DIR, "characters");
 const WORLD_FILE = path.join(DATA_DIR, "world.json");
-const PROTOCOL_VERSION = 2;
+const PROTOCOL_VERSION = 3;
 const TICK = 0.1; // seconds
 const HERO_MODELS = ["Knight", "Barbarian", "Mage", "Rogue"]; // must match CharacterLook.HeroModels
 const MONSTER_VIEW = 45;
@@ -302,7 +302,7 @@ function spawnMonster(type, level, x, z, spawner, inst = 0) {
   const m = {
     id: nextMonsterId++, type, def, level, x, z, ry: rand(0, 360), homeX: x, homeZ: z,
     hp, maxHp: hp, armor: def.armor + level * 2, dmg: def.dmg * (1 + 0.16 * (level - 1)),
-    state: "idle", target: 0, path: [], repathAt: 0, nextAttack: 0, slowUntil: 0,
+    state: "idle", target: 0, path: [], repathAt: 0, nextAttack: 0, slowUntil: 0, stunUntil: 0,
     wanderAt: now() + rand(1, 5), threat: new Map(), spawner, summoned: false, novaAt: 0,
     leash: def.boss ? 40 : 28, inst,
   };
@@ -322,8 +322,11 @@ function alertNearby(m, sessionId) {
     if (o !== m && o.inst === m.inst && o.state === "idle" && dist(o.x, o.z, m.x, m.z) < 6) aggro(o, sessionId);
 }
 
+/** Smoke Bomb: monsters can't see a vanished hero. */
+const hidden = (s) => now() < (s.hiddenUntil || 0);
+
 function validTarget(m, s) {
-  return s && s.inWorld && !s.dead && (s.inst || 0) === m.inst && !(m.inst === 0 && inTown(s.x, s.z)) && dist(m.homeX, m.homeZ, s.x, s.z) < m.leash + 6;
+  return s && s.inWorld && !s.dead && !hidden(s) && (s.inst || 0) === m.inst && !(m.inst === 0 && inTown(s.x, s.z)) && dist(m.homeX, m.homeZ, s.x, s.z) < m.leash + 6;
 }
 
 function moveAlongPath(m, speed) {
@@ -335,6 +338,11 @@ function moveAlongPath(m, speed) {
   if (d > 0.01) m.ry = (Math.atan2(dx, dz) * 180) / Math.PI;
   return true;
 }
+
+/** Effects a client may relay to the players around it (ability visuals). */
+const FX_KINDS = new Set(["fireball", "nova", "heal", "meteor", "cleave", "levelup",
+  "bash", "holybolt", "consecrate", "dshield", "judgement", "axe", "whirl", "leap", "warcry",
+  "chain", "teleport", "twin", "multi", "knives", "smoke", "rain"]);
 
 function sendNear(x, z, range, msg, inst = 0) {
   const data = JSON.stringify(msg);
@@ -353,7 +361,7 @@ function updateMonster(m, t) {
     case "idle": {
       let best = null, bestD = m.def.aggro;
       for (const s of sessions.values()) {
-        if (!s.inWorld || s.dead || (s.inst || 0) !== m.inst || (m.inst === 0 && inTown(s.x, s.z))) continue;
+        if (!s.inWorld || s.dead || hidden(s) || (s.inst || 0) !== m.inst || (m.inst === 0 && inTown(s.x, s.z))) continue;
         const d = dist(m.x, m.z, s.x, s.z);
         if (d < bestD) { bestD = d; best = s; }
       }
@@ -384,6 +392,7 @@ function updateMonster(m, t) {
         break;
       }
 
+      if (t < m.stunUntil) { m.path = []; break; } // stunned: no moving, no attacking
       const d = dist(m.x, m.z, s.x, s.z);
       if (m.type === "Lich King" || m.type === "Crypt Lord") lichAbilities(m, s, d, t);
       if (m.elite) eliteAbilities(m, s, d, t);
@@ -589,6 +598,20 @@ const INVITE_TIMEOUT = 60;
 function partyOf(s) { return s.party ? parties.get(s.party) || null : null; }
 function partyMembers(p) { return [...p.members].map((id) => sessions.get(id)).filter((o) => o && o.inWorld); }
 function sys(s, msg) { safeSend(s, JSON.stringify({ t: "sys", msg })); }
+
+// ---- trading
+const trades = new Map(); // session id -> { a, b, offers: Map(id -> { items, gold }), ok: Set }
+const TRADE_SLOTS = 12, TRADE_RANGE = 10;
+const canTrade = (s, o) => !s.dead && !o.dead && (s.inst || 0) === (o.inst || 0) && dist(s.x, s.z, o.x, o.z) <= TRADE_RANGE;
+
+function closeTrade(tr, msg) {
+  trades.delete(tr.a);
+  trades.delete(tr.b);
+  for (const id of [tr.a, tr.b]) {
+    const o = sessions.get(id);
+    if (o) safeSend(o, JSON.stringify({ t: "tclose", msg }));
+  }
+}
 function partySys(p, msg) { for (const o of partyMembers(p)) sys(o, msg); }
 
 function findOnline(name) {
@@ -648,6 +671,73 @@ const QUEST_ID = /^[a-z0-9_]{1,32}$/;
 
 const partyHandlers = {
   pinvite(s, m) { if (s.inWorld) invite(s, m.name); },
+
+  // ---- trading: the server only relays offers and makes sure both sides accepted the same thing.
+  treq(s, m) {
+    if (!s.inWorld || s.dead) return;
+    const o = sessions.get(m.id | 0);
+    if (!o || o === s || !o.inWorld) return sys(s, "That player is not here.");
+    if (!canTrade(s, o)) return sys(s, `You are too far away from ${o.name} to trade.`);
+    if (trades.has(s.id) || trades.has(o.id)) return sys(s, `${o.name} is busy.`);
+    o.tradeInvite = { from: s.id, at: now() };
+    safeSend(o, JSON.stringify({ t: "tinv", id: s.id, name: s.name }));
+    sys(s, `You ask ${o.name} to trade.`);
+  },
+
+  tacc(s) {
+    const inv = s.tradeInvite;
+    s.tradeInvite = null;
+    if (!inv || !s.inWorld) return;
+    const o = sessions.get(inv.from);
+    if (now() - inv.at > INVITE_TIMEOUT || !o || !o.inWorld) return sys(s, "That trade request has expired.");
+    if (!canTrade(s, o)) return sys(s, `You are too far away from ${o.name} to trade.`);
+    if (trades.has(s.id) || trades.has(o.id)) return sys(s, `${o.name} is busy.`);
+    const tr = { a: o.id, b: s.id, offers: new Map([[o.id, { items: [], gold: 0 }], [s.id, { items: [], gold: 0 }]]), ok: new Set() };
+    trades.set(o.id, tr);
+    trades.set(s.id, tr);
+    safeSend(o, JSON.stringify({ t: "topen", id: s.id, name: s.name }));
+    safeSend(s, JSON.stringify({ t: "topen", id: o.id, name: o.name }));
+  },
+
+  tdecl(s) {
+    const inv = s.tradeInvite;
+    s.tradeInvite = null;
+    const o = inv && sessions.get(inv.from);
+    if (o && o.inWorld) sys(o, `${s.name} declines to trade.`);
+  },
+
+  toffer(s, m) {
+    const tr = trades.get(s.id);
+    if (!tr) return;
+    const items = Array.isArray(m.items) ? m.items.filter((x) => typeof x === "string" && x.length <= 6000).slice(0, TRADE_SLOTS) : [];
+    const gold = Math.max(0, Math.min(1e9, parseInt(m.gold, 10) || 0));
+    tr.offers.set(s.id, { items, gold });
+    tr.ok.clear(); // any change resets both acceptances
+    const other = sessions.get(tr.a === s.id ? tr.b : tr.a);
+    if (other) safeSend(other, JSON.stringify({ t: "tupd", items, gold }));
+  },
+
+  tok(s) {
+    const tr = trades.get(s.id);
+    if (!tr) return;
+    const other = sessions.get(tr.a === s.id ? tr.b : tr.a);
+    if (!other || !canTrade(s, other)) return closeTrade(tr, "You moved too far apart to trade.");
+    tr.ok.add(s.id);
+    safeSend(other, JSON.stringify({ t: "tok", id: s.id }));
+    if (tr.ok.size < 2) return;
+    trades.delete(tr.a);
+    trades.delete(tr.b);
+    for (const [me, them] of [[s, other], [other, s]]) {
+      const got = tr.offers.get(them.id);
+      safeSend(me, JSON.stringify({ t: "tdone", items: got.items, gold: got.gold, name: them.name }));
+    }
+    log(`trade: ${s.name} <-> ${other.name}`);
+  },
+
+  tcancel(s) {
+    const tr = trades.get(s.id);
+    if (tr) closeTrade(tr, `${s.name} cancelled the trade.`);
+  },
 
   paccept(s) {
     if (!s.inWorld || !s.invite) return;
@@ -750,6 +840,7 @@ function populate(inst, players) {
 }
 
 function enterInstance(s, inst) {
+  if (trades.has(s.id)) closeTrade(trades.get(s.id), "The trade was cancelled.");
   s.inst = inst.id;
   [s.x, s.z] = inst.layout.start;
   inst.lastActive = now();
@@ -762,6 +853,7 @@ function enterInstance(s, inst) {
 }
 
 function leaveInstance(s, toTown) {
+  if (trades.has(s.id)) closeTrade(trades.get(s.id), "The trade was cancelled.");
   s.inst = 0;
   [s.x, s.z] = toTown ? [80.5, 77.5] : [CATACOMBS.x, CATACOMBS.z - 2.5];
   safeSend(s, JSON.stringify({ t: "dungeon", id: 0, x: s.x, z: s.z }));
@@ -864,6 +956,21 @@ const handlers = {
     if (mon.state !== "chase") aggro(mon, s.id);
   },
 
+  stun(s, m) {
+    if (!s.inWorld) return;
+    const mon = monsters.get(m.mid);
+    if (!mon || mon.inst !== (s.inst || 0) || dist(mon.x, mon.z, s.x, s.z) > 16) return;
+    let dur = Math.min(Number(m.dur) || 0, 3);
+    if (mon.def.boss) dur *= 0.4; // bosses shrug it off quickly
+    mon.stunUntil = Math.max(mon.stunUntil, now() + dur);
+    if (mon.state !== "chase") aggro(mon, s.id);
+  },
+
+  vanish(s, m) {
+    if (!s.inWorld || s.dead) return;
+    s.hiddenUntil = now() + Math.min(Number(m.dur) || 0, 6);
+  },
+
   chat(s, m) {
     if (!s.inWorld) return;
     const t = now();
@@ -910,7 +1017,7 @@ const handlers = {
     if (t - (s.lastFx || 0) < 0.1) return;
     s.lastFx = t;
     const k = String(m.k || "");
-    if (!["fireball", "nova", "heal", "meteor", "cleave", "levelup"].includes(k)) return;
+    if (!FX_KINDS.has(k)) return;
     const msg = JSON.stringify({ t: "fx", id: s.id, k, x: r2(+m.x || 0), z: r2(+m.z || 0), tx: r2(+m.tx || 0), tz: r2(+m.tz || 0) });
     for (const o of sessions.values())
       if (o !== s && o.inWorld && (o.inst || 0) === (s.inst || 0) && dist(o.x, o.z, s.x, s.z) < PLAYER_VIEW) safeSend(o, msg);
@@ -930,6 +1037,7 @@ const handlers = {
 
 function onDisconnect(s) {
   if (partyOf(s)) leaveParty(s, "has gone offline.");
+  if (trades.has(s.id)) closeTrade(trades.get(s.id), `${s.name} has gone offline.`);
   sessions.delete(s.id);
   if (s.account && s.inWorld) {
     if (s.account.save) {
@@ -972,7 +1080,7 @@ function tick() {
     const inst = s.inst || 0;
     for (const m of monsters.values()) {
       if (m.inst !== inst || dist(m.x, m.z, s.x, s.z) > MONSTER_VIEW) continue;
-      ms.push({ id: m.id, n: m.type, l: m.level, x: r2(m.x), z: r2(m.z), ry: Math.round(m.ry), hp: Math.ceil(m.hp), mhp: m.maxHp, ar: m.armor, sl: t < m.slowUntil,
+      ms.push({ id: m.id, n: m.type, l: m.level, x: r2(m.x), z: r2(m.z), ry: Math.round(m.ry), hp: Math.ceil(m.hp), mhp: m.maxHp, ar: m.armor, sl: t < m.slowUntil, st: t < m.stunUntil,
         ...(m.elite ? { el: m.elite.name, af: m.elite.affixes.join(","), sh: t < m.shieldUntil } : {}) });
     }
     const ps = [];
