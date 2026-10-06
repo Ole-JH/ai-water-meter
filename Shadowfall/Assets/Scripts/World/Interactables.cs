@@ -517,7 +517,10 @@ namespace Shadowfall
             var go = new GameObject(name);
             go.transform.SetParent(parent, false);
             go.transform.position = pos;
-            go.transform.rotation = Quaternion.Euler(0, Random.Range(0, 360f), 0);
+            // The original NPCs take their facing from the world's layout RNG (keeping the layout, and so the
+            // server's world hash, unchanged); newer, non-blocking NPCs must not touch that sequence.
+            float facing = blocksTile ? Random.Range(0, 360f) : ((name.GetHashCode() & 0x7fffffff) % 360);
+            go.transform.rotation = Quaternion.Euler(0, facing, 0);
             var n = go.AddComponent<Npc>();
             n.DisplayName = name;
             n.Title = title;
@@ -530,7 +533,7 @@ namespace Shadowfall
                 new Color(0.7f, 0.7f, 0.75f), hasWeapon, wearsRobe ?? !hasWeapon);
             n.AddClickCollider(0.5f, 2.1f);
             if (blocksTile) WorldGrid.Instance.SetBlocked(Mathf.FloorToInt(pos.x), Mathf.FloorToInt(pos.z), true);
-            n.chatterAt = Time.time + Random.Range(5f, 25f);
+            n.chatterAt = Time.time + 5f + (name.GetHashCode() & 0x7fffffff) % 20; // not Random: see above
             return n;
         }
 
