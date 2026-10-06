@@ -99,6 +99,7 @@ namespace Shadowfall
         {
             LeaveWorld();
             LoginShowcase.Hide();
+            Avatar.Ensure();
             var player = Player.Create(SpawnPoint, look);
             player.DisplayName = characterName;
             if (save != null) player.LoadSave(save);

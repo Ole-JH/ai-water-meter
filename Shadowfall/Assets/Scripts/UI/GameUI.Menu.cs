@@ -91,7 +91,7 @@ namespace Shadowfall
 
         void DrawMenuSettings()
         {
-            const float w = 560, h = 380;
+            const float w = 560, h = 440;
             var r = new Rect((VW - w) / 2, (VH - h) / 2, w, h);
             if (UISkin.Window(r, "Settings")) { menu = MenuPage.Main; return; }
             float x = r.x + 34, y = r.y + 66;
@@ -117,6 +117,15 @@ namespace Shadowfall
             UISkin.Shadowed(new Rect(x + 444, y, 60, 26), Mathf.RoundToInt(Sfx.Volume * 100) + "%", label, UISkin.Gold);
             y += 50;
 
+            // Interface size: applied when the mouse button is released, so the slider doesn't jump under the cursor.
+            UISkin.Shadowed(new Rect(x, y, 120, 26), "UI scale", label, UISkin.Cream);
+            uiScaleDraft = uiScaleDraft < 0f ? GameSettings.UiScale : uiScaleDraft;
+            uiScaleDraft = GUI.HorizontalSlider(new Rect(x + 130, y + 8, 300, 20), uiScaleDraft, 0.7f, 1.5f);
+            UISkin.Shadowed(new Rect(x + 444, y, 70, 26), Mathf.RoundToInt(uiScaleDraft * 100) + "%", label, UISkin.Gold);
+            if (!GameInput.LeftHeld && Mathf.Abs(uiScaleDraft - GameSettings.UiScale) > 0.001f) // (the slider uses up the MouseUp event)
+                GameSettings.UiScale = Mathf.Round(uiScaleDraft * 20f) / 20f;
+            y += 50;
+
             // Toggles
             if (Toggle(new Rect(x, y, w - 68, 30), GameSettings.ShowFps, "Show frames per second")) GameSettings.ShowFps = !GameSettings.ShowFps;
             y += 40;
@@ -126,6 +135,8 @@ namespace Shadowfall
 
             if (UISkin.Btn(new Rect(r.x + (w - 200) / 2, r.yMax - 70, 200, 46), "Back", UISkin.Button)) menu = MenuPage.Main;
         }
+
+        float uiScaleDraft = -1f;
 
         /// <summary>A checkbox drawn from the slot and gold textures; returns true when clicked.</summary>
         bool Toggle(Rect r, bool on, string text)

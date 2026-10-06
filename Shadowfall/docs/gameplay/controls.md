@@ -50,13 +50,15 @@
 - Click an equipped item in the character window to unequip it.
 - **Sort** (bottom of the bags) merges stacks and orders your bags: equipment by rarity, then gems, potions and food, then materials.
 - Gold, potions and gems are picked up automatically when you walk over them.
-- Hover over an item to compare it with what you're wearing (damage per second and armor difference).
+- Hover over an item to compare it with what you're wearing (damage per second and armor difference). Hold ++shift++ to see the equipped item's full tooltip next to it.
+- The character window (++c++) and the portrait at the top left show your hero as they look right now, with the weapon and helm you have equipped.
 
 ## Settings
 
 The settings are in the game menu (++esc++ → **Settings**):
 
 - **Graphics**: *Low* turns off shadows, grass and the color grade and halves particle effects; *Medium* uses hard shadows and fewer lights; *High* is everything. Try Low on laptops or if the frame rate drops.
+- **UI scale** makes the whole interface bigger or smaller (70–150%), applied when you let go of the slider.
 - **Show FPS** puts a frame counter at the top of the screen.
 - **Label common items**: when off, plain white gear on the ground has no label unless you hold ++alt++ or hover it.
 - **Volume**.

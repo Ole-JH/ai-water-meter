@@ -128,7 +128,7 @@ namespace Shadowfall
 
         void Update()
         {
-            scale = Mathf.Max(0.55f, Screen.height / RefHeight);
+            scale = Mathf.Max(0.4f, Screen.height / RefHeight * GameSettings.UiScale);
             var mp = GameInput.MousePosition;
             var guiMouse = new Vector2(mp.x / scale, (Screen.height - mp.y) / scale);
             bool over = false;
@@ -199,7 +199,7 @@ namespace Shadowfall
         {
             UISkin.Init();
             if (Event.current.type == EventType.Layout) blockRects.Clear();
-            scale = Mathf.Max(0.55f, Screen.height / RefHeight);
+            scale = Mathf.Max(0.4f, Screen.height / RefHeight * GameSettings.UiScale);
             VW = Screen.width / scale;
             VH = Screen.height / scale;
             GUI.matrix = Matrix4x4.TRS(Vector3.zero, Quaternion.identity, new Vector3(scale, scale, 1f));
@@ -583,7 +583,15 @@ namespace Shadowfall
             Block(r);
             var portrait = new Rect(r.x + 12, r.y + 12, 72, 72);
             UISkin.Box(portrait, UISkin.Slot);
-            UISkin.IconInSlot(portrait, UISkin.Icon(p.Look.ToLower()), Color.white, 6);
+            var avatar = Avatar.Texture;
+            if (avatar != null)
+            {
+                // head and shoulders of the live avatar (keeps the crop's aspect inside the square slot)
+                var inner = new Rect(portrait.x + 4, portrait.y + 4, portrait.width - 8, portrait.height - 8);
+                if (Event.current.type == EventType.Repaint)
+                    GUI.DrawTextureWithTexCoords(inner, avatar, Avatar.HeadCrop, true);
+            }
+            else UISkin.IconInSlot(portrait, UISkin.Icon(p.Look.ToLower()), Color.white, 6);
             var lv = new Rect(portrait.xMax - 26, portrait.yMax - 24, 30, 26);
             UISkin.Box(lv, UISkin.Slot);
             UISkin.Shadowed(lv, p.Level.ToString(), UISkin.SmallCenter, UISkin.Gold);
@@ -1060,8 +1068,7 @@ namespace Shadowfall
                 }
                 if (item.Kind == ItemKind.Equipment && item.Sockets > 0) DrawSocketPips(cr, item);
                 if (cr.Contains(Event.current.mousePosition))
-                    tooltip = item.Tooltip(p, item.Kind == ItemKind.Equipment ? p.Inventory.GetEquipped(item.Slot) : null) +
-                              "\n<color=#998877>" + BagHint(item, vendor) + "</color>";
+                    ItemTooltip(item, p, BagHint(item, vendor));
                 int click = ClickedIn(cr);
                 if (click == 0)
                 {
@@ -1169,9 +1176,17 @@ namespace Shadowfall
                 DrawEquipSlot(p, new Rect(r.x + 22, r.y + 62 + i * (cell + 10), cell, cell), dollLeft[i], false);
                 DrawEquipSlot(p, new Rect(r.xMax - 22 - cell, r.y + 62 + i * (cell + 10), cell, cell), dollRight[i], true);
             }
-            var portrait = new Rect(r.x + r.width / 2 - 70, r.y + 92, 140, 180);
+            var portrait = new Rect(r.x + r.width / 2 - 110, r.y + 58, 220, 262);
             UISkin.Box(portrait, UISkin.Slot);
-            UISkin.IconInSlot(new Rect(portrait.x + 10, portrait.y + 20, 120, 120), UISkin.Icon(p.Look.ToLower()), new Color(1, 1, 1, 0.9f), 0);
+            var avatarTex = Avatar.Texture;
+            if (avatarTex != null)
+            {
+                // full body, wearing what's equipped right now (fit 2:3 into the frame)
+                float ah = portrait.height - 36, aw = ah * 2f / 3f;
+                if (Event.current.type == EventType.Repaint)
+                    GUI.DrawTexture(new Rect(portrait.center.x - aw / 2, portrait.y + 6, aw, ah), avatarTex, ScaleMode.StretchToFill, true);
+            }
+            else UISkin.IconInSlot(new Rect(portrait.x + 15, portrait.y + 40, 120, 120), UISkin.Icon(p.Look.ToLower()), new Color(1, 1, 1, 0.9f), 0);
             UISkin.Shadowed(new Rect(portrait.x, portrait.yMax - 34, portrait.width, 26), p.Look, UISkin.HeadingCenter, UISkin.Gold);
 
             float y = r.y + 346;
@@ -1210,11 +1225,10 @@ namespace Shadowfall
         {
             var item = p.Inventory.GetEquipped(slot);
             DrawItemSlot(r, item, p, SlotIcon(slot));
-            string label = item != null ? "<color=#" + Item.Hex(item.NameColor) + ">" + item.Name + "</color>" : "<color=#7a6e5e>" + Item.SlotName(slot) + "</color>";
-            var lr = labelLeft ? new Rect(r.x - 108, r.y + 6, 102, 48) : new Rect(r.xMax + 8, r.y + 6, 102, 48);
-            GUI.Label(lr, label, UISkin.V(UISkin.RichSmall, alignment: labelLeft ? TextAnchor.UpperRight : TextAnchor.UpperLeft));
             if (item != null && r.Contains(Event.current.mousePosition))
                 tooltip = item.Tooltip(p) + "\n<color=#998877>Click to unequip</color>";
+            if (item == null && r.Contains(Event.current.mousePosition))
+                tooltip = "<b>" + Item.SlotName(slot) + "</b>\n<color=#998877>Empty</color>";
             if (item != null && item.Sockets > 0) DrawSocketPips(r, item);
             if (item != null && ClickedIn(r) == 0)
             {
@@ -1519,7 +1533,7 @@ namespace Shadowfall
             var slot = new Rect(r.x + 26, y, 44, 44);
             DrawItemSlot(slot, item, p);
             if (slot.Contains(Event.current.mousePosition))
-                tooltip = item.Tooltip(p, item.Kind == ItemKind.Equipment ? p.Inventory.GetEquipped(item.Slot) : null);
+                ItemTooltip(item, p, null);
             var nameColor = item.Kind == ItemKind.Equipment ? Item.RarityColor(item.Rarity) : UISkin.Cream;
             GUI.Label(new Rect(r.x + 80, y + 2, 190, 24), "<b><color=#" + Item.Hex(nameColor) + ">" + item.Name + "</color></b>", UISkin.InkRich);
             GUI.Label(new Rect(r.x + 80, y + 23, 190, 22), "<color=#f0c45a>" + price + " gold</color>" +
@@ -1586,9 +1600,25 @@ namespace Shadowfall
             UISkin.Shadowed(new Rect(0, VH * 0.17f, VW, 50), bannerText, UISkin.Banner, c, 2);
         }
 
+        /// <summary>Second tooltip shown next to the main one (Shift: the item you have equipped in that slot).</summary>
+        string tooltipCompare;
+
+        /// <summary>
+        /// An item's tooltip with its stat differences to what's equipped. Holding Shift also shows the equipped
+        /// item itself, side by side.
+        /// </summary>
+        void ItemTooltip(Item item, Player p, string hint)
+        {
+            var equipped = item.Kind == ItemKind.Equipment ? p.Inventory.GetEquipped(item.Slot) : null;
+            bool shift = Event.current.shift;
+            tooltip = item.Tooltip(p, equipped) + (hint != null ? "\n<color=#998877>" + hint + "</color>" : "") +
+                      (equipped != null && !shift ? "\n<color=#7f9fff>Hold Shift to compare with your equipped " + Item.SlotName(item.Slot).ToLower() + " item</color>" : "");
+            tooltipCompare = equipped != null && shift ? "<color=#c8a060><b>Currently equipped</b></color>\n" + equipped.Tooltip(p) : null;
+        }
+
         void DrawTooltip()
         {
-            if (string.IsNullOrEmpty(tooltip)) return;
+            if (string.IsNullOrEmpty(tooltip)) { tooltipCompare = null; return; }
             var content = new GUIContent(tooltip);
             float w = 330;
             float h = UISkin.Rich.CalcHeight(content, w - 28) + 26;
@@ -1596,9 +1626,21 @@ namespace Shadowfall
             var r = new Rect(m.x + 20, m.y + 20, w, h);
             if (r.xMax > VW) r.x = m.x - w - 12;
             if (r.yMax > VH) r.y = Mathf.Max(0, VH - h);
+            if (!string.IsNullOrEmpty(tooltipCompare))
+            {
+                var cc = new GUIContent(tooltipCompare);
+                float ch = UISkin.Rich.CalcHeight(cc, w - 28) + 26;
+                // beside the main tooltip: to its left if there is room, else to its right
+                var cr = new Rect(r.x - w - 8, r.y, w, ch);
+                if (cr.x < 0) { cr.x = r.xMax + 8; if (cr.xMax > VW) { r.x = Mathf.Max(0, VW - 2 * w - 8); cr.x = r.xMax + 8; } }
+                if (cr.yMax > VH) cr.y = Mathf.Max(0, VH - ch);
+                UISkin.Box(cr, UISkin.Tooltip);
+                GUI.Label(new Rect(cr.x + 14, cr.y + 13, w - 28, ch - 20), cc, UISkin.Rich);
+            }
             UISkin.Box(r, UISkin.Tooltip);
             GUI.Label(new Rect(r.x + 14, r.y + 13, w - 28, h - 20), content, UISkin.Rich);
             tooltip = null;
+            tooltipCompare = null;
         }
 
         // =====================================================================================

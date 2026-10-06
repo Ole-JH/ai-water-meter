@@ -23,6 +23,7 @@
 | `Characters/Player.cs` | Click-to-move, targeting, melee, abilities, stats, potions, gathering, save and load |
 | `Characters/Enemy.cs` | `EnemyDef` (looks) and the `Enemy` network proxy (interpolation, hit prediction, death, personal loot) |
 | `Characters/CharacterView.cs` | Animated model wrapper (`AnimSet`, `CharacterLook`) for heroes, NPCs and monsters |
+| `Characters/Avatar.cs` | The hero's avatar: a copy of the model in the current loadout, rendered off-screen for the portrait and character window |
 | `Characters/Companion.cs` | Companions for hire (`CompanionDef`) and the follower AI: pathing after the hero, targeting, melee/ranged/area attacks, heals (cosmetic for other players) |
 | `Characters/HumanoidModel.cs` | Blocky procedural humanoid with walk and attack animation |
 | `Characters/Abilities.cs` | Ability definitions, class kits and starting stats (`ClassKits`), talents, buffs, meteor/Judgement and ground effects (Consecration, Rain of Arrows) |

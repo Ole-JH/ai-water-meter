@@ -43,6 +43,27 @@ namespace Shadowfall
             set { showCommon = value ? 1 : 0; Store("sf_common_loot", showCommon); }
         }
 
+        static float uiScale = -1f;
+
+        /// <summary>Multiplier on the size of the whole interface (0.7 .. 1.5).</summary>
+        public static float UiScale
+        {
+            get
+            {
+                if (uiScale < 0f)
+                {
+                    try { uiScale = PlayerPrefs.GetFloat("sf_ui_scale", 1f); } catch (System.Exception) { uiScale = 1f; }
+                    uiScale = Mathf.Clamp(uiScale, 0.7f, 1.5f);
+                }
+                return uiScale;
+            }
+            set
+            {
+                uiScale = Mathf.Clamp(value, 0.7f, 1.5f);
+                try { PlayerPrefs.SetFloat("sf_ui_scale", uiScale); PlayerPrefs.Save(); } catch (System.Exception) { }
+            }
+        }
+
         public static float ShadowDistanceScale => Quality == 0 ? 0.5f : Quality == 1 ? 0.75f : 1f;
         public static bool ColorGrading => Quality > 0;
         /// <summary>Particle effects are thinned out on Low.</summary>

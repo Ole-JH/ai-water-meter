@@ -164,7 +164,7 @@ namespace Shadowfall
                 DrawItemSlot(cr, item, p);
                 if (item == null) continue;
                 if (item.Kind == ItemKind.Equipment && item.Sockets > 0) DrawSocketPips(cr, item);
-                if (cr.Contains(Event.current.mousePosition)) tooltip = item.Tooltip(p) + "\n<color=#998877>Click to take it out</color>";
+                if (cr.Contains(Event.current.mousePosition)) ItemTooltip(item, p, "Click to take it out");
                 if (ClickedIn(cr) >= 0)
                 {
                     if (p.Inventory.Add(item)) { p.Stash.Slots[i] = null; Sfx.Play2D("ui_click", 0.4f); }
@@ -210,7 +210,7 @@ namespace Shadowfall
                 var theirs = i < net.TheirOffer.Count ? net.TheirOffer[i] : null;
                 DrawItemSlot(b, theirs, p);
                 if (theirs != null && b.Contains(Event.current.mousePosition))
-                    tooltip = theirs.Tooltip(p, theirs.Kind == ItemKind.Equipment ? p.Inventory.GetEquipped(theirs.Slot) : null);
+                    ItemTooltip(theirs, p, null);
             }
             y += 3 * (cell + gap) + 12;
 
