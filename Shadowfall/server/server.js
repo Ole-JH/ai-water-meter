@@ -675,7 +675,8 @@ const handlers = {
     s.lvl = Math.max(1, Math.min(100, parseInt(m.lvl, 10) || 1));
     s.mv = !!m.mv; s.atk = !!m.atk; s.dead = !!m.dead;
     s.look = { body: String(m.body || "").slice(0, 6), legs: String(m.legs || "").slice(0, 6), weapon: String(m.weapon || "").slice(0, 6), helm: String(m.helm || "").slice(0, 6),
-      mdl: HERO_MODELS.includes(m.mdl) ? m.mdl : "Knight" };
+      mdl: HERO_MODELS.includes(m.mdl) ? m.mdl : "Knight",
+      wk: ["sword", "axe", "mace", "dagger", "staff"].includes(m.wk) ? m.wk : "" };
   },
 
   hit(s, m) {

@@ -148,7 +148,7 @@ namespace Shadowfall
             {
                 x = p.transform.position.x, z = p.transform.position.z, ry = p.transform.eulerAngles.y,
                 hp = p.Health, mhp = p.MaxHealth, lvl = p.Level, mv = p.IsMoving, atk = p.IsAttacking, dead = p.IsDead,
-                body = p.BodyHex, legs = p.LegsHex, weapon = p.WeaponHex, helm = p.HelmHex, mdl = p.Look,
+                body = p.BodyHex, legs = p.LegsHex, weapon = p.WeaponHex, helm = p.HelmHex, mdl = p.Look, wk = p.WeaponKind ?? "",
             });
         }
 

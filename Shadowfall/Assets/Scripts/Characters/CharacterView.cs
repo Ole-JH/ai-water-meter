@@ -57,6 +57,7 @@ namespace Shadowfall
         public Color? Tint;
         public float RunSpeed = 6f;     // world speed at which the run cycle looks right
         public Color? Light;            // optional point light (bosses)
+        public string Weapon;           // weapon kind shown in hand (sword, axe, mace, dagger, staff); null = none
 
         static readonly Dictionary<string, CharacterLook> monsters = new Dictionary<string, CharacterLook>
         {
@@ -64,7 +65,7 @@ namespace Shadowfall
             { "Goblin", new CharacterLook { Model = "Monsters/Goblin", Height = 1.3f, Anims = AnimSet.Blob, RunSpeed = 3f } },
             { "Goblin Shaman", new CharacterLook { Model = "Monsters/GoblinShaman", Height = 1.5f, Anims = AnimSet.Blob, RunSpeed = 3f } },
             { "Goblin Warchief", new CharacterLook { Model = "Monsters/Warchief", Height = 2.9f, Anims = AnimSet.Big, RunSpeed = 5f } },
-            { "Bandit", new CharacterLook { Model = "Characters/Rogue", Height = 1.9f, Tint = new Color(0.85f, 0.75f, 0.7f) } },
+            { "Bandit", new CharacterLook { Model = "Characters/Rogue", Height = 1.9f, Tint = new Color(0.85f, 0.75f, 0.7f), Weapon = "dagger" } },
             { "Skeleton", new CharacterLook { Model = "Characters/SkeletonWarrior", Height = 1.9f, Anims = AnimSet.Skeleton } },
             { "Skeleton Archer", new CharacterLook { Model = "Characters/SkeletonRogue", Height = 1.85f, Anims = AnimSet.Skeleton } },
             { "Zombie", new CharacterLook { Model = "Characters/Zombie", Height = 1.9f, Anims = AnimSet.Kenney, RunSpeed = 4f } },
@@ -85,14 +86,14 @@ namespace Shadowfall
 
         static readonly Dictionary<string, CharacterLook> npcs = new Dictionary<string, CharacterLook>
         {
-            { "Captain Aldric", new CharacterLook { Model = "Characters/Knight", Height = 2.05f } },
+            { "Captain Aldric", new CharacterLook { Model = "Characters/Knight", Height = 2.05f, Weapon = "sword" } },
             { "Forester Wren", new CharacterLook { Model = "Characters/RogueHooded", Height = 1.9f } },
             { "Smith Gorrin", new CharacterLook { Model = "Characters/Barbarian", Height = 2.0f } },
             { "Merchant Lysa", new CharacterLook { Model = "Characters/Mage", Height = 1.9f, Tint = new Color(1f, 0.9f, 1f) } },
             { "Sister Mae", new CharacterLook { Model = "Characters/Mage", Height = 1.9f, Tint = new Color(1.15f, 1.15f, 1.1f) } },
             { "Thomas", new CharacterLook { Model = "Characters/Keeper", Height = 1.85f, Anims = AnimSet.Kenney } },
             { "Armorer Brann", new CharacterLook { Model = "Characters/Knight", Height = 2.0f, Tint = new Color(0.8f, 0.8f, 0.85f) } },
-            { "Weaponsmith Hilda", new CharacterLook { Model = "Characters/Barbarian", Height = 1.9f, Tint = new Color(1.05f, 0.9f, 0.85f) } },
+            { "Weaponsmith Hilda", new CharacterLook { Model = "Characters/Barbarian", Height = 1.9f, Tint = new Color(1.05f, 0.9f, 0.85f), Weapon = "axe" } },
             { "Innkeeper Rosie", new CharacterLook { Model = "Characters/Keeper", Height = 1.8f, Anims = AnimSet.Kenney, Tint = new Color(1.1f, 0.95f, 0.9f) } },
             { "Curio Dealer Vex", new CharacterLook { Model = "Characters/RogueHooded", Height = 1.85f, Tint = new Color(0.8f, 0.7f, 1f) } },
         };
@@ -143,6 +144,7 @@ namespace Shadowfall
             }
 
             var anim = go.GetComponentInChildren<Animation>();
+            if (anim == null || anim.GetClipCount() == 0) anim = AttachLegacyClips(go, look.Model);
             if (anim != null)
             {
                 anim.cullingType = AnimationCullingType.BasedOnRenderers;
@@ -152,8 +154,49 @@ namespace Shadowfall
                 if (look.Anims.Death != null && anim[look.Anims.Death] != null) anim[look.Anims.Death].wrapMode = WrapMode.ClampForever;
             }
             var view = new CharacterView(go, look, anim);
+            view.HideAccessories();
+            view.Equip(look.Weapon, false);
             view.Play(look.Anims.Idle, 0f);
             return view;
+        }
+
+        /// <summary>
+        /// Safety net for models imported without an Animation component (e.g. glTFast set to Mecanim):
+        /// adds one with the model's clips, if they are legacy clips. Logs why when that's not possible.
+        /// </summary>
+        static Animation AttachLegacyClips(GameObject go, string model)
+        {
+            var clips = Resources.LoadAll<AnimationClip>("Art/" + model);
+            if (clips == null || clips.Length == 0) return null;
+            if (!clips[0].legacy)
+            {
+                if (warnedModels.Add(model))
+                    Debug.LogWarning("[Shadowfall] " + model + " was imported with Mecanim animation clips; characters can't animate. " +
+                                     "Rebuild with Shadowfall > Build WebGL so the models are re-imported as Legacy.");
+                return null;
+            }
+            var animator = go.GetComponentInChildren<Animator>();
+            var host = animator != null ? animator.gameObject : go.transform.GetChild(0).gameObject;
+            if (animator != null) Object.Destroy(animator);
+            var anim = host.AddComponent<Animation>();
+            foreach (var c in clips) anim.AddClip(c, c.name);
+            return anim;
+        }
+
+        static readonly HashSet<string> warnedModels = new HashSet<string>();
+
+        /// <summary>True when the hero models came with playable animations (shown on the login screen).</summary>
+        public static bool AnimationsAvailable
+        {
+            get
+            {
+                var prefab = ArtLibrary.Load("Characters/Knight");
+                if (prefab == null) return false;
+                var a = prefab.GetComponentInChildren<Animation>();
+                if (a != null && a.GetClipCount() > 0) return true;
+                var clips = Resources.LoadAll<AnimationClip>("Art/Characters/Knight");
+                return clips.Length > 0 && clips[0].legacy;
+            }
         }
 
         bool Has(string clip) => anim != null && clip != null && anim[clip] != null;
@@ -225,6 +268,77 @@ namespace Shadowfall
             current = null;
             Root.transform.localRotation = Quaternion.identity;
             Play(look.Anims.Idle, 0.1f);
+        }
+
+        // ------------------------------------------------------------------ equipment
+
+        GameObject weapon;
+        bool weaponIsBuiltin;
+        string weaponKind = "?";
+        readonly List<GameObject> headgear = new List<GameObject>();
+
+        /// <summary>
+        /// KayKit hero models come with every weapon and shield of their class in their hands, plus a hat or
+        /// helmet. Hide them all: <see cref="Equip"/> shows what the character actually wears.
+        /// </summary>
+        void HideAccessories()
+        {
+            foreach (var slot in new[] { "handslot.r", "handslot.l" })
+            {
+                var hand = ArtLibrary.FindDeep(Root.transform, slot);
+                if (hand == null) continue;
+                for (int i = 0; i < hand.childCount; i++) hand.GetChild(i).gameObject.SetActive(false);
+            }
+            var head = ArtLibrary.FindDeep(Root.transform, "head");
+            if (head != null)
+                for (int i = 0; i < head.childCount; i++)
+                {
+                    var c = head.GetChild(i);
+                    if (c.GetComponent<Renderer>() == null) continue; // bones, not hats
+                    headgear.Add(c.gameObject);
+                    c.gameObject.SetActive(false);
+                }
+        }
+
+        /// <summary>Shows the weapon kind in hand ("sword", "axe", "mace", "dagger", "staff", or null for none) and the helmet if worn.</summary>
+        public void Equip(string kind, bool helm)
+        {
+            foreach (var h in headgear) if (h != null) h.SetActive(helm);
+            if (string.IsNullOrEmpty(kind)) kind = null;
+            if (kind == weaponKind) return;
+            weaponKind = kind;
+            if (weapon != null)
+            {
+                if (weaponIsBuiltin) weapon.SetActive(false);
+                else Object.Destroy(weapon);
+                weapon = null;
+            }
+            if (kind == null) return;
+            var hand = ArtLibrary.FindDeep(Root.transform, "handslot.r");
+            if (hand == null) return;
+
+            // Prefer the model's own matching weapon (already posed for its hand), else attach a separate weapon model.
+            string builtin = kind == "sword" ? "1H_Sword" : kind == "axe" ? "1H_Axe" : kind == "dagger" ? "Knife" : kind == "staff" ? "2H_Staff" : null;
+            for (int i = 0; builtin != null && i < hand.childCount; i++)
+            {
+                var c = hand.GetChild(i);
+                if (c.name != builtin) continue;
+                c.gameObject.SetActive(true);
+                weapon = c.gameObject;
+                weaponIsBuiltin = true;
+                return;
+            }
+            string path = kind == "axe" || kind == "mace" ? "Weapons/Axe" : kind == "dagger" ? "Weapons/Dagger" : kind == "staff" ? "Weapons/Staff" : "Weapons/Sword";
+            weaponIsBuiltin = false;
+            weapon = ArtLibrary.Spawn(path, hand, Vector3.zero, 0f, ArtLibrary.Fit.Height, 0f, true, false, false);
+        }
+
+        /// <summary>Which weapon model an item shows as.</summary>
+        public static string WeaponKind(Item weapon)
+        {
+            if (weapon == null) return null;
+            var key = UISkin.IconKey(weapon);
+            return key == "axe" || key == "mace" || key == "dagger" ? key : "sword";
         }
 
         /// <summary>Attachment point for weapons/effects (KayKit rigs have handslot.r).</summary>

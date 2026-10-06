@@ -30,7 +30,7 @@ namespace Shadowfall
             Vector3[] gates = { new Vector3(80.5f, 0, 68.5f), new Vector3(80.5f, 0, 92.5f), new Vector3(68.5f, 0, 80.5f), new Vector3(92.5f, 0, 80.5f) };
             for (int i = 0; i < 2; i++)
             {
-                var guard = Walker.Create(root, "Guard", new CharacterLook { Model = "Characters/Knight", Height = 2f, Tint = new Color(0.85f, 0.85f, 0.9f) },
+                var guard = Walker.Create(root, "Guard", new CharacterLook { Model = "Characters/Knight", Height = 2f, Tint = new Color(0.85f, 0.85f, 0.9f), Weapon = "sword" },
                     gates[i * 2], 1.6f, Walker.Kind.Guard);
                 guard.Route = gates;
                 guard.RouteIndex = i * 2;

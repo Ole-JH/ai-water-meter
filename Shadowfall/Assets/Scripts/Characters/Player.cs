@@ -169,10 +169,21 @@ namespace Shadowfall
             RefreshVisuals();
         }
 
+        /// <summary>Weapon model kind shown in hand (sent to other players).</summary>
+        public string WeaponKind { get; private set; }
+
         void RefreshVisuals()
         {
-            if (model == null) return;
             var weapon = Inventory.GetEquipped(EquipSlot.Weapon);
+            WeaponKind = CharacterView.WeaponKind(weapon);
+            var worn = Inventory.GetEquipped(EquipSlot.Helm);
+            view?.Equip(WeaponKind, worn != null);
+            if (model == null)
+            {
+                HelmHex = worn != null ? Item.Hex(worn.IconColor) : "";
+                WeaponHex = weapon != null ? Item.Hex(weapon.IconColor) : "";
+                return;
+            }
             if (model.WeaponRenderer != null)
             {
                 model.WeaponRenderer.gameObject.SetActive(weapon != null);

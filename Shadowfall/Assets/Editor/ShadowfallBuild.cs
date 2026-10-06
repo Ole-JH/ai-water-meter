@@ -99,12 +99,15 @@ namespace Shadowfall.EditorTools
         }
 
         /// <summary>
-        /// glTFast imports textures as GPU-only (non-readable) by default. In headless builds
-        /// (-nographics) there is no GPU, so the pixels are lost and every model renders white.
-        /// Readable textures keep a CPU copy that gets saved with the asset.
+        /// Import settings every model needs:
+        /// - Legacy animation. glTFast's editor importer defaults new assets to Mecanim, which adds an
+        ///   Animator without a controller and no Animation component, so nothing would ever animate.
+        /// - Readable textures: in headless builds (-nographics) there is no GPU, and GPU-only textures
+        ///   would be saved without pixels.
         /// </summary>
         // Bump to force one re-import of every model (e.g. after fixing something that broke their textures).
-        const string ArtImportVersion = "2-imageconversion";
+        const string ArtImportVersion = "3-legacy-animation";
+        const int LegacyAnimation = 1; // GLTFast.AnimationMethod.Legacy
 
         static void MakeModelTexturesReadable()
         {
@@ -122,13 +125,13 @@ namespace Shadowfall.EditorTools
                     if (importer == null) continue;
                     var so = new SerializedObject(importer);
                     var readable = so.FindProperty("importSettings.texturesReadable");
+                    var animation = so.FindProperty("importSettings.animationMethod");
                     bool needsReadable = readable != null && !readable.boolValue;
-                    if (!needsReadable && !forceAll) continue;
-                    if (needsReadable)
-                    {
-                        readable.boolValue = true;
-                        so.ApplyModifiedPropertiesWithoutUndo();
-                    }
+                    bool needsLegacy = animation != null && animation.intValue != LegacyAnimation;
+                    if (!needsReadable && !needsLegacy && !forceAll) continue;
+                    if (needsReadable) readable.boolValue = true;
+                    if (needsLegacy) animation.intValue = LegacyAnimation;
+                    if (needsReadable || needsLegacy) so.ApplyModifiedPropertiesWithoutUndo();
                     AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
                     changed++;
                 }
@@ -138,7 +141,7 @@ namespace Shadowfall.EditorTools
                 AssetDatabase.StopAssetEditing();
             }
             File.WriteAllText(marker, ArtImportVersion);
-            if (changed > 0) Debug.Log("[Shadowfall] Re-imported " + changed + " models with readable textures.");
+            if (changed > 0) Debug.Log("[Shadowfall] Re-imported " + changed + " models (legacy animation, readable textures).");
         }
     }
 }

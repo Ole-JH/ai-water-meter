@@ -93,6 +93,12 @@ tasks:
       - docker compose --profile license build license-helper
       - docker compose --profile license run --rm --service-ports license-helper
 
+  update:
+    desc: "Everything on one machine: git pull, build the client in Docker, then (re)start the server"
+    cmds:
+      - git pull
+      - task: deploy
+
   client:clean-cache:
     desc: Delete the Docker build's Unity import cache (next build re-imports everything)
     cmds:

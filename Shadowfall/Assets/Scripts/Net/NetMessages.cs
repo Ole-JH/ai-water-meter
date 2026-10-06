@@ -24,7 +24,7 @@ namespace Shadowfall
         public float x, z, ry, hp, mhp;
         public int lvl;
         public bool mv, atk, dead;
-        public string body, legs, weapon, helm, mdl;
+        public string body, legs, weapon, helm, mdl, wk; // wk = weapon model kind
     }
 
     /// <summary>Union of every server -> client message.</summary>
@@ -61,7 +61,7 @@ namespace Shadowfall
         public float x, z, ry, hp, mhp;
         public int lvl;
         public bool mv, atk, dead;
-        public string body, legs, weapon, helm, mdl;
+        public string body, legs, weapon, helm, mdl, wk; // wk = weapon model kind
     }
 
     [Serializable]

@@ -16,6 +16,7 @@ Common commands are defined in `Taskfile.yml` and run with [Task](https://taskfi
 | `task logs` / `task ps` | Follow logs; show status and health |
 | `task docker:build` | Build the server image only |
 | `task deploy` | `client:build` (Docker) followed by `up` |
+| `task update` | `git pull`, then `deploy`: the one command to update everything when the game and server run on the same machine |
 | `task world:reset` | Delete the stored world map (after changing world generation) |
 | `task backup` | Archive `server/data` into `backups/` |
 | `task docs:serve` / `task docs:build` | Preview or build this documentation (local mkdocs, or Docker as a fallback) |

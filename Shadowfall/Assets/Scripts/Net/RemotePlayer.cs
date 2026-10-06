@@ -41,6 +41,7 @@ namespace Shadowfall
             if (view != null) Destroy(view.Root);
             if (model != null) Destroy(model.Root.gameObject);
             view = CharacterView.Create(transform, CharacterLook.ForHero(mdl));
+            appearance = null; // re-apply equipment to the new model
             model = view == null
                 ? HumanoidModel.Build(transform, 1f, new Color(0.95f, 0.78f, 0.62f), new Color(0.5f, 0.4f, 0.3f),
                     new Color(0.3f, 0.25f, 0.2f), new Color(0.75f, 0.75f, 0.8f))
@@ -73,10 +74,11 @@ namespace Shadowfall
             if (!Dead && wasDead) view?.Revive();
             wasDead = Dead;
 
-            if (model == null) return;
-            string key = p.body + p.legs + p.weapon + p.helm;
+            string key = p.body + p.legs + p.weapon + p.helm + p.wk;
             if (key == appearance) return;
             appearance = key;
+            view?.Equip(p.wk, !string.IsNullOrEmpty(p.helm));
+            if (model == null) return;
             model.BodyRenderer.sharedMaterial = Mat.Get(Parse(p.body, new Color(0.5f, 0.4f, 0.3f)));
             model.ArmRendererL.sharedMaterial = model.ArmRendererR.sharedMaterial = model.BodyRenderer.sharedMaterial;
             model.LegRendererL.sharedMaterial = model.LegRendererR.sharedMaterial = Mat.Get(Parse(p.legs, new Color(0.3f, 0.25f, 0.2f)));
