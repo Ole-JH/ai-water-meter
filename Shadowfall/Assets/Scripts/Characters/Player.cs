@@ -100,7 +100,7 @@ namespace Shadowfall
             if (stepDistance < 1.15f) return;
             stepDistance = 0f;
             var pos = transform.position;
-            bool stone = WorldGenerator.InTown(pos) || WorldGenerator.InCrypt(pos);
+            bool stone = WorldGenerator.InTown(pos) || WorldGenerator.InCrypt(pos) || Dungeon.Active;
             Sfx.Play(stone ? "step_stone" : "step_grass", pos, stone ? 0.35f : 0.45f, 0.1f, 20f);
         }
 
@@ -440,6 +440,18 @@ namespace Shadowfall
         }
 
         void StopMoving() => path.Clear();
+
+        /// <summary>Instantly moves the hero (entering or leaving a dungeon).</summary>
+        public void TeleportTo(Vector3 pos)
+        {
+            path.Clear();
+            action = Action.None;
+            AttackTarget = null;
+            StopGathering();
+            transform.position = pos;
+            CameraRig.I?.SnapToTarget();
+            SpellFx.Ring(pos, new Color(0.7f, 0.6f, 1f), 1.5f, 0.6f);
+        }
 
         void UpdateAction(float dt)
         {
@@ -900,6 +912,7 @@ namespace Shadowfall
 
         public void Respawn()
         {
+            NetClient.I?.LeaveDungeon(true); // dying in the Catacombs sends you home
             int lost = Gold / 10;
             Gold -= lost;
             IsDead = false;

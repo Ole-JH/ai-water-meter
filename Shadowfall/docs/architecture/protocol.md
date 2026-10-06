@@ -42,6 +42,9 @@ sequenceDiagram
 | `pleave` | — | Leave your party |
 | `pkick` | `id` | Leader removes a member |
 | `pshare` | `q` | Offer quest `q` (quest id) to the rest of the party |
+| `denter` | — | Enter the Catacombs (must be within 6 m of the entrance) |
+| `dstairs` | — | Take the stairs to the next depth (must be near them) |
+| `dleave` | `town` | Leave the dungeon: to the entrance, or to Hollowmere (`town`, after dying) |
 | `fx` | `k`, `x`, `z`, `tx`, `tz` | Cosmetic spell effect: `fireball`, `nova`, `heal`, `meteor`, `cleave`, `levelup` |
 | `save` | `save` | Full character snapshot (`SaveData`) |
 
@@ -61,8 +64,13 @@ sequenceDiagram
 | `party` | `id` (leader), `pm[]` | Your party, sent on every change and once a second: `{id,name,lvl,hp,mhp,mdl,x,z,dead}`. Empty `pm` = not in a party |
 | `pinv` | `id`, `name` | Someone invites you to their party |
 | `qshare` | `id`, `name`, `k` | A party member shares quest `k` |
+| `dungeon` | `id`, `l`, `k`, `seed`, `w`, `h`, `cells`, `rooms`, `start`, `exit`, `stairs`, `boss`, `chests` | You entered dungeon instance `id` at depth `l`: the generated layout (walkability bitmap like the world map, rooms as `x,y,w,h` quadruples, positions as `x,z` pairs). `id` 0 = you are back in the overworld at `x`, `z` |
 | `sys` | `msg` | System message (joins, leaves, boss kills, `/who`) |
 | `leave` | `id` | A player logged out |
+
+## Dungeon instances
+
+Each dungeon level is an instance with its own grid, monsters and id. Positions of players in an instance are **instance-local** on the wire (0..72); the client builds the dungeon at an offset (`Dungeon.Origin`, 1000/1000) and converts positions in and out. Snapshots, monster attacks, kills and spell effects only reach players in the same instance, and party updates carry `di` (the member's instance id).
 
 ## Server-side validation
 

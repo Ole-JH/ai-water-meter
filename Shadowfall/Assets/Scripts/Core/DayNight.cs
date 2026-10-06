@@ -75,11 +75,29 @@ namespace Shadowfall
 
         void Update() => Apply();
 
+        /// <summary>Underground: no sun or moon, a dim cold ambient, black fog close by. Torches do the work.</summary>
+        void ApplyDungeon()
+        {
+            Night = 1f;
+            RenderSettings.ambientSkyColor = new Color(0.09f, 0.085f, 0.11f);
+            RenderSettings.ambientEquatorColor = new Color(0.07f, 0.06f, 0.065f);
+            RenderSettings.ambientGroundColor = new Color(0.03f, 0.03f, 0.03f);
+            RenderSettings.fogColor = new Color(0.01f, 0.008f, 0.01f);
+            RenderSettings.fogStartDistance = 12f;
+            RenderSettings.fogEndDistance = 42f;
+            if (cam != null) cam.backgroundColor = RenderSettings.fogColor;
+            if (sun != null) { sun.intensity = 0.04f; sun.color = new Color(0.5f, 0.55f, 0.8f); }
+        }
+
         void Apply()
         {
             double cycleMs = CycleMinutes * 60000.0;
             double t = ((NowMs() + serverOffsetMs) % cycleMs + cycleMs) % cycleMs / cycleMs;
             Hour = (float)(t * 24.0);
+
+            if (Dungeon.Active) { ApplyDungeon(); return; }
+            RenderSettings.fogStartDistance = 34f;
+            RenderSettings.fogEndDistance = 85f;
 
             int i = 0;
             while (i < keys.Length - 2 && Hour >= keys[i + 1].H) i++;

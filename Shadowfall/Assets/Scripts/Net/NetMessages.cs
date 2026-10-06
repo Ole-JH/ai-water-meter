@@ -42,6 +42,11 @@ namespace Shadowfall
         public double now;      // server clock (ms since 1970) in "welcome", for the day/night cycle
         public string ch;       // chat channel: "" = everyone, "p" = party, "w" = whisper to you, "wto" = your whisper
         public NetPartyMember[] pm; // "party": members (id = leader)
+        // "dungeon": id (0 = back in the overworld at x, z), l = depth, k = name, plus the generated layout
+        public int w, h, seed;
+        public string cells;
+        public int[] rooms;            // x, y, w, h per room
+        public float[] start, exit, stairs, boss, chests;
         public SaveData save;
         public NetMonster[] m;
         public NetPlayer[] p;
@@ -74,7 +79,11 @@ namespace Shadowfall
         public string name, mdl;
         public float hp, mhp, x, z;
         public bool dead;
+        public int di;          // dungeon instance the member is in (0 = overworld)
     }
+
+    /// <summary>Dungeon commands: denter, dstairs, dleave (town = after dying).</summary>
+    [Serializable] public class DungeonCmd { public string t; public bool town; }
 
     /// <summary>Party commands: pinvite (name), paccept, pdecline, pleave, pkick (id), pshare (q).</summary>
     [Serializable] public class PartyCmd { public string t, name, q; public int id; }

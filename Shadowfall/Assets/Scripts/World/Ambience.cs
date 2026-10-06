@@ -119,10 +119,10 @@ namespace Shadowfall
             float night = DayNight.Night;
             string zone = WorldGenerator.ZoneAt(hero);
             bool town = WorldGenerator.InTown(hero);
-            bool wild = !town && !WorldGenerator.InCrypt(hero);
+            bool wild = !town && !WorldGenerator.InCrypt(hero) && !Dungeon.Active;
 
             int wantFireflies = night > 0.6f && wild && zone == "Whisperwood" ? fireflies.Count : 0;
-            int wantBirds = town ? 2 : zone == "Forsaken Graveyard" ? birds.Count : 3;
+            int wantBirds = Dungeon.Active ? 0 : town ? 2 : zone == "Forsaken Graveyard" ? birds.Count : 3;
             int wantLeaves = zone == "Whisperwood" && !town ? leaves.Count : 0;
 
             float t = Time.time, dt = Time.deltaTime;

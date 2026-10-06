@@ -44,6 +44,17 @@ Click another player's name above their head and choose **Invite to Party**, or 
 - **Chat:** `/p message` talks to your party. `/w name message` whispers, `/r message` replies to the last whisper, `/leave` leaves the party.
 - The party leader can remove members with the **x** on their party frame.
 
+## The Catacombs (dungeon)
+
+An old crypt in the south-east of the Forsaken Graveyard, glowing orange, leads into **the Catacombs**: three levels of randomly generated rooms and corridors under the graveyard.
+
+- **Your own copy:** every party (or solo hero) gets its own Catacombs; party members who walk in join the same one. A new layout is generated each time, and an empty dungeon closes two minutes after the last player leaves.
+- **Monsters:** skeletons, skeleton archers and zombies scaled to your party's level and the depth, with more elites than outside. Every room holds a pack; some rooms are led by an elite.
+- **Treasure:** chests in side rooms hold gold and a magic or rare item (each hero opens their own).
+- **Getting around:** a blue portal by the entrance of every level returns you to Hollowmere; the orange stairs in the farthest room lead one level deeper.
+- **The Crypt Lord** waits in the farthest room of depth 3: a giant skeleton who hits hard, blasts frost and calls up his guard at half health.
+- Dying in the Catacombs sends you back to Hollowmere. Logging out inside puts you back at the entrance next time.
+
 ## Elite monsters
 
 About one in twelve monsters spawns as an **elite champion**: a named monster (for example *Gorefang the Cruel*) shown with a blue name, a glowing aura and its affixes under its health bar. Elites are bigger, two levels higher, have about three times the health and hit harder. They give three times the XP or more, and always drop a pile of gold plus two or three magic items, with a good chance of rare and a small chance of legendary.

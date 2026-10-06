@@ -70,6 +70,7 @@ namespace Shadowfall
             { "Skeleton Archer", new CharacterLook { Model = "Characters/SkeletonRogue", Height = 1.85f, Anims = AnimSet.Skeleton } },
             { "Zombie", new CharacterLook { Model = "Characters/Zombie", Height = 1.9f, Anims = AnimSet.Kenney, RunSpeed = 4f } },
             { "Rock Golem", new CharacterLook { Model = "Monsters/Golem", Height = 2.8f, Anims = AnimSet.Big, RunSpeed = 4f, Tint = new Color(0.72f, 0.68f, 0.62f) } },
+            { "Crypt Lord", new CharacterLook { Model = "Characters/SkeletonWarrior", Height = 3.6f, Anims = AnimSet.Skeleton, Tint = new Color(1.1f, 0.75f, 0.7f), Light = new Color(1f, 0.25f, 0.15f) } },
             { "Lich King", new CharacterLook { Model = "Characters/SkeletonMage", Height = 3.4f, Anims = AnimSet.Skeleton, Tint = new Color(0.7f, 0.9f, 1.15f), Light = new Color(0.4f, 0.8f, 1f) } },
         };
 

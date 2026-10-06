@@ -22,6 +22,10 @@ namespace Shadowfall
         public NetPartyMember[] Party { get; private set; } = new NetPartyMember[0];
         public int PartyLeader { get; private set; }
         public bool InParty => Party.Length > 0;
+
+        // ---- dungeons: positions on the wire are instance-local; the client keeps dungeons at Dungeon.Origin
+        public int DungeonId { get; private set; }
+        Vector3 Offset => DungeonId != 0 ? Dungeon.Origin : Vector3.zero;
         public bool IsLeader => InParty && PartyLeader == MyId;
 
         /// <summary>A pending party invitation or shared quest, shown as a popup.</summary>
@@ -63,6 +67,8 @@ namespace Shadowfall
             State = ConnState.Offline;
             Party = new NetPartyMember[0];
             PartyInvite = QuestOffer = null;
+            DungeonId = 0;
+            Dungeon.Exit();
             Status = reason;
             if (wasInWorld) GameManager.I.LeaveWorld();
         }
@@ -130,7 +136,54 @@ namespace Shadowfall
 
         public void SendFx(string kind, Vector3 from, Vector3 to)
         {
+            from -= Offset;
+            to -= Offset;
             if (State == ConnState.InWorld) Send(new FxMsg { k = kind, x = from.x, z = from.z, tx = to.x, tz = to.z });
+        }
+
+        // ---- dungeons
+
+        public void EnterDungeon() { if (State == ConnState.InWorld) Send(new DungeonCmd { t = "denter" }); }
+        public void DescendDungeon() { if (State == ConnState.InWorld) Send(new DungeonCmd { t = "dstairs" }); }
+
+        /// <param name="toTown">True after dying: the hero respawns in Hollowmere (we leave right away).</param>
+        public void LeaveDungeon(bool toTown)
+        {
+            if (DungeonId == 0 || State != ConnState.InWorld) return;
+            Send(new DungeonCmd { t = "dleave", town = toTown });
+            if (toTown) SwitchSpace(0, null);
+        }
+
+        /// <summary>Moves the hero between the overworld and a dungeon level, clearing what belonged to the old space.</summary>
+        void SwitchSpace(int dungeonId, NetMsg layout)
+        {
+            foreach (var e in FindObjectsByType<Enemy>(FindObjectsSortMode.None)) Destroy(e.gameObject);
+            foreach (var r in FindObjectsByType<RemotePlayer>(FindObjectsSortMode.None)) Destroy(r.gameObject);
+            foreach (var l in FindObjectsByType<LootDrop>(FindObjectsSortMode.None)) Destroy(l.gameObject);
+            Enemy.ById.Clear();
+            RemotePlayer.ById.Clear();
+            DungeonId = dungeonId;
+            if (layout != null) Dungeon.Enter(layout); else Dungeon.Exit();
+        }
+
+        void HandleDungeon(NetMsg m)
+        {
+            var p = Player.I;
+            if (p == null) return;
+            if (m.id != 0)
+            {
+                bool deeper = DungeonId != 0;
+                SwitchSpace(m.id, m);
+                p.TeleportTo(Dungeon.ToWorld(m.start[0], m.start[1]));
+                GameUI.Banner(Dungeon.ZoneName, new Color(1f, 0.55f, 0.3f));
+                Sfx.Play2D(deeper ? "rubble" : "gong", 0.6f);
+                if (m.boss != null && m.boss.Length == 2) GameUI.Log("You sense a terrible presence. The Crypt Lord waits below.", new Color(1f, 0.45f, 0.35f));
+            }
+            else
+            {
+                if (DungeonId != 0) SwitchSpace(0, null);
+                p.TeleportTo(new Vector3(m.x, 0f, m.z));
+            }
         }
 
         public void SaveNow()
@@ -146,7 +199,7 @@ namespace Shadowfall
             if (p == null) return;
             Send(new StateMsg
             {
-                x = p.transform.position.x, z = p.transform.position.z, ry = p.transform.eulerAngles.y,
+                x = p.transform.position.x - Offset.x, z = p.transform.position.z - Offset.z, ry = p.transform.eulerAngles.y,
                 hp = p.Health, mhp = p.MaxHealth, lvl = p.Level, mv = p.IsMoving, atk = p.IsAttacking, dead = p.IsDead,
                 body = p.BodyHex, legs = p.LegsHex, weapon = p.WeaponHex, helm = p.HelmHex, mdl = p.Look, wk = p.WeaponKind ?? "",
             });
@@ -190,6 +243,7 @@ namespace Shadowfall
             try { m = JsonUtility.FromJson<NetMsg>(raw); }
             catch (System.Exception e) { Debug.LogWarning("Bad message: " + e.Message); return; }
             if (m == null || m.t == null) return;
+            if (DungeonId != 0) ShiftIn(m);
 
             switch (m.t)
             {
@@ -221,6 +275,7 @@ namespace Shadowfall
                 case "fx": HandleFx(m); break;
 
                 case "chat": HandleChat(m); break;
+                case "dungeon": HandleDungeon(m); break;
                 case "party":
                     bool wasInParty = InParty;
                     Party = m.pm ?? new NetPartyMember[0];
@@ -239,6 +294,28 @@ namespace Shadowfall
 
                 case "leave":
                     if (RemotePlayer.ById.TryGetValue(m.id, out var gone)) Destroy(gone.gameObject);
+                    break;
+            }
+        }
+
+        /// <summary>Instance-local dungeon positions to client world positions.</summary>
+        void ShiftIn(NetMsg m)
+        {
+            float ox = Dungeon.Origin.x, oz = Dungeon.Origin.z;
+            switch (m.t)
+            {
+                case "snap":
+                    if (m.m != null) foreach (var nm in m.m) { nm.x += ox; nm.z += oz; }
+                    if (m.p != null) foreach (var np in m.p) { np.x += ox; np.z += oz; }
+                    break;
+                case "matk": case "fx":
+                    m.x += ox; m.z += oz; m.tx += ox; m.tz += oz;
+                    break;
+                case "kill":
+                    m.x += ox; m.z += oz;
+                    break;
+                case "party":
+                    if (m.pm != null) foreach (var pm in m.pm) if (pm.di == DungeonId) { pm.x += ox; pm.z += oz; }
                     break;
             }
         }

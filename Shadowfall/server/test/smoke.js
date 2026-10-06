@@ -125,6 +125,22 @@ async function main() {
     assert.strictEqual(a.all("party").at(-1).pm.length, 2, "leaving updates the party");
     d.ws.close();
 
+    // ---- dungeons: Bob enters the Catacombs from the graveyard entrance
+    state(b, 104.5, 27.5);
+    await sleep(150);
+    b.ws.send(JSON.stringify({ t: "denter" }));
+    await sleep(400);
+    const dg = b.all("dungeon").at(-1);
+    assert.ok(dg && dg.id > 0 && dg.cells && dg.w === 72, "entering the Catacombs sends a dungeon layout");
+    assert.ok(dg.rooms.length >= 4 * 4 && dg.start.length === 2, "the layout has rooms and a start");
+    state(b, dg.start[0], dg.start[1]);
+    await sleep(500);
+    const inside = b.all("snap").at(-1);
+    assert.ok(!inside.p.some((p) => p.name === "Alice"), "players in a dungeon don't see the overworld");
+    b.ws.send(JSON.stringify({ t: "dleave" }));
+    await sleep(300);
+    assert.strictEqual(b.all("dungeon").at(-1).id, 0, "leaving returns to the overworld");
+
     a.ws.close();
     await sleep(300);
     assert.ok(b.find("leave"), "others see a logout");

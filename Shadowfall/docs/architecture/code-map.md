@@ -14,6 +14,7 @@
 | `Core/Util.cs` | Material cache (`Mat`), primitive builder (`Factory`), pulse/burst effects (`FxPulse`) |
 | `World/WorldGenerator.cs` | Seeded world: ground texture, village, zones, trees, rocks, lakes, NPCs |
 | `World/GroundSurface.cs` | Splat control maps, curving roads, ground mesh with lake beds, water, grass blades |
+| `World/Dungeon.cs` | The Catacombs on the client: builds the server's layout (walls, floors, torches, props), portals, chests, entrance |
 | `World/TownLife.cs` | Strolling villagers, patrolling guards, the village hound |
 | `World/Ambience.cs` | Crows, bats, fireflies and falling leaves around the hero |
 | `World/NpcChatter.cs` | What NPCs and villagers say in speech bubbles |
@@ -47,5 +48,6 @@
 | --- | --- |
 | `server.js` | Static file host, WebSocket sessions, accounts, world grid and A*, monster AI, snapshots, persistence |
 | `content.js` | Monster stats, spawner table, town safe-zone rectangle |
+| `dungeon.js` | Dungeon level generator (rooms, corridors, start, stairs, boss, chests, packs) |
 | `test/smoke.js` | End-to-end test with two fake clients |
 | `Dockerfile`, `docker-compose.yml` | Container build and run |

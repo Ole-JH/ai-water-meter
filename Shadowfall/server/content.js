@@ -12,6 +12,7 @@ const MONSTERS = {
   "Skeleton Archer": { hp: 45,   dmg: 10, speed: 4.0, range: 10,  cd: 1.8, xp: 46,   aggro: 12, armor: 0,  ranged: true },
   "Zombie":          { hp: 110,  dmg: 13, speed: 2.6, range: 1.6, cd: 1.6, xp: 52,   aggro: 8,  armor: 0 },
   "Rock Golem":      { hp: 200,  dmg: 20, speed: 3.0, range: 2.2, cd: 2.0, xp: 95,   aggro: 8,  armor: 45 },
+  "Crypt Lord":      { hp: 1100, dmg: 26, speed: 3.6, range: 2.4, cd: 1.5, xp: 2400, aggro: 14, armor: 40, boss: true },
   "Lich King":       { hp: 1400, dmg: 26, speed: 3.6, range: 11,  cd: 1.6, xp: 2000, aggro: 14, armor: 35, ranged: true, boss: true },
 };
 

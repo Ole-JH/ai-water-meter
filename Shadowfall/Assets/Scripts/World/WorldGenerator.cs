@@ -46,6 +46,7 @@ namespace Shadowfall
 
         public static string ZoneAt(Vector3 p)
         {
+            if (Dungeon.Contains(p)) return Dungeon.ZoneName;
             if (InTown(p)) return "Hollowmere Village";
             if (InCrypt(p)) return "Crypt of the Lich";
             float dx = p.x - 80f, dz = p.z - 80f;

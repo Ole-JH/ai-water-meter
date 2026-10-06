@@ -12,6 +12,8 @@ namespace Shadowfall
         public static WorldGrid Instance;
 
         public readonly int Width, Height;
+        /// <summary>World position of cell (0, 0): (0, 0) for the overworld, offset for dungeon grids.</summary>
+        public Vector2Int Origin;
         readonly bool[] blocked;
 
         // A* scratch buffers (reused between searches, invalidated by a stamp counter)
@@ -27,7 +29,7 @@ namespace Shadowfall
         static readonly int[] DY = { 0, 0, 1, -1, 1, -1, 1, -1 };
         const float Diag = 1.41421356f;
 
-        public WorldGrid(int width, int height)
+        public WorldGrid(int width, int height, bool makeCurrent = true)
         {
             Width = width;
             Height = height;
@@ -38,7 +40,7 @@ namespace Shadowfall
             seenStamp = new int[n];
             closedStamp = new int[n];
             open = new MinHeap(n);
-            Instance = this;
+            if (makeCurrent) Instance = this;
         }
 
         public bool InBounds(int x, int y) => x >= 0 && y >= 0 && x < Width && y < Height;
@@ -46,8 +48,8 @@ namespace Shadowfall
         public bool IsBlocked(Vector2Int c) => IsBlocked(c.x, c.y);
         public void SetBlocked(int x, int y, bool value) { if (InBounds(x, y)) blocked[y * Width + x] = value; }
 
-        public Vector2Int WorldToCell(Vector3 p) => new Vector2Int(Mathf.FloorToInt(p.x), Mathf.FloorToInt(p.z));
-        public Vector3 CellToWorld(Vector2Int c) => new Vector3(c.x + 0.5f, 0f, c.y + 0.5f);
+        public Vector2Int WorldToCell(Vector3 p) => new Vector2Int(Mathf.FloorToInt(p.x) - Origin.x, Mathf.FloorToInt(p.z) - Origin.y);
+        public Vector3 CellToWorld(Vector2Int c) => new Vector3(c.x + Origin.x + 0.5f, 0f, c.y + Origin.y + 0.5f);
         public bool IsWalkable(Vector3 p) => !IsBlocked(WorldToCell(p));
 
         /// <summary>Walkability bitmap (bit set = blocked, LSB first) for uploading to the server.</summary>
@@ -81,7 +83,8 @@ namespace Shadowfall
             for (int y = c.y - r; y <= c.y + r; y++)
                 for (int x = c.x - r; x <= c.x + r; x++)
                 {
-                    float dx = x + 0.5f - center.x, dz = y + 0.5f - center.z;
+                    var w = CellToWorld(new Vector2Int(x, y));
+                    float dx = w.x - center.x, dz = w.z - center.z;
                     if (dx * dx + dz * dz <= radius * radius) SetBlocked(x, y, true);
                 }
         }
@@ -193,7 +196,7 @@ namespace Shadowfall
 
             rawPath.Clear();
             for (int c = end; c != -1 && c != si; c = parent[c])
-                rawPath.Add(new Vector3(c % Width + 0.5f, 0f, c / Width + 0.5f));
+                rawPath.Add(CellToWorld(new Vector2Int(c % Width, c / Width)));
             rawPath.Reverse();
             if (reached) rawPath[rawPath.Count - 1] = goal;
 

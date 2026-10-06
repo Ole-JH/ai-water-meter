@@ -34,6 +34,12 @@ namespace Shadowfall
             if (I != null) I.shake = Mathf.Max(I.shake, amount);
         }
 
+        /// <summary>Jump straight to the hero (after a teleport) instead of gliding there.</summary>
+        public void SnapToTarget()
+        {
+            if (Target != null) focus = Target.position;
+        }
+
         /// <summary>Back to the classic view centered on the hero.</summary>
         public void ResetView()
         {

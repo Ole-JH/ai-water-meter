@@ -198,9 +198,10 @@ namespace Shadowfall
             float night = DayNight.Night;
             bool town = WorldGenerator.InTown(pos);
             bool inWorld = p != null;
-            if (wind != null) wind.volume = Mathf.MoveTowards(wind.volume, inWorld ? Mathf.Lerp(0.2f, 0.14f, night) : 0.12f, Time.deltaTime * 0.2f);
-            if (crickets != null) crickets.volume = Mathf.MoveTowards(crickets.volume, inWorld && !town ? night * 0.3f : night * 0.08f, Time.deltaTime * 0.1f);
-            if (inWorld && night > 0.7f && !town && Time.time > nextHowl)
+            bool underground = Dungeon.Active;
+            if (wind != null) wind.volume = Mathf.MoveTowards(wind.volume, underground ? 0.06f : inWorld ? Mathf.Lerp(0.2f, 0.14f, night) : 0.12f, Time.deltaTime * 0.2f);
+            if (crickets != null) crickets.volume = Mathf.MoveTowards(crickets.volume, underground ? 0f : inWorld && !town ? night * 0.3f : night * 0.08f, Time.deltaTime * 0.1f);
+            if (inWorld && !underground && night > 0.7f && !town && Time.time > nextHowl)
             {
                 nextHowl = Time.time + R(40f, 90f);
                 var dir = Quaternion.Euler(0, R(0f, 360f), 0) * Vector3.forward;

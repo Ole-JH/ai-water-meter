@@ -494,6 +494,13 @@ namespace Shadowfall
                     continue;
                 }
 
+                if (it is DungeonPortal || it is CatacombsEntrance)
+                {
+                    if (!WorldToGui(it.Position + Vector3.up * it.LabelHeight, out var g)) continue;
+                    UISkin.Shadowed(new Rect(g.x - 180, g.y - 11, 360, 22), it.HoverText.Split('\n')[0], UISkin.HeadingCenter, it.LabelColor, 2);
+                    continue;
+                }
+
                 if (it == p.HoveredInteractable)
                 {
                     if (!WorldToGui(it.Position + Vector3.up * it.LabelHeight, out var g)) continue;
@@ -706,23 +713,33 @@ namespace Shadowfall
             Block(frame);
             var r = new Rect(frame.x + 11, frame.y + 11, size, size);
 
-            var tex = GameManager.I.World.MapTexture;
+            // Overworld or dungeon map (dungeons sit at Dungeon.Origin in world space)
+            bool underground = Dungeon.Active;
+            var tex = underground ? Dungeon.MapTexture : GameManager.I.World.MapTexture;
+            Vector3 mapOrigin = underground ? Dungeon.Origin : Vector3.zero;
+            float mapW = underground ? Dungeon.Width : WorldGenerator.W, mapH = underground ? Dungeon.Height : WorldGenerator.H;
             Vector3 pp = p.transform.position;
-            float u0 = (pp.x - span / 2) / WorldGenerator.W, v0 = (pp.z - span / 2) / WorldGenerator.H;
-            GUI.DrawTextureWithTexCoords(r, tex, new Rect(u0, v0, span / WorldGenerator.W, span / WorldGenerator.H));
+            float u0 = (pp.x - mapOrigin.x - span / 2) / mapW, v0 = (pp.z - mapOrigin.z - span / 2) / mapH;
+            GUI.color = Color.black;
+            GUI.DrawTexture(r, UISkin.White);
+            GUI.color = Color.white;
+            if (tex != null) GUI.DrawTextureWithTexCoords(r, tex, new Rect(u0, v0, span / mapW, span / mapH));
 
             System.Func<Vector3, Vector2> toMap = w => new Vector2(
                 r.x + (w.x - (pp.x - span / 2)) / span * r.width,
                 r.y + (1f - (w.z - (pp.z - span / 2)) / span) * r.height);
 
             foreach (var it in Interactable.All)
+            {
                 if (it is Npc npc) Dot(r, toMap(npc.Position), npc.Marker(p, out _) != null ? new Color(1f, 0.85f, 0.1f) : new Color(0.3f, 1f, 0.3f), 7);
+                else if (it is DungeonPortal || it is CatacombsEntrance) Dot(r, toMap(it.Position), it.LabelColor, 9);
+            }
             foreach (var e in Enemy.ById.Values)
                 if (e != null && !e.IsDead) Dot(r, toMap(e.transform.position), e.Def.Boss ? new Color(1f, 0.5f, 0f) : e.Elite ? Enemy.ChampionColor : new Color(0.9f, 0.15f, 0.1f), e.Def.Boss ? 9 : e.Elite ? 8 : 5);
             foreach (var rp in RemotePlayer.ById.Values)
                 if (rp != null) Dot(r, toMap(rp.transform.position), NetClient.I.IsPartyMember(rp.Id) ? new Color(0.35f, 1f, 0.45f) : new Color(0.3f, 0.6f, 1f), 7);
-            foreach (var m in NetClient.I.Party) // party members out of view range
-                if (m.id != NetClient.I.MyId && !RemotePlayer.ById.ContainsKey(m.id)) Dot(r, toMap(new Vector3(m.x, 0, m.z)), new Color(0.35f, 1f, 0.45f), 6);
+            foreach (var m in NetClient.I.Party) // party members out of view range, in the same place as us
+                if (m.id != NetClient.I.MyId && m.di == NetClient.I.DungeonId && !RemotePlayer.ById.ContainsKey(m.id)) Dot(r, toMap(new Vector3(m.x, 0, m.z)), new Color(0.35f, 1f, 0.45f), 6);
             Dot(r, toMap(pp), Color.white, 8);
 
             var net = NetClient.I;
@@ -1099,12 +1116,25 @@ namespace Shadowfall
             GUI.color = new Color(0, 0, 0, 0.55f);
             GUI.DrawTexture(new Rect(0, 0, VW, VH), UISkin.White);
             GUI.color = Color.white;
-            UISkin.Window(new Rect(r.x - 18, r.y - 60, r.width + 36, r.height + 78), "World Map", false);
-            GUI.DrawTexture(r, GameManager.I.World.MapTexture);
-            System.Func<Vector3, Vector2> toMap = w => new Vector2(r.x + w.x / WorldGenerator.W * r.width, r.y + (1f - w.z / WorldGenerator.H) * r.height);
+            bool underground = Dungeon.Active;
+            UISkin.Window(new Rect(r.x - 18, r.y - 60, r.width + 36, r.height + 78), underground ? Dungeon.ZoneName : "World Map", false);
+            Vector3 o = underground ? Dungeon.Origin : Vector3.zero;
+            float mw = underground ? Dungeon.Width : WorldGenerator.W, mh = underground ? Dungeon.Height : WorldGenerator.H;
+            GUI.DrawTexture(r, underground ? Dungeon.MapTexture : GameManager.I.World.MapTexture);
+            System.Func<Vector3, Vector2> toMap = w => new Vector2(r.x + (w.x - o.x) / mw * r.width, r.y + (1f - (w.z - o.z) / mh) * r.height);
+            if (underground)
+            {
+                foreach (var it in Interactable.All)
+                    if (it is DungeonPortal portal) Dot(r, toMap(portal.Position), portal.LabelColor, 11);
+                foreach (var rp in RemotePlayer.ById.Values) if (rp != null) Dot(r, toMap(rp.transform.position), new Color(0.3f, 0.6f, 1f), 9);
+                Dot(r, toMap(p.transform.position), Color.white, 11);
+                if (ClickedIn(new Rect(0, 0, VW, VH)) >= 0) showMap = false;
+                return;
+            }
 
-            string[] zones = { "Whisperwood", "Goblin Encampment", "Forsaken Graveyard", "Ironvein Quarry", "Hollowmere", "Crypt of the Lich" };
-            Vector3[] centers = { new Vector3(80, 0, 125), new Vector3(128, 0, 80), new Vector3(80, 0, 40), new Vector3(32, 0, 80), new Vector3(80, 0, 80), new Vector3(80, 0, 15) };
+            string[] zones = { "Whisperwood", "Goblin Encampment", "Forsaken Graveyard", "Ironvein Quarry", "Hollowmere", "Crypt of the Lich", "The Catacombs" };
+            Vector3[] centers = { new Vector3(80, 0, 125), new Vector3(128, 0, 80), new Vector3(80, 0, 40), new Vector3(32, 0, 80), new Vector3(80, 0, 80), new Vector3(80, 0, 15), Dungeon.Entrance + new Vector3(0, 0, -6) };
+            Dot(r, toMap(Dungeon.Entrance), new Color(1f, 0.55f, 0.3f), 12);
             for (int i = 0; i < zones.Length; i++)
             {
                 var c = toMap(centers[i]);

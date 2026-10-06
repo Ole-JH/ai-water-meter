@@ -10,6 +10,7 @@ const path = require("path");
 const crypto = require("crypto");
 const { WebSocketServer } = require("ws");
 const { MONSTERS, SPAWNERS, TOWN } = require("./content");
+const dungeonGen = require("./dungeon");
 
 const PORT = parseInt(process.env.PORT || "7341", 10);
 const DATA_DIR = path.resolve(process.env.DATA_DIR || path.join(__dirname, "data"));
@@ -114,7 +115,11 @@ function loadWorld() {
   } catch { /* no world yet */ }
 }
 
-const blockedAt = (x, y) => x < 0 || y < 0 || x >= world.w || y >= world.h || world.blocked[y * world.w + x] === 1;
+// The grid that pathfinding and walkability use right now: the overworld, or a dungeon instance's grid
+// while that instance's monsters are updated (see useGrid). Node is single-threaded, so this is safe.
+let G = null;
+const useGrid = (inst) => { G = inst ? (instances.get(inst) || {}).grid || null : world; return G; };
+const blockedAt = (x, y) => !G || x < 0 || y < 0 || x >= G.w || y >= G.h || G.blocked[y * G.w + x] === 1;
 const walkable = (x, z) => !blockedAt(Math.floor(x), Math.floor(z));
 
 function lineOfSight(ax, az, bx, bz, clearance = 0.3) {
@@ -132,7 +137,7 @@ function lineOfSight(ax, az, bx, bz, clearance = 0.3) {
 // A* on the tile grid (8 directions, no corner cutting) with greedy string pulling.
 const DX = [1, -1, 0, 0, 1, 1, -1, -1], DY = [0, 0, 1, -1, 1, -1, 1, -1];
 function findPath(sx, sz, gx, gz, maxExpand = 2500) {
-  const W = world.w;
+  const W = G.w;
   let s = [Math.floor(sx), Math.floor(sz)], g = [Math.floor(gx), Math.floor(gz)];
   if (blockedAt(g[0], g[1])) {
     const n = nearestWalkable(g[0], g[1], 6);
@@ -218,6 +223,7 @@ const spawners = [];
 let nextMonsterId = 1;
 
 function initSpawners() {
+  useGrid(0);
   for (const [x, z, count, minL, maxL, types, radius = 5, respawn = 30] of SPAWNERS) {
     const sp = { x, z, count, minL, maxL, types, radius, respawn, pending: [] };
     spawners.push(sp);
@@ -280,7 +286,7 @@ function eliteAbilities(m, s, d, t) {
       if (!walkable(x, z)) continue;
       const ox = m.x, oz = m.z;
       m.x = x; m.z = z; m.path = [];
-      sendNear(m.x, m.z, PLAYER_VIEW, { t: "matk", mid: m.id, tid: -1, dmg: 0, k: "blink", x: r2(x), z: r2(z), tx: r2(ox), tz: r2(oz) });
+      sendNear(m.x, m.z, PLAYER_VIEW, { t: "matk", mid: m.id, tid: -1, dmg: 0, k: "blink", x: r2(x), z: r2(z), tx: r2(ox), tz: r2(oz) }, m.inst);
       break;
     }
   }
@@ -290,7 +296,7 @@ function eliteAbilities(m, s, d, t) {
   }
 }
 
-function spawnMonster(type, level, x, z, spawner) {
+function spawnMonster(type, level, x, z, spawner, inst = 0) {
   const def = MONSTERS[type];
   const hp = Math.round(def.hp * (1 + 0.28 * (level - 1)));
   const m = {
@@ -298,7 +304,7 @@ function spawnMonster(type, level, x, z, spawner) {
     hp, maxHp: hp, armor: def.armor + level * 2, dmg: def.dmg * (1 + 0.16 * (level - 1)),
     state: "idle", target: 0, path: [], repathAt: 0, nextAttack: 0, slowUntil: 0,
     wanderAt: now() + rand(1, 5), threat: new Map(), spawner, summoned: false, novaAt: 0,
-    leash: def.boss ? 40 : 28,
+    leash: def.boss ? 40 : 28, inst,
   };
   monsters.set(m.id, m);
   return m;
@@ -313,11 +319,11 @@ function aggro(m, sessionId) {
 
 function alertNearby(m, sessionId) {
   for (const o of monsters.values())
-    if (o !== m && o.state === "idle" && dist(o.x, o.z, m.x, m.z) < 6) aggro(o, sessionId);
+    if (o !== m && o.inst === m.inst && o.state === "idle" && dist(o.x, o.z, m.x, m.z) < 6) aggro(o, sessionId);
 }
 
 function validTarget(m, s) {
-  return s && s.inWorld && !s.dead && !inTown(s.x, s.z) && dist(m.homeX, m.homeZ, s.x, s.z) < m.leash + 6;
+  return s && s.inWorld && !s.dead && (s.inst || 0) === m.inst && !(m.inst === 0 && inTown(s.x, s.z)) && dist(m.homeX, m.homeZ, s.x, s.z) < m.leash + 6;
 }
 
 function moveAlongPath(m, speed) {
@@ -330,15 +336,15 @@ function moveAlongPath(m, speed) {
   return true;
 }
 
-function sendNear(x, z, range, msg) {
+function sendNear(x, z, range, msg, inst = 0) {
   const data = JSON.stringify(msg);
   for (const s of sessions.values())
-    if (s.inWorld && dist(s.x, s.z, x, z) <= range) safeSend(s, data);
+    if (s.inWorld && (s.inst || 0) === inst && dist(s.x, s.z, x, z) <= range) safeSend(s, data);
 }
 
 function monsterAttack(m, s, kind, dmg) {
   if (s && hasAffix(m, "Vampiric") && dmg > 0) m.hp = Math.min(m.maxHp, m.hp + dmg * 0.6);
-  sendNear(m.x, m.z, PLAYER_VIEW, { t: "matk", mid: m.id, tid: s ? s.id : -1, dmg: r2(dmg), k: kind, x: r2(s ? s.x : m.x), z: r2(s ? s.z : m.z) });
+  sendNear(m.x, m.z, PLAYER_VIEW, { t: "matk", mid: m.id, tid: s ? s.id : -1, dmg: r2(dmg), k: kind, x: r2(s ? s.x : m.x), z: r2(s ? s.z : m.z) }, m.inst);
 }
 
 function updateMonster(m, t) {
@@ -347,7 +353,7 @@ function updateMonster(m, t) {
     case "idle": {
       let best = null, bestD = m.def.aggro;
       for (const s of sessions.values()) {
-        if (!s.inWorld || s.dead || inTown(s.x, s.z)) continue;
+        if (!s.inWorld || s.dead || (s.inst || 0) !== m.inst || (m.inst === 0 && inTown(s.x, s.z))) continue;
         const d = dist(m.x, m.z, s.x, s.z);
         if (d < bestD) { bestD = d; best = s; }
       }
@@ -379,7 +385,7 @@ function updateMonster(m, t) {
       }
 
       const d = dist(m.x, m.z, s.x, s.z);
-      if (m.type === "Lich King") lichAbilities(m, s, d, t);
+      if (m.type === "Lich King" || m.type === "Crypt Lord") lichAbilities(m, s, d, t);
       if (m.elite) eliteAbilities(m, s, d, t);
 
       const canHit = d <= m.def.range + 0.45 && (!m.def.ranged || lineOfSight(m.x, m.z, s.x, s.z, 0.1));
@@ -418,7 +424,7 @@ function updateMonster(m, t) {
 function separate(m) {
   let px = 0, pz = 0;
   for (const o of monsters.values()) {
-    if (o === m || o.state !== "chase") continue;
+    if (o === m || o.inst !== m.inst || o.state !== "chase") continue;
     const dx = m.x - o.x, dz = m.z - o.z, d = Math.hypot(dx, dz);
     if (d > 0.001 && d < 0.9) { px += (dx / d) * (0.9 - d); pz += (dz / d) * (0.9 - d); }
   }
@@ -437,7 +443,7 @@ function lichAbilities(m, s, d, t) {
     for (let i = 0; i < 4; i++) {
       const a = (i * Math.PI) / 2, x = m.x + Math.cos(a) * 2.5, z = m.z + Math.sin(a) * 2.5;
       if (!walkable(x, z)) continue;
-      const add = spawnMonster(i % 2 ? "Skeleton Archer" : "Skeleton", Math.max(1, m.level - 4), x, z, null);
+      const add = spawnMonster(i % 2 ? "Skeleton Archer" : "Skeleton", Math.max(1, m.level - 4), x, z, null, m.inst);
       add.leash = 40;
       aggro(add, s.id);
     }
@@ -455,7 +461,7 @@ function damageMonster(m, s, dmg) {
 
 function killMonster(m) {
   monsters.delete(m.id);
-  sendNear(m.x, m.z, PLAYER_VIEW + 10, { t: "mdie", mid: m.id });
+  sendNear(m.x, m.z, PLAYER_VIEW + 10, { t: "mdie", mid: m.id }, m.inst);
   if (hasAffix(m, "Fire Enchanted")) monsterAttack(m, null, "explode", m.dmg * 1.6);
   // Everyone who fought it gets credit, plus their party members who are nearby (WoW-style shared kills).
   const credited = new Set();
@@ -464,7 +470,7 @@ function killMonster(m) {
     if (!s || !s.inWorld) continue;
     credited.add(s);
     const p = partyOf(s);
-    if (p) for (const o of partyMembers(p)) if (!o.dead && dist(o.x, o.z, m.x, m.z) <= PARTY_RANGE) credited.add(o);
+    if (p) for (const o of partyMembers(p)) if (!o.dead && (o.inst || 0) === m.inst && dist(o.x, o.z, m.x, m.z) <= PARTY_RANGE) credited.add(o);
   }
   for (const s of credited) {
     const diff = m.level - s.lvl;
@@ -473,8 +479,9 @@ function killMonster(m) {
     const xp = Math.max(1, Math.round(m.def.xp * (1 + 0.12 * (m.level - 1)) * mul * eliteMul));
     safeSend(s, JSON.stringify({ t: "kill", mid: m.id, name: m.type, l: m.level, xp, x: r2(m.x), z: r2(m.z), ...(m.elite ? { el: m.elite.name } : {}) }));
   }
-  if (m.def.boss) broadcast({ t: "sys", msg: `${m.type} has been slain!` });
-  else if (m.elite) sendNear(m.x, m.z, PLAYER_VIEW, { t: "sys", msg: `${m.elite.name} (${m.type}) has been slain!` });
+  if (m.def.boss && m.inst) sendNear(m.x, m.z, 999, { t: "sys", msg: `${m.type} has been slain! The Catacombs fall silent.` }, m.inst);
+  else if (m.def.boss) broadcast({ t: "sys", msg: `${m.type} has been slain!` });
+  else if (m.elite) sendNear(m.x, m.z, PLAYER_VIEW, { t: "sys", msg: `${m.elite.name} (${m.type}) has been slain!` }, m.inst);
   if (m.spawner) m.spawner.pending.push(now() + m.spawner.respawn);
 }
 
@@ -594,7 +601,7 @@ function findOnline(name) {
 function sendParty(p) {
   const pm = partyMembers(p).map((o) => ({
     id: o.id, name: o.name, lvl: o.lvl, hp: Math.ceil(o.hp || 0), mhp: Math.ceil(o.mhp || 1),
-    mdl: (o.look && o.look.mdl) || "Knight", x: r2(o.x), z: r2(o.z), dead: !!o.dead,
+    mdl: (o.look && o.look.mdl) || "Knight", x: r2(o.x), z: r2(o.z), dead: !!o.dead, di: o.inst || 0,
   }));
   const data = JSON.stringify({ t: "party", id: p.leader, pm });
   for (const o of partyMembers(p)) safeSend(o, data);
@@ -690,8 +697,109 @@ const partyHandlers = {
   },
 };
 
+// =====================================================================================
+// Dungeons: the Catacombs, three levels generated per party (or solo player). Each level is an
+// instance with its own grid and monsters; players in an instance only see that instance.
+// =====================================================================================
+
+const instances = new Map();
+let nextInstanceId = 1;
+const CATACOMBS = { x: 104.5, z: 27.5, depths: 3, name: "The Catacombs" }; // entrance, matches the client
+const DUNGEON_TYPES = [["Skeleton", "Zombie"], ["Skeleton", "Skeleton Archer", "Zombie"], ["Skeleton", "Skeleton Archer", "Zombie", "Skeleton"]];
+
+const partyKey = (s) => { const p = partyOf(s); return p ? "p" + p.id : "s" + s.id; };
+
+function getInstance(s, depth) {
+  const key = partyKey(s) + ":" + depth;
+  for (const inst of instances.values()) if (inst.key === key) return inst;
+  const p = partyOf(s);
+  const members = p ? partyMembers(p) : [s];
+  const level = Math.max(3, Math.round(members.reduce((a, o) => a + (o.lvl || 1), 0) / members.length));
+  const seed = (Math.random() * 2147483647) | 0;
+  const L = dungeonGen.generate(seed, depth, CATACOMBS.depths);
+  const inst = { id: nextInstanceId++, key, depth, seed, layout: L, grid: { w: L.w, h: L.h, blocked: L.blocked }, cells: dungeonGen.pack(L.blocked), lastActive: now(), level };
+  instances.set(inst.id, inst);
+  populate(inst, members.length);
+  log(`Dungeon ${inst.id} (${key}, depth ${depth}, level ${level}) created`);
+  return inst;
+}
+
+function populate(inst, players) {
+  useGrid(inst.id);
+  const L = inst.layout, types = DUNGEON_TYPES[Math.min(inst.depth, DUNGEON_TYPES.length) - 1];
+  for (const pk of L.packs) {
+    const eliteRoom = Math.random() < 0.3;
+    const n = pk.n + Math.max(0, players - 1);
+    for (let i = 0; i < n; i++) {
+      for (let a = 0; a < 12; a++) {
+        const x = pk.room.x + 1 + Math.random() * (pk.room.w - 2), z = pk.room.y + 1 + Math.random() * (pk.room.h - 2);
+        if (!walkable(x, z)) continue;
+        const m = spawnMonster(types[randInt(0, types.length - 1)], Math.max(3, inst.level + inst.depth - 1 + randInt(-1, 1)), x, z, null, inst.id);
+        m.leash = 70;
+        if ((eliteRoom && i === 0) || Math.random() < 0.06) makeElite(m);
+        break;
+      }
+    }
+  }
+  if (L.boss) {
+    const b = spawnMonster("Crypt Lord", inst.level + 3, L.boss[0], L.boss[1], null, inst.id);
+    b.maxHp = b.hp = Math.round(b.hp * (0.7 + 0.3 * players));
+    b.leash = 70;
+  }
+  useGrid(0);
+}
+
+function enterInstance(s, inst) {
+  s.inst = inst.id;
+  [s.x, s.z] = inst.layout.start;
+  inst.lastActive = now();
+  const L = inst.layout;
+  safeSend(s, JSON.stringify({
+    t: "dungeon", id: inst.id, l: inst.depth, k: CATACOMBS.name, seed: inst.seed, w: L.w, h: L.h, cells: inst.cells,
+    rooms: L.rooms.flatMap((r) => [r.x, r.y, r.w, r.h]), start: L.start, exit: L.exit,
+    stairs: L.stairs || [], boss: L.boss || [], chests: L.chests.flat(),
+  }));
+}
+
+function leaveInstance(s, toTown) {
+  s.inst = 0;
+  [s.x, s.z] = toTown ? [80.5, 77.5] : [CATACOMBS.x, CATACOMBS.z - 2.5];
+  safeSend(s, JSON.stringify({ t: "dungeon", id: 0, x: s.x, z: s.z }));
+}
+
+/** Where a player is in the overworld (for saves): dungeon players are saved at the entrance. */
+const overworldPos = (s) => (s.inst ? [CATACOMBS.x, CATACOMBS.z - 2.5] : [s.x, s.z]);
+
+function cleanupInstances(t) {
+  for (const inst of instances.values()) {
+    let occupied = false;
+    for (const s of sessions.values()) if (s.inWorld && s.inst === inst.id) { occupied = true; break; }
+    if (occupied) { inst.lastActive = t; continue; }
+    if (t - inst.lastActive < 120) continue;
+    for (const m of monsters.values()) if (m.inst === inst.id) monsters.delete(m.id);
+    instances.delete(inst.id);
+    log(`Dungeon ${inst.id} closed`);
+  }
+}
+
+const dungeonHandlers = {
+  denter(s) {
+    if (!s.inWorld || s.dead || s.inst || dist(s.x, s.z, CATACOMBS.x, CATACOMBS.z) > 6) return;
+    enterInstance(s, getInstance(s, 1));
+  },
+  dstairs(s) {
+    const cur = s.inst && instances.get(s.inst);
+    if (!cur || !cur.layout.stairs || s.dead || dist(s.x, s.z, cur.layout.stairs[0], cur.layout.stairs[1]) > 5) return;
+    enterInstance(s, getInstance(s, cur.depth + 1));
+  },
+  dleave(s, m) {
+    if (s.inst) leaveInstance(s, !!m.town);
+  },
+};
+
 const handlers = {
   ...partyHandlers,
+  ...dungeonHandlers,
 
   hello(s, m) {
     if (s.account || s.pendingLogin) return;
@@ -724,9 +832,10 @@ const handlers = {
   state(s, m) {
     if (!s.inWorld) return;
     const x = Number(m.x), z = Number(m.z);
-    if (Number.isFinite(x) && Number.isFinite(z) && world) {
-      s.x = Math.min(Math.max(x, 0), world.w);
-      s.z = Math.min(Math.max(z, 0), world.h);
+    const grid = s.inst ? (instances.get(s.inst) || {}).grid : world;
+    if (Number.isFinite(x) && Number.isFinite(z) && grid) {
+      s.x = Math.min(Math.max(x, 0), grid.w);
+      s.z = Math.min(Math.max(z, 0), grid.h);
     }
     s.ry = Number(m.ry) || 0;
     s.hp = Number(m.hp) || 0;
@@ -741,7 +850,7 @@ const handlers = {
   hit(s, m) {
     if (!s.inWorld || s.dead) return;
     const mon = monsters.get(m.mid);
-    if (!mon || dist(mon.x, mon.z, s.x, s.z) > 30) return;
+    if (!mon || mon.inst !== (s.inst || 0) || dist(mon.x, mon.z, s.x, s.z) > 30) return;
     const cap = 100 + s.lvl * 60; // sanity cap on reported damage
     const dmg = Math.min(Math.max(parseInt(m.dmg, 10) || 0, 0), cap);
     if (dmg > 0) damageMonster(mon, s, dmg);
@@ -750,7 +859,7 @@ const handlers = {
   slow(s, m) {
     if (!s.inWorld) return;
     const mon = monsters.get(m.mid);
-    if (!mon || dist(mon.x, mon.z, s.x, s.z) > 12) return;
+    if (!mon || mon.inst !== (s.inst || 0) || dist(mon.x, mon.z, s.x, s.z) > 12) return;
     mon.slowUntil = now() + Math.min(Number(m.dur) || 0, 5);
     if (mon.state !== "chase") aggro(mon, s.id);
   },
@@ -804,7 +913,7 @@ const handlers = {
     if (!["fireball", "nova", "heal", "meteor", "cleave", "levelup"].includes(k)) return;
     const msg = JSON.stringify({ t: "fx", id: s.id, k, x: r2(+m.x || 0), z: r2(+m.z || 0), tx: r2(+m.tx || 0), tz: r2(+m.tz || 0) });
     for (const o of sessions.values())
-      if (o !== s && o.inWorld && dist(o.x, o.z, s.x, s.z) < PLAYER_VIEW) safeSend(o, msg);
+      if (o !== s && o.inWorld && (o.inst || 0) === (s.inst || 0) && dist(o.x, o.z, s.x, s.z) < PLAYER_VIEW) safeSend(o, msg);
   },
 
   save(s, m) {
@@ -814,6 +923,7 @@ const handlers = {
     const lvl = parseInt(m.save.level, 10);
     if (!(lvl >= 1 && lvl <= 100)) return;
     s.account.save = m.save;
+    [s.account.save.x, s.account.save.z] = overworldPos(s);
     saveAccount(s.account);
   },
 };
@@ -824,8 +934,7 @@ function onDisconnect(s) {
   if (s.account && s.inWorld) {
     if (s.account.save) {
       // remember where they logged out
-      s.account.save.x = s.x;
-      s.account.save.z = s.z;
+      [s.account.save.x, s.account.save.z] = overworldPos(s);
     }
     saveAccount(s.account);
     broadcast({ t: "sys", msg: `${s.name} has left the world.` });
@@ -847,24 +956,28 @@ function tick() {
     // Monsters with no player anywhere nearby sleep (unless they need to walk home).
     if (m.state === "idle") {
       let awake = false;
-      for (const s of sessions.values()) if (s.inWorld && dist(s.x, s.z, m.x, m.z) < 60) { awake = true; break; }
+      for (const s of sessions.values()) if (s.inWorld && (s.inst || 0) === m.inst && dist(s.x, s.z, m.x, m.z) < 60) { awake = true; break; }
       if (!awake) continue;
     }
+    if (!useGrid(m.inst)) { monsters.delete(m.id); continue; } // its dungeon is gone
     updateMonster(m, t);
   }
+  useGrid(0);
   updateSpawners(t);
+  if (tickCount % 50 === 0) cleanupInstances(t);
 
   const online = [...sessions.values()].filter((s) => s.inWorld);
   for (const s of online) {
     const ms = [];
+    const inst = s.inst || 0;
     for (const m of monsters.values()) {
-      if (dist(m.x, m.z, s.x, s.z) > MONSTER_VIEW) continue;
+      if (m.inst !== inst || dist(m.x, m.z, s.x, s.z) > MONSTER_VIEW) continue;
       ms.push({ id: m.id, n: m.type, l: m.level, x: r2(m.x), z: r2(m.z), ry: Math.round(m.ry), hp: Math.ceil(m.hp), mhp: m.maxHp, ar: m.armor, sl: t < m.slowUntil,
         ...(m.elite ? { el: m.elite.name, af: m.elite.affixes.join(","), sh: t < m.shieldUntil } : {}) });
     }
     const ps = [];
     for (const o of online) {
-      if (o === s || dist(o.x, o.z, s.x, s.z) > PLAYER_VIEW) continue;
+      if (o === s || (o.inst || 0) !== inst || dist(o.x, o.z, s.x, s.z) > PLAYER_VIEW) continue;
       ps.push({ id: o.id, name: o.name, x: r2(o.x), z: r2(o.z), ry: Math.round(o.ry || 0), hp: Math.ceil(o.hp || 0), mhp: Math.ceil(o.mhp || 1),
         lvl: o.lvl, mv: o.mv, atk: o.atk, dead: o.dead, ...(o.look || {}) });
     }
@@ -906,7 +1019,7 @@ setInterval(() => {
 // Periodically flush characters to disk (in addition to client save messages).
 setInterval(() => {
   for (const s of sessions.values()) if (s.inWorld && s.account && s.account.save) {
-    s.account.save.x = s.x; s.account.save.z = s.z;
+    [s.account.save.x, s.account.save.z] = overworldPos(s);
     saveAccount(s.account);
   }
 }, 60000);
@@ -921,7 +1034,7 @@ server.listen(PORT, () => log(`Shadowfall server listening on :${PORT}  (public:
 function shutdown() {
   log("Shutting down, saving characters...");
   for (const s of sessions.values()) if (s.account && s.inWorld) {
-    if (s.account.save) { s.account.save.x = s.x; s.account.save.z = s.z; }
+    if (s.account.save) [s.account.save.x, s.account.save.z] = overworldPos(s);
     try { fs.writeFileSync(charFile(s.account.name), JSON.stringify(s.account)); } catch { /* ignore */ }
   }
   process.exit(0);
