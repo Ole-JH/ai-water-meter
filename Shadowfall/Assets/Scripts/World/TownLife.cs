@@ -16,10 +16,10 @@ namespace Shadowfall
             var rng = new System.Random(77);
             string[] villagerModels = { "Characters/Keeper", "Characters/RogueHooded", "Characters/Mage", "Characters/Rogue" };
             Color[] tints = { new Color(1f, 0.9f, 0.8f), new Color(0.85f, 0.95f, 0.85f), new Color(0.9f, 0.85f, 1f), new Color(1f, 1f, 0.9f) };
-            for (int i = 0; i < 6; i++)
+            for (int i = 0; i < 10; i++)
             {
                 string model = villagerModels[i % villagerModels.Length];
-                bool child = i == 5;
+                bool child = i == 5 || i == 9;
                 var look = new CharacterLook
                 {
                     Model = model, Height = child ? 1.15f : 1.8f + (float)rng.NextDouble() * 0.15f,
@@ -27,13 +27,14 @@ namespace Shadowfall
                 };
                 Walker.Create(root, child ? "Child" : "Villager", look, RandomTownPoint(rng), child ? 2.6f : 1.5f, Walker.Kind.Villager);
             }
-            Vector3[] gates = { new Vector3(80.5f, 0, 68.5f), new Vector3(80.5f, 0, 92.5f), new Vector3(68.5f, 0, 80.5f), new Vector3(92.5f, 0, 80.5f) };
-            for (int i = 0; i < 2; i++)
+            var t = WorldGenerator.Town;
+            Vector3[] gates = { new Vector3(80.5f, 0, t.yMin + 2.5f), new Vector3(t.xMax - 2.5f, 0, 80.5f), new Vector3(80.5f, 0, t.yMax - 2.5f), new Vector3(t.xMin + 2.5f, 0, 80.5f) };
+            for (int i = 0; i < 3; i++)
             {
                 var guard = Walker.Create(root, "Guard", new CharacterLook { Model = "Characters/Knight", Height = 2f, Tint = new Color(0.85f, 0.85f, 0.9f), Weapon = "sword" },
-                    gates[i * 2], 1.6f, Walker.Kind.Guard);
+                    gates[i], 1.6f, Walker.Kind.Guard);
                 guard.Route = gates;
-                guard.RouteIndex = i * 2;
+                guard.RouteIndex = i;
             }
             Walker.Create(root, "Hound", new CharacterLook { Model = "Monsters/Wolf", Height = 0.85f, Anims = AnimSet.Wolf, RunSpeed = 5f, Tint = new Color(0.55f, 0.45f, 0.38f) },
                 new Vector3(79.5f, 0, 79.5f), 2.5f, Walker.Kind.Dog);

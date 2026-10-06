@@ -18,13 +18,13 @@ const MONSTERS = {
 // [x, z, count, minLevel, maxLevel, [types], radius?, respawnSeconds?]
 const SPAWNERS = [
   // Whisperwood (north)
-  [80, 108, 4, 1, 3, ["Dire Wolf"]],
+  [80, 114, 4, 1, 3, ["Dire Wolf"]],
   [100, 118, 5, 2, 4, ["Dire Wolf"]],
-  [62, 108, 4, 2, 4, ["Dire Wolf"]],
+  [60, 114, 4, 2, 4, ["Dire Wolf"]],
   [70, 140, 5, 4, 6, ["Dire Wolf"]],
   [130, 145, 5, 5, 7, ["Dire Wolf", "Bandit"]],
   // Goblin Encampment (east)
-  [108, 80, 4, 3, 5, ["Goblin"]],
+  [114, 80, 4, 3, 5, ["Goblin"]],
   [124, 92, 6, 4, 7, ["Goblin", "Goblin", "Goblin Shaman"]],
   [124, 68, 6, 4, 7, ["Goblin", "Goblin", "Goblin Shaman"]],
   [140, 110, 5, 6, 8, ["Bandit"]],
@@ -40,13 +40,13 @@ const SPAWNERS = [
   [87, 14, 4, 11, 13, ["Skeleton", "Skeleton Archer"]],
   [80.5, 9.5, 1, 16, 16, ["Lich King"], 0.5, 180],
   // Ironvein Quarry (west)
-  [56, 66, 4, 3, 5, ["Bandit"]],
+  [46, 64, 4, 3, 5, ["Bandit"]],
   [36, 82, 4, 8, 11, ["Rock Golem"]],
   [24, 60, 4, 10, 13, ["Rock Golem"]],
   [20, 105, 4, 12, 15, ["Rock Golem"]],
 ];
 
 // Safe zone: monsters never follow players inside the village walls.
-const TOWN = { x0: 66, z0: 66, x1: 95, z1: 95 };
+const TOWN = { x0: 58, z0: 58, x1: 103, z1: 103 };
 
 module.exports = { MONSTERS, SPAWNERS, TOWN };

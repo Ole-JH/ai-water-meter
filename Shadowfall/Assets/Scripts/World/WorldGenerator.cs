@@ -10,7 +10,7 @@ namespace Shadowfall
     {
         public const int W = 160, H = 160;
         public const int Seed = 20261006;
-        public static readonly RectInt Town = new RectInt(66, 66, 29, 29); // cells 66..94
+        public static readonly RectInt Town = new RectInt(58, 58, 45, 45); // cells 58..102
         public static readonly RectInt Crypt = new RectInt(68, 4, 25, 19);  // cells 68..92, 4..22
 
         public Texture2D MapTexture { get; private set; }
@@ -121,15 +121,35 @@ namespace Shadowfall
                     BaseSurface(x, y, wn / sum, ws / sum, we / sum, ww / sum);
                 }
 
+            // The village: cobbled cross streets and central square, grassy yards with trodden dirt elsewhere.
             for (int y = Town.yMin; y < Town.yMax; y++)
                 for (int x = Town.xMin; x < Town.xMax; x++)
                 {
-                    float n = Mathf.PerlinNoise(x * 0.9f, y * 0.9f) * 0.15f;
-                    Paint(x, y, cobbleC * (0.9f + n));
                     Reserve(x, y);
-                    surface.Set(x, y, GroundSurface.Cobble);
-                    if (Mathf.PerlinNoise(x * 0.21f + 9f, y * 0.21f) > 0.66f) surface.Set(x, y, GroundSurface.Dirt, 0.45f); // worn patches
+                    if (IsTownStreet(x, y))
+                    {
+                        float n = Mathf.PerlinNoise(x * 0.9f, y * 0.9f) * 0.15f;
+                        Paint(x, y, cobbleC * (0.9f + n));
+                        surface.Set(x, y, GroundSurface.Cobble);
+                        if (Mathf.PerlinNoise(x * 0.21f + 9f, y * 0.21f) > 0.66f) surface.Set(x, y, GroundSurface.Dirt, 0.45f); // worn patches
+                    }
+                    else
+                    {
+                        surface.Set(x, y, GroundSurface.Grass, 0.85f);
+                        float worn = Mathf.PerlinNoise(x * 0.17f + 3f, y * 0.17f + 11f);
+                        bool lane = x <= Town.xMin + 2 || x >= Town.xMax - 3 || y <= Town.yMin + 2 || y >= Town.yMax - 3; // path inside the wall
+                        if (lane || worn > 0.62f) surface.Set(x, y, GroundSurface.Dirt, lane ? 0.75f : 0.5f);
+                        Paint(x, y, Color.Lerp(new Color(0.3f, 0.4f, 0.2f), dirtC, lane ? 0.7f : 0.2f));
+                    }
                 }
+        }
+
+        /// <summary>Cobbled parts of the village: the two cross streets between the gates and the central square.</summary>
+        static bool IsTownStreet(int x, int y)
+        {
+            bool cross = (x >= 78 && x <= 82) || (y >= 78 && y <= 82);
+            bool square = x >= 72 && x <= 89 && y >= 72 && y <= 89;
+            return cross || square;
         }
 
         /// <summary>Which ground textures a tile gets, from how much it belongs to each zone.</summary>
@@ -157,7 +177,7 @@ namespace Shadowfall
             w[GroundSurface.Dry] += west * (1f - rock) * 0.6f;
             w[GroundSurface.Dirt] += west * (1f - rock) * 0.4f;
             // Green meadow around the village.
-            float meadow = 1f - Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(20f, 36f, Vector2.Distance(new Vector2(x, y), new Vector2(80f, 80f))));
+            float meadow = 1f - Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(28f, 44f, Vector2.Distance(new Vector2(x, y), new Vector2(80f, 80f))));
             for (int i = 0; i < w.Length; i++) w[i] *= 1f - meadow;
             w[GroundSurface.Grass] += meadow;
             surface.SetWeights(x, y, w);
@@ -408,10 +428,21 @@ namespace Shadowfall
                 Factory.Prim(PrimitiveType.Cube, deco, p + Vector3.up * 2f, new Vector3(1.7f, 0.1f, 1.3f), i % 2 == 0 ? new Color(0.7f, 0.2f, 0.2f) : new Color(0.85f, 0.8f, 0.6f));
             }
 
+            BuildOuterTown(wood);
+
             if (art)
             {
-                // Lantern posts around the square (visual only).
-                foreach (var lp in new[] { new Vector3(77.6f, 0, 79.4f), new Vector3(83.4f, 0, 79.4f), new Vector3(77.6f, 0, 85.6f), new Vector3(83.4f, 0, 85.6f) })
+                // Lantern posts around the square and along the streets (visual only).
+                var posts = new System.Collections.Generic.List<Vector3>
+                    { new Vector3(77.6f, 0, 79.4f), new Vector3(83.4f, 0, 79.4f), new Vector3(77.6f, 0, 85.6f), new Vector3(83.4f, 0, 85.6f) };
+                foreach (float d in new[] { 63.5f, 69.5f, 92.5f, 98.5f })
+                {
+                    posts.Add(new Vector3(77.4f, 0, d));
+                    posts.Add(new Vector3(83.6f, 0, d));
+                    posts.Add(new Vector3(d, 0, 77.4f));
+                    posts.Add(new Vector3(d, 0, 83.6f));
+                }
+                foreach (var lp in posts)
                 {
                     Art("Town/lantern", lp, 2.4f);
                     var l = new GameObject("LanternLight").AddComponent<Light>();
@@ -426,6 +457,66 @@ namespace Shadowfall
                 Art("Town/cart", new Vector3(73.5f, 0, 73.0f), 2.2f, ArtLibrary.Fit.Width, 35f);
                 Art("Props/barrel_small_stack", new Vector3(69.0f, 0, 76.6f), 1.0f);
                 Art("Props/box_stacked", new Vector3(76.4f, 0, 77.0f), 1.0f, ArtLibrary.Fit.Height, 15f);
+            }
+        }
+
+        /// <summary>The newer, outer part of the village: church, windmill, market hall, homes, a farm plot and a training yard.</summary>
+        void BuildOuterTown(Color wood)
+        {
+            // Visual variety only uses vr (see the class comment); blocking uses fixed rectangles, so the layout stays deterministic.
+            House(new RectInt(86, 92, 10, 8), new Color(0.75f, 0.73f, 0.68f), new Color(0.3f, 0.32f, 0.45f), "Buildings/building_church_blue", 180f);
+            House(new RectInt(60, 92, 8, 8), new Color(0.72f, 0.65f, 0.55f), new Color(0.5f, 0.3f, 0.2f), "Buildings/building_windmill_blue", 135f);
+            House(new RectInt(60, 84, 6, 6), new Color(0.72f, 0.65f, 0.55f), new Color(0.3f, 0.35f, 0.55f), "Buildings/building_home_A_blue", 90f);
+            House(new RectInt(60, 69, 7, 7), new Color(0.74f, 0.66f, 0.52f), new Color(0.55f, 0.25f, 0.2f), "Buildings/building_market_blue", 90f);
+            House(new RectInt(96, 86, 6, 6), new Color(0.7f, 0.64f, 0.55f), new Color(0.3f, 0.35f, 0.55f), "Buildings/building_home_B_blue", 270f);
+            House(new RectInt(96, 68, 6, 6), new Color(0.7f, 0.64f, 0.55f), new Color(0.3f, 0.45f, 0.25f), "Buildings/building_home_A_blue", 270f);
+
+            // Fountain on the north street
+            grid.BlockRect(79, 92, 81, 94);
+            if (Art("Town/fountain-round", new Vector3(80.5f, 0, 93.5f), 3.2f, ArtLibrary.Fit.Width) == null)
+                Factory.Prim(PrimitiveType.Cylinder, deco, new Vector3(80.5f, 0.4f, 93.5f), new Vector3(3f, 0.4f, 3f), new Color(0.55f, 0.53f, 0.5f));
+
+            // Farm plot (south-west): tilled soil with rows of crops behind a fence
+            var farm = new RectInt(61, 60, 13, 7);
+            for (int y = farm.yMin; y < farm.yMax; y++)
+                for (int x = farm.xMin; x < farm.xMax; x++)
+                {
+                    surface.Set(x, y, GroundSurface.Dirt, 0.95f);
+                    surface.Tint(x, y, new Color(0.8f, 0.75f, 0.7f));
+                    Paint(x, y, dirtC * 0.8f);
+                    bool edge = x == farm.xMin || x == farm.xMax - 1 || y == farm.yMin || y == farm.yMax - 1;
+                    if (edge)
+                    {
+                        if (y == farm.yMax - 1 && (x == 67 || x == 68)) continue; // gap to walk in
+                        grid.SetBlocked(x, y, true);
+                        bool alongX = y == farm.yMin || y == farm.yMax - 1;
+                        if (ArtBox("Town/fence", new Vector3(x + 0.5f, 0, y + 0.5f), new Vector3(0.3f, 1f, 1.02f), alongX ? 90f : 0f) == null)
+                            Factory.Prim(PrimitiveType.Cube, deco, new Vector3(x + 0.5f, 0.5f, y + 0.5f), alongX ? new Vector3(1f, 1f, 0.2f) : new Vector3(0.2f, 1f, 1f), wood);
+                    }
+                    else if (art && (y - farm.yMin) % 2 == 1)
+                        Art(Pick("Nature/plant_bush", "Nature/grass_large"), new Vector3(x + 0.5f, 0, y + 0.5f), VR(0.5f, 0.75f), ArtLibrary.Fit.Height, VR(0, 360), false);
+                }
+
+            // Training yard (south-east): posts, targets and banners
+            for (int y = 60; y < 67; y++)
+                for (int x = 87; x < 100; x++)
+                    surface.Set(x, y, GroundSurface.Dirt, 0.8f);
+            foreach (var px in new[] { 89.5f, 92.5f, 95.5f })
+            {
+                grid.SetBlocked((int)px, 63, true);
+                if (Art("Town/pillar-wood", new Vector3(px, 0, 63.5f), 2f, ArtLibrary.Fit.Height) == null)
+                    Factory.Prim(PrimitiveType.Cylinder, deco, new Vector3(px, 1f, 63.5f), new Vector3(0.4f, 1f, 0.4f), wood);
+            }
+            if (art)
+            {
+                Art("Town/banner-red", new Vector3(98.5f, 0, 65.5f), 3f, ArtLibrary.Fit.Height, 270f);
+                Art("Props/barrel_large", new Vector3(98.5f, 0, 61.5f), 1f);
+                Art("Props/crates_stacked", new Vector3(88.0f, 0, 60.8f), 1.1f, ArtLibrary.Fit.Height, 10f);
+                // Banners by the north and south gates
+                Art("Town/banner-green", new Vector3(76.6f, 0, Town.yMax - 2.5f), 3f, ArtLibrary.Fit.Height, 180f);
+                Art("Town/banner-green", new Vector3(84.4f, 0, Town.yMax - 2.5f), 3f, ArtLibrary.Fit.Height, 180f);
+                Art("Town/banner-red", new Vector3(76.6f, 0, Town.yMin + 2.5f), 3f, ArtLibrary.Fit.Height, 0f);
+                Art("Town/banner-red", new Vector3(84.4f, 0, Town.yMin + 2.5f), 3f, ArtLibrary.Fit.Height, 0f);
             }
         }
 

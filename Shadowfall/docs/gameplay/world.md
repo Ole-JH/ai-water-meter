@@ -1,6 +1,6 @@
 # The world
 
-The map is 160 × 160 tiles, with the village of **Hollowmere** at its centre. A road leaves each of the four gates. Monsters never follow you inside the walls.
+The map is 160 × 160 tiles, with the walled village of **Hollowmere** (45 × 45 tiles) at its centre. Cobbled cross streets lead from the four gates to the central square with the well; around them are grassy yards with the tavern, homes, the smithy, a church with a fountain plaza, a windmill, a market hall, a fenced farm plot and a guards' training yard. A road leaves each gate. Monsters never follow you inside the walls.
 
 | Zone | Direction | Monsters (level) | Resources |
 | --- | --- | --- | --- |
