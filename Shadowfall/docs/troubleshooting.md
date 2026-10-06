@@ -1,7 +1,7 @@
 # Troubleshooting
 
 ??? question "The browser shows *“the game client hasn't been built yet”*"
-    `server/public` only contains the placeholder page. Run **Shadowfall → Build WebGL** in Unity, or `task client:build`, then refresh. With Docker Compose the folder is mounted, so you don't need to restart.
+    `server/public` only contains the placeholder page. Build the client with `task client:build` (Docker; see [Building the client in Docker](deployment/docker-client-build.md)) or **Shadowfall → Build WebGL** in Unity, then refresh. With Docker Compose the folder is mounted, so you don't need to restart.
 
 ??? question "*“Your game client doesn't match this server's world”*"
     The world generation changed since the server stored its map, or your browser cached an old build. Hard-refresh the page (++ctrl+shift+r++). If you changed the world on purpose, run `task world:reset` and restart the server.
@@ -25,3 +25,6 @@
 
 ??? question "I forgot my password"
     See [Operations → Resetting a character's password](deployment/operations.md#resetting-a-characters-password).
+
+??? question "Docker client build: *“No Unity license found”* or activation errors"
+    See [Building the client in Docker → License](deployment/docker-client-build.md#1-provide-a-unity-license). A Personal `.ulf` is tied to the account that activated it. If Unity rejects it, sign in to Unity Hub again on your machine to refresh it, then copy it again.

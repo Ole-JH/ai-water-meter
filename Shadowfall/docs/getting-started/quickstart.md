@@ -6,7 +6,8 @@ This gets you from a fresh checkout to playing in the browser.
 
 | Tool | Used for | Required? |
 | --- | --- | --- |
-| [Unity 6](https://unity.com/download) (6000.0 LTS) with the **WebGL Build Support** module | Building the game client | Yes |
+| [Unity 6](https://unity.com/download) (6000.0 LTS) with the **WebGL Build Support** module | Building the client in the editor | Only if not building in Docker |
+| A Unity license (the free Personal one works) | Building the client, in Docker or the editor | Yes |
 | [Docker](https://docs.docker.com/get-docker/) with Compose | Running the server | Yes (or Node.js 18+) |
 | [Task](https://taskfile.dev/installation/) | Shortcut commands | Recommended |
 | [.NET SDK 8](https://dotnet.microsoft.com/download) | Compiling the C# without Unity (`task client:check`) | Optional |
@@ -16,20 +17,32 @@ This gets you from a fresh checkout to playing in the browser.
 
 ## 1. Build the browser client
 
+=== "Docker (no Unity install)"
+
+    Unity needs a license even in Docker; the free Personal license works. Copy your license file into the project, then build:
+
+    ```bash
+    mkdir -p unity-license
+    cp "/path/to/Unity_lic.ulf" unity-license/   # see below for where to find it
+    task client:build
+    ```
+
+    See [Building the client in Docker](../deployment/docker-client-build.md) for where the license file lives and other license options.
+
 === "Unity editor"
 
     1. In Unity Hub choose **Add → Add project from disk** and select the `Shadowfall` folder.
     2. Open the project. The first import takes a few minutes.
     3. From the menu bar choose **Shadowfall → Build WebGL (into server folder)**.
 
-    The build is written to `server/public/`. The first WebGL build takes a while; later builds are faster.
-
-=== "Headless (Task)"
+=== "Local Unity, headless"
 
     ```bash
     export UNITY_PATH="/path/to/Unity"   # see Taskfile.yml for per-OS examples
-    task client:build
+    task client:build:local
     ```
+
+Every option writes the build to `server/public/`. The first build takes a while; later builds are faster.
 
 ## 2. Start the server
 

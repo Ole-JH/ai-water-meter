@@ -8,6 +8,7 @@
 /[Uu]ser[Ss]ettings/
 /[Mm]emoryCaptures/
 *.csproj
+!/tools/compile-check/CompileCheck.csproj
 *.sln
 *.suo
 *.user
@@ -28,3 +29,6 @@
 /site/
 /backups/
 /.task/
+
+# Unity license used by the Docker client build - never commit it
+/unity-license/

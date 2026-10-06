@@ -13,6 +13,9 @@ vars:
   DOCS_PORT: '{{.DOCS_PORT | default "8000"}}'
   # Host port for the game (Docker). Override: SHADOWFALL_PORT=9000 task up
   GAME_PORT: '{{.SHADOWFALL_PORT | default "7341"}}'
+  # Unity version for the Docker build image, read from the project
+  UNITY_VERSION:
+    sh: "sed -n 's/^m_EditorVersion: *//p' ProjectSettings/ProjectVersion.txt | tr -d '\\r'"
 
 tasks:
   default:
@@ -62,9 +65,26 @@ tasks:
       - dotnet build tools/compile-check -nologo -clp:NoSummary
 
   client:build:
-    desc: Headless Unity WebGL build into server/public (set UNITY_PATH to your Unity editor)
+    desc: Build the WebGL client in Docker into server/public (needs a Unity license, see docs)
+    dir: "{{.SERVER_DIR}}"
+    env:
+      UNITY_VERSION: "{{.UNITY_VERSION}}"
+      HOST_UID:
+        sh: id -u
+      HOST_GID:
+        sh: id -g
+    cmds:
+      - docker compose --profile build run --rm client-builder
+
+  client:build:local:
+    desc: Build the WebGL client with a locally installed Unity editor (set UNITY_PATH)
     cmds:
       - '"{{.UNITY}}" -batchmode -quit -nographics -projectPath "{{.ROOT_DIR}}" -buildTarget WebGL -executeMethod Shadowfall.EditorTools.ShadowfallBuild.BuildWebGL -logFile -'
+
+  client:clean-cache:
+    desc: Delete the Docker build's Unity import cache (next build re-imports everything)
+    cmds:
+      - docker volume rm shadowfall-unity-library
 
   # ---------------------------------------------------------------- docker
 
@@ -109,7 +129,7 @@ tasks:
       - docker build -t shadowfall-server:latest .
 
   deploy:
-    desc: Full release - build the WebGL client, then rebuild and restart the container
+    desc: Full release - build the WebGL client in Docker, then rebuild and restart the server
     cmds:
       - task: client:build
       - task: up

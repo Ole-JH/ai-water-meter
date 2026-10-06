@@ -1,0 +1,21 @@
+<!--
+  Compiles the game scripts against Unity's reference assemblies (from NuGet) with the plain
+  .NET SDK, so you can catch C# errors without opening the Unity editor (e.g. in CI).
+  Run: task client:check   (or: dotnet build tools/compile-check)
+  Note: this checks the editor/desktop code path; WebGL- and InputSystem-only #if branches
+  and Assets/Editor are only compiled by Unity itself.
+-->
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <LangVersion>9.0</LangVersion>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <Nullable>disable</Nullable>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <NoWarn>CS0649</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../Assets/Scripts/**/*.cs" />
+    <PackageReference Include="UnityEngine.Modules" Version="2021.3.33" />
+  </ItemGroup>
+</Project>

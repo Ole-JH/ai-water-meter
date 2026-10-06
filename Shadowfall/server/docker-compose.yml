@@ -11,3 +11,25 @@ services:
       - ./data:/data         # accounts, characters and the world map
       - ./public:/app/public:ro   # the Unity WebGL build
     stop_grace_period: 10s
+
+  # Builds the Unity WebGL client in Docker and writes it to ./public (no local Unity needed).
+  # Only runs on demand: task client:build   (or: docker compose --profile build run --rm client-builder)
+  client-builder:
+    profiles: ["build"]
+    image: unityci/editor:ubuntu-${UNITY_VERSION:-6000.0.23f1}-webgl-3
+    working_dir: /project
+    entrypoint: ["bash", "/project/tools/docker-build-client.sh"]
+    environment:
+      UNITY_LICENSE: ${UNITY_LICENSE:-}
+      UNITY_SERIAL: ${UNITY_SERIAL:-}
+      UNITY_EMAIL: ${UNITY_EMAIL:-}
+      UNITY_PASSWORD: ${UNITY_PASSWORD:-}
+      HOST_UID: ${HOST_UID:-1000}
+      HOST_GID: ${HOST_GID:-1000}
+    volumes:
+      - ..:/project                          # the Unity project (Shadowfall/)
+      - unity-library:/project/Library       # import cache: makes rebuilds much faster
+
+volumes:
+  unity-library:
+    name: shadowfall-unity-library

@@ -73,6 +73,7 @@ nav:
       - Items & progression: gameplay/progression.md
   - Deployment:
       - Docker: deployment/docker.md
+      - Building the client in Docker: deployment/docker-client-build.md
       - HTTPS & reverse proxy: deployment/reverse-proxy.md
       - Operations: deployment/operations.md
   - Architecture:
