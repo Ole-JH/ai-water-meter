@@ -36,3 +36,6 @@
 # Downloaded source art (tools/art/fetch_sources.sh)
 /.art-cache/
 __pycache__/
+
+# Local tool binaries (e.g. a downloaded task binary)
+/bin/
