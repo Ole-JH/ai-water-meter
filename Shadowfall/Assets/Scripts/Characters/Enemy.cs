@@ -224,10 +224,40 @@ namespace Shadowfall
 
         Vector3? FacingTarget;
 
+        /// <summary>Which sound a monster makes: when attacking, getting hit or dying.</summary>
+        static string Voice(EnemyDef d, string what)
+        {
+            switch (d.Name)
+            {
+                case "Dire Wolf": return what == "attack" ? "wolf_attack" : what == "die" ? "goblin_die" : "hit_flesh";
+                case "Goblin":
+                case "Goblin Shaman": return what == "attack" ? "goblin" : what == "die" ? "goblin_die" : "hit_flesh";
+                case "Goblin Warchief": return what == "attack" ? "brute" : what == "die" ? "roar" : "hit_flesh";
+                case "Bandit": return what == "attack" ? null : what == "die" ? "goblin_die" : "hit_flesh";
+                case "Skeleton":
+                case "Skeleton Archer": return what == "attack" ? null : what == "die" ? "rubble" : "hit_bone";
+                case "Zombie": return what == "attack" ? "undead" : what == "die" ? "undead_die" : "hit_flesh";
+                case "Rock Golem": return what == "attack" ? "roar" : what == "die" ? "rubble" : "hit_stone";
+                case "Lich King": return what == "attack" ? "undead" : what == "die" ? "scream" : "hit_bone";
+                default: return what == "hit" ? "hit_flesh" : null;
+            }
+        }
+
+        float nextVoice;
+
         public void PlayAttack(Vector3 targetPos)
         {
             attackAnim = 0f;
             FacingTarget = targetPos;
+            var voice = Voice(Def, "attack");
+            if (voice != null && Time.time > nextVoice && Random.value < 0.4f)
+            {
+                nextVoice = Time.time + 2.5f;
+                Sfx.Play(voice, transform.position + Vector3.up, Def.Boss ? 0.9f : 0.5f, 0.12f);
+            }
+            if (!Def.Ranged) Sfx.Play("swing", transform.position + Vector3.up, 0.35f, 0.15f);
+            else if (Def.Name == "Skeleton Archer") Sfx.Play("swing", transform.position + Vector3.up, 0.3f, 0.05f);
+            else Sfx.Play("fire_cast", transform.position + Vector3.up, 0.4f, 0.2f);
             if (view != null)
             {
                 if (!Def.Ranged) view.Attack(0.9f);
@@ -289,6 +319,7 @@ namespace Shadowfall
             GameUI.Float(transform.position + Vector3.up * (Height + 0.2f), crit ? dmg + "!" : dmg.ToString(),
                 crit ? new Color(1f, 0.85f, 0.2f) : Color.white, crit ? 1.5f : 1f);
             FxPulse.Sparks(Center, new Color(0.7f, 0.05f, 0.05f), 3);
+            Sfx.Play(crit ? "hit_heavy" : Voice(Def, "hit"), Center, crit ? 0.7f : 0.5f, 0.12f);
             view?.Hit();
             if (source is Player) NetClient.I?.SendHit(NetId, dmg, crit);
         }
@@ -310,6 +341,9 @@ namespace Shadowfall
             if (col != null) col.enabled = false;
             if (view != null) view.Die();
             else if (model != null) model.localRotation = Quaternion.Euler(-80f, 0, 0);
+            var deathVoice = Voice(Def, "die");
+            if (deathVoice != null) Sfx.Play(deathVoice, Center, Def.Boss ? 1f : 0.6f, 0.1f, Def.Boss ? 80f : 40f);
+            if (Def.Boss) Sfx.Play2D("gong", 0.7f);
             FxPulse.Burst(Center, Factory.Shade(Def.Color, 0.6f), 0.8f, 0.3f);
         }
 

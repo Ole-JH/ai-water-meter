@@ -121,6 +121,16 @@ tasks:
     cmds:
       - python3 tools/art/make_ground.py
 
+  audio:fetch:
+    desc: Download the CC0 sound packs into .art-cache/audio
+    cmds:
+      - bash tools/audio/fetch_sources.sh .art-cache/audio
+
+  audio:build:
+    desc: Rebuild Assets/Resources/Audio from .art-cache/audio plus synthesized sounds (needs numpy and ffmpeg)
+    cmds:
+      - python3 tools/audio/build_audio.py .art-cache/audio
+
   ui:icons:
     desc: Re-render the UI icons from a game-icons.net checkout (ICONS_DIR, needs playwright-core + CHROMIUM_PATH)
     cmds:

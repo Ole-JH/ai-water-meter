@@ -119,6 +119,7 @@ namespace Shadowfall
             {
                 taken = true;
                 p.AddGold(Gold);
+                Sfx.Play2D("coins", 0.5f, Random.Range(0.95f, 1.05f));
                 Destroy(gameObject);
                 return;
             }
@@ -126,6 +127,7 @@ namespace Shadowfall
             if (p.Inventory.Add(Item))
             {
                 taken = true;
+                Sfx.Play2D("loot", 0.6f);
                 GameUI.Log("You pick up " + (before > 1 ? before + "x " : "") + Item.Name + ".", Item.NameColor);
                 Destroy(gameObject);
             }
@@ -411,6 +413,7 @@ namespace Shadowfall
 
             var result = Make(p);
             if (!p.Inventory.Add(result)) LootDrop.Spawn(p.transform.position, result, 0);
+            Sfx.Play(Skill == SkillType.Smithing ? "anvil" : "sizzle", p.transform.position, 0.6f);
             p.Skills.AddXp(Skill, Xp);
             GameUI.Log("You make: " + result.Name, result.NameColor);
             return true;
@@ -471,6 +474,7 @@ namespace Shadowfall
                 s.fireLight.color = flame;
                 s.fireLight.range = 8f;
                 s.fireLight.intensity = 1.5f;
+                Sfx.LoopAt("fire_loop", pos, 0.8f, 12f);
             }
             s.AddClickCollider(0.7f, 1.2f);
             WorldGrid.Instance.SetBlocked(Mathf.FloorToInt(pos.x), Mathf.FloorToInt(pos.z), true);

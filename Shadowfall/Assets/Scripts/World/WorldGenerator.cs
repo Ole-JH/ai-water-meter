@@ -236,6 +236,7 @@ namespace Shadowfall
                 }
 
             surface.AddLake(center, radius);
+            Sfx.LoopAt("water_loop", new Vector3(center.x, 0f, center.y), 0.35f, radius + 10f);
             // Water surface plane for a bit of shine (the water shader version is built with the ground)
             if (!fancyGround)
             {
@@ -637,6 +638,7 @@ namespace Shadowfall
                 l.range = 9f;
                 l.intensity = 1.5f;
                 NightLight.Add(l, 1f, 1.1f);
+                Sfx.LoopAt("fire_loop", p + Vector3.up * 3f, 0.6f, 10f);
                 grid.SetBlocked((int)p.x, (int)p.z, true);
             }
             // throne

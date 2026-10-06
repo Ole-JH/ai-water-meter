@@ -42,6 +42,7 @@ namespace Shadowfall
         {
             if (IsActive(def.Id) || Completed.Contains(def.Id)) return;
             Active.Add(new QuestState(def));
+            Sfx.Play2D("ui_confirm", 0.6f);
             GameUI.Banner("Quest Accepted: " + def.Title, new Color(1f, 0.85f, 0.3f));
             GameUI.Log("Quest accepted: " + def.Title, new Color(1f, 0.85f, 0.3f));
         }
@@ -73,6 +74,7 @@ namespace Shadowfall
                 GameUI.Log("You receive: " + item.Name, item.NameColor);
             }
             NetClient.I?.SaveNow();
+            Sfx.Play2D("quest_done", 0.8f);
             GameUI.Banner("Quest Complete: " + q.Def.Title, new Color(1f, 0.85f, 0.3f));
             GameUI.Log("Quest complete: " + q.Def.Title + " (+" + q.Def.RewardXp + " xp, +" + q.Def.RewardGold + " gold)",
                 new Color(1f, 0.85f, 0.3f));

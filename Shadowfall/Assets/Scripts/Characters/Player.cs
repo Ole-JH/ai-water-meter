@@ -87,6 +87,21 @@ namespace Shadowfall
         {
             attackAnim = 0f;
             view?.Attack(1f / Mathf.Max(0.6f, AttackSpeed));
+            Sfx.Play("swing", transform.position + Vector3.up, 0.55f, 0.12f);
+        }
+
+        float stepDistance;
+
+        /// <summary>Footsteps: stone in the village and the crypt, grass and earth everywhere else.</summary>
+        void Footsteps(float speed, float dt)
+        {
+            if (speed < 0.5f) { stepDistance = 0.6f; return; }
+            stepDistance += speed * dt;
+            if (stepDistance < 1.15f) return;
+            stepDistance = 0f;
+            var pos = transform.position;
+            bool stone = WorldGenerator.InTown(pos) || WorldGenerator.InCrypt(pos);
+            Sfx.Play(stone ? "step_stone" : "step_grass", pos, stone ? 0.35f : 0.45f, 0.1f, 20f);
         }
 
         void AnimCast()
@@ -240,6 +255,7 @@ namespace Shadowfall
                 Health = MaxHealth;
                 Mana = MaxMana;
                 GameUI.Banner("LEVEL UP!  You are now level " + Level, new Color(1f, 0.85f, 0.2f));
+                Sfx.Play2D("levelup", 0.8f);
                 GameUI.Log("You have reached level " + Level + "! You have " + StatPoints + " attribute points to spend (C).", new Color(1f, 0.85f, 0.2f));
                 FxPulse.Ring(transform.position, new Color(1f, 0.85f, 0.2f), 4f, 0.8f);
                 FxPulse.Spawn(transform.position + Vector3.up, new Color(1f, 0.9f, 0.4f), new Vector3(1.5f, 0.1f, 1.5f), new Vector3(0.2f, 8f, 0.2f), 0.9f, PrimitiveType.Cylinder);
@@ -290,6 +306,7 @@ namespace Shadowfall
             }
             if (view != null) view.UpdateLocomotion(currentSpeed);
             else model?.Animate(Mathf.Clamp01(currentSpeed / MoveSpeed), atk, dt);
+            Footsteps(currentSpeed, dt);
             if (castAnim >= 0f)
             {
                 castAnim += dt * 3.5f;
@@ -549,6 +566,7 @@ namespace Shadowfall
             if (Mana < a.ManaCost)
             {
                 if (!silent || Time.frameCount % 30 == 0) GameUI.Float(transform.position + Vector3.up * 2.5f, "Not enough mana", new Color(0.4f, 0.6f, 1f), 0.8f);
+                if (!silent) Sfx.Play2D("ui_error", 0.4f);
                 return;
             }
 
@@ -566,6 +584,7 @@ namespace Shadowfall
                 {
                     attackAnim = 0f;
                     view?.Action("2H_Melee_Attack_Spin", 0.55f);
+                    Sfx.Play("swing_heavy", transform.position + Vector3.up, 0.7f);
                     Overlap(transform.position, 3.4f, Faction, buffer);
                     foreach (var c in buffer)
                     {
@@ -584,6 +603,7 @@ namespace Shadowfall
                 case AbilityId.Fireball:
                 {
                     AnimCast();
+                    Sfx.Play("fire_cast", transform.position + Vector3.up, 0.6f, 0.1f);
                     bool crit = Random.value * 100f < CritChance;
                     float dmg = 14f * SpellMultiplier * Random.Range(0.9f, 1.1f) * (crit ? 2f : 1f);
                     Projectile.Fire(this, transform.position + Vector3.up * 1.2f + transform.forward * 0.6f,
@@ -594,6 +614,8 @@ namespace Shadowfall
                 case AbilityId.FrostNova:
                 {
                     AnimCast();
+                    Sfx.Play("frost_cast", transform.position, 0.8f);
+                    Sfx.Play("shatter", transform.position, 0.5f);
                     Overlap(transform.position, 6f, Faction, buffer);
                     foreach (var c in buffer)
                     {
@@ -608,6 +630,7 @@ namespace Shadowfall
                 case AbilityId.Heal:
                 {
                     AnimCast();
+                    Sfx.Play("holy_cast", transform.position, 0.7f, 0.02f);
                     Heal(MaxHealth * 0.35f + TotInt * 3f);
                     FxPulse.Spawn(transform.position + Vector3.up, a.Color, new Vector3(2f, 0.05f, 2f), new Vector3(0.2f, 5f, 0.2f), 0.7f, PrimitiveType.Cylinder);
                     FxPulse.Ring(transform.position, a.Color, 2f, 0.5f);
@@ -660,6 +683,7 @@ namespace Shadowfall
                 return;
             }
             var used = Inventory.TakeOne(index);
+            Sfx.Play2D("potion", 0.6f, Random.Range(0.92f, 1.08f));
             if (used.HealAmount > 0)
             {
                 Heal(used.HealAmount + MaxHealth * 0.1f);
@@ -685,6 +709,7 @@ namespace Shadowfall
             Inventory.Slots[index] = old;
             Inventory.Equipped[item.Slot] = item;
             Inventory.NotifyChanged();
+            Sfx.Play2D("equip", 0.6f);
         }
 
         public void Unequip(EquipSlot slot)
@@ -701,6 +726,7 @@ namespace Shadowfall
             var item = Inventory.TakeAll(index);
             if (item == null) return;
             LootDrop.Spawn(transform.position + transform.forward, item, 0);
+            Sfx.Play2D("drop", 0.6f);
             GameUI.Log("You drop " + item.Name + ".", Color.gray);
         }
 
@@ -755,6 +781,8 @@ namespace Shadowfall
             gatherTimer = 0f;
             attackAnim = 0f;
             view?.Interact();
+            var skill = GatherNode.Skill;
+            Sfx.Play(skill == SkillType.Woodcutting ? "chop" : skill == SkillType.Mining ? "mine" : "splash", GatherNode.Position + Vector3.up, 0.6f, 0.1f);
 
             int lvl = Skills.Level(GatherNode.Skill);
             float chance = Mathf.Clamp(0.4f + (lvl - GatherNode.LevelRequired) * 0.05f, 0.4f, 0.95f);
@@ -859,6 +887,7 @@ namespace Shadowfall
         {
             if (action == Action.Gather) StopGathering();
             CameraRig.Shake(Mathf.Clamp(amount / MaxHealth, 0.05f, 0.3f));
+            Sfx.Play(amount > MaxHealth * 0.12f ? "hit_heavy" : "hit_armor", transform.position + Vector3.up, 0.55f, 0.1f);
             if (Health > 0f && amount > MaxHealth * 0.04f) view?.Hit();
         }
 
@@ -868,6 +897,7 @@ namespace Shadowfall
             action = Action.None;
             AttackTarget = null;
             view?.Die();
+            Sfx.Play2D("death", 0.8f);
             GameUI.Log("You have been slain" + (killer != null ? " by " + killer.DisplayName : "") + ".", new Color(1f, 0.3f, 0.3f));
         }
 
@@ -885,6 +915,7 @@ namespace Shadowfall
             GameUI.Log("You awaken in Hollowmere. You lost " + lost + " gold.", new Color(1f, 0.6f, 0.3f));
             NetClient.I?.SaveNow();
             FxPulse.Ring(transform.position, new Color(1f, 1f, 0.8f), 3f, 0.8f);
+            Sfx.Play2D("holy_cast", 0.6f);
         }
     }
 }

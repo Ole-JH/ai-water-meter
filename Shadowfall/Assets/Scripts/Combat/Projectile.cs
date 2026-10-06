@@ -67,6 +67,7 @@ namespace Shadowfall
                 if (life <= 0f || !WorldGrid.Instance.IsWalkable(transform.position))
                 {
                     FxPulse.Burst(transform.position, color, 1.2f, 0.3f);
+                    Sfx.Play("explosion", transform.position, 0.35f, 0.15f);
                     Destroy(gameObject);
                 }
                 return;
@@ -96,6 +97,7 @@ namespace Shadowfall
                     onHit?.Invoke(c);
                 }
                 FxPulse.Burst(transform.position, color, aoe * 0.8f, 0.3f);
+                Sfx.Play("explosion", transform.position, 0.5f, 0.15f);
             }
             else if (direct != null)
             {

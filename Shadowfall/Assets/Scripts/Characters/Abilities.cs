@@ -66,6 +66,7 @@ namespace Shadowfall
             m.delay = delay;
             m.damage = damage;
             m.owner = owner;
+            Sfx.Play("meteor_fall", target, 0.8f, 0.05f, 50f);
             m.marker = Factory.Prim(PrimitiveType.Cylinder, null, new Vector3(target.x, 0.03f, target.z), new Vector3(8f, 0.01f, 8f),
                 new Color(0.6f, 0.1f, 0.05f), false, Mat.Glow(new Color(0.5f, 0.08f, 0.02f)));
         }
@@ -86,6 +87,8 @@ namespace Shadowfall
             FxPulse.Ring(target, new Color(1f, 0.25f, 0.05f), 4.5f, 0.5f);
             FxPulse.Sparks(target + Vector3.up * 0.5f, new Color(1f, 0.6f, 0.1f), 14);
             CameraRig.Shake(0.35f);
+            Sfx.Play("boom", target, 1f, 0.08f, 60f);
+            Sfx.Play("rubble", target, 0.6f, 0.1f, 40f);
             Destroy(marker);
             Destroy(gameObject);
         }

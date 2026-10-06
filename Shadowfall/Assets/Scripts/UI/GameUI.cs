@@ -140,6 +140,21 @@ namespace Shadowfall
 
             if (!ChatOpen)
             {
+                bool before = showBags | showChar | showSkills | showQuests | showMap | showHelp;
+                bool questsBefore = showQuests;
+                WindowKeys();
+                bool after = showBags | showChar | showSkills | showQuests | showMap | showHelp;
+                if (showQuests && !questsBefore) Sfx.Play2D("book", 0.5f);
+                else if (after != before) Sfx.Play2D(after ? "ui_open" : "ui_close", 0.4f);
+            }
+
+            if (dialogNpc != null && Factory.FlatDistance(p.transform.position, dialogNpc.transform.position) > 5f) dialogNpc = null;
+            if (craftStation != null && Factory.FlatDistance(p.transform.position, craftStation.transform.position) > 5f) craftStation = null;
+        }
+
+        void WindowKeys()
+        {
+            {
                 if (GameInput.Down(GKey.I) || GameInput.Down(GKey.B)) showBags = !showBags;
                 if (GameInput.Down(GKey.C)) showChar = !showChar;
                 if (GameInput.Down(GKey.K)) showSkills = !showSkills;
@@ -152,9 +167,6 @@ namespace Shadowfall
                     else showBags = showChar = showSkills = showQuests = showMap = showHelp = false;
                 }
             }
-
-            if (dialogNpc != null && Factory.FlatDistance(p.transform.position, dialogNpc.transform.position) > 5f) dialogNpc = null;
-            if (craftStation != null && Factory.FlatDistance(p.transform.position, craftStation.transform.position) > 5f) craftStation = null;
         }
 
         void UpdateCursor(Player p)
@@ -973,6 +985,7 @@ namespace Shadowfall
             int value = item.Value * Mathf.Max(1, item.Count);
             p.Inventory.TakeAll(index);
             p.AddGold(value);
+            Sfx.Play2D("coins", 0.5f);
             Log("Sold " + item.Name + (item.Count > 1 ? " x" + item.Count : "") + " for " + value + " gold.", new Color(1f, 0.85f, 0.2f));
         }
 
@@ -1171,7 +1184,7 @@ namespace Shadowfall
 
         void DrawHelp()
         {
-            var r = new Rect((VW - 600) / 2, 100, 600, 560);
+            var r = new Rect((VW - 600) / 2, 80, 600, 620);
             if (UISkin.Window(r, "How to Play", true, true)) showHelp = false;
             Block(r);
             GUI.Label(new Rect(r.x + 28, r.y + 58, 544, 490),
@@ -1191,6 +1204,10 @@ namespace Shadowfall
                 "North: Whisperwood (1-7)    East: Goblin Encampment (3-10)\n" +
                 "West: Ironvein Quarry (3-15)    South: Forsaken Graveyard (6-11)\n" +
                 "Far south: Crypt of the Lich (boss)", UISkin.InkRich);
+            GUI.Label(new Rect(r.x + 28, r.yMax - 48, 120, 26), "<b>Volume</b>", UISkin.InkRich);
+            float v = GUI.HorizontalSlider(new Rect(r.x + 130, r.yMax - 40, 300, 20), Sfx.Volume, 0f, 1f);
+            if (Mathf.Abs(v - Sfx.Volume) > 0.001f) Sfx.Volume = v;
+            GUI.Label(new Rect(r.x + 446, r.yMax - 48, 80, 26), Mathf.RoundToInt(Sfx.Volume * 100) + "%", UISkin.InkRich);
         }
 
         void DrawDeath(Player p)
@@ -1323,6 +1340,7 @@ namespace Shadowfall
                 bought.Count = n;
                 if (!p.Inventory.Add(bought)) { Log("Your bags are full.", new Color(1f, 0.4f, 0.4f)); continue; }
                 p.Gold -= price * n;
+                Sfx.Play2D("coins", 0.5f);
                 Log("Bought " + item.Name + (n > 1 ? " x" + n : "") + " for " + price * n + " gold.", new Color(1f, 0.85f, 0.2f));
                 if (!item.Stackable) { shop.Items.RemoveAt(index); NetClient.I?.SaveNow(); break; }
             }

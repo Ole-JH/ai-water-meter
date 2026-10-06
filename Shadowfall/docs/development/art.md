@@ -44,6 +44,22 @@ task ui:icons      # re-render icons (needs playwright-core and CHROMIUM_PATH)
 
 To use another model, add a line to `MODELS` in `tools/art/build_art.py`, listing the animations to keep, and reference its path from code. For example, to give the Goblin Warchief a different model, change its entry in `CharacterLook` (`Assets/Scripts/Characters/CharacterView.cs`).
 
+## Sound
+
+All sound effects are **CC0**: Kenney's RPG Audio, Impact Sounds and Interface Sounds, and rubberduck's CC0 packs from OpenGameArt (creatures, general SFX, bangs). Sword swings, spells, the level-up and quest fanfares, and the wind, cricket and fire loops are synthesized by `tools/audio/build_audio.py`.
+
+- Clips live in `Assets/Resources/Audio` as `key_N.ogg`. `Sfx.Play("swing", position)` picks a random variant with slight pitch variation.
+- Sounds are positional and heard from the hero (not from the camera high above).
+- **Ambience:** wind everywhere, crickets and distant wolf howls at night outside the walls, crackling campfires and braziers, lapping water at the lakes.
+- **Volume:** a slider in the Help window (++f1++), saved in the browser.
+
+```bash
+task audio:fetch   # download the source packs into .art-cache/audio
+task audio:build   # rebuild Assets/Resources/Audio (needs numpy and ffmpeg)
+```
+
+To add a sound, add an entry to `PICKS` (a clip from a pack) or to `synth()` (generated) in `tools/audio/build_audio.py`, rebuild, and call `Sfx.Play("your_key", position)`.
+
 ## Credits
 
 | Pack | Creator | License | Used for |

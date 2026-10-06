@@ -305,6 +305,7 @@ namespace Shadowfall
             if (style == null || style == Button || style == SquareButton) GUI.backgroundColor = new Color(0.62f, 0.5f, 0.4f);
             bool clicked = GUI.Button(r, content, style ?? Button);
             GUI.backgroundColor = old;
+            if (clicked) Sfx.Play2D("ui_click", 0.35f);
             return clicked;
         }
 

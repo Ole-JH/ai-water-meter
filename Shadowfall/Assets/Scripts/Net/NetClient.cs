@@ -352,6 +352,7 @@ namespace Shadowfall
                     break;
 
                 case "nova":
+                    Sfx.Play("frost_cast", e != null ? e.transform.position : targetPos, 0.9f, 0.05f, 50f);
                     var c = new Color(0.4f, 0.85f, 1f);
                     var center = e != null ? e.transform.position : targetPos;
                     FxPulse.Ring(center, c, 6f, 0.6f);
@@ -360,6 +361,7 @@ namespace Shadowfall
                     break;
 
                 case "summon":
+                    Sfx.Play2D("roar", 0.8f, 0.8f);
                     GameUI.Banner("Lich King: \"Rise, my servants!\"", new Color(0.6f, 0.85f, 1f));
                     break;
             }
@@ -373,21 +375,26 @@ namespace Shadowfall
             switch (m.k)
             {
                 case "fireball":
+                    Sfx.Play("fire_cast", from, 0.5f, 0.1f);
                     Projectile.FireVisual(from + Vector3.up * 1.2f, to + Vector3.up * 1.2f, 20f, new Color(1f, 0.45f, 0.1f), 0.5f, 22f);
                     break;
                 case "nova":
+                    Sfx.Play("frost_cast", from, 0.7f);
                     FxPulse.Ring(from, new Color(0.45f, 0.8f, 1f), 6f, 0.45f);
                     break;
                 case "heal":
+                    Sfx.Play("holy_cast", from, 0.6f, 0.02f);
                     FxPulse.Spawn(from + Vector3.up, new Color(1f, 0.95f, 0.5f), new Vector3(2f, 0.05f, 2f), new Vector3(0.2f, 5f, 0.2f), 0.7f, PrimitiveType.Cylinder);
                     break;
                 case "meteor":
                     MeteorFx.Cast(null, to, 0f);
                     break;
                 case "cleave":
+                    Sfx.Play("swing_heavy", from, 0.6f);
                     FxPulse.Ring(from, new Color(0.9f, 0.85f, 0.75f), 2.5f, 0.25f);
                     break;
                 case "levelup":
+                    Sfx.Play("levelup", from, 0.7f, 0f);
                     FxPulse.Ring(from, new Color(1f, 0.85f, 0.2f), 4f, 0.8f);
                     FxPulse.Spawn(from + Vector3.up, new Color(1f, 0.9f, 0.4f), new Vector3(1.5f, 0.1f, 1.5f), new Vector3(0.2f, 8f, 0.2f), 0.9f, PrimitiveType.Cylinder);
                     break;
