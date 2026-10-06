@@ -4,26 +4,34 @@ using UnityEngine;
 namespace Shadowfall
 {
     /// <summary>
-    /// Fantasy UI skin for the IMGUI interface: Kenney RPG panels/buttons/bars (CC0), game-icons.net icons
-    /// (CC BY 3.0), Cinzel + Alegreya Sans fonts (SIL OFL). Everything degrades to flat colors if missing.
+    /// Dark gothic UI skin for the IMGUI interface: procedural panels, title plates, buttons, slots, bars and
+    /// orbs (tools/ui/make_skin.py, CC0), game-icons.net icons (CC BY 3.0), Cinzel + Alegreya Sans fonts
+    /// (SIL OFL). Everything degrades to flat colors if a texture is missing.
     /// </summary>
     public static class UISkin
     {
         public static readonly Color Gold = new Color(1f, 0.82f, 0.42f);
         public static readonly Color Cream = new Color(0.96f, 0.9f, 0.78f);
-        public static readonly Color Ink = new Color(0.24f, 0.15f, 0.08f);
+        public static readonly Color Ink = new Color(0.9f, 0.84f, 0.72f); // body text in windows (light on the dark skin)
         public static readonly Color Muted = new Color(0.72f, 0.66f, 0.56f);
 
         public static Font Title, Body, Bold;
-        public static GUIStyle Panel, Parchment, Inset, InsetLight, Button, ButtonLight, SquareButton, Field, Tooltip;
+        public static GUIStyle Panel, PanelPlain, Parchment, Inset, InsetLight, Slot, Button, ButtonLight, SquareButton, Field, Tooltip, TitlePlate, BarFrame;
         public static GUIStyle Label, LabelCenter, Small, SmallCenter, SmallRight, Heading, HeadingCenter, TitleHuge, Banner, FloatText,
             Rich, RichSmall, Ink14, InkRich;
-        public static Texture2D White, Circle, BarBackL, BarBackM, BarBackR, Close;
+        public static Texture2D White, Circle, BarBackL, BarBackM, BarBackR, Close, CloseHover, DividerTex, FadeDown,
+            OrbLiquid, OrbGlass, OrbFrame;
         static readonly Dictionary<string, Texture2D[]> bars = new Dictionary<string, Texture2D[]>();
         static readonly Dictionary<string, Texture2D> icons = new Dictionary<string, Texture2D>();
         static bool ready;
 
-        static Texture2D Tex(string path) => Resources.Load<Texture2D>("UI/" + path);
+        static readonly Dictionary<string, Texture2D> texCache = new Dictionary<string, Texture2D>();
+
+        public static Texture2D Tex(string path)
+        {
+            if (!texCache.TryGetValue(path, out var t)) texCache[path] = t = Resources.Load<Texture2D>("UI/" + path);
+            return t;
+        }
 
         /// <summary>Call from OnGUI (GUI.skin is only valid there).</summary>
         public static void Init()
@@ -36,24 +44,33 @@ namespace Shadowfall
             Body = Resources.Load<Font>("UI/Fonts/AlegreyaSans-Regular");
             Bold = Resources.Load<Font>("UI/Fonts/AlegreyaSans-Bold") ?? Body;
 
-            Panel = Box("Skin/panel_brown", 14, new Color(0.13f, 0.09f, 0.06f, 0.95f));
-            Parchment = Box("Skin/panel_beige", 14, new Color(0.86f, 0.78f, 0.62f, 0.97f));
-            Inset = Box("Skin/panelInset_brown", 12, new Color(0.08f, 0.06f, 0.04f, 0.9f));
-            InsetLight = Box("Skin/panelInset_beige", 12, new Color(0.78f, 0.7f, 0.55f, 0.95f));
+            Panel = Box("Gothic/panel", 34, new Color(0.08f, 0.06f, 0.05f, 0.95f), 22);
+            PanelPlain = Box("Gothic/panel_plain", 14, new Color(0.08f, 0.06f, 0.05f, 0.95f), 14);
+            Parchment = Panel; // windows and dialogs share the dark skin
+            Inset = Box("Gothic/inset", 8, new Color(0.05f, 0.04f, 0.03f, 0.9f));
+            InsetLight = Box("Gothic/inset_selected", 8, new Color(0.2f, 0.15f, 0.08f, 0.95f));
+            Slot = Box("Gothic/slot", 6, new Color(0.04f, 0.03f, 0.03f, 0.95f));
+            TitlePlate = Box("Gothic/title_plate", 26, new Color(0.25f, 0.08f, 0.05f, 0.95f));
+            TitlePlate.border = new RectOffset(26, 26, 0, 0);
+            BarFrame = Box("Gothic/bar_frame", 8, new Color(0f, 0f, 0f, 0.8f));
 
-            Button = Btn("Skin/buttonLong_brown", "Skin/buttonLong_brown_pressed", Cream, 16);
-            ButtonLight = Btn("Skin/buttonLong_beige", "Skin/buttonLong_beige_pressed", Ink, 16);
-            SquareButton = Btn("Skin/buttonSquare_brown", "Skin/buttonSquare_brown_pressed", Cream, 18);
-            SquareButton.padding = new RectOffset(4, 4, 4, 6);
+            Button = Btn("Gothic/button", "Gothic/button_hover", "Gothic/button_pressed", Cream, 15, 14);
+            ButtonLight = Button;
+            SquareButton = Btn("Gothic/button_square", "Gothic/button_square_hover", "Gothic/button_square_pressed", Cream, 17, 12);
+            SquareButton.padding = new RectOffset(4, 4, 4, 4);
 
             Field = new GUIStyle(GUI.skin.textField)
             {
                 font = Body, fontSize = 17, alignment = TextAnchor.MiddleLeft,
-                padding = new RectOffset(10, 10, 4, 4), border = new RectOffset(12, 12, 12, 12)
+                padding = new RectOffset(12, 12, 4, 4), border = new RectOffset(8, 8, 8, 8)
             };
-            var fieldTex = Tex("Skin/panelInset_beige");
-            if (fieldTex != null) Field.normal.background = Field.focused.background = Field.hover.background = Field.active.background = fieldTex;
-            Field.normal.textColor = Field.focused.textColor = Field.hover.textColor = Ink;
+            var fieldTex = Tex("Gothic/field");
+            var fieldFocus = Tex("Gothic/field_focus");
+            if (fieldTex != null) Field.normal.background = Field.hover.background = fieldTex;
+            if (fieldFocus != null) Field.focused.background = Field.active.background = fieldFocus;
+            Field.normal.textColor = Field.focused.textColor = Field.hover.textColor = Field.active.textColor = Cream;
+            GUI.skin.settings.cursorColor = Gold;
+            GUI.skin.settings.selectionColor = new Color(0.6f, 0.4f, 0.15f, 0.6f);
 
             Label = Text(Body, 16, Cream);
             LabelCenter = new GUIStyle(Label) { alignment = TextAnchor.MiddleCenter };
@@ -75,41 +92,51 @@ namespace Shadowfall
             Ink14.wordWrap = true;
             InkRich = new GUIStyle(Ink14) { fontSize = 16 };
 
-            Tooltip = new GUIStyle(Panel) { padding = new RectOffset(14, 14, 12, 12) };
+            Tooltip = Box("Gothic/tooltip", 14, new Color(0.05f, 0.04f, 0.03f, 0.97f));
+            Tooltip.padding = new RectOffset(14, 14, 12, 12);
+            Close = Tex("Gothic/close");
+            CloseHover = Tex("Gothic/close_hover");
+            DividerTex = Tex("Gothic/divider");
+            FadeDown = Tex("Gothic/fade_down");
+            OrbLiquid = Tex("Gothic/orb_liquid");
+            OrbGlass = Tex("Gothic/orb_glass");
+            OrbFrame = Tex("Gothic/orb_frame");
 
             BarBackL = Tex("Skin/barBack_horizontalLeft");
             BarBackM = Tex("Skin/barBack_horizontalMid");
             BarBackR = Tex("Skin/barBack_horizontalRight");
-            Close = Tex("Skin/iconCross_brown");
-            foreach (var c in new[] { "Red", "Green", "Blue", "Yellow" })
-                bars[c] = new[] { Tex($"Skin/bar{c}_horizontalLeft"), Tex($"Skin/bar{c}_horizontalMid"), Tex($"Skin/bar{c}_horizontalRight") };
+            foreach (var c in new[] { "Red", "Green", "Blue", "Yellow", "Purple" })
+                barFills[c] = Tex("Gothic/bar_" + c.ToLower());
         }
 
-        static GUIStyle Box(string tex, int border, Color fallback)
+        static readonly Dictionary<string, Texture2D> barFills = new Dictionary<string, Texture2D>();
+
+        static GUIStyle Box(string tex, int border, Color fallback, int padding = -1)
         {
             var t = Tex(tex);
-            var s = new GUIStyle { border = new RectOffset(border, border, border, border), padding = new RectOffset(border, border, border, border) };
+            if (padding < 0) padding = border;
+            var s = new GUIStyle { border = new RectOffset(border, border, border, border), padding = new RectOffset(padding, padding, padding, padding) };
             s.normal.background = t != null ? t : Solid(fallback);
             return s;
         }
 
-        static GUIStyle Btn(string tex, string pressed, Color text, int size)
+        static GUIStyle Btn(string tex, string hover, string pressed, Color text, int size, int border)
         {
             var s = new GUIStyle(GUI.skin.button)
             {
-                font = Bold, fontSize = size, alignment = TextAnchor.MiddleCenter,
-                border = new RectOffset(12, 12, 12, 14), padding = new RectOffset(8, 8, 4, 8)
+                font = Title ?? Bold, fontSize = size, alignment = TextAnchor.MiddleCenter,
+                border = new RectOffset(border, border, border, border), padding = new RectOffset(10, 10, 4, 4)
             };
             var t = Tex(tex);
-            var p = Tex(pressed);
             if (t != null)
             {
-                s.normal.background = s.hover.background = s.focused.background = t;
-                s.active.background = p != null ? p : t;
+                s.normal.background = s.focused.background = t;
+                s.hover.background = Tex(hover) ?? t;
+                s.active.background = Tex(pressed) ?? t;
             }
             s.normal.textColor = s.focused.textColor = text;
-            s.hover.textColor = Color.Lerp(text, Color.white, 0.4f);
-            s.active.textColor = text;
+            s.hover.textColor = Color.Lerp(text, new Color(1f, 0.9f, 0.6f), 0.6f);
+            s.active.textColor = Color.Lerp(text, Color.gray, 0.3f);
             return s;
         }
 
@@ -229,11 +256,17 @@ namespace Shadowfall
             style.normal.textColor = old;
         }
 
-        /// <summary>Kenney 3-piece horizontal bar (back + colored fill), with optional centered text.</summary>
+        /// <summary>A framed bar with a glossy colored fill ("Red", "Blue", "Green", "Yellow", "Purple") and optional centered text.</summary>
         public static void Bar(Rect r, float frac, string color, string text = null, Color? fallback = null)
         {
             frac = Mathf.Clamp01(frac);
-            if (BarBackM == null || !bars.TryGetValue(color, out var fill) || fill[1] == null)
+            if (barFills.TryGetValue(color, out var fillTex) && fillTex != null && BarFrame.normal.background != null)
+            {
+                GUI.Box(new Rect(r.x - 2, r.y - 2, r.width + 4, r.height + 4), GUIContent.none, BarFrame);
+                var inner = new Rect(r.x + 1, r.y + 1, (r.width - 2) * frac, r.height - 2);
+                if (frac > 0.001f) GUI.DrawTexture(inner, fillTex, ScaleMode.StretchToFill);
+            }
+            else if (BarBackM == null || !bars.TryGetValue(color, out var fill) || fill[1] == null)
             {
                 var c = fallback ?? Color.red;
                 GUI.color = new Color(0, 0, 0, 0.75f);
@@ -265,46 +298,71 @@ namespace Shadowfall
             GUI.DrawTexture(new Rect(r.xMax - cap, r.y, cap, r.height), right);
         }
 
-        /// <summary>A window: leather panel, gold title, close button. Returns true if closed.</summary>
+        /// <summary>A window: ornate dark panel with a title plate on its top edge and a close button. Returns true if closed.</summary>
         public static bool Window(Rect r, string title, bool closable = true, bool parchment = false)
         {
-            Box(r, parchment ? Parchment : Panel);
+            Box(r, Panel);
             if (title != null)
             {
-                Shadowed(new Rect(r.x + 18, r.y + 12, r.width - 60, 28), title, Heading, parchment ? new Color(0.45f, 0.22f, 0.08f) : Gold);
-                GUI.color = new Color(0, 0, 0, 0.25f);
-                GUI.DrawTexture(new Rect(r.x + 16, r.y + 44, r.width - 32, 2), White);
-                GUI.color = Color.white;
+                float tw = Heading.CalcSize(new GUIContent(title)).x;
+                float pw = Mathf.Min(r.width - 90f, tw + 96f);
+                var plate = new Rect(r.x + (r.width - pw) / 2f, r.y - 16f, pw, 46f);
+                GUI.Box(plate, GUIContent.none, TitlePlate);
+                Shadowed(new Rect(plate.x, plate.y + 1, plate.width, plate.height), title, HeadingCenter, Gold, 2);
             }
             if (!closable) return false;
-            var cr = new Rect(r.xMax - 40, r.y + 12, 26, 26);
+            var cr = new Rect(r.xMax - 44, r.y + 12, 30, 30);
             if (Close != null)
             {
-                GUI.DrawTexture(new Rect(cr.x + 5, cr.y + 5, 16, 15), Close);
-                return GUI.Button(cr, GUIContent.none, GUIStyle.none);
+                GUI.DrawTexture(cr, cr.Contains(Event.current.mousePosition) && CloseHover != null ? CloseHover : Close);
+                bool hit = GUI.Button(cr, GUIContent.none, GUIStyle.none);
+                if (hit) Sfx.Play2D("ui_close", 0.4f);
+                return hit;
             }
             return Btn(cr, "x", SquareButton);
         }
 
-        /// <summary>Draws a skinned box; leather panels and slots are tinted dark for contrast with light text.</summary>
-        public static void Box(Rect r, GUIStyle style)
+        /// <summary>Draws a skinned box.</summary>
+        public static void Box(Rect r, GUIStyle style) => GUI.Box(r, GUIContent.none, style);
+
+        /// <summary>An ornamental gold divider line, centered in <paramref name="r"/>.</summary>
+        public static void Divider(Rect r)
         {
-            var old = GUI.backgroundColor;
-            if (style == Panel || style == Tooltip) GUI.backgroundColor = new Color(0.46f, 0.38f, 0.31f);
-            else if (style == Inset) GUI.backgroundColor = new Color(0.3f, 0.25f, 0.2f);
-            GUI.Box(r, GUIContent.none, style);
-            GUI.backgroundColor = old;
+            if (DividerTex != null) GUI.DrawTexture(new Rect(r.x, r.y + r.height / 2f - 9f, r.width, 18f), DividerTex, ScaleMode.StretchToFill);
+            else
+            {
+                GUI.color = new Color(Gold.r, Gold.g, Gold.b, 0.5f);
+                GUI.DrawTexture(new Rect(r.x, r.y + r.height / 2f, r.width, 1f), White);
+                GUI.color = Color.white;
+            }
         }
 
-        /// <summary>A leather button, darkened so its light label reads well.</summary>
+        /// <summary>A Diablo-style health/mana orb: tinted liquid filled to <paramref name="frac"/>, glass and a bronze frame.</summary>
+        public static bool Orb(Rect r, float frac, Color color)
+        {
+            if (OrbLiquid == null || OrbFrame == null) return false;
+            frac = Mathf.Clamp01(frac);
+            var old = GUI.color;
+            GUI.color = Factory.Shade(color, 0.2f);
+            GUI.DrawTexture(r, OrbLiquid);
+            GUI.color = color;
+            // the liquid occupies the inner 84% of the texture: map the fill height onto that
+            float inner = 0.84f, lo = (1f - inner) / 2f;
+            float v = lo + inner * frac;
+            if (frac > 0.001f) GUI.DrawTextureWithTexCoords(new Rect(r.x, r.y + r.height * (1f - v), r.width, r.height * v), OrbLiquid, new Rect(0, 0, 1, v));
+            GUI.color = new Color(1f, 1f, 1f, 0.9f);
+            if (OrbGlass != null) GUI.DrawTexture(r, OrbGlass);
+            GUI.color = Color.white;
+            GUI.DrawTexture(r, OrbFrame);
+            GUI.color = old;
+            return true;
+        }
+
         public static bool Btn(Rect r, string text, GUIStyle style = null) => Btn(r, new GUIContent(text), style);
 
         public static bool Btn(Rect r, GUIContent content, GUIStyle style = null)
         {
-            var old = GUI.backgroundColor;
-            if (style == null || style == Button || style == SquareButton) GUI.backgroundColor = new Color(0.62f, 0.5f, 0.4f);
             bool clicked = GUI.Button(r, content, style ?? Button);
-            GUI.backgroundColor = old;
             if (clicked) Sfx.Play2D("ui_click", 0.35f);
             return clicked;
         }

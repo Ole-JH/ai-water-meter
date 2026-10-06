@@ -37,7 +37,9 @@
 | `Net/RemotePlayer.cs` | Other players: interpolation, appearance, animation |
 | `UI/UISkin.cs` | Fantasy UI skin: panels, buttons, bars, fonts, icons, drawing helpers |
 | `UI/Speech.cs` | Speech bubbles (chat and NPC chatter) |
-| `UI/GameUI.cs` | Login screen, HUD, windows, dialogs, vendor, crafting, chat, minimap, tooltips |
+| `UI/GameUI.cs` | HUD, windows, dialogs, vendor, crafting, chat, minimap, tooltips |
+| `UI/GameUI.Login.cs` | Login screen |
+| `UI/LoginShowcase.cs` | Live, lit hero preview in the village square behind the login screen |
 
 ## Server (`server/`)
 

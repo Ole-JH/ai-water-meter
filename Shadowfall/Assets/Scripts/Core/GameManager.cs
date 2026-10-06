@@ -94,6 +94,7 @@ namespace Shadowfall
         public void EnterWorld(string characterName, SaveData save, string look)
         {
             LeaveWorld();
+            LoginShowcase.Hide();
             var player = Player.Create(SpawnPoint, look);
             player.DisplayName = characterName;
             if (save != null) player.LoadSave(save);

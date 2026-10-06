@@ -131,6 +131,11 @@ tasks:
     cmds:
       - python3 tools/audio/build_audio.py .art-cache/audio
 
+  ui:skin:
+    desc: Regenerate the dark UI skin textures in Assets/Resources/UI/Gothic (needs numpy and Pillow)
+    cmds:
+      - python3 tools/ui/make_skin.py
+
   ui:icons:
     desc: Re-render the UI icons from a game-icons.net checkout (ICONS_DIR, needs playwright-core + CHROMIUM_PATH)
     cmds:

@@ -8,7 +8,7 @@ namespace Shadowfall
     /// fantasy skin in <see cref="UISkin"/>. Login, HUD (orbs, action bar, unit frames, minimap, quest
     /// tracker, chat, menu), windows (bags, character, skills, quests, map, help), NPC dialogs, vendor, crafting.
     /// </summary>
-    public class GameUI : MonoBehaviour
+    public partial class GameUI : MonoBehaviour
     {
         public static GameUI I;
 
@@ -240,83 +240,6 @@ namespace Shadowfall
         // Login
         // =====================================================================================
 
-        void DrawLogin()
-        {
-            var net = NetClient.I;
-            // Vignette over the slowly orbiting village
-            GUI.color = new Color(0.03f, 0.02f, 0.01f, 0.55f);
-            GUI.DrawTexture(new Rect(0, 0, VW, VH), UISkin.White);
-            GUI.color = Color.white;
-
-            UISkin.Shadowed(new Rect(0, VH * 0.07f, VW, 90), "SHADOWFALL", UISkin.TitleHuge, UISkin.Gold, 2);
-            UISkin.Shadowed(new Rect(0, VH * 0.07f + 86, VW, 30), "Heroes, monsters and loot in a world shared by all", UISkin.LabelCenter, UISkin.Cream);
-
-#if UNITY_WEBGL && !UNITY_EDITOR
-            bool showServer = false;
-#else
-            bool showServer = true;
-#endif
-            float w = 520, h = showServer ? 520 : 470;
-            var r = new Rect((VW - w) / 2, VH * 0.25f, w, h);
-            UISkin.Window(r, "Enter the World", false);
-            bool busy = net.State == NetClient.ConnState.Connecting || net.State == NetClient.ConnState.LoggingIn;
-
-            float y = r.y + 62, lx = r.x + 30, fx = r.x + 160, fw = w - 190;
-            UISkin.Shadowed(new Rect(lx, y + 4, 130, 28), "Character", UISkin.Label, UISkin.Cream);
-            loginName = GUI.TextField(new Rect(fx, y, fw, 36), loginName, 16, UISkin.Field);
-            y += 46;
-            UISkin.Shadowed(new Rect(lx, y + 4, 130, 28), "Password", UISkin.Label, UISkin.Cream);
-            loginPass = GUI.PasswordField(new Rect(fx, y, fw, 36), loginPass, '*', 64, UISkin.Field);
-            y += 46;
-            if (showServer)
-            {
-                UISkin.Shadowed(new Rect(lx, y + 4, 130, 28), "Server", UISkin.Label, UISkin.Cream);
-                serverUrl = GUI.TextField(new Rect(fx, y, fw, 36), serverUrl, 200, UISkin.Field);
-                y += 46;
-            }
-
-            // Appearance picker
-            y += 6;
-            UISkin.Shadowed(new Rect(lx, y, w - 60, 26), "Choose your hero", UISkin.Heading, UISkin.Gold);
-            y += 34;
-            float card = (w - 60 - 3 * 10) / 4f;
-            for (int i = 0; i < heroNames.Length; i++)
-            {
-                var cr = new Rect(lx + i * (card + 10), y, card, card + 26);
-                bool selected = loginLook == heroNames[i];
-                UISkin.Box(cr, selected ? UISkin.InsetLight : UISkin.Inset);
-                UISkin.IconInSlot(new Rect(cr.x + 10, cr.y + 6, card - 20, card - 20), UISkin.Icon(heroNames[i].ToLower()), selected ? Color.white : new Color(1, 1, 1, 0.6f), 0);
-                UISkin.Shadowed(new Rect(cr.x, cr.yMax - 30, cr.width, 24), heroNames[i], UISkin.SmallCenter, selected ? UISkin.Gold : UISkin.Muted);
-                if (GUI.Button(cr, GUIContent.none, GUIStyle.none)) loginLook = heroNames[i];
-                if (cr.Contains(Event.current.mousePosition)) tooltip = "<b>" + heroNames[i] + "</b>\n" + heroBlurbs[i];
-            }
-            y += card + 40;
-
-            bool enter = Event.current.type == EventType.KeyDown &&
-                         (Event.current.keyCode == KeyCode.Return || Event.current.keyCode == KeyCode.KeypadEnter);
-            GUI.enabled = !busy;
-            if (UISkin.Btn(new Rect(r.x + (w - 260) / 2, y, 260, 48), busy ? "Connecting..." : "Enter World", UISkin.Button) || (enter && !busy))
-            {
-                try
-                {
-                    PlayerPrefs.SetString("sf_name", loginName);
-                    PlayerPrefs.SetString("sf_server", serverUrl);
-                    PlayerPrefs.SetString("sf_look", loginLook);
-                }
-                catch (System.Exception) { }
-                net.Login(showServer ? serverUrl : "", loginName, loginPass, loginLook);
-            }
-            GUI.enabled = true;
-            y += 54;
-            string status = string.IsNullOrEmpty(net.Status) ? "New name? Your character is created when you first log in." : net.Status;
-            UISkin.Shadowed(new Rect(r.x + 20, y, w - 40, 26), status, UISkin.SmallCenter, string.IsNullOrEmpty(net.Status) ? UISkin.Muted : UISkin.Gold);
-            // Build version + art status, handy when checking that a new build is really live.
-            if (animStatus == null) animStatus = CharacterView.AnimationsAvailable ? "animations OK" : "<color=#ff8866>animations missing</color>";
-            string art = ArtLibrary.Available ? "3D art loaded, " + animStatus : "<color=#ff8866>3D art missing (glTFast?)</color>";
-            UISkin.Shadowed(new Rect(8, VH - 26, VW - 16, 22), "Build " + Application.version + "   " + art,
-                new GUIStyle(UISkin.Small) { alignment = TextAnchor.LowerRight }, UISkin.Muted);
-            DrawTooltip();
-        }
 
         // =====================================================================================
         // World-space overlays: nameplates, health bars, loot labels, quest markers
@@ -381,8 +304,8 @@ namespace Shadowfall
                 float h = bubbleStyle.CalcHeight(content, w);
                 var r = new Rect(g.x - w / 2 - 14, g.y - h - 46, w + 28, h + 20);
                 GUI.color = new Color(1, 1, 1, a);
-                UISkin.Box(r, UISkin.Parchment);
-                GUI.color = new Color(0.86f, 0.78f, 0.62f, a); // a little tail pointing at the speaker
+                UISkin.Box(r, UISkin.Tooltip);
+                GUI.color = new Color(0.05f, 0.04f, 0.03f, a * 0.95f); // a little tail pointing at the speaker
                 GUI.DrawTexture(new Rect(g.x - 5, r.yMax - 4, 10, 6), UISkin.White);
                 GUI.DrawTexture(new Rect(g.x - 2.5f, r.yMax + 2, 5, 5), UISkin.White);
                 GUI.color = new Color(1, 1, 1, a);
@@ -403,10 +326,10 @@ namespace Shadowfall
                 bool near = RemotePlayer.ById.TryGetValue(m.id, out var rp) && rp != null;
                 if (near) { hp = rp.Health; mhp = rp.MaxHealth; }
                 var r = new Rect(12, y, 250, 58);
-                UISkin.Box(r, UISkin.Panel);
+                UISkin.Box(r, UISkin.PanelPlain);
                 Block(r);
                 var icon = new Rect(r.x + 9, r.y + 9, 40, 40);
-                UISkin.Box(icon, UISkin.Inset);
+                UISkin.Box(icon, UISkin.Slot);
                 UISkin.IconInSlot(icon, UISkin.Icon((m.mdl ?? "knight").ToLower()), m.dead ? new Color(0.5f, 0.5f, 0.5f) : Color.white, 3);
                 bool leader = m.id == net.PartyLeader;
                 UISkin.Shadowed(new Rect(r.x + 58, r.y + 7, 160, 20), m.name + "  " + m.lvl + (leader ? "  (Leader)" : ""),
@@ -433,7 +356,7 @@ namespace Shadowfall
             var net = NetClient.I;
             bool canInvite = !net.IsPartyMember(rp.Id) && (!net.InParty || net.IsLeader);
             var r = new Rect(menuPos.x - 100, menuPos.y + 10, 200, 60 + (canInvite ? 44 : 0) + 88);
-            UISkin.Box(r, UISkin.Panel);
+            UISkin.Box(r, UISkin.PanelPlain);
             Block(r);
             UISkin.Shadowed(new Rect(r.x, r.y + 12, r.width, 24), rp.Name, UISkin.HeadingCenter, UISkin.Gold);
             float y = r.y + 48;
@@ -601,10 +524,10 @@ namespace Shadowfall
             UISkin.Box(r, UISkin.Panel);
             Block(r);
             var portrait = new Rect(r.x + 12, r.y + 12, 72, 72);
-            UISkin.Box(portrait, UISkin.Inset);
+            UISkin.Box(portrait, UISkin.Slot);
             UISkin.IconInSlot(portrait, UISkin.Icon(p.Look.ToLower()), Color.white, 6);
             var lv = new Rect(portrait.xMax - 26, portrait.yMax - 24, 30, 26);
-            UISkin.Box(lv, UISkin.Panel);
+            UISkin.Box(lv, UISkin.Slot);
             UISkin.Shadowed(lv, p.Level.ToString(), UISkin.SmallCenter, UISkin.Gold);
 
             UISkin.Shadowed(new Rect(r.x + 96, r.y + 12, 220, 24), p.DisplayName, UISkin.Heading, UISkin.Gold);
@@ -624,7 +547,7 @@ namespace Shadowfall
             if (target != null && !target.IsDead)
             {
                 var t = new Rect(354, 12, 320, 76);
-                UISkin.Box(t, UISkin.Panel);
+                UISkin.Box(t, UISkin.PanelPlain);
                 var e = target as Enemy;
                 bool boss = e != null && e.Def.Boss;
                 UISkin.Shadowed(new Rect(t.x + 16, t.y + 12, 290, 24), target.DisplayName, UISkin.Heading, LevelColor(target.Level, p.Level));
@@ -656,7 +579,7 @@ namespace Shadowfall
                 var a = AbilityDef.All[i];
                 var r = new Rect(x0 + i * (slot + gap), y0, slot, slot);
                 bool locked = p.Level < a.RequiredLevel;
-                UISkin.Box(r, UISkin.Inset);
+                UISkin.Box(r, UISkin.Slot);
                 UISkin.IconInSlot(r, UISkin.Icon(UISkin.AbilityIcon(a.Id)), locked ? new Color(0.35f, 0.35f, 0.35f) : Color.white, 3);
 
                 float cd = p.CooldownEnd[i] - Time.time;
@@ -691,7 +614,7 @@ namespace Shadowfall
             {
                 var r = new Rect(x0 + (AbilityDef.All.Length + i) * (slot + gap) + 4, y0, slot, slot);
                 int n = p.Inventory.CountOf(potions[i]);
-                UISkin.Box(r, UISkin.Inset);
+                UISkin.Box(r, UISkin.Slot);
                 UISkin.IconInSlot(r, UISkin.Icon(icons[i]), n > 0 ? Color.white : new Color(0.4f, 0.4f, 0.4f), 6);
                 UISkin.Shadowed(new Rect(r.x + 5, r.y + 2, r.width, 18), keys[i], UISkin.Small, UISkin.Gold, 2);
                 UISkin.Shadowed(new Rect(r.x, r.y + r.height - 22, r.width - 6, 20), n.ToString(), UISkin.SmallRight, n > 0 ? Color.white : new Color(1f, 0.4f, 0.4f), 2);
@@ -700,7 +623,7 @@ namespace Shadowfall
             }
 
             // XP bar inside the action bar frame
-            UISkin.Bar(new Rect(x0, y0 + slot + 10, barW - 24, 16), (float)p.Xp / p.XpToNext, "Yellow",
+            UISkin.Bar(new Rect(x0, y0 + slot + 10, barW - 24, 16), (float)p.Xp / p.XpToNext, "Purple",
                 "Level " + p.Level + "   " + p.Xp + " / " + p.XpToNext + " XP", new Color(0.6f, 0.35f, 0.9f));
 
             // Gathering progress
@@ -714,6 +637,13 @@ namespace Shadowfall
         void DrawOrb(Rect r, float frac, Color color, string text)
         {
             frac = Mathf.Clamp01(frac);
+            var big = new Rect(r.x - 14, r.y - 14, r.width + 28, r.height + 28);
+            if (UISkin.Orb(big, frac, color))
+            {
+                UISkin.Shadowed(new Rect(r.x, r.y + r.height / 2 - 14, r.width, 28), text, UISkin.LabelCenter, Color.white, 2);
+                Block(r);
+                return;
+            }
             var c = UISkin.Circle;
             GUI.color = new Color(0.36f, 0.24f, 0.14f);
             GUI.DrawTexture(new Rect(r.x - 10, r.y - 10, r.width + 20, r.height + 20), c);
@@ -991,7 +921,7 @@ namespace Shadowfall
 
         void DrawItemSlot(Rect r, Item item, Player p, string emptyIcon = null)
         {
-            UISkin.Box(r, UISkin.Inset);
+            UISkin.Box(r, UISkin.Slot);
             if (item == null)
             {
                 if (emptyIcon != null) UISkin.IconInSlot(r, UISkin.Icon(emptyIcon), new Color(1, 1, 1, 0.18f), 9);
@@ -1053,7 +983,7 @@ namespace Shadowfall
                 DrawEquipSlot(p, new Rect(r.xMax - 22 - cell, r.y + 62 + i * (cell + 10), cell, cell), dollRight[i], true);
             }
             var portrait = new Rect(r.x + r.width / 2 - 70, r.y + 92, 140, 180);
-            UISkin.Box(portrait, UISkin.Inset);
+            UISkin.Box(portrait, UISkin.Slot);
             UISkin.IconInSlot(new Rect(portrait.x + 10, portrait.y + 20, 120, 120), UISkin.Icon(p.Look.ToLower()), new Color(1, 1, 1, 0.9f), 0);
             UISkin.Shadowed(new Rect(portrait.x, portrait.yMax - 34, portrait.width, 26), p.Look, UISkin.HeadingCenter, UISkin.Gold);
 
@@ -1145,7 +1075,7 @@ namespace Shadowfall
             foreach (var q in p.Quests.Active)
             {
                 bool ready = q.IsReady(p);
-                GUI.Label(new Rect(r.x + 26, y, 420, 26), "<b>" + q.Def.Title + "</b>" + (ready ? "  <color=#2f7a2a>(complete)</color>" : ""), UISkin.InkRich);
+                GUI.Label(new Rect(r.x + 26, y, 420, 26), "<b>" + q.Def.Title + "</b>" + (ready ? "  <color=#7fe07a>(complete)</color>" : ""), UISkin.InkRich);
                 if (NetClient.I.InParty && UISkin.Btn(new Rect(r.xMax - 112, y - 4, 86, 32), "Share", UISkin.Button))
                     NetClient.I.ShareQuest(q.Def);
                 y += 26;
@@ -1248,15 +1178,15 @@ namespace Shadowfall
                         break;
                     }
                     var state = p.Quests.Get(q.Id);
-                    UISkin.Shadowed(new Rect(r.x + 26, y, 420, 28), q.Title, UISkin.Heading, new Color(0.5f, 0.24f, 0.06f));
+                    UISkin.Shadowed(new Rect(r.x + 26, y, 420, 28), q.Title, UISkin.Heading, UISkin.Gold);
                     y += 32;
                     string body = state != null && state.IsReady(p) ? q.CompletionText : q.Description;
                     GUI.Label(new Rect(r.x + 26, y, 420, 120), body, UISkin.Ink14);
                     y += 124;
                     GUI.Label(new Rect(r.x + 26, y, 420, 44), "<b>Objective:</b> " + q.Objective, UISkin.Ink14);
                     y += 46;
-                    string reward = "<b>Rewards:</b>  <color=#6a2fa0>" + q.RewardXp + " xp</color>,  <color=#8a6400>" + q.RewardGold + " gold</color>";
-                    if (q.RewardItemLevel > 0) reward += ",  <color=#" + Item.Hex(Factory.Shade(Item.RarityColor(q.RewardRarity), 0.7f)) + ">a " + q.RewardRarity + " item</color>";
+                    string reward = "<b>Rewards:</b>  <color=#c49cff>" + q.RewardXp + " xp</color>,  <color=#f0c45a>" + q.RewardGold + " gold</color>";
+                    if (q.RewardItemLevel > 0) reward += ",  <color=#" + Item.Hex(Item.RarityColor(q.RewardRarity)) + ">a " + q.RewardRarity + " item</color>";
                     GUI.Label(new Rect(r.x + 26, y, 420, 26), reward, UISkin.Ink14);
                     y += 40;
 
@@ -1264,7 +1194,7 @@ namespace Shadowfall
                     if (state == null)
                     {
                         if (p.Level < q.MinLevel)
-                            GUI.Label(new Rect(r.x + 26, y, 420, 30), "<color=#9a2a1a>Come back when you are level " + q.MinLevel + ".</color>", UISkin.InkRich);
+                            GUI.Label(new Rect(r.x + 26, y, 420, 30), "<color=#ff7a5c>Come back when you are level " + q.MinLevel + ".</color>", UISkin.InkRich);
                         else if (UISkin.Btn(br, "Accept Quest", UISkin.Button)) p.Quests.Accept(q);
                     }
                     else if (state.IsReady(p))
@@ -1280,7 +1210,7 @@ namespace Shadowfall
                 {
                     var shop = npc.Shop;
                     shop.Refresh(p.Level);
-                    UISkin.Shadowed(new Rect(r.x + 26, y, 420, 28), "For Sale", UISkin.Heading, new Color(0.5f, 0.24f, 0.06f));
+                    UISkin.Shadowed(new Rect(r.x + 26, y, 420, 28), "For Sale", UISkin.Heading, UISkin.Gold);
                     if (shop.Rotates)
                         GUI.Label(new Rect(r.x + 200, y + 4, 244, 24), "New stock in " + Mathf.CeilToInt(shop.SecondsUntilRestock / 60f) + " min",
                             new GUIStyle(UISkin.Ink14) { alignment = TextAnchor.UpperRight });
@@ -1289,7 +1219,7 @@ namespace Shadowfall
                         y = ShopRow(p, r, y, shop, i);
                     y += 14;
                     GUI.Label(new Rect(r.x + 26, y, 420, 50),
-                        "Right-click items in your bags to sell them. You have <color=#8a6400><b>" + p.Gold + " gold</b></color>.", UISkin.Ink14);
+                        "Right-click items in your bags to sell them. You have <color=#f0c45a><b>" + p.Gold + " gold</b></color>.", UISkin.Ink14);
                     y += 56;
                     if (UISkin.Btn(new Rect(r.x + (r.width - 340) / 2, y, 340, 46), "Sell Common Items & Materials", UISkin.Button))
                     {
@@ -1325,10 +1255,10 @@ namespace Shadowfall
             DrawItemSlot(slot, item, p);
             if (slot.Contains(Event.current.mousePosition))
                 tooltip = item.Tooltip(p, item.Kind == ItemKind.Equipment ? p.Inventory.GetEquipped(item.Slot) : null);
-            var nameColor = item.Kind == ItemKind.Equipment ? Factory.Shade(Item.RarityColor(item.Rarity), 0.6f) : new Color(0.25f, 0.15f, 0.05f);
+            var nameColor = item.Kind == ItemKind.Equipment ? Item.RarityColor(item.Rarity) : UISkin.Cream;
             GUI.Label(new Rect(r.x + 80, y + 2, 190, 24), "<b><color=#" + Item.Hex(nameColor) + ">" + item.Name + "</color></b>", UISkin.InkRich);
-            GUI.Label(new Rect(r.x + 80, y + 23, 190, 22), "<color=#8a6400>" + price + " gold</color>" +
-                (item.Kind == ItemKind.Equipment && item.RequiredLevel > p.Level ? "   <color=#9a2a1a>level " + item.RequiredLevel + "</color>" : ""), UISkin.Ink14);
+            GUI.Label(new Rect(r.x + 80, y + 23, 190, 22), "<color=#f0c45a>" + price + " gold</color>" +
+                (item.Kind == ItemKind.Equipment && item.RequiredLevel > p.Level ? "   <color=#ff7a5c>level " + item.RequiredLevel + "</color>" : ""), UISkin.Ink14);
 
             int[] amounts = item.Stackable ? new[] { 1, 5 } : new[] { 1 };
             foreach (int n in amounts)

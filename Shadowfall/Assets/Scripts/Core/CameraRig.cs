@@ -50,9 +50,25 @@ namespace Shadowfall
                 HandleInput(dt);
                 focus = Vector3.Lerp(focus, Target.position, 1f - Mathf.Exp(-dt * 10f));
             }
+            else if (LoginShowcase.Focus.HasValue)
+            {
+                // Login screen: a slow, low cinematic shot of the hero preview, framed off-centre so the
+                // login panel doesn't cover it.
+                dragging = false;
+                yawGoal = yaw = Mathf.Sin(Time.time * 0.12f) * 10f;
+                pitchGoal = pitch = 9f;
+                distanceGoal = distance = 6.2f;
+                var cam = GetComponent<Camera>();
+                float halfWidth = Mathf.Tan(cam.fieldOfView * 0.5f * Mathf.Deg2Rad) * distance * cam.aspect;
+                var right = Quaternion.Euler(0f, yaw, 0f) * Vector3.right;
+                focus = LoginShowcase.Focus.Value + Vector3.up * 0.15f - right * (LoginShowcase.ScreenOffset * halfWidth);
+                transform.SetPositionAndRotation(focus + Vector3.up * 1f + Quaternion.Euler(pitch, yaw, 0f) * new Vector3(0f, 0f, -distance),
+                    Quaternion.Euler(pitch, yaw, 0f));
+                return;
+            }
             else
             {
-                // Slow orbit over the village while on the login screen.
+                // Slow orbit over the village (before the preview exists).
                 dragging = false;
                 yawGoal = yaw = Time.time * 4f;
                 pitchGoal = pitch = 48f;
