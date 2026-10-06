@@ -63,6 +63,18 @@ fix_ownership() {
 }
 trap 'return_license; fix_ownership' EXIT
 
+# When the package list changes (e.g. a different glTFast version), the cached script compilation in the
+# Library volume can still reference the old package's files ("Source file ... could not be found").
+# Clear just the compile caches; the imported assets stay cached.
+MANIFEST_HASH=$(sha256sum "$PROJECT/Packages/manifest.json" | cut -d' ' -f1)
+HASH_FILE="$PROJECT/Library/.shadowfall-manifest.sha256"
+if [[ -d "$PROJECT/Library" && "$(cat "$HASH_FILE" 2>/dev/null)" != "$MANIFEST_HASH" ]]; then
+  log "Packages changed since the last build: clearing the cached script compilation"
+  rm -rf "$PROJECT/Library/Bee" "$PROJECT/Library/ScriptAssemblies" "$PROJECT/Library/PackageCache" \
+         "$PROJECT/Library/BurstCache" "$PROJECT/Library/PackageManager" 2>/dev/null || true
+fi
+mkdir -p "$PROJECT/Library" && echo "$MANIFEST_HASH" > "$HASH_FILE"
+
 log "Building WebGL (the first build imports the project and takes a while; later builds reuse the Library cache)"
 if ! unity-editor -batchmode -nographics -quit -logFile /dev/stdout \
   -projectPath "$PROJECT" -buildTarget WebGL \
