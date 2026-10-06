@@ -35,7 +35,7 @@ function connect(name, pass, hash = HASH, cells = bytes, wv = 1) {
   return new Promise((resolve, reject) => {
     const ws = new WebSocket(URL);
     const c = { ws, msgs: [], find: (t) => c.msgs.find((m) => m.t === t), all: (t) => c.msgs.filter((m) => m.t === t) };
-    ws.on("open", () => ws.send(JSON.stringify({ t: "hello", name, pass, hash, ver: 3, wv })));
+    ws.on("open", () => ws.send(JSON.stringify({ t: "hello", name, pass, hash, ver: 4, wv })));
     ws.on("error", reject);
     ws.on("message", (d) => {
       const m = JSON.parse(d);
@@ -60,7 +60,7 @@ function checkDockerfile() {
 async function main() {
   checkDockerfile();
   const server = spawn(process.execPath, [path.join(__dirname, "..", "server.js")], {
-    env: { ...process.env, PORT: String(PORT), DATA_DIR, PUBLIC_DIR: path.join(__dirname, "..", "public"), ELITE_CHANCE: "0" },
+    env: { ...process.env, PORT: String(PORT), DATA_DIR, PUBLIC_DIR: path.join(__dirname, "..", "public"), ELITE_CHANCE: "0", ADMINS: "alice" },
     stdio: ["ignore", "pipe", "pipe"],
   });
   let serverLog = "";
@@ -84,15 +84,15 @@ async function main() {
     assert.ok(b.find("welcome"), "Bob logs in");
 
     // Stand next to the wolves north of town
-    state(a, 144, 182);
-    state(b, 145, 182);
+    state(a, 144, 187);
+    state(b, 145, 187);
     await sleep(1500);
     const snap = a.all("snap").at(-1);
     assert.ok(snap.m.length > 0, "snapshot contains monsters");
     assert.ok(snap.p.some((p) => p.name === "Bob"), "snapshot contains the other player");
     assert.ok(a.all("matk").length > 0, "monsters attack players");
 
-    const wolf = snap.m.slice().sort((p, q) => Math.hypot(p.x - 144, p.z - 182) - Math.hypot(q.x - 144, q.z - 182))[0];
+    const wolf = snap.m.slice().sort((p, q) => Math.hypot(p.x - 144, p.z - 187) - Math.hypot(q.x - 144, q.z - 187))[0];
     a.ws.send(JSON.stringify({ t: "hit", mid: wolf.id, dmg: 5 }));
     b.ws.send(JSON.stringify({ t: "hit", mid: wolf.id, dmg: 999999 })); // capped, but enough to kill a wolf
     await sleep(300);
@@ -101,8 +101,8 @@ async function main() {
     assert.ok(a.find("kill").xp > 0, "kill grants xp");
 
     a.ws.send(JSON.stringify({ t: "chat", msg: "hello <b>there</b>" }));
-    a.ws.send(JSON.stringify({ t: "fx", k: "fireball", x: 144, z: 182, tx: 149, tz: 187 }));
-    a.ws.send(JSON.stringify({ t: "save", save: { level: 3, xp: 10, gold: 55, x: 144, z: 182 } }));
+    a.ws.send(JSON.stringify({ t: "fx", k: "fireball", x: 144, z: 187, tx: 149, tz: 192 }));
+    a.ws.send(JSON.stringify({ t: "save", save: { level: 3, xp: 10, gold: 55, x: 144, z: 187 } }));
     await sleep(300);
     assert.strictEqual(b.find("chat")?.msg, "hello bthere/b", "chat is relayed and sanitised");
     assert.ok(b.find("fx"), "spell effects are relayed");
@@ -110,7 +110,7 @@ async function main() {
 
     // ---- parties
     const d = await connect("Dana", "secret4");
-    state(d, 146, 182);
+    state(d, 146, 187);
     a.ws.send(JSON.stringify({ t: "pinvite", name: "bob" }));
     await sleep(200);
     assert.strictEqual(b.find("pinv")?.name, "Alice", "Bob receives Alice's invitation");
@@ -131,7 +131,7 @@ async function main() {
 
     // Dana never hits the wolf but is nearby and in the party: she shares the kill.
     const snap2 = b.all("snap").at(-1);
-    const wolf2 = snap2.m.filter((x) => x.id !== wolf.id).sort((p, q) => Math.hypot(p.x - 144, p.z - 182) - Math.hypot(q.x - 144, q.z - 182))[0];
+    const wolf2 = snap2.m.filter((x) => x.id !== wolf.id).sort((p, q) => Math.hypot(p.x - 144, p.z - 187) - Math.hypot(q.x - 144, q.z - 187))[0];
     b.ws.send(JSON.stringify({ t: "hit", mid: wolf2.id, dmg: 999999 }));
     await sleep(300);
     assert.ok(d.all("kill").some((k) => k.mid === wolf2.id), "nearby party member shares kill credit");
@@ -144,8 +144,8 @@ async function main() {
       assert.ok(a.all("snap").at(-1).m.find((x) => x.id === wolf3.id)?.st, "stunned monsters are flagged in snapshots");
     }
     // ---- companions are shown to other players (unknown ids are dropped)
-    state(a, 144, 182, { cp: "hound" });
-    state(b, 145, 182, { cp: "dragon" });
+    state(a, 144, 187, { cp: "hound" });
+    state(b, 145, 187, { cp: "dragon" });
     await sleep(300);
     assert.strictEqual(b.all("snap").at(-1).p.find((x) => x.name === "Alice")?.cp, "hound", "companions are relayed");
     assert.strictEqual(a.all("snap").at(-1).p.find((x) => x.name === "Bob")?.cp, "", "unknown companions are rejected");
@@ -174,6 +174,26 @@ async function main() {
     assert.strictEqual(a.find("tdone")?.gold, 30, "Alice receives Bob's gold");
     assert.strictEqual(b.find("tdone")?.items[0], '{"Name":"Sword"}', "Bob receives Alice's item");
 
+    // ---- admin module: Alice is an admin (ADMINS=alice), Bob is not
+    assert.strictEqual(a.find("welcome").admin, true, "admins are told so at login");
+    assert.ok(!b.find("welcome").admin, "normal players are not admins");
+    b.ws.send(JSON.stringify({ t: "adm", c: "spawn", type: "Goblin", n: 3 }));
+    await sleep(150);
+    assert.ok(b.all("sys").some((m) => /not an admin/.test(m.msg)), "non-admins can't run admin commands");
+    a.ws.send(JSON.stringify({ t: "chat", msg: "/a spawn Goblin 7 3 elite" }));
+    await sleep(300);
+    assert.ok(a.all("sys").some((m) => /Spawned 3 Goblin \(level 7, elite\)/.test(m.msg)), "admins can spawn monsters from chat");
+    assert.ok(a.all("snap").at(-1).m.filter((x) => x.n === "Goblin" && x.el).length >= 3, "spawned elites show up");
+    a.ws.send(JSON.stringify({ t: "adm", c: "killall", r: 15 }));
+    await sleep(300);
+    assert.ok(a.all("kill").some((k) => k.name === "Goblin"), "killall gives kills");
+    a.ws.send(JSON.stringify({ t: "adm", c: "time", phase: "night" }));
+    await sleep(150);
+    assert.ok(b.find("clock"), "changing the time is broadcast");
+    a.ws.send(JSON.stringify({ t: "adm", c: "who" }));
+    await sleep(150);
+    assert.ok(a.find("admwho").items.some((x) => x.includes("|Bob|")), "admins can list players");
+
     const danaId = d.find("welcome").id;
     d.ws.send(JSON.stringify({ t: "vanish", dur: 3 }));
     await sleep(400);
@@ -201,6 +221,27 @@ async function main() {
     b.ws.send(JSON.stringify({ t: "dleave" }));
     await sleep(300);
     assert.strictEqual(b.all("dungeon").at(-1).id, 0, "leaving returns to the overworld");
+
+    // ---- another dungeon: the Bandit Hideout (index 1), entered at its own entrance; admins can jump anywhere
+    state(b, 168.5, 224.5);
+    await sleep(150);
+    b.ws.send(JSON.stringify({ t: "denter", d: 1 }));
+    await sleep(300);
+    const hide = b.all("dungeon").at(-1);
+    assert.strictEqual(hide.d, 1, "the hideout is its own dungeon");
+    assert.strictEqual(hide.k, "Bandit Hideout", "dungeon names come from the server");
+    b.ws.send(JSON.stringify({ t: "dleave" }));
+    await sleep(200);
+    assert.ok(Math.abs(b.all("dungeon").at(-1).z - 222) < 1, "leaving puts you back at that dungeon's entrance");
+    a.ws.send(JSON.stringify({ t: "chat", msg: "/a dungeon warrens 2" }));
+    await sleep(300);
+    const war = a.all("dungeon").at(-1);
+    assert.ok(war.d === 2 && war.l === 2, "admins can enter any dungeon at any depth");
+    a.ws.send(JSON.stringify({ t: "adm", c: "regen" }));
+    await sleep(300);
+    assert.notStrictEqual(a.all("dungeon").at(-1).seed, war.seed, "admins can regenerate a level");
+    a.ws.send(JSON.stringify({ t: "dleave" }));
+    await sleep(200);
 
     a.ws.close();
     await sleep(300);
@@ -245,7 +286,7 @@ async function main() {
     await sleep(700);
     try {
       const e = await connect("Erin", "secret5", hash2, bytes2, 2); // the world was replaced above
-      state(e, 144, 182);
+      state(e, 144, 187);
       await sleep(1200);
       const champ = e.all("snap").at(-1).m.find((m) => m.el);
       assert.ok(champ, "elite monsters appear in snapshots");

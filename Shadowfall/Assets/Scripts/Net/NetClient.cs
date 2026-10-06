@@ -9,7 +9,7 @@ namespace Shadowfall
     /// </summary>
     public partial class NetClient : MonoBehaviour
     {
-        public const int ProtocolVersion = 3;
+        public const int ProtocolVersion = 4;
         public static NetClient I;
 
         public enum ConnState { Offline, Connecting, LoggingIn, InWorld }
@@ -77,6 +77,7 @@ namespace Shadowfall
             Party = new NetPartyMember[0];
             PartyInvite = QuestOffer = TradeInvite = null;
             DropTrade(); // the save above already counted anything in the trade window
+            AdminTools.Reset();
             DungeonId = 0;
             Dungeon.Exit();
             Status = reason;
@@ -164,7 +165,7 @@ namespace Shadowfall
 
         // ---- dungeons
 
-        public void EnterDungeon() { if (State == ConnState.InWorld) Send(new DungeonCmd { t = "denter" }); }
+        public void EnterDungeon(int index) { if (State == ConnState.InWorld) Send(new DungeonCmd { t = "denter", d = index }); }
         public void DescendDungeon() { if (State == ConnState.InWorld) Send(new DungeonCmd { t = "dstairs" }); }
 
         /// <param name="toTown">True after dying: the hero respawns in Hollowmere (we leave right away).</param>
@@ -195,16 +196,25 @@ namespace Shadowfall
             {
                 bool deeper = DungeonId != 0;
                 SwitchSpace(m.id, m);
+                Exploration.ResetDungeon(m.w, m.h);
                 p.TeleportTo(Dungeon.ToWorld(m.start[0], m.start[1]));
                 GameUI.Banner(Dungeon.ZoneName, new Color(1f, 0.55f, 0.3f));
                 Sfx.Play2D(deeper ? "rubble" : "gong", 0.6f);
-                if (m.boss != null && m.boss.Length == 2) GameUI.Log("You sense a terrible presence. The Crypt Lord waits below.", new Color(1f, 0.45f, 0.35f));
+                if (m.boss != null && m.boss.Length == 2) GameUI.Log("You sense a terrible presence. " + Dungeon.Def.Boss + " waits on this level.", new Color(1f, 0.45f, 0.35f));
             }
             else
             {
                 if (DungeonId != 0) SwitchSpace(0, null);
                 p.TeleportTo(new Vector3(m.x, 0f, m.z));
             }
+        }
+
+        /// <summary>Players online, from the admin "who" command: "id|name|level|where".</summary>
+        public string[] AdminWho = new string[0];
+
+        public void SendAdmin(AdminCmd cmd)
+        {
+            if (State == ConnState.InWorld) Send(cmd);
         }
 
         public void SaveNow()
@@ -282,6 +292,9 @@ namespace Shadowfall
                 case "welcome":
                     MyId = m.id;
                     DayNight.SyncServerTime(m.now);
+                    AdminTools.Reset();
+                    AdminTools.IsAdmin = m.admin;
+                    if (m.admin) GameUI.Log("You are an admin. Open the admin panel from the game menu (Esc) or type /a in chat.", new Color(1f, 0.5f, 0.9f));
                     State = ConnState.InWorld;
                     Status = "";
                     nextSave = Time.time + 20f;
@@ -290,6 +303,15 @@ namespace Shadowfall
                     break;
 
                 case "snap": HandleSnapshot(m); break;
+                case "tp": // admin teleport
+                    Player.I?.TeleportTo(new Vector3(m.x, 0f, m.z) + Offset);
+                    break;
+                case "clock":
+                    DayNight.SyncServerTime(m.now);
+                    break;
+                case "admwho":
+                    AdminWho = m.items ?? new string[0];
+                    break;
                 case "mdie": if (Enemy.ById.TryGetValue(m.mid, out var dying)) dying.NetDie(); break;
                 case "kill": HandleKill(m); break;
                 case "matk": HandleMonsterAttack(m); break;

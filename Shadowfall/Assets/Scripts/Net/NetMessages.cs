@@ -46,6 +46,8 @@ namespace Shadowfall
         public NetPartyMember[] pm; // "party": members (id = leader)
         // "dungeon": id (0 = back in the overworld at x, z), l = depth, k = name, plus the generated layout
         public int w, h, seed;
+        public int d, n;               // "dungeon": which dungeon (DungeonDef index) and how many levels it has
+        public bool admin;             // "welcome": this account is an admin
         public string cells;
         public int[] rooms;            // x, y, w, h per room
         public float[] start, exit, stairs, boss, chests;
@@ -90,7 +92,9 @@ namespace Shadowfall
     }
 
     /// <summary>Dungeon commands: denter, dstairs, dleave (town = after dying).</summary>
-    [Serializable] public class DungeonCmd { public string t; public bool town; }
+    [Serializable] public class DungeonCmd { public string t; public bool town; public int d; }
+    /// <summary>Admin command (the server checks the sender is an admin). Unused fields are ignored.</summary>
+    [Serializable] public class AdminCmd { public string t = "adm"; public string c, name, type, text, phase; public float x, z, r, chance; public int d, l, n; public bool elite, fresh; }
 
     /// <summary>Party commands: pinvite (name), paccept, pdecline, pleave, pkick (id), pshare (q).</summary>
     [Serializable] public class PartyCmd { public string t, name, q; public int id; }
@@ -116,6 +120,7 @@ namespace Shadowfall
         public SlotSave[] stash;
         public string[] companions;   // hired companion ids
         public string companion;      // the one following (empty = none)
+        public string fog;            // explored overworld tiles, 1 bit each, base64 (see Exploration)
         public int wv;                // WorldGenerator.LayoutVersion when saved (older positions get converted)
     }
 }

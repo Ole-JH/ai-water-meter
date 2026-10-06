@@ -15,7 +15,7 @@ namespace Shadowfall
         // ---- state read by gameplay code
         public bool MouseOverUI { get; private set; }
         public bool ChatOpen { get; private set; }
-        public bool KeyboardCaptured => ChatOpen || Player.I == null || tradeGoldFocused || menu != MenuPage.None;
+        public bool KeyboardCaptured => ChatOpen || Player.I == null || tradeGoldFocused || menu != MenuPage.None || (showAdmin && adminFieldFocused);
         public bool BlocksWorldInput => Player.I == null || Player.I.IsDead || showMap || menu != MenuPage.None;
 
         // ---- windows
@@ -144,6 +144,7 @@ namespace Shadowfall
                 bool before = showBags | showChar | showSkills | showQuests | showMap | showHelp | showTalents | menu != MenuPage.None;
                 bool questsBefore = showQuests;
                 WindowKeys();
+                AdminKeys();
                 bool after = showBags | showChar | showSkills | showQuests | showMap | showHelp | showTalents | menu != MenuPage.None;
                 if (showQuests && !questsBefore) Sfx.Play2D("book", 0.5f);
                 else if (after != before) Sfx.Play2D(after ? "ui_open" : "ui_close", 0.4f);
@@ -168,8 +169,8 @@ namespace Shadowfall
                     if (dialogNpc != null || craftStation != null) { dialogNpc = null; craftStation = null; }
                     else if (tradeOpen) NetClient.I?.CancelTrade();
                     else if (menu != MenuPage.None) menu = menu == MenuPage.Main ? MenuPage.None : MenuPage.Main;
-                    else if (showBags | showChar | showSkills | showQuests | showMap | showHelp | showTalents | showStash)
-                        showBags = showChar = showSkills = showQuests = showMap = showHelp = showTalents = showStash = false;
+                    else if (showBags | showChar | showSkills | showQuests | showMap | showHelp | showTalents | showStash | showAdmin)
+                        showBags = showChar = showSkills = showQuests = showMap = showHelp = showTalents = showStash = showAdmin = false;
                     else menu = MenuPage.Main; // nothing to close: open the game menu
                 }
             }
@@ -241,6 +242,7 @@ namespace Shadowfall
             if (showTalents) DrawTalents(p);
             if (showStash) DrawStash(p);
             if (tradeOpen) DrawTrade(p);
+            if (showAdmin) DrawAdmin(p);
             else tradeGoldFocused = false;
             if (dialogNpc != null) DrawDialog(p);
             if (craftStation != null) DrawCrafting(p);
@@ -540,7 +542,7 @@ namespace Shadowfall
                     continue;
                 }
 
-                if (it is DungeonPortal || it is CatacombsEntrance)
+                if (it is DungeonPortal || it is DungeonEntrance)
                 {
                     if (!WorldToGui(it.Position + Vector3.up * it.LabelHeight, out var g)) continue;
                     UISkin.Shadowed(new Rect(g.x - 180, g.y - 11, 360, 22), it.HoverText.Split('\n')[0], UISkin.HeadingCenter, it.LabelColor, 2);
@@ -820,6 +822,7 @@ namespace Shadowfall
 
             foreach (var it in Interactable.All)
             {
+                if (!Exploration.Seen(it.Position) && !(it is DungeonEntrance)) continue; // fog hides what you haven't found
                 if (it is Npc npc)
                 {
                     var pos = toMap(npc.Position);
@@ -828,11 +831,13 @@ namespace Shadowfall
                         UISkin.Shadowed(new Rect(pos.x - 10, pos.y - 13, 20, 24), mark, UISkin.V(UISkin.HeadingCenter, fontSize: 18), mc, 1);
                     else Dot(r, pos, npc.Role == NpcRole.Vendor ? new Color(1f, 0.8f, 0.35f) : npc.Role == NpcRole.Healer ? new Color(0.5f, 1f, 0.7f) : new Color(0.75f, 0.9f, 0.6f), 6);
                 }
-                else if (it is DungeonPortal || it is CatacombsEntrance) Dot(r, toMap(it.Position), it.LabelColor, 10);
+                else if (it is DungeonPortal) Dot(r, toMap(it.Position), it.LabelColor, 10);
+                else if (it is DungeonEntrance && AdminTools.ShowDungeons) Dot(r, toMap(it.Position), it.LabelColor, 10);
                 else if (it is StashChest) Dot(r, toMap(it.Position), new Color(0.9f, 0.7f, 0.4f), 6);
             }
-            foreach (var e in Enemy.ById.Values)
-                if (e != null && !e.IsDead) Dot(r, toMap(e.transform.position), e.Def.Boss ? new Color(1f, 0.5f, 0f) : e.Elite ? Enemy.ChampionColor : new Color(0.9f, 0.15f, 0.1f), e.Def.Boss ? 10 : e.Elite ? 8 : 5);
+            if (AdminTools.ShowEnemies) // enemies are not on the map (admins can turn them on)
+                foreach (var e in Enemy.ById.Values)
+                    if (e != null && !e.IsDead) Dot(r, toMap(e.transform.position), e.Def.Boss ? new Color(1f, 0.5f, 0f) : e.Elite ? Enemy.ChampionColor : new Color(0.9f, 0.15f, 0.1f), e.Def.Boss ? 10 : e.Elite ? 8 : 5);
             foreach (var rp in RemotePlayer.ById.Values)
                 if (rp != null) Dot(r, toMap(rp.transform.position), net.IsPartyMember(rp.Id) ? new Color(0.35f, 1f, 0.45f) : new Color(0.3f, 0.6f, 1f), 7);
             foreach (var m in net.Party) // party members out of view range, in the same place as us
@@ -867,6 +872,11 @@ namespace Shadowfall
         void Dot(Rect clip, Vector2 pos, Color c, float size)
         {
             if (!InCircle(clip, pos, size / 2 + 2)) return;
+            DotAt(pos, c, size);
+        }
+
+        void DotAt(Vector2 pos, Color c, float size)
+        {
             GUI.color = Color.black;
             GUI.DrawTexture(new Rect(pos.x - size / 2 - 1, pos.y - size / 2 - 1, size + 2, size + 2), UISkin.Circle);
             GUI.color = c;
@@ -1279,36 +1289,67 @@ namespace Shadowfall
             UISkin.Window(new Rect(r.x - 18, r.y - 60, r.width + 36, r.height + 78), underground ? Dungeon.ZoneName : "World Map", false);
             Vector3 o = underground ? Dungeon.Origin : Vector3.zero;
             float mw = underground ? Dungeon.Width : WorldGenerator.W, mh = underground ? Dungeon.Height : WorldGenerator.H;
-            GUI.DrawTexture(r, underground ? Dungeon.MapTexture : GameManager.I.World.MapTexture);
+            if (Event.current.type == EventType.Repaint) GUI.DrawTexture(r, Minimap.FoggedMap(underground));
             System.Func<Vector3, Vector2> toMap = w => new Vector2(r.x + (w.x - o.x) / mw * r.width, r.y + (1f - (w.z - o.z) / mh) * r.height);
+            System.Action<Vector3, Color, float> mark = (w, c, s) => { var m = toMap(w); if (r.Contains(m)) DotAt(m, c, s); };
+
             if (underground)
             {
                 foreach (var it in Interactable.All)
-                    if (it is DungeonPortal portal) Dot(r, toMap(portal.Position), portal.LabelColor, 11);
-                foreach (var rp in RemotePlayer.ById.Values) if (rp != null) Dot(r, toMap(rp.transform.position), new Color(0.3f, 0.6f, 1f), 9);
-                Dot(r, toMap(p.transform.position), Color.white, 11);
-                if (ClickedIn(new Rect(0, 0, VW, VH)) >= 0) showMap = false;
-                return;
+                    if (it is DungeonPortal portal && Exploration.Seen(portal.Position)) mark(portal.Position, portal.LabelColor, 11);
             }
+            else
+            {
+                string[] zones = { "Whisperwood", "Goblin Encampment", "Forsaken Graveyard", "Ironvein Quarry", "Hollowmere", "Crypt of the Lich" };
+                Vector3[] centers =
+                {
+                    WorldGenerator.Map(new Vector3(80, 0, 128)), WorldGenerator.Map(new Vector3(130, 0, 80)), WorldGenerator.Map(new Vector3(80, 0, 42)),
+                    WorldGenerator.Map(new Vector3(30, 0, 80)), WorldGenerator.Map(new Vector3(80, 0, 80)), new Vector3(144.5f, 0, 18),
+                };
+                for (int i = 0; i < zones.Length; i++)
+                {
+                    if (!ZoneKnown(centers[i], 30f)) continue; // names appear once you've been nearby
+                    var c = toMap(centers[i]);
+                    UISkin.Shadowed(new Rect(c.x - 120, c.y - 12, 240, 26), zones[i], UISkin.HeadingCenter, new Color(1f, 0.92f, 0.75f), 2);
+                }
+                if (AdminTools.ShowDungeons)
+                    foreach (var def in DungeonDef.All)
+                    {
+                        mark(def.Entrance, new Color(1f, 0.55f, 0.3f), 12);
+                        var c = toMap(def.Entrance);
+                        UISkin.Shadowed(new Rect(c.x - 100, c.y + 6, 200, 20), def.Name, UISkin.SmallCenter, new Color(1f, 0.7f, 0.45f), 2);
+                    }
+                foreach (var it in Interactable.All)
+                    if (it is Npc npc && npc.Marker(p, out _) != null && Exploration.Seen(npc.Position)) mark(npc.Position, new Color(1f, 0.85f, 0.1f), 9);
+            }
+            if (AdminTools.ShowEnemies)
+                foreach (var e in Enemy.ById.Values)
+                    if (e != null && !e.IsDead) mark(e.transform.position, e.Def.Boss ? new Color(1f, 0.5f, 0f) : e.Elite ? Enemy.ChampionColor : new Color(0.9f, 0.15f, 0.1f), e.Def.Boss ? 10 : 6);
+            foreach (var rp in RemotePlayer.ById.Values) if (rp != null) mark(rp.transform.position, NetClient.I.IsPartyMember(rp.Id) ? new Color(0.35f, 1f, 0.45f) : new Color(0.3f, 0.6f, 1f), 9);
+            mark(p.transform.position, Color.white, 11);
 
-            string[] zones = { "Whisperwood", "Goblin Encampment", "Forsaken Graveyard", "Ironvein Quarry", "Hollowmere", "Crypt of the Lich", "The Catacombs" };
-            Vector3[] centers =
+            string hint = AdminTools.IsAdmin && !underground ? "Click or M to close   -   Admin: right-click to teleport there" : "Click anywhere or press M to close";
+            UISkin.Shadowed(new Rect(r.x, r.yMax - 28, r.width, 24), hint, UISkin.SmallCenter, UISkin.Cream);
+            int click = ClickedIn(new Rect(0, 0, VW, VH));
+            if (click == 1 && AdminTools.IsAdmin && !underground && r.Contains(Event.current.mousePosition))
             {
-                WorldGenerator.Map(new Vector3(80, 0, 128)), WorldGenerator.Map(new Vector3(130, 0, 80)), WorldGenerator.Map(new Vector3(80, 0, 42)),
-                WorldGenerator.Map(new Vector3(30, 0, 80)), WorldGenerator.Map(new Vector3(80, 0, 80)), new Vector3(144.5f, 0, 18), Dungeon.Entrance + new Vector3(0, 0, -6),
-            };
-            Dot(r, toMap(Dungeon.Entrance), new Color(1f, 0.55f, 0.3f), 12);
-            for (int i = 0; i < zones.Length; i++)
-            {
-                var c = toMap(centers[i]);
-                UISkin.Shadowed(new Rect(c.x - 120, c.y - 12, 240, 26), zones[i], UISkin.HeadingCenter, new Color(1f, 0.92f, 0.75f), 2);
+                var mp = Event.current.mousePosition;
+                float wx = (mp.x - r.x) / r.width * mw, wz = (1f - (mp.y - r.y) / r.height) * mh;
+                AdminTools.Send(new AdminCmd { c = "tp", x = wx, z = wz });
+                showMap = false;
             }
-            foreach (var it in Interactable.All)
-                if (it is Npc npc && npc.Marker(p, out _) != null) Dot(r, toMap(npc.Position), new Color(1f, 0.85f, 0.1f), 9);
-            foreach (var rp in RemotePlayer.ById.Values) if (rp != null) Dot(r, toMap(rp.transform.position), new Color(0.3f, 0.6f, 1f), 9);
-            Dot(r, toMap(p.transform.position), Color.white, 11);
-            UISkin.Shadowed(new Rect(r.x, r.yMax - 28, r.width, 24), "Click anywhere or press M to close", UISkin.SmallCenter, UISkin.Cream);
-            if (ClickedIn(new Rect(0, 0, VW, VH)) >= 0) showMap = false;
+            else if (click >= 0) showMap = false;
+        }
+
+        /// <summary>True when any of the area around a point has been explored.</summary>
+        static bool ZoneKnown(Vector3 center, float radius)
+        {
+            for (int i = 0; i < 16; i++)
+            {
+                float a = i * Mathf.PI / 8f;
+                if (Exploration.Seen(center + new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a)) * radius * (i % 2 == 0 ? 0.4f : 1f))) return true;
+            }
+            return Exploration.Seen(center);
         }
 
         void DrawHelp()

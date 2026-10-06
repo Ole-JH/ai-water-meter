@@ -12,9 +12,10 @@ namespace Shadowfall
     public static class Dungeon
     {
         public static readonly Vector3 Origin = new Vector3(1000f, 0f, 1000f);
-        /// <summary>The Catacombs entrance in the graveyard (must match CATACOMBS in server.js).</summary>
-        public static readonly Vector3 Entrance = new Vector3(168.5f, 0f, 62.5f); // = WorldGenerator.Map(104.5, 27.5)
-        public const int Depths = 3;
+        /// <summary>Which dungeon we are in (index into <see cref="DungeonDef.All"/>) and how many levels it has.</summary>
+        public static int Index { get; private set; }
+        public static DungeonDef Def => DungeonDef.Get(Index);
+        public static int Depths { get; private set; } = 3;
 
         public static bool Active => root != null;
         public static int Depth { get; private set; }
@@ -38,7 +39,9 @@ namespace Shadowfall
         {
             Exit();
             Depth = m.l;
-            Name = string.IsNullOrEmpty(m.k) ? "The Catacombs" : m.k;
+            Index = m.d;
+            Depths = m.n > 0 ? m.n : Def.Depths;
+            Name = string.IsNullOrEmpty(m.k) ? Def.Name : m.k;
             Width = m.w;
             Height = m.h;
 
@@ -138,11 +141,12 @@ namespace Shadowfall
                             Vector2.zero, Vector2.up, Vector2.one, Vector2.right, wn, Vector3.up);
                 }
 
-            var floorTex = Resources.Load<Texture2D>("Ground/cobble");
-            var wallTex = Resources.Load<Texture2D>("Ground/gravel");
-            var floorMat = Mat.New(new Color(0.62f, 0.58f, 0.54f));
+            var def = Def;
+            var floorTex = Resources.Load<Texture2D>(def.FloorTex);
+            var wallTex = Resources.Load<Texture2D>(def.WallTex);
+            var floorMat = Mat.New(def.FloorTint);
             if (floorTex != null) floorMat.mainTexture = floorTex;
-            var wallMat = Mat.New(new Color(0.5f, 0.46f, 0.42f));
+            var wallMat = Mat.New(def.WallTint);
             if (wallTex != null) wallMat.mainTexture = wallTex;
             var topMat = Mat.New(new Color(0.05f, 0.045f, 0.04f));
 
@@ -170,6 +174,7 @@ namespace Shadowfall
 
         static void Decorate(bool[] blocked, List<RectInt> rooms, System.Random rng, NetMsg m)
         {
+            var def = Def;
             float R(float a, float b) => a + (float)rng.NextDouble() * (b - a);
             GameObject Art(string path, Vector3 pos, float size, float yaw = 0f, ArtLibrary.Fit fit = ArtLibrary.Fit.Height, bool shadows = true) =>
                 ArtLibrary.Spawn(path, root.transform, pos, size, fit, yaw, shadows, true, true);
@@ -190,12 +195,14 @@ namespace Shadowfall
                         var c = ToWorld(x + 0.5f, y + 0.5f);
                         var face = new Vector3(d.x, 0f, d.y);
                         var torchPos = c + face * 0.42f;
-                        Art("Props/torch_mounted", torchPos + Vector3.up * 1.2f, 0.9f, Quaternion.LookRotation(-face).eulerAngles.y, ArtLibrary.Fit.Height, false);
+                        if (def.Id == "mine")
+                            Factory.Prim(PrimitiveType.Sphere, root.transform, torchPos + Vector3.up * 1.7f, Vector3.one * 0.22f, def.TorchColor, false, Mat.Glow(def.TorchColor));
+                        else Art("Props/torch_mounted", torchPos + Vector3.up * 1.2f, 0.9f, Quaternion.LookRotation(-face).eulerAngles.y, ArtLibrary.Fit.Height, false);
                         var l = new GameObject("Torch").AddComponent<Light>();
                         l.transform.SetParent(root.transform, false);
                         l.transform.position = c + face * 0.1f + Vector3.up * 1.9f;
                         l.type = LightType.Point;
-                        l.color = new Color(1f, 0.6f, 0.28f);
+                        l.color = def.TorchColor;
                         l.range = 7.5f;
                         l.intensity = 1.6f;
                         l.gameObject.AddComponent<Flicker>();
@@ -209,9 +216,29 @@ namespace Shadowfall
                     }
                 }
 
-            // Room furnishings
+            // Room furnishings (crypts get pillars, coffins and candles; the others their own props)
             foreach (var r in rooms)
             {
+                if (def.Id != "catacombs")
+                {
+                    int n = rng.Next(2, 5);
+                    for (int i = 0; i < n; i++)
+                    {
+                        var at = ToWorld(r.x + R(1.2f, r.width - 1.2f), r.y + R(1.2f, r.height - 1.2f));
+                        if (!WorldGrid.Instance.IsWalkable(at)) continue;
+                        string prop = def.RoomProps[rng.Next(def.RoomProps.Length)];
+                        Art(prop, at, prop.Contains("rock_large") || prop.Contains("tent") ? 1.8f : prop.Contains("rock") ? 0.8f : 1.1f, R(0, 360));
+                    }
+                    if (def.Id == "mine" && rng.NextDouble() < 0.6)
+                    {
+                        // glowing ore crystals
+                        var at = ToWorld(r.x + R(1f, r.width - 1f), r.y + R(1f, r.height - 1f));
+                        var crystal = new Color(0.4f, 0.75f, 1f);
+                        Factory.Prim(PrimitiveType.Cube, root.transform, at + Vector3.up * 0.4f, new Vector3(0.25f, 0.8f, 0.25f), crystal, false, Mat.Glow(crystal))
+                            .transform.rotation = Quaternion.Euler(R(-20, 20), R(0, 360), R(-20, 20));
+                    }
+                    continue;
+                }
                 var center = ToWorld(r.x + r.width / 2f, r.y + r.height / 2f);
                 if (r.width >= 8 && r.height >= 8)
                     foreach (var corner in new[] { new Vector2(1.6f, 1.6f), new Vector2(r.width - 1.6f, 1.6f), new Vector2(1.6f, r.height - 1.6f), new Vector2(r.width - 1.6f, r.height - 1.6f) })
@@ -235,12 +262,12 @@ namespace Shadowfall
                 {
                     var p = b + off;
                     if (!WorldGrid.Instance.IsWalkable(p)) continue;
-                    Art("Graveyard/fire-basket", p, 1.2f);
+                    Art(def.Id == "mine" ? "Nature/rock_tallC" : "Graveyard/fire-basket", p, 1.2f);
                     var l = new GameObject("Brazier").AddComponent<Light>();
                     l.transform.SetParent(root.transform, false);
                     l.transform.position = p + Vector3.up * 1.6f;
                     l.type = LightType.Point;
-                    l.color = new Color(1f, 0.3f, 0.15f);
+                    l.color = def.BossFire;
                     l.range = 8f;
                     l.intensity = 2f;
                     l.gameObject.AddComponent<Flicker>();
@@ -362,40 +389,5 @@ namespace Shadowfall
             LootDrop.Spawn(transform.position + Vector3.right * 0.8f, ItemDatabase.RandomEquipment(level, 0.4f, Random.value < 0.25f ? Rarity.Rare : Rarity.Magic), 0);
             if (Random.value < 0.4f) LootDrop.Spawn(transform.position + Vector3.left * 0.8f, ItemDatabase.RandomEquipment(level, 0.4f), 0);
         }
-    }
-
-    /// <summary>The way into the Catacombs, in the graveyard: an old crypt with a glowing doorway.</summary>
-    public class CatacombsEntrance : Interactable
-    {
-        public override Color LabelColor => new Color(1f, 0.55f, 0.3f);
-        public override float LabelHeight => 3.6f;
-        public override string HoverText => "The Catacombs\n<dungeon>";
-
-        public static void Spawn()
-        {
-            var go = new GameObject("CatacombsEntrance");
-            go.transform.position = Dungeon.Entrance;
-            var e = go.AddComponent<CatacombsEntrance>();
-            e.DisplayName = "The Catacombs";
-            e.InteractRange = 2.5f;
-            e.AddClickCollider(1.2f, 3f);
-            ArtLibrary.Spawn("Graveyard/crypt", go.transform, new Vector3(0f, 0f, 2.2f), 4.2f, ArtLibrary.Fit.Width, 180f);
-            SpellFx.Emit(new SpellFx.P
-            {
-                Rate = 25, Duration = 100000f, Life = new Vector2(1.2f, 2f), Speed = new Vector2(0.05f, 0.2f),
-                Size = new Vector2(0.08f, 0.18f), Start = new Color(1f, 0.6f, 0.3f), End = new Color(0.8f, 0.2f, 0.05f, 0f),
-                Shape = ParticleSystemShapeType.Circle, Radius = 1f, Velocity = new Vector3(0f, 0.8f, 0f),
-            }, Dungeon.Entrance + Vector3.up * 0.1f, go.transform);
-            var l = new GameObject("EntranceLight").AddComponent<Light>();
-            l.transform.SetParent(go.transform, false);
-            l.transform.localPosition = new Vector3(0f, 1.6f, 0.6f);
-            l.type = LightType.Point;
-            l.color = new Color(1f, 0.45f, 0.2f);
-            l.range = 7f;
-            l.intensity = 2f;
-            l.gameObject.AddComponent<Flicker>();
-        }
-
-        public override void Interact(Player p) => NetClient.I.EnterDungeon();
     }
 }

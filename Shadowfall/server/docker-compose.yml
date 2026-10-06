@@ -10,6 +10,10 @@ services:
     volumes:
       - ./data:/data         # accounts, characters and the world map
       - ./public:/app/public:ro   # the Unity WebGL build
+    environment:
+      # Comma-separated character names with admin rights (admin panel: F10 in game, or /a in chat).
+      # Set it in server/.env, e.g.  ADMINS=Kissmypiss
+      ADMINS: ${ADMINS:-}
     stop_grace_period: 10s
 
   # Builds the Unity WebGL client in Docker and writes it to ./public (no local Unity needed).

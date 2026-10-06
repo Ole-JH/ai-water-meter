@@ -32,6 +32,11 @@
 | `Combat/AbilityFx.cs` | Look and sound of each class ability, shared by the hero and other players' relayed casts; `LightningBolt` |
 | `Items/ItemPowers.cs` | Legendary powers, the four class sets and their bonuses, gems (stats, colors, fusing), loot hooks |
 | `World/StashChest.cs` | The stash chest in Hollowmere |
+| `World/DungeonSites.cs` | The four dungeons (`DungeonDef`: entrance, look, depths) and their entrances (`DungeonEntrance`) |
+| `Core/Exploration.cs` | Fog of war (revealed tiles, saved with the character) and the client side of the admin module (`AdminTools`) |
+| `UI/Minimap.cs` | Round minimap and fogged world map rendering |
+| `UI/GameUI.Admin.cs` | Admin panel (F10) |
+| `UI/GameUI.Menu.cs` | Esc game menu: settings, log out |
 | `Items/VendorStock.cs` | What each vendor sells, prices and restocking |
 | `Items/*` | `Item` model and tooltips, random gear generator, inventory |
 | `Progression/SkillSet.cs` | RuneScape-style professions and XP curve |
@@ -55,6 +60,6 @@
 | --- | --- |
 | `server.js` | Static file host, WebSocket sessions, accounts, world grid and A*, monster AI (slows, stuns, vanished heroes), parties, trades, snapshots, persistence |
 | `content.js` | Monster stats, spawner table, town safe-zone rectangle |
-| `dungeon.js` | Dungeon level generator (rooms, corridors, start, stairs, boss, chests, packs) |
+| `dungeon.js` | Dungeon level generators: rooms and corridors (`generate`) and natural caverns (`generateCaves`), with start, stairs, boss, chests and packs |
 | `test/smoke.js` | End-to-end test with two fake clients |
 | `Dockerfile`, `docker-compose.yml` | Container build and run |

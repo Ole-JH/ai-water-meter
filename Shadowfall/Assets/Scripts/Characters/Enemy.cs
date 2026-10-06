@@ -32,6 +32,10 @@ namespace Shadowfall
             new EnemyDef { Name = "Zombie", Color = new Color(0.45f, 0.55f, 0.4f), Secondary = new Color(0.3f, 0.28f, 0.25f), Scale = 1.05f, Weapon = false },
             new EnemyDef { Name = "Crypt Lord", Color = new Color(0.8f, 0.75f, 0.68f), Secondary = new Color(0.45f, 0.08f, 0.08f), Scale = 1.8f, Boss = true },
             new EnemyDef { Name = "Rock Golem", Shape = EnemyShape.Golem, Color = new Color(0.5f, 0.48f, 0.45f), Secondary = new Color(0.35f, 0.33f, 0.3f), Scale = 1.3f },
+            // dungeon bosses
+            new EnemyDef { Name = "Bandit Lord", Color = new Color(0.6f, 0.2f, 0.18f), Secondary = new Color(0.25f, 0.2f, 0.18f), Scale = 1.4f, Boss = true },
+            new EnemyDef { Name = "Goblin King", Color = new Color(0.4f, 0.6f, 0.2f), Secondary = new Color(0.85f, 0.7f, 0.2f), Scale = 1.6f, Boss = true },
+            new EnemyDef { Name = "Stone Colossus", Shape = EnemyShape.Golem, Color = new Color(0.45f, 0.5f, 0.62f), Secondary = new Color(0.3f, 0.35f, 0.45f), Scale = 2.1f, Boss = true },
             new EnemyDef { Name = "Lich King", Color = new Color(0.55f, 0.75f, 0.85f), Secondary = new Color(0.3f, 0.12f, 0.45f), Scale = 1.8f,
                 Ranged = true, Boss = true, Robe = true, ProjectileColor = new Color(0.4f, 0.9f, 1f) },
         };
@@ -300,6 +304,9 @@ namespace Shadowfall
                 case "Rock Golem": return what == "attack" ? "roar" : what == "die" ? "rubble" : "hit_stone";
                 case "Lich King": return what == "attack" ? "undead" : what == "die" ? "scream" : "hit_bone";
                 case "Crypt Lord": return what == "attack" ? "roar" : what == "die" ? "scream" : "hit_bone";
+                case "Bandit Lord": return what == "attack" ? "swing_heavy" : what == "die" ? "scream" : "hit_flesh";
+                case "Goblin King": return what == "attack" ? "brute" : what == "die" ? "roar" : "hit_flesh";
+                case "Stone Colossus": return what == "attack" ? "boom" : what == "die" ? "rubble" : "hit_stone";
                 default: return what == "hit" ? "hit_flesh" : null;
             }
         }
@@ -384,7 +391,7 @@ namespace Shadowfall
             LastDamagedTime = Time.time;
             GameUI.Float(transform.position + Vector3.up * (Height + 0.2f), crit ? dmg + "!" : dmg.ToString(),
                 crit ? new Color(1f, 0.85f, 0.2f) : Color.white, crit ? 1.5f : 1f);
-            bool bones = Def.Name.StartsWith("Skeleton") || Def.Name == "Lich King" || Def.Name == "Crypt Lord", stone = Def.Name == "Rock Golem";
+            bool bones = Def.Name.StartsWith("Skeleton") || Def.Name == "Lich King" || Def.Name == "Crypt Lord", stone = Def.Name == "Rock Golem" || Def.Name == "Stone Colossus";
             SpellFx.Hit(Center, bones ? new Color(0.9f, 0.88f, 0.8f) : stone ? new Color(0.6f, 0.55f, 0.5f) : new Color(0.55f, 0.03f, 0.03f), !bones && !stone, crit ? 16 : 9);
             Sfx.Play(crit ? "hit_heavy" : Voice(Def, "hit"), Center, crit ? 0.7f : 0.5f, 0.12f);
             view?.Hit();

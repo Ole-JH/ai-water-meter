@@ -36,6 +36,7 @@
 | ++l++ | Quest log |
 | ++m++ | World map |
 | ++f1++ or ++h++ | Help |
+| ++f10++ | Admin panel (admins only, see [Admin module](../deployment/admin.md)) |
 | ++enter++ or ++slash++ | Chat. `/p` party, `/w name` whisper, `/r` reply, `/invite name`, `/leave`, `/who` |
 | ++esc++ | Close the open windows; with nothing open, the **game menu** (also the cog button at the bottom right): Resume, Settings, How to Play, Log Out |
 | ++arrow-up++ / ++arrow-down++ in chat | Recall the messages you sent before |

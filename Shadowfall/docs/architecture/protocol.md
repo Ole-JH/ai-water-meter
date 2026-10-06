@@ -2,7 +2,7 @@
 
 Every message is a single JSON text frame on the WebSocket at `/ws`, and every message has a `t` (type) field. The C# definitions are in `Assets/Scripts/Net/NetMessages.cs`; the server handlers are the `handlers` object in `server/server.js`.
 
-Protocol version: **3**. It is checked in `hello`.
+Protocol version: **4**. It is checked in `hello`.
 
 ## Login sequence
 
@@ -43,13 +43,14 @@ sequenceDiagram
 | `toffer` | `items[]`, `gold` | Your current offer: up to 12 items as JSON strings (`Item`) plus gold. Resets both acceptances |
 | `tok` | — | Accept the current offers |
 | `tcancel` | — | Cancel the trade |
+| `adm` | `c` + arguments | Admin command (`tp`, `tpto`, `summon`, `dungeon`, `regen`, `spawn`, `killall`, `time`, `elites`, `announce`, `kick`, `who`); refused unless the account is an admin. See [Admin module](../deployment/admin.md) |
 | `chat` | `msg` | Chat to everyone. Commands handled by the server: `/who`, `/p` (party), `/w name` (whisper), `/invite name`, `/leave` |
 | `pinvite` | `name` | Invite a player to your party (leader only once in a party) |
 | `paccept` / `pdecline` | — | Answer a pending invitation (they expire after 60 s) |
 | `pleave` | — | Leave your party |
 | `pkick` | `id` | Leader removes a member |
 | `pshare` | `q` | Offer quest `q` (quest id) to the rest of the party |
-| `denter` | — | Enter the Catacombs (must be within 6 m of the entrance) |
+| `denter` | `d` | Enter dungeon `d` (0 Catacombs, 1 Bandit Hideout, 2 Goblin Warrens, 3 Ironvein Deep); you must be within 6 m of its entrance. Party members share one copy |
 | `dstairs` | — | Take the stairs to the next depth (must be near them) |
 | `dleave` | `town` | Leave the dungeon: to the entrance, or to Hollowmere (`town`, after dying) |
 | `fx` | `k`, `x`, `z`, `tx`, `tz` | Cosmetic spell effect: `fireball`, `nova`, `heal`, `meteor`, `cleave`, `levelup`, `bash`, `holybolt`, `consecrate`, `dshield`, `judgement`, `axe`, `whirl`, `leap`, `warcry`, `chain`, `teleport`, `twin`, `multi`, `knives`, `smoke`, `rain` |
@@ -61,7 +62,7 @@ sequenceDiagram
 | --- | --- | --- |
 | `needworld` | — | Ask this client to upload the world map |
 | `error` | `err` | Fatal error; the socket is closed afterwards |
-| `welcome` | `id`, `hasSave`, `save`, `now` | Login OK: your session id, stored character and the server clock (ms, drives the day/night cycle) |
+| `welcome` | `id`, `hasSave`, `save`, `now`, `admin` | Login OK: your session id, stored character and the server clock (ms, drives the day/night cycle) |
 | `snap` | `l` (online count), `m[]`, `p[]` | Nearby monsters `{id,n,l,x,z,ry,hp,mhp,ar,sl,st}` (`sl` slowed, `st` stunned) (elites also `el` name, `af` comma-separated affixes, `sh` shield up) and players `{id,name,x,z,ry,hp,mhp,lvl,mv,atk,dead,body,legs,weapon,helm,mdl,wk,cp}` |
 | `matk` | `mid`, `tid`, `dmg`, `k`, `x`, `z` | Monster attack: `k` = `melee`, `shot`, `nova`, `summon`, `blink` (elite teleports to `x`,`z` from `tx`,`tz`) or `explode` (Fire Enchanted death, area damage at `x`,`z`); `tid` = target session (−1 for area effects) |
 | `mdie` | `mid` | Monster died (play the death animation) |
@@ -71,13 +72,16 @@ sequenceDiagram
 | `party` | `id` (leader), `pm[]` | Your party, sent on every change and once a second: `{id,name,lvl,hp,mhp,mdl,x,z,dead}`. Empty `pm` = not in a party |
 | `pinv` | `id`, `name` | Someone invites you to their party |
 | `qshare` | `id`, `name`, `k` | A party member shares quest `k` |
-| `dungeon` | `id`, `l`, `k`, `seed`, `w`, `h`, `cells`, `rooms`, `start`, `exit`, `stairs`, `boss`, `chests` | You entered dungeon instance `id` at depth `l`: the generated layout (walkability bitmap like the world map, rooms as `x,y,w,h` quadruples, positions as `x,z` pairs). `id` 0 = you are back in the overworld at `x`, `z` |
+| `dungeon` | `id`, `l`, `k`, `d`, `n`, `seed`, `w`, `h`, `cells`, `rooms`, `start`, `exit`, `stairs`, `boss`, `chests` | You entered dungeon instance `id` at depth `l`: the generated layout (walkability bitmap like the world map, rooms as `x,y,w,h` quadruples, positions as `x,z` pairs). `id` 0 = you are back in the overworld at `x`, `z` |
 | `tinv` | `id`, `name` | Someone wants to trade with you |
 | `topen` | `id`, `name` | The trade window opens with player `id` |
 | `tupd` | `items[]`, `gold` | The other player's offer changed (acceptances reset) |
 | `tok` | `id` | The other player accepted |
 | `tdone` | `items[]`, `gold`, `name` | Trade complete: what you receive. Your own offered items are gone |
 | `tclose` | `msg` | Trade cancelled (by either player, distance, dungeon, logout) |
+| `tp` | `x`, `z` | Admin teleport: move there (in the current space) |
+| `clock` | `now` | The server clock changed (an admin set the time of day) |
+| `admwho` | `items[]` | Admin player list: `id\|name\|level\|where` |
 | `sys` | `msg` | System message (joins, leaves, boss kills, `/who`) |
 | `leave` | `id` | A player logged out |
 

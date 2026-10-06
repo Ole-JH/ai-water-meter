@@ -14,6 +14,10 @@ const MONSTERS = {
   "Rock Golem":      { hp: 200,  dmg: 20, speed: 3.0, range: 2.2, cd: 2.0, xp: 95,   aggro: 8,  armor: 45 },
   "Crypt Lord":      { hp: 1100, dmg: 26, speed: 3.6, range: 2.4, cd: 1.5, xp: 2400, aggro: 14, armor: 40, boss: true },
   "Lich King":       { hp: 1400, dmg: 26, speed: 3.6, range: 11,  cd: 1.6, xp: 2000, aggro: 14, armor: 35, ranged: true, boss: true },
+  // Dungeon bosses
+  "Bandit Lord":     { hp: 700,  dmg: 18, speed: 4.8, range: 1.8, cd: 1.1, xp: 900,  aggro: 13, armor: 20, boss: true },
+  "Goblin King":     { hp: 950,  dmg: 22, speed: 4.4, range: 2.4, cd: 1.4, xp: 1500, aggro: 13, armor: 30, boss: true },
+  "Stone Colossus":  { hp: 1800, dmg: 32, speed: 3.0, range: 2.8, cd: 2.0, xp: 3200, aggro: 13, armor: 60, boss: true },
 };
 
 // The world is 288 x 288 tiles. Zones were laid out on the original 160-tile map centred on 80; map() turns those
@@ -75,9 +79,23 @@ const SPAWNERS = [
   [144.5, 14.5, 1, 16, 16, ["Lich King"], 0.5, 180],
 ];
 
+// Dungeons: each has an entrance in the overworld (design coordinates, resolved on the world map to the nearest
+// clear 5x5 spot, the same way the client does it) and is generated fresh for every party. Monster types are per depth.
+// style: "rooms" (halls and corridors) or "caves" (natural caverns). Must match DungeonDef.All on the client (ids, order).
+const DUNGEONS = [
+  { id: "catacombs", name: "The Catacombs", at: [104.5, 27.5], depths: 3, style: "rooms", minLevel: 6, boss: "Crypt Lord",
+    types: [["Skeleton", "Zombie"], ["Skeleton", "Skeleton Archer", "Zombie"], ["Skeleton", "Skeleton Archer", "Zombie", "Skeleton"]] },
+  { id: "hideout", name: "Bandit Hideout", at: [104, 132], depths: 2, style: "rooms", minLevel: 3, boss: "Bandit Lord",
+    types: [["Bandit", "Bandit", "Dire Wolf"], ["Bandit", "Dire Wolf"]] },
+  { id: "warrens", name: "Goblin Warrens", at: [138, 74], depths: 3, style: "caves", minLevel: 4, boss: "Goblin King",
+    types: [["Goblin", "Goblin", "Goblin Shaman"], ["Goblin", "Goblin Shaman"], ["Goblin", "Goblin Shaman", "Goblin Shaman"]] },
+  { id: "mine", name: "Ironvein Deep", at: [26, 96], depths: 3, style: "caves", minLevel: 10, boss: "Stone Colossus",
+    types: [["Rock Golem", "Skeleton"], ["Rock Golem", "Zombie", "Skeleton"], ["Rock Golem", "Skeleton Archer", "Zombie"]] },
+];
+
 // Safe zone: monsters never follow players inside the village walls (cells 116..172).
 const TOWN = { x0: 116, z0: 116, x1: 173, z1: 173 };
 // Where new heroes start and dead ones wake up (the plaza, matches WorldGenerator.SpawnPoint).
 const SPAWN = { x: 144.5, z: 141.5 };
 
-module.exports = { MONSTERS, SPAWNERS, TOWN, SPAWN, map };
+module.exports = { MONSTERS, SPAWNERS, TOWN, SPAWN, DUNGEONS, map };

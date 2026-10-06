@@ -39,3 +39,4 @@ __pycache__/
 
 # Local tool binaries (e.g. a downloaded task binary)
 /bin/
+server/.env

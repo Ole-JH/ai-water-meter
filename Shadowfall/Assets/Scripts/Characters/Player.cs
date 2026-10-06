@@ -137,6 +137,7 @@ namespace Shadowfall
 
         void Awake()
         {
+            Exploration.ResetWorld(); // a new hero knows only the village (LoadSave restores what this one explored)
             I = this;
             DisplayName = "Hero";
             Faction = Faction.Player;
@@ -201,7 +202,7 @@ namespace Shadowfall
             MinDamage = weapon != null ? weapon.MinDamage : 1;
             MaxDamage = weapon != null ? weapon.MaxDamage : 3;
             AttackSpeed = baseAps * (1f + ItemStat(Stat.AttackSpeed) / 100f);
-            MoveSpeed = 6.2f * (1f + ItemStat(Stat.MoveSpeed) / 100f + 0.04f * Tal("swiftness"));
+            MoveSpeed = 6.2f * (1f + ItemStat(Stat.MoveSpeed) / 100f + 0.04f * Tal("swiftness")) * (AdminTools.Fast ? 2.2f : 1f);
             LifeOnHit = ItemStat(Stat.LifeOnHit);
             HealthRegen = 1f + Level * 0.2f + ItemStat(Stat.HealthRegen);
             ManaRegen = (2f + TotInt * 0.06f + ItemStat(Stat.ManaRegen)) * (1f + 0.12f * Tal("manafont"));
@@ -322,6 +323,7 @@ namespace Shadowfall
             HandleInput();
             UpdateChannels(dt);
             UpdateRecall();
+            Exploration.Reveal(transform.position);
             if (leapT < 0f)
             {
                 UpdateAction(dt);
@@ -1190,6 +1192,8 @@ namespace Shadowfall
             }, transform.position, transform);
         }
 
+        public void ResetRecallCooldown() => recallReadyAt = 0f;
+
         void CancelRecall(string why)
         {
             if (recallStart < 0f) return;
@@ -1440,6 +1444,7 @@ namespace Shadowfall
                 stash = stash.ToArray(),
                 talents = SaveTalents(),
                 companions = OwnedCompanions.ToArray(), companion = ActiveCompanion ?? "", wv = WorldGenerator.LayoutVersion,
+                fog = Exploration.Save(),
                 str = Strength, dex = Dexterity, intel = Intelligence, vit = Vitality, statPoints = StatPoints,
                 x = transform.position.x, z = transform.position.z,
                 hp = IsDead ? MaxHealth : Health, mana = Mana,
@@ -1507,6 +1512,7 @@ namespace Shadowfall
 
             var pos = new Vector3(s.x, 0, s.z);
             if (s.wv < 3) pos = WorldGenerator.Map(pos); // saved on the smaller world: same place in the new layout
+            Exploration.Load(s.wv < 3 ? null : s.fog);
             if (s.x > 0 && WorldGrid.Instance.IsWalkable(pos)) transform.position = pos;
             RecalculateStats();
             Health = s.hp > 0 ? Mathf.Min(s.hp, MaxHealth) : MaxHealth;
@@ -1531,6 +1537,7 @@ namespace Shadowfall
 
         public override void TakeDamage(float amount, Combatant source, bool crit = false)
         {
+            if (AdminTools.God) return;
             foreach (var b in Buffs) if (Time.time < b.Until) amount *= b.DamageTakenMul;
             base.TakeDamage(amount, source, crit);
         }

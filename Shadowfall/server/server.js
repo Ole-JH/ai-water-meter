@@ -9,7 +9,7 @@ const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
 const { WebSocketServer } = require("ws");
-const { MONSTERS, SPAWNERS, TOWN, SPAWN } = require("./content");
+const { MONSTERS, SPAWNERS, TOWN, SPAWN, DUNGEONS, map: designToWorld } = require("./content");
 const dungeonGen = require("./dungeon");
 
 const PORT = parseInt(process.env.PORT || "7341", 10);
@@ -17,7 +17,7 @@ const DATA_DIR = path.resolve(process.env.DATA_DIR || path.join(__dirname, "data
 const PUBLIC_DIR = path.resolve(process.env.PUBLIC_DIR || path.join(__dirname, "public"));
 const CHAR_DIR = path.join(DATA_DIR, "characters");
 const WORLD_FILE = path.join(DATA_DIR, "world.json");
-const PROTOCOL_VERSION = 3;
+const PROTOCOL_VERSION = 4;
 const TICK = 0.1; // seconds
 const HERO_MODELS = ["Knight", "Barbarian", "Mage", "Rogue"]; // must match CharacterLook.HeroModels
 const MONSTER_VIEW = 45;
@@ -250,7 +250,7 @@ function spawnFrom(sp) {
 // Elite monsters: champions with a name and random affixes (Diablo style).
 // =====================================================================================
 
-const ELITE_CHANCE = Number(process.env.ELITE_CHANCE ?? 0.08);
+let ELITE_CHANCE = Number(process.env.ELITE_CHANCE ?? 0.08); // admins can change it at runtime
 const AFFIXES = ["Fast", "Vampiric", "Fire Enchanted", "Teleporter", "Shielding", "Mighty", "Extra Health"];
 const NAME_A = ["Grim", "Blood", "Rot", "Skull", "Ash", "Gore", "Bone", "Black", "Iron", "Venom", "Dread", "Hollow", "Grave", "Thorn"];
 const NAME_B = ["maw", "fang", "hide", "claw", "bane", "heart", "eye", "tooth", "grin", "spine", "shade", "gut", "jaw", "skull"];
@@ -492,7 +492,10 @@ function killMonster(m) {
     const xp = Math.max(1, Math.round(m.def.xp * (1 + 0.12 * (m.level - 1)) * mul * eliteMul));
     safeSend(s, JSON.stringify({ t: "kill", mid: m.id, name: m.type, l: m.level, xp, x: r2(m.x), z: r2(m.z), ...(m.elite ? { el: m.elite.name } : {}) }));
   }
-  if (m.def.boss && m.inst) sendNear(m.x, m.z, 999, { t: "sys", msg: `${m.type} has been slain! The Catacombs fall silent.` }, m.inst);
+  if (m.def.boss && m.inst) {
+    const inst = instances.get(m.inst);
+    sendNear(m.x, m.z, 999, { t: "sys", msg: `${m.type} has been slain! ${inst ? DUNGEONS[inst.dIdx].name : "The dungeon"} falls silent.` }, m.inst);
+  }
   else if (m.def.boss) broadcast({ t: "sys", msg: `${m.type} has been slain!` });
   else if (m.elite) sendNear(m.x, m.z, PLAYER_VIEW, { t: "sys", msg: `${m.elite.name} (${m.type}) has been slain!` }, m.inst);
   if (m.spawner) m.spawner.pending.push(now() + m.spawner.respawn);
@@ -578,13 +581,15 @@ function completeLogin(s) {
     }
 
   s.account = acc;
+  s.admin = isAdmin(acc);
+  if (s.admin) log(`${acc.name} is an admin`);
   s.name = acc.name;
   s.inWorld = true;
   s.lvl = acc.save && acc.save.level ? acc.save.level : 1;
   s.x = acc.save && acc.save.x ? acc.save.x : SPAWN.x;
   s.z = acc.save && acc.save.z ? acc.save.z : SPAWN.z;
   acc.lastLogin = new Date().toISOString();
-  safeSend(s, JSON.stringify({ t: "welcome", id: s.id, hasSave: !!acc.save, save: acc.save || undefined, now: Date.now() }));
+  safeSend(s, JSON.stringify({ t: "welcome", id: s.id, hasSave: !!acc.save, save: acc.save || undefined, now: worldClock(), admin: !!s.admin }));
   broadcast({ t: "sys", msg: `${acc.name} has entered the world.` });
   log(`${acc.name} logged in (${sessions.size} connected)`);
 }
@@ -798,29 +803,69 @@ const partyHandlers = {
 
 const instances = new Map();
 let nextInstanceId = 1;
-const CATACOMBS = { x: 168.5, z: 62.5, depths: 3, name: "The Catacombs" }; // entrance, matches Dungeon.Entrance on the client
-const DUNGEON_TYPES = [["Skeleton", "Zombie"], ["Skeleton", "Skeleton Archer", "Zombie"], ["Skeleton", "Skeleton Archer", "Zombie", "Skeleton"]];
+// Dungeon entrances: each DUNGEONS entry's design position, moved to the nearest clear 5x5 spot on the world map.
+// The client runs the very same search on the very same map (DungeonDef.ResolveEntrance), so both agree.
+function resolveEntrance(x, z) {
+  const cx = Math.floor(x), cz = Math.floor(z);
+  const clear = (px, pz) => {
+    for (let j = -2; j <= 2; j++) for (let i = -2; i <= 2; i++) if (blockedAt(px + i, pz + j)) return false;
+    return true;
+  };
+  for (let r = 0; r <= 30; r++)
+    for (let dz = -r; dz <= r; dz++)
+      for (let dx = -r; dx <= r; dx++) {
+        if (Math.max(Math.abs(dx), Math.abs(dz)) !== r) continue;
+        if (clear(cx + dx, cz + dz)) return [cx + dx + 0.5, cz + dz + 0.5];
+      }
+  return [cx + 0.5, cz + 0.5];
+}
+
+let entrancesFor = null;
+/** Entrance positions (world coordinates), computed once per world map. */
+function entrances() {
+  if (!world) return DUNGEONS.map((d) => [designToWorld(d.at[0]), designToWorld(d.at[1])]);
+  if (entrancesFor !== world) {
+    useGrid(0);
+    for (const d of DUNGEONS) d.entrance = resolveEntrance(designToWorld(d.at[0]), designToWorld(d.at[1]));
+    entrancesFor = world;
+  }
+  return DUNGEONS.map((d) => d.entrance);
+}
+const dungeonIndex = (id) => { const i = DUNGEONS.findIndex((d) => d.id === id); return i < 0 ? 0 : i; };
+const exitOf = (dIdx) => { const e = entrances()[dIdx]; return [e[0], e[1] - 2.5]; };
 
 const partyKey = (s) => { const p = partyOf(s); return p ? "p" + p.id : "s" + s.id; };
 
-function getInstance(s, depth) {
-  const key = partyKey(s) + ":" + depth;
-  for (const inst of instances.values()) if (inst.key === key) return inst;
+/** The party's (or solo hero's) instance of a dungeon level, generated on first entry. */
+function getInstance(s, depth, dIdx, fresh = false) {
+  const key = partyKey(s) + ":" + dIdx + ":" + depth;
+  for (const inst of instances.values()) if (inst.key === key) {
+    if (!fresh) return inst;
+    closeInstance(inst);
+    break;
+  }
+  const def = DUNGEONS[dIdx];
   const p = partyOf(s);
   const members = p ? partyMembers(p) : [s];
-  const level = Math.max(3, Math.round(members.reduce((a, o) => a + (o.lvl || 1), 0) / members.length));
+  const level = Math.max(def.minLevel, Math.round(members.reduce((a, o) => a + (o.lvl || 1), 0) / members.length));
   const seed = (Math.random() * 2147483647) | 0;
-  const L = dungeonGen.generate(seed, depth, CATACOMBS.depths);
-  const inst = { id: nextInstanceId++, key, depth, seed, layout: L, grid: { w: L.w, h: L.h, blocked: L.blocked }, cells: dungeonGen.pack(L.blocked), lastActive: now(), level };
+  const L = def.style === "caves" ? dungeonGen.generateCaves(seed, depth, def.depths) : dungeonGen.generate(seed, depth, def.depths);
+  const inst = { id: nextInstanceId++, key, dIdx, depth, seed, layout: L, grid: { w: L.w, h: L.h, blocked: L.blocked }, cells: dungeonGen.pack(L.blocked), lastActive: now(), level };
   instances.set(inst.id, inst);
   populate(inst, members.length);
-  log(`Dungeon ${inst.id} (${key}, depth ${depth}, level ${level}) created`);
+  log(`Dungeon ${inst.id} (${def.name}, ${key}, depth ${depth}, level ${level}) created`);
   return inst;
+}
+
+function closeInstance(inst) {
+  for (const m of monsters.values()) if (m.inst === inst.id) monsters.delete(m.id);
+  instances.delete(inst.id);
 }
 
 function populate(inst, players) {
   useGrid(inst.id);
-  const L = inst.layout, types = DUNGEON_TYPES[Math.min(inst.depth, DUNGEON_TYPES.length) - 1];
+  const def = DUNGEONS[inst.dIdx];
+  const L = inst.layout, types = def.types[Math.min(inst.depth, def.types.length) - 1];
   for (const pk of L.packs) {
     const eliteRoom = Math.random() < 0.3;
     const n = pk.n + Math.max(0, players - 1);
@@ -836,7 +881,7 @@ function populate(inst, players) {
     }
   }
   if (L.boss) {
-    const b = spawnMonster("Crypt Lord", inst.level + 3, L.boss[0], L.boss[1], null, inst.id);
+    const b = spawnMonster(def.boss, inst.level + 3, L.boss[0], L.boss[1], null, inst.id);
     b.maxHp = b.hp = Math.round(b.hp * (0.7 + 0.3 * players));
     b.leash = 70;
   }
@@ -850,7 +895,7 @@ function enterInstance(s, inst) {
   inst.lastActive = now();
   const L = inst.layout;
   safeSend(s, JSON.stringify({
-    t: "dungeon", id: inst.id, l: inst.depth, k: CATACOMBS.name, seed: inst.seed, w: L.w, h: L.h, cells: inst.cells,
+    t: "dungeon", id: inst.id, l: inst.depth, k: DUNGEONS[inst.dIdx].name, d: inst.dIdx, n: DUNGEONS[inst.dIdx].depths, seed: inst.seed, w: L.w, h: L.h, cells: inst.cells,
     rooms: L.rooms.flatMap((r) => [r.x, r.y, r.w, r.h]), start: L.start, exit: L.exit,
     stairs: L.stairs || [], boss: L.boss || [], chests: L.chests.flat(),
   }));
@@ -858,13 +903,14 @@ function enterInstance(s, inst) {
 
 function leaveInstance(s, toTown) {
   if (trades.has(s.id)) closeTrade(trades.get(s.id), "The trade was cancelled.");
+  const inst = instances.get(s.inst);
   s.inst = 0;
-  [s.x, s.z] = toTown ? [SPAWN.x, SPAWN.z] : [CATACOMBS.x, CATACOMBS.z - 2.5];
+  [s.x, s.z] = toTown ? [SPAWN.x, SPAWN.z] : exitOf(inst ? inst.dIdx : 0);
   safeSend(s, JSON.stringify({ t: "dungeon", id: 0, x: s.x, z: s.z }));
 }
 
 /** Where a player is in the overworld (for saves): dungeon players are saved at the entrance. */
-const overworldPos = (s) => (s.inst ? [CATACOMBS.x, CATACOMBS.z - 2.5] : [s.x, s.z]);
+const overworldPos = (s) => (s.inst ? exitOf((instances.get(s.inst) || { dIdx: 0 }).dIdx) : [s.x, s.z]);
 
 function cleanupInstances(t) {
   for (const inst of instances.values()) {
@@ -872,30 +918,197 @@ function cleanupInstances(t) {
     for (const s of sessions.values()) if (s.inWorld && s.inst === inst.id) { occupied = true; break; }
     if (occupied) { inst.lastActive = t; continue; }
     if (t - inst.lastActive < 120) continue;
-    for (const m of monsters.values()) if (m.inst === inst.id) monsters.delete(m.id);
-    instances.delete(inst.id);
+    closeInstance(inst);
     log(`Dungeon ${inst.id} closed`);
   }
 }
 
 const dungeonHandlers = {
-  denter(s) {
-    if (!s.inWorld || s.dead || s.inst || dist(s.x, s.z, CATACOMBS.x, CATACOMBS.z) > 6) return;
-    enterInstance(s, getInstance(s, 1));
+  denter(s, m) {
+    const dIdx = Math.max(0, Math.min(DUNGEONS.length - 1, m.d | 0));
+    const e = entrances()[dIdx];
+    if (!s.inWorld || s.dead || s.inst || dist(s.x, s.z, e[0], e[1]) > 6) return;
+    enterInstance(s, getInstance(s, 1, dIdx));
   },
   dstairs(s) {
     const cur = s.inst && instances.get(s.inst);
     if (!cur || !cur.layout.stairs || s.dead || dist(s.x, s.z, cur.layout.stairs[0], cur.layout.stairs[1]) > 5) return;
-    enterInstance(s, getInstance(s, cur.depth + 1));
+    enterInstance(s, getInstance(s, cur.depth + 1, cur.dIdx));
   },
   dleave(s, m) {
     if (s.inst) leaveInstance(s, !!m.town);
   },
 };
 
+// =====================================================================================
+// Admin module: accounts named in ADMINS (comma-separated, case-insensitive) or with "admin": true in their
+// character file. Server-side commands are checked here; client-side helpers (map reveal, god mode, gold...)
+// are only offered by the client when the server said "admin: true" at login.
+// =====================================================================================
+
+const ADMINS = new Set(String(process.env.ADMINS || "").split(",").map((n) => n.trim().toLowerCase()).filter(Boolean));
+const isAdmin = (acc) => !!acc && (acc.admin === true || ADMINS.has(String(acc.name).toLowerCase()));
+
+const CYCLE_MS = 48 * 60000; // must match DayNight.CycleMinutes on the client
+let clockOffset = 0;
+const worldClock = () => Date.now() + clockOffset;
+const PHASE_HOURS = { dawn: 6, morning: 9, day: 12, noon: 12, dusk: 19, evening: 20, night: 23, midnight: 0 };
+
+function findSession(name) {
+  name = String(name || "").toLowerCase();
+  for (const o of sessions.values()) if (o.inWorld && o.name.toLowerCase() === name) return o;
+  return null;
+}
+
+function teleport(s, x, z) {
+  [s.x, s.z] = [x, z];
+  safeSend(s, JSON.stringify({ t: "tp", x: r2(x), z: r2(z) }));
+}
+
+/** Runs one admin command. Returns a short result line for the admin. */
+function runAdmin(s, c, a) {
+  a = a || {};
+  switch (c) {
+    case "tp": {
+      const x = Number(a.x), z = Number(a.z);
+      if (!Number.isFinite(x) || !Number.isFinite(z) || !world) return "Usage: tp <x> <z>";
+      if (s.inst) leaveInstance(s, false);
+      teleport(s, Math.min(Math.max(x, 1), world.w - 1), Math.min(Math.max(z, 1), world.h - 1));
+      return `Teleported to ${Math.round(x)}, ${Math.round(z)}.`;
+    }
+    case "tpto": {
+      const o = findSession(a.name);
+      if (!o || o === s) return "No such player online.";
+      if (o.inst && o.inst !== s.inst && instances.get(o.inst)) enterInstance(s, instances.get(o.inst));
+      else if (!o.inst && s.inst) leaveInstance(s, false);
+      teleport(s, o.x + 1, o.z);
+      return `Teleported to ${o.name}.`;
+    }
+    case "summon": {
+      const o = findSession(a.name);
+      if (!o || o === s) return "No such player online.";
+      if (s.inst && instances.get(s.inst)) enterInstance(o, instances.get(s.inst));
+      else if (o.inst) leaveInstance(o, false);
+      teleport(o, s.x + 1, s.z);
+      sys(o, `${s.name} summoned you.`);
+      return `Summoned ${o.name}.`;
+    }
+    case "dungeon": {
+      const dIdx = typeof a.d === "string" && isNaN(a.d) ? dungeonIndex(a.d) : Math.max(0, Math.min(DUNGEONS.length - 1, a.d | 0));
+      const def = DUNGEONS[dIdx];
+      const depth = Math.max(1, Math.min(def.depths, a.l | 0 || 1));
+      s.inst = 0;
+      enterInstance(s, getInstance(s, depth, dIdx, !!a.fresh));
+      return `Entered ${def.name}, depth ${depth}.`;
+    }
+    case "regen": {
+      const cur = s.inst && instances.get(s.inst);
+      if (!cur) return "You are not in a dungeon.";
+      const inside = [...sessions.values()].filter((o) => o.inWorld && o.inst === cur.id);
+      const fresh = getInstance(s, cur.depth, cur.dIdx, true);
+      for (const o of inside) enterInstance(o, fresh);
+      return `Regenerated ${DUNGEONS[fresh.dIdx].name}, depth ${fresh.depth} (seed ${fresh.seed}).`;
+    }
+    case "spawn": {
+      const type = Object.keys(MONSTERS).find((k) => k.toLowerCase() === String(a.type || "").toLowerCase());
+      if (!type) return `Unknown monster. Types: ${Object.keys(MONSTERS).join(", ")}`;
+      const n = Math.max(1, Math.min(20, a.n | 0 || 1)), level = Math.max(1, Math.min(60, a.l | 0 || s.lvl));
+      useGrid(s.inst || 0);
+      let made = 0;
+      for (let i = 0; i < n; i++)
+        for (let k = 0; k < 20; k++) {
+          const ang = Math.random() * Math.PI * 2, r = 3 + Math.random() * 3;
+          const x = s.x + Math.cos(ang) * r, z = s.z + Math.sin(ang) * r;
+          if (!walkable(x, z)) continue;
+          const m = spawnMonster(type, level, x, z, null, s.inst || 0);
+          m.leash = 60;
+          if (a.elite) makeElite(m);
+          made++;
+          break;
+        }
+      useGrid(0);
+      return `Spawned ${made} ${type} (level ${level}${a.elite ? ", elite" : ""}).`;
+    }
+    case "killall": {
+      const r = Math.max(1, Math.min(200, Number(a.r) || 20));
+      let n = 0;
+      for (const m of [...monsters.values()])
+        if (m.inst === (s.inst || 0) && dist(m.x, m.z, s.x, s.z) <= r) { damageMonster(m, s, m.hp + 1); n++; }
+      return `Killed ${n} monsters within ${r} m.`;
+    }
+    case "time": {
+      const want = PHASE_HOURS[String(a.phase || "").toLowerCase()];
+      const hour = want !== undefined ? want : Number(a.phase);
+      if (!Number.isFinite(hour)) return "Usage: time dawn|day|dusk|night|<hour>";
+      const target = ((hour % 24) / 24) * CYCLE_MS;
+      const cur = ((Date.now() % CYCLE_MS) + CYCLE_MS) % CYCLE_MS;
+      clockOffset = target - cur;
+      broadcast({ t: "clock", now: worldClock() });
+      return `The time is now ${hour}:00.`;
+    }
+    case "elites": {
+      const v = Number(a.chance);
+      if (!Number.isFinite(v)) return `Elite chance is ${ELITE_CHANCE}.`;
+      ELITE_CHANCE = Math.max(0, Math.min(1, v));
+      return `Elite chance set to ${Math.round(ELITE_CHANCE * 100)}% (new spawns).`;
+    }
+    case "announce": {
+      const text = String(a.text || "").replace(/[<>]/g, "").slice(0, 200);
+      if (!text) return "Usage: announce <text>";
+      broadcast({ t: "sys", msg: `[Announcement] ${text}` });
+      return "Announced.";
+    }
+    case "kick": {
+      const o = findSession(a.name);
+      if (!o) return "No such player online.";
+      if (o === s) return "You can't kick yourself.";
+      fail(o, `You were kicked by ${s.name}.`);
+      return `Kicked ${o.name}.`;
+    }
+    case "who": {
+      const list = [...sessions.values()].filter((o) => o.inWorld).map((o) => {
+        const inst = o.inst && instances.get(o.inst);
+        return `${o.id}|${o.name}|${o.lvl}|${inst ? DUNGEONS[inst.dIdx].name + " " + inst.depth : Math.round(o.x) + "," + Math.round(o.z)}`;
+      });
+      safeSend(s, JSON.stringify({ t: "admwho", items: list }));
+      return null;
+    }
+  }
+  return "Unknown admin command.";
+}
+
+/** "/a <command> ..." typed in chat: the same commands with plain arguments. */
+function adminFromChat(s, line) {
+  const [c, ...w] = line.trim().split(/\s+/);
+  const rest = line.trim().slice(c.length).trim();
+  switch ((c || "").toLowerCase()) {
+    case "tp": return runAdmin(s, "tp", { x: w[0], z: w[1] });
+    case "tpto": return runAdmin(s, "tpto", { name: w[0] });
+    case "summon": return runAdmin(s, "summon", { name: w[0] });
+    case "dungeon": return runAdmin(s, "dungeon", { d: w[0], l: w[1] });
+    case "regen": return runAdmin(s, "regen");
+    case "spawn": return runAdmin(s, "spawn", { type: w.filter((x) => isNaN(x) && x !== "elite").join(" "), l: w.find((x) => !isNaN(x)), n: w.filter((x) => !isNaN(x))[1], elite: w.includes("elite") });
+    case "killall": return runAdmin(s, "killall", { r: w[0] });
+    case "time": return runAdmin(s, "time", { phase: w[0] });
+    case "elites": return runAdmin(s, "elites", { chance: w[0] });
+    case "announce": return runAdmin(s, "announce", { text: rest });
+    case "kick": return runAdmin(s, "kick", { name: w[0] });
+    case "who": return runAdmin(s, "who");
+    default: return "Admin commands: tp x z, tpto name, summon name, dungeon <id|0-3> [depth], regen, spawn <type> [level] [count] [elite], killall [radius], time dawn|day|dusk|night, elites <0-1>, announce text, kick name, who";
+  }
+}
+
 const handlers = {
   ...partyHandlers,
   ...dungeonHandlers,
+
+  adm(s, m) {
+    if (!s.inWorld) return;
+    if (!s.admin) return sys(s, "You are not an admin.");
+    const res = runAdmin(s, String(m.c || ""), m);
+    if (res) sys(s, `[admin] ${res}`);
+    log(`admin ${s.name}: ${m.c}`);
+  },
 
   hello(s, m) {
     if (s.account || s.pendingLogin) return;
@@ -1008,6 +1221,13 @@ const handlers = {
     }
     const [cmd, ...rest] = msg.split(" ");
     const arg = rest.join(" ").trim();
+    if (cmd.toLowerCase() === "/a" || cmd.toLowerCase() === "/admin") {
+      if (!s.admin) return sys(s, "You are not an admin.");
+      const res = adminFromChat(s, arg);
+      if (res) sys(s, `[admin] ${res}`);
+      log(`admin ${s.name}: ${arg}`);
+      return;
+    }
     switch (cmd.toLowerCase()) {
       case "/p": case "/party": {
         const p = partyOf(s);

@@ -76,6 +76,7 @@ nav:
       - Building the client in Docker: deployment/docker-client-build.md
       - HTTPS & reverse proxy: deployment/reverse-proxy.md
       - Operations: deployment/operations.md
+      - Admin module: deployment/admin.md
   - Architecture:
       - Overview: architecture/overview.md
       - Network protocol: architecture/protocol.md

@@ -17,7 +17,7 @@ The four zones start a short walk outside the walls and stretch about 115 tiles 
 | **Whisperwood** | North | Dire Wolf (1–7), Bandit (5–8) | Oak → Willow → Yew trees further north; trout and salmon lakes |
 | **Goblin Encampment** | East | Goblin, Goblin Shaman (3–10), Bandit, **Goblin Warchief** (10, boss) and, in the war camp farther north-east, a second **Warchief** (13) | Campfires |
 | **Ironvein Quarry** | West | Bandit (3–9), Rock Golem (8–16) | Copper → Iron → Mithril rocks further west |
-| **Forsaken Graveyard** | South | Skeleton, Skeleton Archer, Zombie (6–12); the Catacombs entrance | A murky mere in the south-east |
+| **Forsaken Graveyard** | South | Skeleton, Skeleton Archer, Zombie (6–12) | A murky mere in the south-east |
 | **Crypt of the Lich** | Far south | Skeletons (11–13), **Lich King** (16, raid boss) | — |
 
 ## NPCs
@@ -54,16 +54,29 @@ Click another player's name above their head and choose **Invite to Party**, or 
 - **Chat:** `/p message` talks to your party. `/w name message` whispers, `/r message` replies to the last whisper, `/leave` leaves the party.
 - The party leader can remove members with the **x** on their party frame.
 
-## The Catacombs (dungeon)
+## Dungeons
 
-An old crypt in the south-east of the Forsaken Graveyard, glowing orange, leads into **the Catacombs**: three levels of randomly generated rooms and corridors under the graveyard.
+Four dungeons lie hidden in the wilds. They are **not marked on the map**: find their entrances by exploring.
 
-- **Your own copy:** every party (or solo hero) gets its own Catacombs; party members who walk in join the same one. A new layout is generated each time, and an empty dungeon closes two minutes after the last player leaves.
-- **Monsters:** skeletons, skeleton archers and zombies scaled to your party's level and the depth, with more elites than outside. Every room holds a pack; some rooms are led by an elite.
+| Dungeon | Where | Levels | Style | Monsters | Boss |
+| --- | --- | --- | --- | --- | --- |
+| **Bandit Hideout** (level 3+) | Deep in Whisperwood: a ruined shack with a trapdoor | 2 | Cellars | Bandits, dire wolves | **Bandit Lord** |
+| **Goblin Warrens** (level 4+) | East of the goblin encampment: a cave mouth with a goblin banner | 3 | Caves | Goblins, goblin shamans | **Goblin King** |
+| **The Catacombs** (level 6+) | South-east of the Forsaken Graveyard: an old crypt | 3 | Crypt halls | Skeletons, skeleton archers, zombies | **Crypt Lord** |
+| **Ironvein Deep** (level 10+) | In the western quarry: a timbered mine adit | 3 | Caves, lit by glowing ore | Rock golems, skeletons, zombies | **Stone Colossus** |
+
+- **Generated for your party:** every party (or solo hero) gets its own copy of each level, with a fresh layout each time. Halls and corridors in the crypts and cellars, natural caverns in the warrens and the mine. Party members who walk in join the same copy, so friends explore together. An empty dungeon closes two minutes after the last player leaves.
+- **Monsters** scale to your party's level, the dungeon's minimum level and the depth. More party members means bigger packs and a tougher boss. Every room or clearing holds a pack, some led by an elite.
 - **Treasure:** chests in side rooms hold gold and a magic or rare item (each hero opens their own).
-- **Getting around:** a blue portal by the entrance of every level returns you to Hollowmere; the orange stairs in the farthest room lead one level deeper.
-- **The Crypt Lord** waits in the farthest room of depth 3: a giant skeleton who hits hard, blasts frost and calls up his guard at half health.
-- Dying in the Catacombs sends you back to Hollowmere. Logging out inside puts you back at the entrance next time.
+- **Getting around:** a blue portal by the start of every level returns you to the surface; the orange stairs in the farthest room lead one level deeper. The boss waits in the farthest room of the last level.
+- **Fog of war:** each level starts dark on your map and is revealed as you explore it.
+- Dying in a dungeon sends you back to Hollowmere. Logging out inside puts you back at that dungeon's entrance next time.
+
+## Fog of war
+
+The minimap and the world map (++m++) start dark except for Hollowmere; everything within about 15 tiles of you is revealed as you travel, and what you have explored is saved with your character. Zone names appear on the world map once you've been there.
+
+Enemies are **not shown** on the minimap or the world map, and neither are dungeon entrances: you have to look. Quest givers, vendors and other players are shown where you have explored.
 
 ## Elite monsters
 
