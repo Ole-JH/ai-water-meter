@@ -777,56 +777,87 @@ namespace Shadowfall
 
         void DrawMinimap(Player p)
         {
-            const float size = 200, span = 60;
-            var frame = new Rect(VW - size - 34, 12, size + 22, size + 116);
-            UISkin.Box(frame, UISkin.Panel);
+            const float D = 196f;                            // map diameter
+            float frameSize = D / 0.83f;                     // the orb frame's inner ring is ~83% of its size
+            var frame = new Rect(VW - frameSize - 12, 6, frameSize, frameSize);
+            var r = new Rect(frame.center.x - D / 2, frame.center.y - D / 2, D, D);
+            var info = new Rect(frame.x + 6, frame.yMax - 10, frameSize - 12, 86);
             Block(frame);
-            var r = new Rect(frame.x + 11, frame.y + 11, size, size);
-
-            // Overworld or dungeon map (dungeons sit at Dungeon.Origin in world space)
-            bool underground = Dungeon.Active;
-            var tex = underground ? Dungeon.MapTexture : GameManager.I.World.MapTexture;
-            Vector3 mapOrigin = underground ? Dungeon.Origin : Vector3.zero;
-            float mapW = underground ? Dungeon.Width : WorldGenerator.W, mapH = underground ? Dungeon.Height : WorldGenerator.H;
+            Block(info);
             Vector3 pp = p.transform.position;
-            float u0 = (pp.x - mapOrigin.x - span / 2) / mapW, v0 = (pp.z - mapOrigin.z - span / 2) / mapH;
-            GUI.color = Color.black;
-            GUI.DrawTexture(r, UISkin.White);
-            GUI.color = Color.white;
-            if (tex != null) GUI.DrawTextureWithTexCoords(r, tex, new Rect(u0, v0, span / mapW, span / mapH));
+            var net = NetClient.I;
 
+            // Info plate under the ring: zone name (shrunk to fit), gold / players online, time of day.
+            UISkin.Box(info, UISkin.Panel);
+            string zone = WorldGenerator.ZoneAt(pp);
+            int fs = 20;
+            while (fs > 12 && UISkin.V(UISkin.HeadingCenter, fontSize: fs).CalcSize(new GUIContent(zone)).x > info.width - 20) fs--;
+            UISkin.Shadowed(new Rect(info.x + 8, info.y + 14, info.width - 16, 26), zone, UISkin.V(UISkin.HeadingCenter, fontSize: fs),
+                WorldGenerator.InTown(pp) ? new Color(0.6f, 1f, 0.6f) : UISkin.Gold);
+            UISkin.IconInSlot(new Rect(info.x + 14, info.y + 42, 20, 20), UISkin.Icon("gold"), Color.white, 0);
+            UISkin.Shadowed(new Rect(info.x + 38, info.y + 42, 90, 20), p.Gold.ToString(), UISkin.Small, new Color(1f, 0.85f, 0.3f));
+            UISkin.Shadowed(new Rect(info.x + 14, info.y + 42, info.width - 28, 20), net.PlayersOnline + " online",
+                UISkin.V(UISkin.Small, alignment: TextAnchor.MiddleRight), UISkin.Muted);
+            bool dark = DayNight.Night > 0.5f;
+            UISkin.Shadowed(new Rect(info.x + 14, info.y + 62, info.width - 28, 18), DayNight.Phase + "  " + DayNight.Clock,
+                UISkin.V(UISkin.Small, alignment: TextAnchor.MiddleCenter), dark ? new Color(0.65f, 0.75f, 1f) : new Color(1f, 0.85f, 0.5f));
+
+            // The map itself, then markers clipped to the circle.
+            GUI.color = new Color(0.03f, 0.025f, 0.02f, 1f);
+            GUI.DrawTexture(new Rect(r.x - 2, r.y - 2, r.width + 4, r.height + 4), UISkin.Circle);
+            GUI.color = Color.white;
+            if (Event.current.type == EventType.Repaint) GUI.DrawTexture(r, Minimap.Render(pp));
+
+            float span = Minimap.Span;
             System.Func<Vector3, Vector2> toMap = w => new Vector2(
-                r.x + (w.x - (pp.x - span / 2)) / span * r.width,
-                r.y + (1f - (w.z - (pp.z - span / 2)) / span) * r.height);
+                r.center.x + (w.x - pp.x) / span * r.width,
+                r.center.y - (w.z - pp.z) / span * r.height);
 
             foreach (var it in Interactable.All)
             {
-                if (it is Npc npc) Dot(r, toMap(npc.Position), npc.Marker(p, out _) != null ? new Color(1f, 0.85f, 0.1f) : new Color(0.3f, 1f, 0.3f), 7);
-                else if (it is DungeonPortal || it is CatacombsEntrance) Dot(r, toMap(it.Position), it.LabelColor, 9);
+                if (it is Npc npc)
+                {
+                    var pos = toMap(npc.Position);
+                    var mark = npc.Marker(p, out var mc);
+                    if (mark != null && InCircle(r, pos, 6f))
+                        UISkin.Shadowed(new Rect(pos.x - 10, pos.y - 13, 20, 24), mark, UISkin.V(UISkin.HeadingCenter, fontSize: 18), mc, 1);
+                    else Dot(r, pos, npc.Role == NpcRole.Vendor ? new Color(1f, 0.8f, 0.35f) : npc.Role == NpcRole.Healer ? new Color(0.5f, 1f, 0.7f) : new Color(0.75f, 0.9f, 0.6f), 6);
+                }
+                else if (it is DungeonPortal || it is CatacombsEntrance) Dot(r, toMap(it.Position), it.LabelColor, 10);
+                else if (it is StashChest) Dot(r, toMap(it.Position), new Color(0.9f, 0.7f, 0.4f), 6);
             }
             foreach (var e in Enemy.ById.Values)
-                if (e != null && !e.IsDead) Dot(r, toMap(e.transform.position), e.Def.Boss ? new Color(1f, 0.5f, 0f) : e.Elite ? Enemy.ChampionColor : new Color(0.9f, 0.15f, 0.1f), e.Def.Boss ? 9 : e.Elite ? 8 : 5);
+                if (e != null && !e.IsDead) Dot(r, toMap(e.transform.position), e.Def.Boss ? new Color(1f, 0.5f, 0f) : e.Elite ? Enemy.ChampionColor : new Color(0.9f, 0.15f, 0.1f), e.Def.Boss ? 10 : e.Elite ? 8 : 5);
             foreach (var rp in RemotePlayer.ById.Values)
-                if (rp != null) Dot(r, toMap(rp.transform.position), NetClient.I.IsPartyMember(rp.Id) ? new Color(0.35f, 1f, 0.45f) : new Color(0.3f, 0.6f, 1f), 7);
-            foreach (var m in NetClient.I.Party) // party members out of view range, in the same place as us
-                if (m.id != NetClient.I.MyId && m.di == NetClient.I.DungeonId && !RemotePlayer.ById.ContainsKey(m.id)) Dot(r, toMap(new Vector3(m.x, 0, m.z)), new Color(0.35f, 1f, 0.45f), 6);
-            Dot(r, toMap(pp), Color.white, 8);
+                if (rp != null) Dot(r, toMap(rp.transform.position), net.IsPartyMember(rp.Id) ? new Color(0.35f, 1f, 0.45f) : new Color(0.3f, 0.6f, 1f), 7);
+            foreach (var m in net.Party) // party members out of view range, in the same place as us
+                if (m.id != net.MyId && m.di == net.DungeonId && !RemotePlayer.ById.ContainsKey(m.id)) Dot(r, toMap(new Vector3(m.x, 0, m.z)), new Color(0.35f, 1f, 0.45f), 6);
 
-            var net = NetClient.I;
-            UISkin.Shadowed(new Rect(frame.x, r.yMax + 8, frame.width, 26), WorldGenerator.ZoneAt(pp), UISkin.HeadingCenter,
-                WorldGenerator.InTown(pp) ? new Color(0.6f, 1f, 0.6f) : UISkin.Gold);
-            UISkin.IconInSlot(new Rect(frame.x + 16, r.yMax + 40, 24, 24), UISkin.Icon("gold"), Color.white, 0);
-            UISkin.Shadowed(new Rect(frame.x + 44, r.yMax + 40, 100, 24), p.Gold.ToString(), UISkin.Label, new Color(1f, 0.85f, 0.3f));
-            UISkin.Shadowed(new Rect(frame.x + 16, r.yMax + 40, frame.width - 32, 24), net.PlayersOnline + " online",
-                UISkin.V(UISkin.Small, alignment: TextAnchor.MiddleRight), UISkin.Muted);
-            bool dark = DayNight.Night > 0.5f;
-            UISkin.Shadowed(new Rect(frame.x + 16, r.yMax + 64, frame.width - 32, 22), DayNight.Phase + "   " + DayNight.Clock,
-                UISkin.V(UISkin.Small, alignment: TextAnchor.MiddleCenter), dark ? new Color(0.65f, 0.75f, 1f) : new Color(1f, 0.85f, 0.5f));
+            // Hero: an arrow pointing where we face.
+            var saved = GUI.matrix;
+            GUIUtility.RotateAroundPivot(p.transform.eulerAngles.y, r.center);
+            GUI.color = new Color(1f, 0.95f, 0.8f);
+            GUI.DrawTexture(new Rect(r.center.x - 8, r.center.y - 9, 16, 18), Minimap.Arrow);
+            GUI.matrix = saved;
+            GUI.color = Color.white;
+
+            // Bronze ring, north marker and zoom buttons.
+            if (UISkin.OrbFrame != null) GUI.DrawTexture(frame, UISkin.OrbFrame);
+            UISkin.Shadowed(new Rect(frame.center.x - 12, frame.y + 2, 24, 22), "N", UISkin.V(UISkin.HeadingCenter, fontSize: 15), UISkin.Gold, 2);
+            var zin = new Rect(frame.xMax - 40, frame.yMax - 44, 26, 26);
+            var zout = new Rect(frame.x + 14, frame.yMax - 44, 26, 26);
+            if (UISkin.Btn(zin, "+", UISkin.SquareButton)) Minimap.Span = Mathf.Max(Minimap.MinSpan, Minimap.Span / 1.3f);
+            if (UISkin.Btn(zout, "-", UISkin.SquareButton)) Minimap.Span = Mathf.Min(Minimap.MaxSpan, Minimap.Span * 1.3f);
+            if (zin.Contains(Event.current.mousePosition)) tooltip = "Zoom in";
+            if (zout.Contains(Event.current.mousePosition)) tooltip = "Zoom out";
         }
+
+        static bool InCircle(Rect circle, Vector2 pos, float margin) =>
+            (pos - circle.center).sqrMagnitude <= (circle.width / 2 - margin) * (circle.width / 2 - margin);
 
         void Dot(Rect clip, Vector2 pos, Color c, float size)
         {
-            if (!clip.Contains(pos)) return;
+            if (!InCircle(clip, pos, size / 2 + 2)) return;
             GUI.color = Color.black;
             GUI.DrawTexture(new Rect(pos.x - size / 2 - 1, pos.y - size / 2 - 1, size + 2, size + 2), UISkin.Circle);
             GUI.color = c;
