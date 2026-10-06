@@ -19,7 +19,7 @@ namespace Shadowfall
         public int PlayersOnline { get; private set; }
 
         readonly WebSocketConnection socket = new WebSocketConnection();
-        string pendingName, pendingPass;
+        string pendingName, pendingPass, pendingLook;
         float nextStateSend, nextSave, lastMessage;
         readonly HashSet<int> seenMonsters = new HashSet<int>();
         readonly List<int> stale = new List<int>();
@@ -31,8 +31,9 @@ namespace Shadowfall
         // =====================================================================================
 
         /// <param name="url">ws:// or wss:// URL. Empty in WebGL = the server that hosts the page.</param>
-        public void Login(string url, string name, string password)
+        public void Login(string url, string name, string password, string look)
         {
+            pendingLook = look;
             name = (name ?? "").Trim();
             if (name.Length < 3 || name.Length > 16) { Status = "Name must be 3-16 characters."; return; }
             if (string.IsNullOrEmpty(password) || password.Length < 4) { Status = "Password must be at least 4 characters."; return; }
@@ -103,7 +104,7 @@ namespace Shadowfall
             {
                 x = p.transform.position.x, z = p.transform.position.z, ry = p.transform.eulerAngles.y,
                 hp = p.Health, mhp = p.MaxHealth, lvl = p.Level, mv = p.IsMoving, atk = p.IsAttacking, dead = p.IsDead,
-                body = p.BodyHex, legs = p.LegsHex, weapon = p.WeaponHex, helm = p.HelmHex,
+                body = p.BodyHex, legs = p.LegsHex, weapon = p.WeaponHex, helm = p.HelmHex, mdl = p.Look,
             });
         }
 
@@ -164,7 +165,7 @@ namespace Shadowfall
                     State = ConnState.InWorld;
                     Status = "";
                     nextSave = Time.time + 20f;
-                    GameManager.I.EnterWorld(pendingName, m.hasSave ? m.save : null);
+                    GameManager.I.EnterWorld(pendingName, m.hasSave ? m.save : null, pendingLook);
                     pendingPass = null;
                     break;
 

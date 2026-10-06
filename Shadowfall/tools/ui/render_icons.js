@@ -1,0 +1,93 @@
+// Renders game-icons.net SVGs (CC BY 3.0) into styled 128px PNGs for the in-game UI.
+//   node tools/ui/render_icons.js <path-to-game-icons-repo>
+// Needs playwright-core and a Chromium (set CHROMIUM_PATH). Output: Assets/Resources/UI/Icons/*.png
+const fs = require('fs');
+const path = require('path');
+const { chromium } = require('playwright-core');
+
+const SRC = process.argv[2];
+const OUT = path.join(__dirname, '..', '..', 'Assets', 'Resources', 'UI', 'Icons');
+
+// key: [svg path in repo, background color (null = transparent item icon), glyph tint]
+const ICONS = {
+  // abilities
+  cleave: ['lorc/sword-slice', '#7a2a22', '#fff2e0'],
+  fireball: ['lorc/fireball', '#b4470f', '#fff1c4'],
+  frostnova: ['lorc/frozen-orb', '#1f5f8f', '#e6f8ff'],
+  heal: ['delapouite/healing', '#8c7418', '#fffbe0'],
+  meteor: ['lorc/meteor-impact', '#6e1810', '#ffd9b0'],
+  // consumables
+  health_potion: ['delapouite/health-potion', null, '#ff6a5c'],
+  mana_potion: ['delapouite/magic-potion', null, '#6fa8ff'],
+  raw_fish: ['delapouite/tropical-fish', null, '#c9d6e0'],
+  cooked_fish: ['darkzaitzev/fried-fish', null, '#e8b46a'],
+  burnt_fish: ['darkzaitzev/fried-fish', null, '#5a4434'],
+  // equipment
+  sword: ['lorc/broadsword', null, '#e8edf2'],
+  axe: ['lorc/battle-axe', null, '#e8edf2'],
+  mace: ['delapouite/flanged-mace', null, '#e8edf2'],
+  dagger: ['lorc/plain-dagger', null, '#e8edf2'],
+  helm: ['lorc/visored-helm', null, '#e3e6ea'],
+  chest: ['lorc/breastplate', null, '#e3e6ea'],
+  gloves: ['delapouite/gauntlet', null, '#e3e6ea'],
+  legs: ['delapouite/leg-armor', null, '#e3e6ea'],
+  boots: ['lorc/boots', null, '#e3d2b8'],
+  ring: ['delapouite/ring', null, '#ffd76a'],
+  amulet: ['lorc/gem-pendant', null, '#9fe0ff'],
+  // materials
+  logs: ['delapouite/log', null, '#d29a5c'],
+  ore: ['faithtoken/ore', null, '#d9c1a5'],
+  gold: ['delapouite/two-coins', null, '#ffd24a'],
+  // skills
+  woodcutting: ['lorc/wood-axe', '#3f6a2a', '#eaffd8'],
+  mining: ['lorc/mining', '#5e5348', '#f0e6da'],
+  fishing: ['delapouite/fishing-pole', '#2a5878', '#e0f2ff'],
+  smithing: ['lorc/anvil', '#7a4a20', '#ffe6c8'],
+  cooking: ['delapouite/cooking-pot', '#7a2f22', '#ffe0d0'],
+  // menu buttons
+  bags: ['lorc/knapsack', '#4a3524', '#f3e3c8'],
+  character: ['delapouite/person', '#4a3524', '#f3e3c8'],
+  skills: ['delapouite/skills', '#4a3524', '#f3e3c8'],
+  quests: ['lorc/scroll-unfurled', '#4a3524', '#f3e3c8'],
+  map: ['lorc/treasure-map', '#4a3524', '#f3e3c8'],
+  help: ['sbed/help', '#4a3524', '#f3e3c8'],
+  // hero classes
+  knight: ['delapouite/knight-banner', '#3b4a66', '#eef2ff'],
+  barbarian: ['delapouite/barbarian', '#6a3420', '#ffeede'],
+  mage: ['lorc/wizard-staff', '#3e2c6e', '#efe6ff'],
+  rogue: ['darkzaitzev/hooded-assassin', '#2c4a34', '#e6ffe9'],
+};
+
+function glyph(svgText) {
+  // game-icons SVGs: a black background square followed by the white glyph path(s)
+  const paths = [...svgText.matchAll(/<path[^>]*d="([^"]+)"[^>]*\/>/g)].map(m => m[1]);
+  return paths.filter(d => !/^M0 0h512v512H0z$/.test(d)).map(d => `<path d="${d}"/>`).join('');
+}
+
+(async () => {
+  fs.mkdirSync(OUT, { recursive: true });
+  let html = '<html><body style="margin:0;background:transparent">';
+  for (const [key, [src, bg, tint]] of Object.entries(ICONS)) {
+    const svg = fs.readFileSync(path.join(SRC, src + '.svg'), 'utf8');
+    const back = bg
+      ? `background: radial-gradient(circle at 35% 28%, ${bg}ee, ${bg}88 55%, #120c08 100%); border-radius: 22px;
+         box-shadow: inset 0 0 0 4px #00000055, inset 0 3px 6px #ffffff33;`
+      : 'background: transparent;';
+    html += `<div id="${key}" style="width:128px;height:128px;display:inline-block;${back}">
+      <svg viewBox="0 0 512 512" width="128" height="128" style="padding:${bg ? 18 : 6}px;box-sizing:border-box">
+        <defs><linearGradient id="g_${key}" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="${tint}"/></linearGradient>
+          <filter id="s_${key}" x="-10%" y="-10%" width="130%" height="130%">
+          <feDropShadow dx="0" dy="10" stdDeviation="10" flood-color="#000" flood-opacity="0.65"/></filter></defs>
+        <g fill="url(#g_${key})" filter="url(#s_${key})">${glyph(svg)}</g></svg></div>`;
+  }
+  html += '</body></html>';
+  const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH, args: ['--no-sandbox'] });
+  const page = await browser.newPage({ viewport: { width: 1024, height: 1024 } });
+  await page.setContent(html);
+  for (const key of Object.keys(ICONS)) {
+    await page.locator('#' + key).screenshot({ path: path.join(OUT, key + '.png'), omitBackground: true });
+  }
+  await browser.close();
+  console.log(`Rendered ${Object.keys(ICONS).length} icons to ${OUT}`);
+})();

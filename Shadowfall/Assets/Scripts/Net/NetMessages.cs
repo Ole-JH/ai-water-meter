@@ -24,7 +24,7 @@ namespace Shadowfall
         public float x, z, ry, hp, mhp;
         public int lvl;
         public bool mv, atk, dead;
-        public string body, legs, weapon, helm;
+        public string body, legs, weapon, helm, mdl;
     }
 
     /// <summary>Union of every server -> client message.</summary>
@@ -58,7 +58,7 @@ namespace Shadowfall
         public float x, z, ry, hp, mhp;
         public int lvl;
         public bool mv, atk, dead;
-        public string body, legs, weapon, helm;
+        public string body, legs, weapon, helm, mdl;
     }
 
     // ---------------------------------------------------------------- character save (stored by the server)
@@ -70,6 +70,7 @@ namespace Shadowfall
     public class SaveData
     {
         public int level, xp, gold, str, dex, intel, vit, statPoints;
+        public string look;
         public float x, z, hp, mana;
         public int[] skillXp;
         public string[] completedQuests;

@@ -16,10 +16,11 @@ namespace Shadowfall
         public float LastSeen;
 
         Vector3 netPos;
-        float netRy, attackAnim = -1f, speed01;
-        bool moving, wasAttacking;
-        string appearance;
-        HumanoidModel model;
+        float netRy, attackAnim = -1f, speed01, moveSpeed;
+        bool moving, wasAttacking, wasDead;
+        string appearance, modelName;
+        HumanoidModel model;       // primitive fallback
+        CharacterView view;        // animated model
 
         public static RemotePlayer Get(NetPlayer p)
         {
@@ -29,10 +30,21 @@ namespace Shadowfall
             rp = go.AddComponent<RemotePlayer>();
             rp.Id = p.id;
             rp.netPos = go.transform.position;
-            rp.model = HumanoidModel.Build(go.transform, 1f, new Color(0.95f, 0.78f, 0.62f), new Color(0.5f, 0.4f, 0.3f),
-                new Color(0.3f, 0.25f, 0.2f), new Color(0.75f, 0.75f, 0.8f));
             ById[p.id] = rp;
             return rp;
+        }
+
+        void BuildModel(string mdl)
+        {
+            modelName = mdl;
+            appearance = null;
+            if (view != null) Destroy(view.Root);
+            if (model != null) Destroy(model.Root.gameObject);
+            view = CharacterView.Create(transform, CharacterLook.ForHero(mdl));
+            model = view == null
+                ? HumanoidModel.Build(transform, 1f, new Color(0.95f, 0.78f, 0.62f), new Color(0.5f, 0.4f, 0.3f),
+                    new Color(0.3f, 0.25f, 0.2f), new Color(0.75f, 0.75f, 0.8f))
+                : null;
         }
 
         public void Apply(NetPlayer p)
@@ -46,24 +58,35 @@ namespace Shadowfall
             moving = p.mv;
             netPos = new Vector3(p.x, 0, p.z);
             netRy = p.ry;
-            if (p.atk && !wasAttacking) attackAnim = 0f;
+
+            string mdl = string.IsNullOrEmpty(p.mdl) ? CharacterLook.HeroModels[0] : p.mdl;
+            if (mdl != modelName) BuildModel(mdl);
+
+            if (p.atk && !wasAttacking)
+            {
+                attackAnim = 0f;
+                view?.Attack(0.6f);
+            }
             wasAttacking = p.atk;
 
+            if (Dead && !wasDead) view?.Die();
+            if (!Dead && wasDead) view?.Revive();
+            wasDead = Dead;
+
+            if (model == null) return;
             string key = p.body + p.legs + p.weapon + p.helm;
-            if (key != appearance)
+            if (key == appearance) return;
+            appearance = key;
+            model.BodyRenderer.sharedMaterial = Mat.Get(Parse(p.body, new Color(0.5f, 0.4f, 0.3f)));
+            model.ArmRendererL.sharedMaterial = model.ArmRendererR.sharedMaterial = model.BodyRenderer.sharedMaterial;
+            model.LegRendererL.sharedMaterial = model.LegRendererR.sharedMaterial = Mat.Get(Parse(p.legs, new Color(0.3f, 0.25f, 0.2f)));
+            if (model.WeaponRenderer != null)
             {
-                appearance = key;
-                model.BodyRenderer.sharedMaterial = Mat.Get(Parse(p.body, new Color(0.5f, 0.4f, 0.3f)));
-                model.ArmRendererL.sharedMaterial = model.ArmRendererR.sharedMaterial = model.BodyRenderer.sharedMaterial;
-                model.LegRendererL.sharedMaterial = model.LegRendererR.sharedMaterial = Mat.Get(Parse(p.legs, new Color(0.3f, 0.25f, 0.2f)));
-                if (model.WeaponRenderer != null)
-                {
-                    model.WeaponRenderer.gameObject.SetActive(!string.IsNullOrEmpty(p.weapon));
-                    model.WeaponRenderer.sharedMaterial = Mat.Get(Parse(p.weapon, Color.gray));
-                }
-                model.Helm.gameObject.SetActive(!string.IsNullOrEmpty(p.helm));
-                if (!string.IsNullOrEmpty(p.helm)) model.HelmRenderer.sharedMaterial = Mat.Get(Parse(p.helm, Color.gray));
+                model.WeaponRenderer.gameObject.SetActive(!string.IsNullOrEmpty(p.weapon));
+                model.WeaponRenderer.sharedMaterial = Mat.Get(Parse(p.weapon, Color.gray));
             }
+            model.Helm.gameObject.SetActive(!string.IsNullOrEmpty(p.helm));
+            if (!string.IsNullOrEmpty(p.helm)) model.HelmRenderer.sharedMaterial = Mat.Get(Parse(p.helm, Color.gray));
         }
 
         static Color Parse(string hex, Color fallback) =>
@@ -74,10 +97,20 @@ namespace Shadowfall
             float dt = Time.deltaTime;
             if (Time.time - LastSeen > 3f) { Destroy(gameObject); return; }
 
+            Vector3 before = transform.position;
             Vector3 to = netPos - transform.position;
             if (to.magnitude > 8f) transform.position = netPos;
             else transform.position = Vector3.MoveTowards(transform.position, netPos, Mathf.Max(to.magnitude * 8f, 3f) * dt);
             transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.Euler(0, netRy, 0), dt * 12f);
+            float moved = Factory.FlatDistance(before, transform.position);
+            if (dt > 0f && moved < 3f) moveSpeed = Mathf.Lerp(moveSpeed, moving ? moved / dt : 0f, dt * 10f);
+
+            if (view != null)
+            {
+                view.UpdateLocomotion(moveSpeed);
+                return;
+            }
+            if (model == null) return;
 
             if (Dead)
             {

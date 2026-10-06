@@ -98,6 +98,23 @@ tasks:
     cmds:
       - docker volume rm shadowfall-unity-library
 
+  # ---------------------------------------------------------------- art
+
+  art:fetch:
+    desc: Download the CC0 source art packs into .art-cache (needs git, curl, unzip, pip install gdown)
+    cmds:
+      - tools/art/fetch_sources.sh .art-cache
+
+  art:build:
+    desc: Rebuild Assets/Resources/Art/*.glb from .art-cache (trims animations, embeds textures)
+    cmds:
+      - python3 tools/art/build_art.py .art-cache
+
+  ui:icons:
+    desc: Re-render the UI icons from a game-icons.net checkout (ICONS_DIR, needs playwright-core + CHROMIUM_PATH)
+    cmds:
+      - node tools/ui/render_icons.js "{{.ICONS_DIR | default ".art-cache/icons"}}"
+
   # ---------------------------------------------------------------- docker
 
   up:

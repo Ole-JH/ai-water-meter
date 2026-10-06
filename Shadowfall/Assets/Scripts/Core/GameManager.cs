@@ -66,13 +66,17 @@ namespace Shadowfall
             if (sun == null) sun = new GameObject("Sun").AddComponent<Light>();
             sun.type = LightType.Directional;
             sun.transform.rotation = Quaternion.Euler(50f, -35f, 0f);
-            sun.color = new Color(1f, 0.9f, 0.78f);
-            sun.intensity = 0.85f;
+            sun.color = new Color(1f, 0.92f, 0.8f);
+            sun.intensity = 1.05f;
             sun.shadows = LightShadows.Soft;
-            sun.shadowStrength = 0.7f;
+            sun.shadowStrength = 0.75f;
+            QualitySettings.shadowDistance = 70f;
+            QualitySettings.shadowCascades = 2;
 
-            RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
-            RenderSettings.ambientLight = new Color(0.32f, 0.32f, 0.4f);
+            RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Trilight;
+            RenderSettings.ambientSkyColor = new Color(0.5f, 0.55f, 0.68f);
+            RenderSettings.ambientEquatorColor = new Color(0.38f, 0.38f, 0.4f);
+            RenderSettings.ambientGroundColor = new Color(0.2f, 0.18f, 0.15f);
             RenderSettings.fog = true;
             RenderSettings.fogMode = FogMode.Linear;
             RenderSettings.fogColor = new Color(0.05f, 0.05f, 0.07f);
@@ -81,10 +85,10 @@ namespace Shadowfall
         }
 
         /// <summary>Called when the server accepts our login.</summary>
-        public void EnterWorld(string characterName, SaveData save)
+        public void EnterWorld(string characterName, SaveData save, string look)
         {
             LeaveWorld();
-            var player = Player.Create(SpawnPoint);
+            var player = Player.Create(SpawnPoint, look);
             player.DisplayName = characterName;
             if (save != null) player.LoadSave(save);
             Cam.GetComponent<CameraRig>().Target = player.transform;

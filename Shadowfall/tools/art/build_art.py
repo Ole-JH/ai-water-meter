@@ -1,0 +1,123 @@
+#!/usr/bin/env python3
+"""Builds Assets/Resources/Art/**.glb from the downloaded CC0 source packs.
+
+    python3 tools/art/build_art.py <sources-dir>
+
+<sources-dir> is created by tools/art/fetch_sources.sh. Every model is repacked into a single
+.glb with embedded textures and only the animations the game uses (see gltf_pack.py).
+The game loads these by path (without extension) via ArtLibrary.cs, so keep names stable.
+"""
+import os
+import sys
+
+sys.path.insert(0, os.path.dirname(__file__))
+import gltf_pack  # noqa: E402
+
+ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+OUT = os.path.join(ROOT, "Assets", "Resources", "Art")
+
+HERO = ["Idle", "Walking_A", "Running_A", "1H_Melee_Attack_Chop", "1H_Melee_Attack_Slice_Diagonal",
+        "2H_Melee_Attack_Spin", "1H_Ranged_Shoot", "Spellcast_Shoot", "Spellcast_Raise", "Hit_A",
+        "Death_A", "Death_A_Pose", "PickUp", "Interact", "Cheer"]
+SKELETON = ["Idle", "Idle_Combat", "Walking_A", "Running_A", "1H_Melee_Attack_Chop", "1H_Melee_Attack_Slice_Diagonal",
+            "1H_Ranged_Shoot", "Spellcast_Shoot", "Spellcast_Summon", "Hit_A", "Death_A", "Death_A_Pose",
+            "Skeletons_Awaken_Standing"]
+BLOB = ["Idle", "Walk", "Bite_Front", "HitRecieve", "Death"]
+BIG = ["Idle", "Walk", "Run", "Punch", "Weapon", "HitReact", "Death"]
+WOLF = ["Idle", "Walk", "Gallop", "Attack", "Death", "Idle_HitReact1"]
+KENNEY_CHAR = ["idle", "walk", "sprint", "attack-melee-right", "die", "interact-right", "emote-yes"]
+
+# (output path under Art/, source file name, path hint, animations to keep or None = none/all static)
+MODELS = [
+    # --- Characters (KayKit Adventurers / Skeletons, CC0)
+    ("Characters/Knight", "Knight.glb", "adventures", HERO),
+    ("Characters/Barbarian", "Barbarian.glb", "adventures", HERO),
+    ("Characters/Mage", "Mage.glb", "adventures", HERO),
+    ("Characters/Rogue", "Rogue.glb", "adventures", HERO),
+    ("Characters/RogueHooded", "Rogue_Hooded.glb", "adventures", HERO),
+    ("Characters/SkeletonWarrior", "Skeleton_Warrior.glb", "skeletons", SKELETON),
+    ("Characters/SkeletonRogue", "Skeleton_Rogue.glb", "skeletons", SKELETON),
+    ("Characters/SkeletonMage", "Skeleton_Mage.glb", "skeletons", SKELETON),
+    ("Characters/Zombie", "character-zombie.glb", "graveyard", KENNEY_CHAR),
+    ("Characters/Keeper", "character-keeper.glb", "graveyard", KENNEY_CHAR),
+    # --- Monsters (Quaternius, CC0)
+    ("Monsters/Wolf", "Wolf.gltf", "Animated Animals", WOLF),
+    ("Monsters/Goblin", "Orc.gltf", "Blob", BLOB),
+    ("Monsters/GoblinShaman", "Wizard.gltf", "Blob", BLOB),
+    ("Monsters/Warchief", "Orc.gltf", "Big", BIG),
+    ("Monsters/Golem", "Yeti.gltf", "Big", BIG),
+    # --- Weapons (KayKit)
+    ("Weapons/Sword", "sword_1handed.gltf", "adventures", None),
+    ("Weapons/Axe", "axe_1handed.gltf", "adventures", None),
+    ("Weapons/Dagger", "dagger.gltf", "adventures", None),
+    ("Weapons/Greatsword", "sword_2handed.gltf", "adventures", None),
+    ("Weapons/Staff", "staff.gltf", "adventures", None),
+    ("Weapons/Shield", "shield_round.gltf", "adventures", None),
+    ("Weapons/Crossbow", "crossbow_1handed.gltf", "adventures", None),
+    ("Weapons/SkeletonBlade", "Skeleton_Blade.gltf", "skeletons", None),
+    ("Weapons/SkeletonStaff", "Skeleton_Staff.gltf", "skeletons", None),
+    ("Weapons/SkeletonCrossbow", "Skeleton_Crossbow.gltf", "skeletons", None),
+    ("Weapons/SkeletonShield", "Skeleton_Shield_Small_A.gltf", "skeletons", None),
+    # --- Nature (Kenney Nature Kit, CC0)
+    *[(f"Nature/{n}", f"{n}.glb", "nature-kit", None) for n in [
+        "tree_oak", "tree_default", "tree_detailed", "tree_fat", "tree_plateau", "tree_tall",
+        "tree_pineTallA_detailed", "tree_pineTallD_detailed", "tree_pineRoundC", "tree_pineTallB", "tree_cone_dark",
+        "stump_roundDetailed", "stump_old",
+        "rock_largeA", "rock_largeB", "rock_largeC", "rock_largeD", "rock_tallA", "rock_tallC", "rock_tallF",
+        "rock_smallA", "rock_smallC", "rock_smallE", "rock_smallFlatA",
+        "grass", "grass_large", "grass_leafsLarge", "flower_redA", "flower_yellowA", "flower_purpleA",
+        "plant_bush", "plant_bushLarge", "mushroom_redGroup", "mushroom_tanGroup",
+        "tent_detailedOpen", "tent_detailedClosed", "tent_smallClosed", "campfire_stones", "campfire_logs",
+        "log_stack", "log_large", "fence_planks", "fence_simple"]],
+    # --- Buildings (KayKit Medieval Hexagon, CC0)
+    *[(f"Buildings/{n}", f"{n}.gltf", "hexagon", None) for n in [
+        "building_home_A_blue", "building_home_B_blue", "building_home_A_green", "building_blacksmith_blue",
+        "building_market_blue", "building_tavern_blue", "building_church_blue", "building_tower_A_blue",
+        "building_well_blue", "building_windmill_blue"]],
+    # --- Town props (Kenney Fantasy Town Kit, CC0)
+    *[(f"Town/{n}", f"{n}.glb", "fantasy-town", None) for n in [
+        "stall-red", "stall-green", "cart", "lantern", "banner-red", "banner-green", "fountain-round",
+        "wall-wood", "fence", "hedge", "pillar-wood"]],
+    # --- Props (KayKit Dungeon Remastered, CC0)
+    *[(f"Props/{n.replace('.gltf', '')}", f"{n}.glb", "dungeon", None) for n in [
+        "barrel_large.gltf", "barrel_small_stack.gltf", "crates_stacked.gltf", "box_stacked.gltf",
+        "torch_lit.gltf", "torch_mounted.gltf", "banner_red.gltf", "chest"]],
+    # --- Graveyard (Kenney Graveyard Kit, CC0)
+    *[(f"Graveyard/{n}", f"{n}.glb", "graveyard", None) for n in [
+        "gravestone-cross", "gravestone-round", "gravestone-bevel", "gravestone-broken", "gravestone-decorative",
+        "grave", "crypt-large", "crypt", "iron-fence", "iron-fence-border", "lightpost-single", "pine-crooked",
+        "pine-fall-crooked", "trunk", "candle-multiple", "fire-basket", "altar-stone", "pillar-large", "coffin",
+        "stone-wall", "stone-wall-column"]],
+]
+
+
+def find_source(src_root, name, hint):
+    best = None
+    for dirpath, _, files in os.walk(src_root, followlinks=True):
+        if name in files:
+            path = os.path.join(dirpath, name)
+            score = (hint.lower() in path.lower()) * 10 + ("glb" in dirpath.lower() or "gltf" in dirpath.lower())
+            if best is None or score > best[0]:
+                best = (score, path)
+    if best is None or best[0] < 10:
+        raise FileNotFoundError(f"{name} (hint '{hint}') not found under {src_root}")
+    return best[1]
+
+
+def main():
+    if len(sys.argv) != 2:
+        print(__doc__)
+        sys.exit(2)
+    src = os.path.abspath(sys.argv[1])
+    total = 0
+    for out_rel, name, hint, anims in MODELS:
+        source = find_source(src, name, hint)
+        out = os.path.join(OUT, out_rel + ".glb")
+        stats = gltf_pack.repack(source, out, anims if anims is not None else [])
+        total += stats["bytes"]
+        print(f"{out_rel:40s} {stats['bytes'] / 1024:8.0f} KB  {len(stats['animations'])} anims")
+    print(f"\n{len(MODELS)} models, {total / 1024 / 1024:.1f} MB total -> {OUT}")
+
+
+if __name__ == "__main__":
+    main()

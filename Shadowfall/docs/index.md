@@ -8,7 +8,7 @@
 | **World of Warcraft** | Always-online shared world, accounts, quest givers with `!` and `?` markers, an ability bar with cooldowns, unit frames, chat, safe-zone village, personal loot |
 | **RuneScape** | Gathering and crafting professions (Woodcutting, Mining, Fishing, Smithing, Cooking) on the classic 1–99 XP curve |
 
-Everything you see in the game — terrain, village, trees, monsters, UI — is generated from code, so the Unity project contains no scenes, prefabs or art assets to manage.
+The world is generated from code and dressed with free, openly licensed low-poly art (KayKit, Kenney, Quaternius) and a fantasy UI, so the Unity project has no scenes or prefabs to manage. See [Art & UI](development/art.md).
 
 ```mermaid
 flowchart LR

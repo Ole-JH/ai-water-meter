@@ -32,3 +32,7 @@
 
 # Unity license used by the Docker client build - never commit it
 /unity-license/
+
+# Downloaded source art (tools/art/fetch_sources.sh)
+/.art-cache/
+__pycache__/

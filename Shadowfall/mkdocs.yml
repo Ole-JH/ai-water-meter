@@ -83,5 +83,6 @@ nav:
   - Development:
       - Taskfile commands: development/taskfile.md
       - Extending the game: development/extending.md
+      - Art & UI: development/art.md
       - Testing: development/testing.md
   - Troubleshooting: troubleshooting.md

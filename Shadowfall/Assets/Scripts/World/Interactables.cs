@@ -217,17 +217,37 @@ namespace Shadowfall
             return n;
         }
 
+        // Visual-only randomness (the layout RNG must stay in step so the world map doesn't change).
+        static readonly System.Random visualRandom = new System.Random(4242);
+        static string PickVisual(params string[] options) => options[visualRandom.Next(options.Length)];
+
         void BuildTree(int tier)
         {
             activeVisual = new GameObject("Tree");
             activeVisual.transform.SetParent(transform, false);
             var t = activeVisual.transform;
             float s = Random.Range(0.85f, 1.2f);
+            float leafShade = tier == 0 ? Random.Range(0.9f, 1.1f) : 1f;
+
+            string model = tier == 0 ? PickVisual("Nature/tree_oak", "Nature/tree_default", "Nature/tree_detailed")
+                : tier == 1 ? PickVisual("Nature/tree_fat", "Nature/tree_plateau")
+                : PickVisual("Nature/tree_pineTallA_detailed", "Nature/tree_pineTallD_detailed");
+            float height = (tier == 0 ? 4.4f : tier == 1 ? 4.8f : 6f) * s;
+            var tree = ArtLibrary.Spawn(model, t, Vector3.zero, height, ArtLibrary.Fit.Height, (float)visualRandom.NextDouble() * 360f, true, true, true);
+            if (tree != null)
+            {
+                if (tier == 1) ArtLibrary.Tint(tree, new Color(1.05f, 1.15f, 0.75f)); // willow: yellow-green
+                if (tier == 2) ArtLibrary.Tint(tree, new Color(0.7f, 0.85f, 0.75f));  // yew: dark
+                depletedVisual = ArtLibrary.Spawn(PickVisual("Nature/stump_roundDetailed", "Nature/stump_old"), transform, Vector3.zero, 0.9f,
+                    ArtLibrary.Fit.Width, (float)visualRandom.NextDouble() * 360f, true, true, true);
+                if (depletedVisual != null) { depletedVisual.SetActive(false); return; }
+            }
+
             var trunk = new Color(0.4f, 0.28f, 0.16f);
             Factory.Prim(PrimitiveType.Cylinder, t, new Vector3(0, 1f * s, 0), new Vector3(0.35f, 1f * s, 0.35f), trunk);
             if (tier == 0) // Oak: round canopy
             {
-                var leaf = new Color(0.22f, 0.5f, 0.18f) * Random.Range(0.9f, 1.1f);
+                var leaf = new Color(0.22f, 0.5f, 0.18f) * leafShade;
                 Factory.Prim(PrimitiveType.Sphere, t, new Vector3(0, 2.6f * s, 0), new Vector3(2.2f, 1.9f, 2.2f) * s, leaf);
                 Factory.Prim(PrimitiveType.Sphere, t, new Vector3(0.5f, 3.2f * s, 0.2f), new Vector3(1.3f, 1.2f, 1.3f) * s, leaf * 1.1f);
             }
@@ -267,6 +287,12 @@ namespace Shadowfall
             depletedVisual = new GameObject("Empty");
             depletedVisual.transform.SetParent(transform, false);
 
+            // A real rock model stays visible; only the ore crystals disappear when it's mined out.
+            var rock = ArtLibrary.SpawnBox(PickVisual("Nature/rock_largeA", "Nature/rock_largeB", "Nature/rock_largeC", "Nature/rock_largeD"),
+                transform, Vector3.zero, new Vector3(1.5f, 1.05f, 1.4f), (float)visualRandom.NextDouble() * 360f);
+            if (rock != null && tier > 0) ArtLibrary.Tint(rock, tier == 1 ? new Color(0.85f, 0.75f, 0.72f) : new Color(0.75f, 0.8f, 0.95f));
+
+            if (rock == null)
             foreach (var parent in new[] { activeVisual.transform, depletedVisual.transform })
             {
                 Factory.Prim(PrimitiveType.Cube, parent, new Vector3(0, 0.45f, 0), new Vector3(1.1f, 0.9f, 1f), stone)
@@ -421,15 +447,22 @@ namespace Shadowfall
             {
                 s.DisplayName = "Campfire";
                 s.Recipes = Recipe.Cooking;
-                for (int i = 0; i < 6; i++)
-                    Factory.Prim(PrimitiveType.Cube, go.transform, Quaternion.Euler(0, i * 60, 0) * Vector3.forward * 0.6f + Vector3.up * 0.1f,
-                        new Vector3(0.3f, 0.2f, 0.3f), new Color(0.4f, 0.4f, 0.42f));
-                Factory.Prim(PrimitiveType.Cylinder, go.transform, new Vector3(0, 0.15f, 0), new Vector3(0.8f, 0.08f, 0.15f), new Color(0.35f, 0.2f, 0.1f))
-                    .transform.localRotation = Quaternion.Euler(0, 30, 90);
-                Factory.Prim(PrimitiveType.Cylinder, go.transform, new Vector3(0, 0.15f, 0), new Vector3(0.8f, 0.08f, 0.15f), new Color(0.35f, 0.2f, 0.1f))
-                    .transform.localRotation = Quaternion.Euler(0, -30, 90);
+                var stones = ArtLibrary.Spawn("Nature/campfire_stones", go.transform, Vector3.zero, 1.4f, ArtLibrary.Fit.Width, 0f, true, true, true);
+                if (stones != null)
+                    ArtLibrary.Spawn("Nature/campfire_logs", go.transform, Vector3.zero, 0.9f, ArtLibrary.Fit.Width, 30f, true, true, true);
+                else
+                {
+                    for (int i = 0; i < 6; i++)
+                        Factory.Prim(PrimitiveType.Cube, go.transform, Quaternion.Euler(0, i * 60, 0) * Vector3.forward * 0.6f + Vector3.up * 0.1f,
+                            new Vector3(0.3f, 0.2f, 0.3f), new Color(0.4f, 0.4f, 0.42f));
+                    Factory.Prim(PrimitiveType.Cylinder, go.transform, new Vector3(0, 0.15f, 0), new Vector3(0.8f, 0.08f, 0.15f), new Color(0.35f, 0.2f, 0.1f))
+                        .transform.localRotation = Quaternion.Euler(0, 30, 90);
+                    Factory.Prim(PrimitiveType.Cylinder, go.transform, new Vector3(0, 0.15f, 0), new Vector3(0.8f, 0.08f, 0.15f), new Color(0.35f, 0.2f, 0.1f))
+                        .transform.localRotation = Quaternion.Euler(0, -30, 90);
+                }
                 var flame = new Color(1f, 0.55f, 0.1f);
-                Factory.Prim(PrimitiveType.Sphere, go.transform, new Vector3(0, 0.45f, 0), new Vector3(0.5f, 0.7f, 0.5f), flame, false, Mat.Glow(flame));
+                Factory.Prim(PrimitiveType.Sphere, go.transform, new Vector3(0, 0.45f, 0), new Vector3(0.45f, 0.65f, 0.45f), flame, false, Mat.Glow(flame))
+                    .GetComponent<Renderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
                 var lightGo = new GameObject("FireLight");
                 lightGo.transform.SetParent(go.transform, false);
                 lightGo.transform.localPosition = new Vector3(0, 1.2f, 0);
@@ -463,6 +496,7 @@ namespace Shadowfall
         public NpcRole Role;
         public string Title, Greeting;
         HumanoidModel model;
+        CharacterView view;
         float idleTimer;
 
         public override Color LabelColor => new Color(0.4f, 1f, 0.4f);
@@ -482,6 +516,8 @@ namespace Shadowfall
             n.Role = role;
             n.Greeting = greeting;
             n.InteractRange = 2.4f;
+            n.view = CharacterView.Create(go.transform, CharacterLook.ForNpc(name));
+            if (n.view == null)
             n.model = HumanoidModel.Build(go.transform, 1f, new Color(0.9f, 0.75f, 0.6f), robe, Factory.Shade(robe, 0.7f),
                 new Color(0.7f, 0.7f, 0.75f), hasWeapon, wearsRobe ?? !hasWeapon);
             n.AddClickCollider(0.5f, 2.1f);
@@ -495,6 +531,7 @@ namespace Shadowfall
         /// </summary>
         public void DressAsButler()
         {
+            if (model == null) return;
             var black = new Color(0.08f, 0.08f, 0.1f);
             var white = new Color(0.95f, 0.95f, 0.93f);
             var red = new Color(0.8f, 0.1f, 0.1f);
@@ -552,7 +589,8 @@ namespace Shadowfall
 
         void Update()
         {
-            model.Animate(0f, -1f, Time.deltaTime);
+            if (view != null) view.UpdateLocomotion(0f);
+            else model.Animate(0f, -1f, Time.deltaTime);
             var p = Player.I;
             if (p != null && Factory.FlatDistance(p.transform.position, transform.position) < 6f)
                 Factory.Face(transform, p.transform.position, Time.deltaTime * 4f);
@@ -563,6 +601,10 @@ namespace Shadowfall
             }
         }
 
-        public override void Interact(Player p) => GameUI.I.OpenDialog(this);
+        public override void Interact(Player p)
+        {
+            GameUI.I.OpenDialog(this);
+            if (view != null) { if (Role == NpcRole.QuestGiver) view.Cheer(); else view.Interact(); }
+        }
     }
 }

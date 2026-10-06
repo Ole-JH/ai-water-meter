@@ -59,7 +59,10 @@ namespace Shadowfall
         float armor, attackAnim = -1f, deathTime, curSpeed, walkPhase;
         bool dying;
         HumanoidModel humanoid;
+        CharacterView view;
         Transform model;
+        Vector3 lastPos;
+        float moveSpeed;
         Transform[] legs;
 
         public override float Armor => armor;
@@ -108,6 +111,13 @@ namespace Shadowfall
 
         void BuildModel()
         {
+            view = CharacterView.Create(transform, CharacterLook.ForMonster(Def.Name));
+            if (view != null)
+            {
+                model = view.Root.transform;
+                Height = view.Height;
+                return;
+            }
             switch (Def.Shape)
             {
                 case EnemyShape.Humanoid:
@@ -201,6 +211,9 @@ namespace Shadowfall
                 transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(to), dt * 10f);
             }
             curSpeed = Mathf.Lerp(curSpeed, dist > 0.05f ? 1f : 0f, dt * 8f);
+            float moved = Factory.FlatDistance(transform.position, lastPos);
+            if (dt > 0f && moved < 3f) moveSpeed = Mathf.Lerp(moveSpeed, moved / dt, dt * 10f); // ignore teleports
+            lastPos = transform.position;
 
             // Face whoever we are hitting
             if (attackAnim >= 0f && Player.I != null && FacingTarget != null)
@@ -215,6 +228,12 @@ namespace Shadowfall
         {
             attackAnim = 0f;
             FacingTarget = targetPos;
+            if (view != null)
+            {
+                if (!Def.Ranged) view.Attack(0.9f);
+                else if (Def.Name == "Skeleton Archer") view.Shoot();
+                else view.Cast();
+            }
         }
 
         void Animate(float dt)
@@ -226,6 +245,12 @@ namespace Shadowfall
                 attackAnim += dt * 2.8f;
                 atk = attackAnim;
                 if (attackAnim >= 1f) { attackAnim = -1f; FacingTarget = null; }
+            }
+
+            if (view != null)
+            {
+                view.UpdateLocomotion(moveSpeed);
+                return;
             }
 
             if (humanoid != null)
@@ -264,6 +289,7 @@ namespace Shadowfall
             GameUI.Float(transform.position + Vector3.up * (Height + 0.2f), crit ? dmg + "!" : dmg.ToString(),
                 crit ? new Color(1f, 0.85f, 0.2f) : Color.white, crit ? 1.5f : 1f);
             FxPulse.Sparks(Center, new Color(0.7f, 0.05f, 0.05f), 3);
+            view?.Hit();
             if (source is Player) NetClient.I?.SendHit(NetId, dmg, crit);
         }
 
@@ -282,7 +308,8 @@ namespace Shadowfall
             Health = 0;
             var col = GetComponent<Collider>();
             if (col != null) col.enabled = false;
-            if (model != null) model.localRotation = Quaternion.Euler(-80f, 0, 0);
+            if (view != null) view.Die();
+            else if (model != null) model.localRotation = Quaternion.Euler(-80f, 0, 0);
             FxPulse.Burst(Center, Factory.Shade(Def.Color, 0.6f), 0.8f, 0.3f);
         }
 

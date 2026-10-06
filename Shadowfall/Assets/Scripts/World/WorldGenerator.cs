@@ -20,6 +20,18 @@ namespace Shadowfall
         Color[] pixels;
         bool[] reserved; // no trees / rocks here (roads, town, water)
         Transform root, nodes, npcs, deco;
+        bool art;                 // CC0 models available (falls back to primitives if not)
+        System.Random vr;         // visual-only randomness: never touches the layout RNG, so the
+                                  // walkability grid (and the server's world hash) stays the same
+
+        float VR(float a, float b) => a + (float)vr.NextDouble() * (b - a);
+        string Pick(params string[] options) => options[vr.Next(options.Length)];
+
+        GameObject Art(string path, Vector3 pos, float size, ArtLibrary.Fit fit = ArtLibrary.Fit.Height, float yaw = 0f, bool shadows = true) =>
+            art ? ArtLibrary.Spawn(path, deco, pos, size, fit, yaw, shadows, true, true) : null;
+
+        GameObject ArtBox(string path, Vector3 pos, Vector3 size, float yaw = 0f) =>
+            art ? ArtLibrary.SpawnBox(path, deco, pos, size, yaw) : null;
 
         public static bool InTown(Vector3 p) =>
             p.x >= Town.xMin && p.x < Town.xMax && p.z >= Town.yMin && p.z < Town.yMax;
@@ -40,6 +52,8 @@ namespace Shadowfall
         {
             var oldState = Random.state;
             Random.InitState(Seed);
+            art = ArtLibrary.Available;
+            vr = new System.Random(Seed ^ 0x5eed);
 
             grid = new WorldGrid(W, H);
             pixels = new Color[W * H];
@@ -60,7 +74,9 @@ namespace Shadowfall
             BuildGraveyard();
             BuildCrypt();
             BuildQuarry();
+            ScatterDetail();
             BuildGround();
+            if (art) StaticBatchingUtility.Combine(deco.gameObject);
 
             Random.state = oldState;
         }
@@ -200,8 +216,15 @@ namespace Shadowfall
         void Cliff(Vector3 p)
         {
             float h = Random.Range(3f, 7f);
-            Factory.Prim(PrimitiveType.Cube, deco, p + Vector3.up * h * 0.5f, new Vector3(Random.Range(3.5f, 5f), h, Random.Range(3.5f, 5f)),
-                new Color(0.34f, 0.32f, 0.3f) * Random.Range(0.85f, 1.1f)).transform.rotation = Quaternion.Euler(0, Random.Range(0, 90f), 0);
+            float sx = Random.Range(3.5f, 5f), sz = Random.Range(3.5f, 5f), shade = Random.Range(0.85f, 1.1f), rot = Random.Range(0, 90f);
+            if (Art(Pick("Nature/rock_tallA", "Nature/rock_tallC", "Nature/rock_tallF"), p, h, ArtLibrary.Fit.Height, VR(0, 360)) != null)
+            {
+                Art(Pick("Nature/rock_largeA", "Nature/rock_largeB", "Nature/rock_largeC", "Nature/rock_largeD"), p, Mathf.Max(sx, sz) * 1.2f,
+                    ArtLibrary.Fit.Width, VR(0, 360));
+                return;
+            }
+            Factory.Prim(PrimitiveType.Cube, deco, p + Vector3.up * h * 0.5f, new Vector3(sx, h, sz),
+                new Color(0.34f, 0.32f, 0.3f) * shade).transform.rotation = Quaternion.Euler(0, rot, 0);
         }
 
         // ------------------------------------------------------------------ town
@@ -227,33 +250,45 @@ namespace Shadowfall
             foreach (var g in new[] { new Vector2(77, y0), new Vector2(83, y0), new Vector2(77, y1), new Vector2(83, y1),
                                       new Vector2(x0, 77), new Vector2(x0, 83), new Vector2(x1, 77), new Vector2(x1, 83) })
             {
+                if (Art("Buildings/building_tower_A_blue", new Vector3(g.x + 0.5f, 0, g.y + 0.5f), 5.2f, ArtLibrary.Fit.Height, VR(0, 4) * 90f) != null) continue;
                 Factory.Prim(PrimitiveType.Cube, deco, new Vector3(g.x + 0.5f, 2f, g.y + 0.5f), new Vector3(1.4f, 4f, 1.4f), wood * 0.85f);
                 var torchC = new Color(1f, 0.6f, 0.2f);
                 Factory.Prim(PrimitiveType.Sphere, deco, new Vector3(g.x + 0.5f, 4.3f, g.y + 0.5f), Vector3.one * 0.4f, torchC, false, Mat.Glow(torchC));
             }
 
-            House(new RectInt(68, 86, 7, 6), new Color(0.75f, 0.68f, 0.55f), new Color(0.55f, 0.2f, 0.15f));
-            House(new RectInt(86, 86, 7, 6), new Color(0.7f, 0.65f, 0.55f), new Color(0.25f, 0.3f, 0.5f));
-            House(new RectInt(68, 68, 6, 6), new Color(0.72f, 0.62f, 0.5f), new Color(0.3f, 0.45f, 0.25f));
+            House(new RectInt(68, 86, 7, 6), new Color(0.75f, 0.68f, 0.55f), new Color(0.55f, 0.2f, 0.15f), "Buildings/building_tavern_blue", 180f);
+            House(new RectInt(86, 86, 7, 6), new Color(0.7f, 0.65f, 0.55f), new Color(0.25f, 0.3f, 0.5f), "Buildings/building_home_B_blue", 180f);
+            House(new RectInt(68, 68, 6, 6), new Color(0.72f, 0.62f, 0.5f), new Color(0.3f, 0.45f, 0.25f), "Buildings/building_home_A_green", 0f);
             // Smithy: open-sided shelter
             var smithy = new RectInt(87, 68, 6, 5);
             for (int i = 0; i < 4; i++)
             {
                 float px = i % 2 == 0 ? smithy.xMin + 0.5f : smithy.xMax - 0.5f;
                 float pz = i < 2 ? smithy.yMin + 0.5f : smithy.yMax - 0.5f;
-                Factory.Prim(PrimitiveType.Cube, deco, new Vector3(px, 1.5f, pz), new Vector3(0.4f, 3f, 0.4f), wood);
+                if (!art) Factory.Prim(PrimitiveType.Cube, deco, new Vector3(px, 1.5f, pz), new Vector3(0.4f, 3f, 0.4f), wood);
                 grid.SetBlocked((int)px, (int)pz, true);
             }
-            Factory.Prim(PrimitiveType.Cube, deco, new Vector3(smithy.center.x, 3.1f, smithy.center.y), new Vector3(smithy.width + 0.6f, 0.3f, smithy.height + 0.6f), new Color(0.35f, 0.25f, 0.18f));
             var forgeC = new Color(1f, 0.35f, 0.05f);
-            Factory.Prim(PrimitiveType.Cube, deco, new Vector3(91.5f, 0.6f, 71.5f), new Vector3(1.6f, 1.2f, 1.6f), new Color(0.3f, 0.28f, 0.27f));
-            Factory.Prim(PrimitiveType.Cube, deco, new Vector3(91.5f, 1.25f, 71.5f), new Vector3(1.2f, 0.1f, 1.2f), forgeC, false, Mat.Glow(forgeC));
+            if (Art("Buildings/building_blacksmith_blue", new Vector3(91.7f, 0, 71.3f), 3.8f, ArtLibrary.Fit.Width, -90f) != null)
+            {
+                Art("Props/barrel_large", new Vector3(92.4f, 0, 68.6f), 0.9f);
+                Art("Props/crates_stacked", new Vector3(87.6f, 0, 68.6f), 1.2f, ArtLibrary.Fit.Height, 20f);
+            }
+            else
+            {
+                Factory.Prim(PrimitiveType.Cube, deco, new Vector3(smithy.center.x, 3.1f, smithy.center.y), new Vector3(smithy.width + 0.6f, 0.3f, smithy.height + 0.6f), new Color(0.35f, 0.25f, 0.18f));
+                Factory.Prim(PrimitiveType.Cube, deco, new Vector3(91.5f, 0.6f, 71.5f), new Vector3(1.6f, 1.2f, 1.6f), new Color(0.3f, 0.28f, 0.27f));
+                Factory.Prim(PrimitiveType.Cube, deco, new Vector3(91.5f, 1.25f, 71.5f), new Vector3(1.2f, 0.1f, 1.2f), forgeC, false, Mat.Glow(forgeC));
+            }
             grid.BlockRect(91, 71, 92, 72);
 
             // Well in the square
-            Factory.Prim(PrimitiveType.Cylinder, deco, new Vector3(80.5f, 0.5f, 82.5f), new Vector3(1.8f, 0.5f, 1.8f), new Color(0.5f, 0.48f, 0.45f));
-            Factory.Prim(PrimitiveType.Cylinder, deco, new Vector3(80.5f, 1.01f, 82.5f), new Vector3(1.4f, 0.01f, 1.4f), waterC);
-            Factory.Prim(PrimitiveType.Cube, deco, new Vector3(80.5f, 2.3f, 82.5f), new Vector3(2.2f, 0.2f, 0.3f), wood);
+            if (Art("Buildings/building_well_blue", new Vector3(80.5f, 0, 82.5f), 2.3f, ArtLibrary.Fit.Width) == null)
+            {
+                Factory.Prim(PrimitiveType.Cylinder, deco, new Vector3(80.5f, 0.5f, 82.5f), new Vector3(1.8f, 0.5f, 1.8f), new Color(0.5f, 0.48f, 0.45f));
+                Factory.Prim(PrimitiveType.Cylinder, deco, new Vector3(80.5f, 1.01f, 82.5f), new Vector3(1.4f, 0.01f, 1.4f), waterC);
+                Factory.Prim(PrimitiveType.Cube, deco, new Vector3(80.5f, 2.3f, 82.5f), new Vector3(2.2f, 0.2f, 0.3f), wood);
+            }
             grid.BlockRect(80, 82, 80, 82);
 
             CraftingStation.Create(SkillType.Smithing, new Vector3(89.5f, 0, 70.5f), root);
@@ -279,21 +314,53 @@ namespace Shadowfall
             for (int i = 0; i < 3; i++)
             {
                 var p = new Vector3(70.5f + i * 2f, 0, 76.5f);
+                grid.SetBlocked((int)p.x, (int)p.z, true);
+                if (Art(i % 2 == 0 ? "Town/stall-red" : "Town/stall-green", p, 1.8f, ArtLibrary.Fit.Width) != null) continue;
                 Factory.Prim(PrimitiveType.Cube, deco, p + Vector3.up * 0.4f, new Vector3(1.4f, 0.8f, 1f), wood);
                 Factory.Prim(PrimitiveType.Cube, deco, p + Vector3.up * 2f, new Vector3(1.7f, 0.1f, 1.3f), i % 2 == 0 ? new Color(0.7f, 0.2f, 0.2f) : new Color(0.85f, 0.8f, 0.6f));
-                grid.SetBlocked((int)p.x, (int)p.z, true);
+            }
+
+            if (art)
+            {
+                // Lantern posts around the square (visual only).
+                foreach (var lp in new[] { new Vector3(77.6f, 0, 79.4f), new Vector3(83.4f, 0, 79.4f), new Vector3(77.6f, 0, 85.6f), new Vector3(83.4f, 0, 85.6f) })
+                {
+                    Art("Town/lantern", lp, 2.4f);
+                    var l = new GameObject("LanternLight").AddComponent<Light>();
+                    l.transform.SetParent(deco, false);
+                    l.transform.position = lp + Vector3.up * 2.3f;
+                    l.type = LightType.Point;
+                    l.color = new Color(1f, 0.75f, 0.4f);
+                    l.range = 6f;
+                    l.intensity = 1.2f;
+                }
+                Art("Town/cart", new Vector3(73.5f, 0, 73.0f), 2.2f, ArtLibrary.Fit.Width, 35f);
+                Art("Props/barrel_small_stack", new Vector3(69.0f, 0, 76.6f), 1.0f);
+                Art("Props/box_stacked", new Vector3(76.4f, 0, 77.0f), 1.0f, ArtLibrary.Fit.Height, 15f);
             }
         }
 
         void Palisade(int x, int y, Color wood)
         {
-            Factory.Prim(PrimitiveType.Cube, deco, new Vector3(x + 0.5f, 1.4f, y + 0.5f), new Vector3(0.9f, 2.8f, 0.9f), wood * Random.Range(0.85f, 1.05f));
+            float shade = Random.Range(0.85f, 1.05f);
             grid.SetBlocked(x, y, true);
+            bool alongX = y == Town.yMin || y == Town.yMax - 1;
+            // Town/wall-wood is a 1-unit wall piece running along Z.
+            if (ArtBox("Town/wall-wood", new Vector3(x + 0.5f, 0, y + 0.5f), new Vector3(0.45f, 2.6f, 1.04f), alongX ? 90f : 0f) != null) return;
+            Factory.Prim(PrimitiveType.Cube, deco, new Vector3(x + 0.5f, 1.4f, y + 0.5f), new Vector3(0.9f, 2.8f, 0.9f), wood * shade);
         }
 
-        void House(RectInt r, Color wall, Color roof)
+        void House(RectInt r, Color wall, Color roof, string model, float yaw)
         {
             var c = new Vector3(r.center.x, 0, r.center.y);
+            grid.BlockRect(r.xMin, r.yMin, r.xMax - 1, r.yMax - 1);
+            if (Art(model, c, Mathf.Min(r.width, r.height) - 0.4f, ArtLibrary.Fit.Width, yaw) != null)
+            {
+                // A few props in the yard (inside the blocked footprint).
+                Art(Pick("Props/barrel_large", "Props/barrel_small_stack"), new Vector3(r.xMin + 0.5f, 0, r.yMin + 0.5f), 1f, ArtLibrary.Fit.Height, VR(0, 360));
+                Art(Pick("Props/crates_stacked", "Props/box_stacked"), new Vector3(r.xMax - 0.5f, 0, r.yMax - 0.5f), 1.1f, ArtLibrary.Fit.Height, VR(0, 360));
+                return;
+            }
             Factory.Prim(PrimitiveType.Cube, deco, c + Vector3.up * 1.5f, new Vector3(r.width, 3f, r.height), wall);
             float side = r.width / 1.414f;
             var roofGo = Factory.Prim(PrimitiveType.Cube, deco, c + Vector3.up * 3f, new Vector3(side, side, r.height + 0.6f), roof);
@@ -301,7 +368,6 @@ namespace Shadowfall
             Factory.Prim(PrimitiveType.Cube, deco, new Vector3(c.x, 0.9f, r.yMin - 0.01f), new Vector3(1f, 1.8f, 0.1f), new Color(0.3f, 0.2f, 0.12f));
             var win = new Color(1f, 0.85f, 0.4f);
             Factory.Prim(PrimitiveType.Cube, deco, new Vector3(c.x - r.width * 0.3f, 1.8f, r.yMin - 0.01f), new Vector3(0.7f, 0.6f, 0.1f), win, false, Mat.Glow(win * 0.6f));
-            grid.BlockRect(r.xMin, r.yMin, r.xMax - 1, r.yMax - 1);
         }
 
         // ------------------------------------------------------------------ zones
@@ -340,6 +406,13 @@ namespace Shadowfall
 
         void Pine(Vector3 p, bool dead)
         {
+            if (art)
+            {
+                Random.Range(0f, dead ? 180f : 1f); // keep the layout RNG in step with the primitive version
+                if (dead) Art(Pick("Graveyard/pine-crooked", "Graveyard/pine-fall-crooked"), p, VR(3.2f, 4.6f), ArtLibrary.Fit.Height, VR(0, 360));
+                else Art(Pick("Nature/tree_pineRoundC", "Nature/tree_pineTallB", "Nature/tree_cone_dark", "Nature/tree_tall"), p, VR(4f, 6f), ArtLibrary.Fit.Height, VR(0, 360));
+                return;
+            }
             var trunk = new Color(0.3f, 0.22f, 0.15f);
             Factory.Prim(PrimitiveType.Cylinder, deco, p + Vector3.up, new Vector3(0.3f, 1f, 0.3f), dead ? new Color(0.2f, 0.18f, 0.16f) : trunk);
             if (dead)
@@ -363,9 +436,16 @@ namespace Shadowfall
                 var p = center + Quaternion.Euler(0, i * (360f / 7f) + 10f, 0) * Vector3.forward * 9f;
                 var c = grid.WorldToCell(p);
                 if (grid.IsBlocked(c)) continue;
-                var tent = Factory.Prim(PrimitiveType.Cube, deco, grid.CellToWorld(c) + Vector3.up * 0.9f, new Vector3(2f, 2f, 2.4f), hide * Random.Range(0.8f, 1.1f));
-                tent.transform.rotation = Quaternion.LookRotation(center - p) * Quaternion.Euler(0, 0, 45);
+                float shade = Random.Range(0.8f, 1.1f);
                 grid.BlockRect(c.x - 1, c.y - 1, c.x + 1, c.y + 1);
+                float face = Quaternion.LookRotation(center - p).eulerAngles.y;
+                if (Art(Pick("Nature/tent_detailedOpen", "Nature/tent_detailedClosed", "Nature/tent_smallClosed"), grid.CellToWorld(c), 3.2f, ArtLibrary.Fit.Width, face) != null)
+                {
+                    Art(Pick("Nature/log_stack", "Props/barrel_large", "Props/crates_stacked"), grid.CellToWorld(c) + Quaternion.Euler(0, face, 0) * new Vector3(1.3f, 0, -0.6f), 0.9f, ArtLibrary.Fit.Height, VR(0, 360));
+                    continue;
+                }
+                var tent = Factory.Prim(PrimitiveType.Cube, deco, grid.CellToWorld(c) + Vector3.up * 0.9f, new Vector3(2f, 2f, 2.4f), hide * shade);
+                tent.transform.rotation = Quaternion.LookRotation(center - p) * Quaternion.Euler(0, 0, 45);
             }
             // spiked barricade arcs
             for (int a = 0; a < 360; a += 12)
@@ -399,7 +479,15 @@ namespace Shadowfall
                     if (!Free(x, y)) continue;
                     var p = new Vector3(x + 0.5f, 0, y + 0.5f);
                     bool cross = Random.value < 0.3f;
-                    if (cross)
+                    if (art)
+                    {
+                        if (!cross) { Random.Range(0.8f, 1.1f); Random.Range(-8f, 8f); Random.Range(-8f, 8f); } // keep RNG in step
+                        Art(cross ? "Graveyard/gravestone-cross" : Pick("Graveyard/gravestone-round", "Graveyard/gravestone-bevel", "Graveyard/gravestone-broken", "Graveyard/gravestone-decorative"),
+                            p, VR(1.1f, 1.5f), ArtLibrary.Fit.Height, 180f + VR(-12f, 12f));
+                        Art("Graveyard/grave", p + new Vector3(0, 0, -0.9f), 1.1f, ArtLibrary.Fit.Width, 180f, false);
+                        if (vr.NextDouble() < 0.15) Art("Graveyard/candle-multiple", p + new Vector3(0.45f, 0, -0.35f), 0.45f, ArtLibrary.Fit.Height, VR(0, 360), false);
+                    }
+                    else if (cross)
                     {
                         Factory.Prim(PrimitiveType.Cube, deco, p + Vector3.up * 0.75f, new Vector3(0.2f, 1.5f, 0.2f), stone);
                         Factory.Prim(PrimitiveType.Cube, deco, p + Vector3.up * 1.1f, new Vector3(0.8f, 0.2f, 0.2f), stone);
@@ -423,15 +511,21 @@ namespace Shadowfall
                     bool edge = x == Crypt.xMin || x == Crypt.xMax - 1 || y == Crypt.yMin || y == Crypt.yMax - 1;
                     if (!edge || (y == Crypt.yMax - 1 && x >= 78 && x <= 82)) continue;
                     grid.SetBlocked(x, y, true);
+                    float shade = (x + y) % 2 == 0 ? Random.Range(0.85f, 1.1f) : 1f;
+                    bool sideX = y == Crypt.yMin || y == Crypt.yMax - 1;
+                    // Graveyard/stone-wall is a 1-unit wall piece running along X.
+                    if (ArtBox("Graveyard/stone-wall", new Vector3(x + 0.5f, 0, y + 0.5f), new Vector3(1.05f, 2.6f, 0.7f), sideX ? 0f : 90f) != null) continue;
                     if ((x + y) % 2 == 0)
-                        Factory.Prim(PrimitiveType.Cube, deco, new Vector3(x + 0.5f, 1.6f, y + 0.5f), new Vector3(2f, 3.2f, 2f), wall * Random.Range(0.85f, 1.1f));
+                        Factory.Prim(PrimitiveType.Cube, deco, new Vector3(x + 0.5f, 1.6f, y + 0.5f), new Vector3(2f, 3.2f, 2f), wall * shade);
                 }
             // pillars and braziers
             var fire = new Color(0.3f, 0.85f, 1f);
             foreach (var p in new[] { new Vector3(74.5f, 0, 18.5f), new Vector3(86.5f, 0, 18.5f), new Vector3(74.5f, 0, 9.5f), new Vector3(86.5f, 0, 9.5f) })
             {
-                Factory.Prim(PrimitiveType.Cylinder, deco, p + Vector3.up * 1.5f, new Vector3(0.9f, 1.5f, 0.9f), wall);
-                Factory.Prim(PrimitiveType.Sphere, deco, p + Vector3.up * 3.3f, Vector3.one * 0.6f, fire, false, Mat.Glow(fire));
+                if (Art("Graveyard/pillar-large", p, 3f, ArtLibrary.Fit.Height) != null)
+                    Art("Graveyard/fire-basket", p + Vector3.up * 3f, 0.7f, ArtLibrary.Fit.Height, 0f, false);
+                else Factory.Prim(PrimitiveType.Cylinder, deco, p + Vector3.up * 1.5f, new Vector3(0.9f, 1.5f, 0.9f), wall);
+                Factory.Prim(PrimitiveType.Sphere, deco, p + Vector3.up * 3.6f, Vector3.one * 0.45f, fire, false, Mat.Glow(fire));
                 var l = new GameObject("Brazier").AddComponent<Light>();
                 l.transform.SetParent(deco, false);
                 l.transform.position = p + Vector3.up * 3.5f;
@@ -442,7 +536,14 @@ namespace Shadowfall
                 grid.SetBlocked((int)p.x, (int)p.z, true);
             }
             // throne
-            Factory.Prim(PrimitiveType.Cube, deco, new Vector3(80.5f, 0.3f, 6.5f), new Vector3(5f, 0.6f, 2f), wall * 1.2f);
+            if (Art("Graveyard/altar-stone", new Vector3(80.5f, 0, 6.2f), 4.5f, ArtLibrary.Fit.Width) != null)
+            {
+                Art("Graveyard/candle-multiple", new Vector3(77.8f, 0, 7.4f), 0.8f, ArtLibrary.Fit.Height, 0f, false);
+                Art("Graveyard/candle-multiple", new Vector3(83.2f, 0, 7.4f), 0.8f, ArtLibrary.Fit.Height, 90f, false);
+                Art("Graveyard/coffin", new Vector3(73.5f, 0, 6.5f), 2f, ArtLibrary.Fit.Width, 90f);
+                Art("Graveyard/coffin", new Vector3(87.5f, 0, 6.5f), 2f, ArtLibrary.Fit.Width, 90f);
+            }
+            else Factory.Prim(PrimitiveType.Cube, deco, new Vector3(80.5f, 0.3f, 6.5f), new Vector3(5f, 0.6f, 2f), wall * 1.2f);
             Factory.Prim(PrimitiveType.Cube, deco, new Vector3(80.5f, 2f, 5.5f), new Vector3(2f, 3.5f, 0.6f), new Color(0.25f, 0.1f, 0.35f));
             grid.BlockRect(78, 5, 83, 6);
         }
@@ -464,10 +565,89 @@ namespace Shadowfall
                 int x = Random.Range(8, 60), y = Random.Range(40, 120);
                 if (ZoneAt(new Vector3(x, 0, y)) != "Ironvein Quarry" || !Free(x, y) || !SpacedFrom(x, y, 2)) continue;
                 float s = Random.Range(1.5f, 2.6f);
-                Factory.Prim(PrimitiveType.Cube, deco, new Vector3(x + 0.5f, s * 0.4f, y + 0.5f), Vector3.one * s, new Color(0.42f, 0.4f, 0.37f) * Random.Range(0.85f, 1.1f))
-                    .transform.rotation = Random.rotation;
+                float shade = Random.Range(0.85f, 1.1f);
+                var rot = Random.rotation;
                 grid.BlockRect(x - 1, y - 1, x + 1, y + 1);
+                if (Art(Pick("Nature/rock_largeC", "Nature/rock_largeD", "Nature/rock_tallF", "Nature/rock_largeA"), new Vector3(x + 0.5f, 0, y + 0.5f), s * 1.5f, ArtLibrary.Fit.Width, VR(0, 360)) != null)
+                    continue;
+                Factory.Prim(PrimitiveType.Cube, deco, new Vector3(x + 0.5f, s * 0.4f, y + 0.5f), Vector3.one * s, new Color(0.42f, 0.4f, 0.37f) * shade)
+                    .transform.rotation = rot;
             }
+        }
+
+        /// <summary>
+        /// Higher resolution ground texture: tile colors blended smoothly, plus fine per-pixel noise so
+        /// grass, dirt and stone don't look like flat smeared color. (MapTexture stays 1 px/tile for the minimap.)
+        /// </summary>
+        Texture2D BuildDetailedGround(int res)
+        {
+            int tw = W * res, th = H * res;
+            var px = new Color32[tw * th];
+            for (int y = 0; y < th; y++)
+            {
+                float fy = (y + 0.5f) / res - 0.5f;
+                int y0 = Mathf.Clamp(Mathf.FloorToInt(fy), 0, H - 1), y1 = Mathf.Min(y0 + 1, H - 1);
+                float ty = Mathf.Clamp01(fy - y0);
+                for (int x = 0; x < tw; x++)
+                {
+                    float fx = (x + 0.5f) / res - 0.5f;
+                    int x0 = Mathf.Clamp(Mathf.FloorToInt(fx), 0, W - 1), x1 = Mathf.Min(x0 + 1, W - 1);
+                    float tx = Mathf.Clamp01(fx - x0);
+                    Color c = Color.Lerp(
+                        Color.Lerp(pixels[Idx(x0, y0)], pixels[Idx(x1, y0)], tx),
+                        Color.Lerp(pixels[Idx(x0, y1)], pixels[Idx(x1, y1)], tx), ty);
+                    float n = Mathf.PerlinNoise(x * 0.37f, y * 0.37f) * 0.16f + Mathf.PerlinNoise(x * 1.3f + 50f, y * 1.3f) * 0.1f;
+                    c *= 0.88f + n;
+                    px[y * tw + x] = c;
+                }
+            }
+            var tex = new Texture2D(tw, th, TextureFormat.RGBA32, true)
+            {
+                filterMode = FilterMode.Trilinear,
+                wrapMode = TextureWrapMode.Clamp,
+                anisoLevel = 4,
+                name = "Ground"
+            };
+            tex.SetPixels32(px);
+            tex.Apply(true, true);
+            return tex;
+        }
+
+        // ------------------------------------------------------------------ detail
+
+        /// <summary>Grass, flowers, bushes, mushrooms and pebbles. Purely visual: never blocks tiles.</summary>
+        void ScatterDetail()
+        {
+            if (!art) return;
+            for (int y = 5; y < H - 5; y++)
+                for (int x = 5; x < W - 5; x++)
+                {
+                    if (!Free(x, y)) continue;
+                    var p = new Vector3(x + (float)vr.NextDouble(), 0, y + (float)vr.NextDouble());
+                    string zone = ZoneAt(p);
+                    double r = vr.NextDouble();
+                    switch (zone)
+                    {
+                        case "Whisperwood":
+                            if (r < 0.10) Art(Pick("Nature/grass", "Nature/grass_large", "Nature/grass_leafsLarge"), p, VR(0.4f, 0.8f), ArtLibrary.Fit.Height, VR(0, 360), false);
+                            else if (r < 0.13) Art(Pick("Nature/flower_redA", "Nature/flower_yellowA", "Nature/flower_purpleA"), p, VR(0.35f, 0.55f), ArtLibrary.Fit.Height, VR(0, 360), false);
+                            else if (r < 0.145) Art(Pick("Nature/plant_bush", "Nature/plant_bushLarge"), p, VR(0.7f, 1.2f), ArtLibrary.Fit.Height, VR(0, 360));
+                            else if (r < 0.155) Art(Pick("Nature/mushroom_redGroup", "Nature/mushroom_tanGroup"), p, VR(0.3f, 0.5f), ArtLibrary.Fit.Height, VR(0, 360), false);
+                            break;
+                        case "Goblin Encampment":
+                            if (r < 0.05) Art(Pick("Nature/grass", "Nature/grass_large"), p, VR(0.4f, 0.7f), ArtLibrary.Fit.Height, VR(0, 360), false);
+                            else if (r < 0.06) Art(Pick("Nature/plant_bush", "Nature/rock_smallA"), p, VR(0.5f, 0.9f), ArtLibrary.Fit.Height, VR(0, 360));
+                            break;
+                        case "Ironvein Quarry":
+                            if (r < 0.04) Art(Pick("Nature/rock_smallA", "Nature/rock_smallC", "Nature/rock_smallE", "Nature/rock_smallFlatA"), p, VR(0.5f, 0.9f), ArtLibrary.Fit.Width, VR(0, 360), false);
+                            else if (r < 0.06) Art("Nature/grass", p, VR(0.3f, 0.5f), ArtLibrary.Fit.Height, VR(0, 360), false);
+                            break;
+                        case "Forsaken Graveyard":
+                            if (r < 0.04) Art(Pick("Nature/grass_leafsLarge", "Nature/grass"), p, VR(0.4f, 0.7f), ArtLibrary.Fit.Height, VR(0, 360), false);
+                            else if (r < 0.048) Art("Nature/mushroom_tanGroup", p, VR(0.3f, 0.45f), ArtLibrary.Fit.Height, VR(0, 360), false);
+                            break;
+                    }
+                }
         }
 
         // ------------------------------------------------------------------ ground
@@ -490,7 +670,7 @@ namespace Shadowfall
             ground.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
             ground.transform.localScale = new Vector3(W, H, 1f);
             var mat = Mat.New(Color.white);
-            mat.mainTexture = MapTexture;
+            mat.mainTexture = BuildDetailedGround(4);
             ground.GetComponent<Renderer>().sharedMaterial = mat;
         }
     }

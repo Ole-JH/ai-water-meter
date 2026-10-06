@@ -48,7 +48,9 @@ namespace Shadowfall
         bool holdMoving, standAttack;
         Vector3 standAttackPoint;
         string lastZone;
-        HumanoidModel model;
+        HumanoidModel model;        // primitive fallback
+        CharacterView view;         // animated model
+        public string Look { get; private set; } = "Knight";
         Light torch;
         float currentSpeed;
         static readonly List<Combatant> buffer = new List<Combatant>();
@@ -58,12 +60,39 @@ namespace Shadowfall
         public bool IsAttacking => attackAnim >= 0f || castAnim >= 0f;
         public string BodyHex, LegsHex, WeaponHex, HelmHex;
 
-        public static Player Create(Vector3 pos)
+        public static Player Create(Vector3 pos, string look)
         {
             var go = new GameObject("Player");
             go.transform.position = pos;
             var p = go.AddComponent<Player>();
+            p.SetLook(look);
             return p;
+        }
+
+        /// <summary>Builds (or rebuilds) the hero's model: an animated KayKit character, or primitives as a fallback.</summary>
+        public void SetLook(string look)
+        {
+            Look = System.Array.IndexOf(CharacterLook.HeroModels, look) >= 0 ? look : CharacterLook.HeroModels[0];
+            if (view != null) Destroy(view.Root);
+            if (model != null) Destroy(model.Root.gameObject);
+            view = CharacterView.Create(transform, CharacterLook.ForHero(Look));
+            model = view == null
+                ? HumanoidModel.Build(transform, 1f, new Color(0.95f, 0.78f, 0.62f), new Color(0.5f, 0.4f, 0.3f),
+                    new Color(0.3f, 0.25f, 0.2f), new Color(0.75f, 0.75f, 0.8f))
+                : null;
+            RefreshVisuals();
+        }
+
+        void AnimAttack()
+        {
+            attackAnim = 0f;
+            view?.Attack(1f / Mathf.Max(0.6f, AttackSpeed));
+        }
+
+        void AnimCast()
+        {
+            castAnim = 0f;
+            view?.Cast();
         }
 
         void Awake()
@@ -73,9 +102,6 @@ namespace Shadowfall
             Faction = Faction.Player;
             Radius = 0.45f;
             Height = 2f;
-
-            model = HumanoidModel.Build(transform, 1f, new Color(0.95f, 0.78f, 0.62f), new Color(0.5f, 0.4f, 0.3f),
-                new Color(0.3f, 0.25f, 0.2f), new Color(0.75f, 0.75f, 0.8f));
 
             var col = gameObject.AddComponent<CapsuleCollider>();
             col.center = new Vector3(0, 1f, 0);
@@ -228,7 +254,8 @@ namespace Shadowfall
         {
             if (IsDead)
             {
-                model.Root.localRotation = Quaternion.Slerp(model.Root.localRotation, Quaternion.Euler(-90, 0, 0), Time.deltaTime * 5f);
+                if (model != null)
+                    model.Root.localRotation = Quaternion.Slerp(model.Root.localRotation, Quaternion.Euler(-90, 0, 0), Time.deltaTime * 5f);
                 return;
             }
 
@@ -250,11 +277,12 @@ namespace Shadowfall
                 atk = attackAnim;
                 if (attackAnim >= 1f) attackAnim = -1f;
             }
-            model.Animate(Mathf.Clamp01(currentSpeed / MoveSpeed), atk, dt);
+            if (view != null) view.UpdateLocomotion(currentSpeed);
+            else model?.Animate(Mathf.Clamp01(currentSpeed / MoveSpeed), atk, dt);
             if (castAnim >= 0f)
             {
                 castAnim += dt * 3.5f;
-                model.CastPose(Mathf.Clamp01(castAnim));
+                if (view == null) model?.CastPose(Mathf.Clamp01(castAnim));
                 if (castAnim >= 1f) castAnim = -1f;
             }
             torch.intensity = 1.5f + Mathf.PerlinNoise(Time.time * 3f, 0f) * 0.4f;
@@ -472,7 +500,7 @@ namespace Shadowfall
         void PerformAttack(Combatant target, Vector3 point)
         {
             nextAttackTime = Time.time + 1f / Mathf.Max(0.2f, AttackSpeed);
-            attackAnim = 0f;
+            AnimAttack();
             Factory.Face(transform, point);
 
             Combatant victim = target;
@@ -524,6 +552,7 @@ namespace Shadowfall
                 case AbilityId.Cleave:
                 {
                     attackAnim = 0f;
+                    view?.Action("2H_Melee_Attack_Spin", 0.55f);
                     Overlap(transform.position, 3.4f, Faction, buffer);
                     foreach (var c in buffer)
                     {
@@ -541,7 +570,7 @@ namespace Shadowfall
                 }
                 case AbilityId.Fireball:
                 {
-                    castAnim = 0f;
+                    AnimCast();
                     bool crit = Random.value * 100f < CritChance;
                     float dmg = 14f * SpellMultiplier * Random.Range(0.9f, 1.1f) * (crit ? 2f : 1f);
                     Projectile.Fire(this, transform.position + Vector3.up * 1.2f + transform.forward * 0.6f,
@@ -551,7 +580,7 @@ namespace Shadowfall
                 }
                 case AbilityId.FrostNova:
                 {
-                    castAnim = 0f;
+                    AnimCast();
                     Overlap(transform.position, 6f, Faction, buffer);
                     foreach (var c in buffer)
                     {
@@ -565,7 +594,7 @@ namespace Shadowfall
                 }
                 case AbilityId.Heal:
                 {
-                    castAnim = 0f;
+                    AnimCast();
                     Heal(MaxHealth * 0.35f + TotInt * 3f);
                     FxPulse.Spawn(transform.position + Vector3.up, a.Color, new Vector3(2f, 0.05f, 2f), new Vector3(0.2f, 5f, 0.2f), 0.7f, PrimitiveType.Cylinder);
                     FxPulse.Ring(transform.position, a.Color, 2f, 0.5f);
@@ -574,7 +603,7 @@ namespace Shadowfall
                 }
                 case AbilityId.Meteor:
                 {
-                    castAnim = 0f;
+                    AnimCast();
                     float range = Factory.FlatDistance(transform.position, aim);
                     Vector3 target = range > 16f ? transform.position + Factory.Flat(aim - transform.position).normalized * 16f : aim;
                     MeteorFx.Cast(this, new Vector3(target.x, 0f, target.z), 70f * SpellMultiplier);
@@ -712,6 +741,7 @@ namespace Shadowfall
             if (gatherTimer < tick) return;
             gatherTimer = 0f;
             attackAnim = 0f;
+            view?.Interact();
 
             int lvl = Skills.Level(GatherNode.Skill);
             float chance = Mathf.Clamp(0.4f + (lvl - GatherNode.LevelRequired) * 0.05f, 0.4f, 0.95f);
@@ -747,7 +777,7 @@ namespace Shadowfall
 
             return new SaveData
             {
-                level = Level, xp = Xp, gold = Gold,
+                level = Level, xp = Xp, gold = Gold, look = Look,
                 str = Strength, dex = Dexterity, intel = Intelligence, vit = Vitality, statPoints = StatPoints,
                 x = transform.position.x, z = transform.position.z,
                 hp = IsDead ? MaxHealth : Health, mana = Mana,
@@ -816,6 +846,7 @@ namespace Shadowfall
         {
             if (action == Action.Gather) StopGathering();
             CameraRig.Shake(Mathf.Clamp(amount / MaxHealth, 0.05f, 0.3f));
+            if (Health > 0f && amount > MaxHealth * 0.04f) view?.Hit();
         }
 
         protected override void Die(Combatant killer)
@@ -823,6 +854,7 @@ namespace Shadowfall
             path.Clear();
             action = Action.None;
             AttackTarget = null;
+            view?.Die();
             GameUI.Log("You have been slain" + (killer != null ? " by " + killer.DisplayName : "") + ".", new Color(1f, 0.3f, 0.3f));
         }
 
@@ -834,7 +866,8 @@ namespace Shadowfall
             Health = MaxHealth;
             Mana = MaxMana;
             transform.position = GameManager.I.SpawnPoint;
-            model.Root.localRotation = Quaternion.identity;
+            if (model != null) model.Root.localRotation = Quaternion.identity;
+            view?.Revive();
             path.Clear();
             GameUI.Log("You awaken in Hollowmere. You lost " + lost + " gold.", new Color(1f, 0.6f, 0.3f));
             NetClient.I?.SaveNow();
