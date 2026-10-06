@@ -320,7 +320,13 @@ namespace Shadowfall
             {
                 p.AddXp(m.xp);
                 p.Quests.OnKill(def.Name);
-                Enemy.RollLoot(def, m.l, pos);
+                if (!string.IsNullOrEmpty(m.el))
+                {
+                    Enemy.RollEliteLoot(def, m.l, pos);
+                    Sfx.Play2D("quest_done", 0.5f, 0.9f);
+                    GameUI.Banner(m.el + " slain!", Enemy.ChampionColor);
+                }
+                else Enemy.RollLoot(def, m.l, pos);
             }
             if (def.Boss) GameUI.Banner(def.Name + " has been slain!", new Color(1f, 0.55f, 0.1f));
         }
@@ -331,7 +337,7 @@ namespace Shadowfall
             Enemy.ById.TryGetValue(m.mid, out var e);
             var targetPos = new Vector3(m.x, 0, m.z);
             bool targetIsMe = m.tid == MyId;
-            if (e != null) e.PlayAttack(targetPos);
+            if (e != null && m.k != "blink" && m.k != "explode") e.PlayAttack(targetPos);
 
             switch (m.k)
             {
@@ -359,6 +365,26 @@ namespace Shadowfall
                     SpellFx.FrostNova(center, 6f);
                     if (p != null && !p.IsDead && Factory.FlatDistance(p.transform.position, center) < 6.5f) p.TakeDamage(m.dmg, e);
                     break;
+
+                case "blink":
+                {
+                    var purple = new Color(0.75f, 0.35f, 1f);
+                    SpellFx.Explosion(new Vector3(m.tx, 0.8f, m.tz), purple, 0.8f, false);
+                    SpellFx.Explosion(new Vector3(m.x, 0.8f, m.z), purple, 0.8f, false);
+                    Sfx.Play("frost_cast", new Vector3(m.x, 0, m.z), 0.5f, 0.2f);
+                    break;
+                }
+
+                case "explode":
+                {
+                    // Fire Enchanted elites explode when they die.
+                    var at = new Vector3(m.x, 0f, m.z);
+                    SpellFx.Explosion(at + Vector3.up * 0.6f, new Color(1f, 0.4f, 0.05f), 3.2f, true);
+                    Sfx.Play("explosion", at, 0.9f, 0.1f);
+                    CameraRig.Shake(0.2f);
+                    if (p != null && !p.IsDead && Factory.FlatDistance(p.transform.position, at) < 3.5f) p.TakeDamage(m.dmg, null);
+                    break;
+                }
 
                 case "summon":
                     Sfx.Play2D("roar", 0.8f, 0.8f);

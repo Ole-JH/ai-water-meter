@@ -54,6 +54,53 @@ namespace Shadowfall
         public EnemyDef Def;
         public float LastSeen;
         public bool Slowed;
+        public bool Elite { get; private set; }
+        public string[] Affixes { get; private set; } = new string[0];
+        public bool Shielded { get; private set; }
+        Light eliteLight;
+        float nextShieldPulse;
+
+        /// <summary>Aura color for an elite, from its first affix.</summary>
+        public static Color AffixColor(string affix)
+        {
+            switch (affix)
+            {
+                case "Fast": return new Color(1f, 0.9f, 0.35f);
+                case "Vampiric": return new Color(0.9f, 0.1f, 0.15f);
+                case "Fire Enchanted": return new Color(1f, 0.45f, 0.1f);
+                case "Teleporter": return new Color(0.75f, 0.35f, 1f);
+                case "Shielding": return new Color(0.4f, 0.85f, 1f);
+                case "Mighty": return new Color(1f, 0.3f, 0.1f);
+                default: return new Color(0.4f, 1f, 0.5f); // Extra Health
+            }
+        }
+
+        public static readonly Color ChampionColor = new Color(0.45f, 0.65f, 1f);
+
+        void MakeElite(NetMonster m)
+        {
+            Elite = true;
+            DisplayName = m.el;
+            Affixes = string.IsNullOrEmpty(m.af) ? new string[0] : m.af.Split(',');
+            var c = Affixes.Length > 0 ? AffixColor(Affixes[0]) : ChampionColor;
+            if (model != null) model.localScale *= 1.25f;
+            Height *= 1.25f;
+            Radius *= 1.2f;
+            var lightGo = new GameObject("EliteAura");
+            lightGo.transform.SetParent(transform, false);
+            lightGo.transform.localPosition = new Vector3(0f, 1.2f, 0f);
+            eliteLight = lightGo.AddComponent<Light>();
+            eliteLight.type = LightType.Point;
+            eliteLight.color = c;
+            eliteLight.range = 5f;
+            eliteLight.intensity = 1.6f;
+            SpellFx.Emit(new SpellFx.P
+            {
+                Rate = 22, Duration = 100000f, Life = new Vector2(0.8f, 1.4f), Speed = new Vector2(0.05f, 0.3f),
+                Size = new Vector2(0.08f, 0.18f), Start = new Color(c.r, c.g, c.b, 0.9f), End = new Color(c.r, c.g, c.b, 0f),
+                Shape = ParticleSystemShapeType.Circle, Radius = 0.9f, Velocity = new Vector3(0f, 1.1f, 0f),
+            }, transform.position, transform);
+        }
 
         Vector3 netPos;
         float armor, attackAnim = -1f, deathTime, curSpeed, walkPhase;
@@ -81,6 +128,7 @@ namespace Shadowfall
             e.Radius = 0.45f * def.Scale * (def.Shape == EnemyShape.Golem ? 1.3f : 1f);
             e.Height = 2f * def.Scale;
             e.BuildModel();
+            if (!string.IsNullOrEmpty(m.el)) e.MakeElite(m);
             var col = go.AddComponent<CapsuleCollider>();
             col.center = new Vector3(0, e.Height * 0.5f, 0);
             col.height = e.Height;
@@ -99,6 +147,8 @@ namespace Shadowfall
             // Keep our locally-predicted damage for a moment so health bars don't flicker back up.
             Health = Time.time - LastDamagedTime < 0.4f ? Mathf.Min(Health, m.hp) : m.hp;
             Slowed = m.sl;
+            if (Elite && m.sh && !Shielded) Sfx.Play("frost_cast", transform.position, 0.5f, 0.1f);
+            Shielded = m.sh;
             netPos = new Vector3(m.x, 0, m.z);
             if (snap) transform.position = netPos;
         }
@@ -199,6 +249,13 @@ namespace Shadowfall
                 if (Time.time - deathTime > 3f) Destroy(gameObject);
                 return;
             }
+
+            if (Shielded && Time.time >= nextShieldPulse)
+            {
+                nextShieldPulse = Time.time + 0.45f;
+                SpellFx.Ring(transform.position, new Color(0.45f, 0.85f, 1f), 1.6f, 0.45f);
+            }
+            if (eliteLight != null) eliteLight.intensity = Shielded ? 3f : 1.4f + Mathf.Sin(Time.time * 3f) * 0.3f;
 
             // Smoothly chase the latest server position.
             Vector3 to = Factory.Flat(netPos - transform.position);
@@ -312,6 +369,11 @@ namespace Shadowfall
         public override void TakeDamage(float amount, Combatant source, bool crit = false)
         {
             if (IsDead || dying) return;
+            if (Shielded)
+            {
+                GameUI.Float(transform.position + Vector3.up * (Height + 0.2f), "Immune", new Color(0.6f, 0.9f, 1f), 0.9f);
+                return;
+            }
             float mitigated = amount * 100f / (100f + Mathf.Max(0f, Armor));
             int dmg = Mathf.Max(1, Mathf.RoundToInt(mitigated));
             Health = Mathf.Max(0f, Health - dmg);
@@ -352,6 +414,20 @@ namespace Shadowfall
         protected override void Die(Combatant killer) { /* deaths are decided by the server */ }
 
         /// <summary>Personal loot, rolled locally when the server credits us with a kill.</summary>
+        /// <summary>Elites always drop a pile: plenty of gold, two or three magic-or-better items, sometimes rare or legendary.</summary>
+        public static void RollEliteLoot(EnemyDef def, int level, Vector3 pos)
+        {
+            LootDrop.Spawn(pos, null, Mathf.Max(5, Mathf.RoundToInt(level * Random.Range(10f, 20f))));
+            int items = Random.Range(2, 4);
+            for (int i = 0; i < items; i++)
+            {
+                float r = Random.value;
+                var rarity = r < 0.03f ? Rarity.Legendary : r < 0.33f ? Rarity.Rare : Rarity.Magic;
+                LootDrop.Spawn(pos, ItemDatabase.RandomEquipment(level, 0.5f, rarity), 0);
+            }
+            if (Random.value < 0.5f) { var hp = ItemDatabase.HealthPotion(); hp.Count = 2; LootDrop.Spawn(pos, hp, 0); }
+        }
+
         public static void RollLoot(EnemyDef def, int level, Vector3 pos)
         {
             if (Random.value < (def.Boss ? 1f : 0.55f))

@@ -44,6 +44,20 @@ Click another player's name above their head and choose **Invite to Party**, or 
 - **Chat:** `/p message` talks to your party. `/w name message` whispers, `/r message` replies to the last whisper, `/leave` leaves the party.
 - The party leader can remove members with the **x** on their party frame.
 
+## Elite monsters
+
+About one in twelve monsters spawns as an **elite champion**: a named monster (for example *Gorefang the Cruel*) shown with a blue name, a glowing aura and its affixes under its health bar. Elites are bigger, two levels higher, have about three times the health and hit harder. They give three times the XP or more, and always drop a pile of gold plus two or three magic items, with a good chance of rare and a small chance of legendary.
+
+| Affix | Effect |
+| --- | --- |
+| Fast | Moves 50% faster |
+| Vampiric | Heals itself when it hits you |
+| Fire Enchanted | Explodes when it dies: step away from the corpse |
+| Teleporter | Blinks next to you when you keep your distance |
+| Shielding | Becomes immune to damage for 3 seconds now and then (blue rings, "Immune") |
+| Mighty | Hits much harder |
+| Extra Health | Much more health |
+
 ## Monsters
 
 Monsters live on the server, so every player sees the same ones. They:

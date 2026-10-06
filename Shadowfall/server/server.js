@@ -232,9 +232,62 @@ function spawnFrom(sp) {
     const x = sp.x + Math.cos(a) * r, z = sp.z + Math.sin(a) * r;
     if (!walkable(x, z)) continue;
     const type = sp.types[Math.floor(Math.random() * sp.types.length)];
-    return spawnMonster(type, randInt(sp.minL, sp.maxL), x, z, sp);
+    const m = spawnMonster(type, randInt(sp.minL, sp.maxL), x, z, sp);
+    if (!m.def.boss && Math.random() < ELITE_CHANCE) makeElite(m);
+    return m;
   }
   return null;
+}
+
+// =====================================================================================
+// Elite monsters: champions with a name and random affixes (Diablo style).
+// =====================================================================================
+
+const ELITE_CHANCE = Number(process.env.ELITE_CHANCE ?? 0.08);
+const AFFIXES = ["Fast", "Vampiric", "Fire Enchanted", "Teleporter", "Shielding", "Mighty", "Extra Health"];
+const NAME_A = ["Grim", "Blood", "Rot", "Skull", "Ash", "Gore", "Bone", "Black", "Iron", "Venom", "Dread", "Hollow", "Grave", "Thorn"];
+const NAME_B = ["maw", "fang", "hide", "claw", "bane", "heart", "eye", "tooth", "grin", "spine", "shade", "gut", "jaw", "skull"];
+const NAME_C = ["the Cruel", "the Hungry", "the Unbroken", "the Vile", "the Ravenous", "the Defiler", "the Cursed", "the Wretched", "the Butcher"];
+const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+
+function makeElite(m, affixCount) {
+  const n = affixCount ?? (m.level >= 9 ? 3 : m.level >= 5 ? randInt(2, 3) : randInt(1, 2));
+  const affixes = [];
+  while (affixes.length < n) { const a = pick(AFFIXES); if (!affixes.includes(a)) affixes.push(a); }
+  const has = (a) => affixes.includes(a);
+  m.elite = { name: `${pick(NAME_A)}${pick(NAME_B)} ${pick(NAME_C)}`, affixes };
+  m.level += 2;
+  m.maxHp = m.hp = Math.round(m.maxHp * (has("Extra Health") ? 4.2 : 2.8));
+  m.dmg *= has("Mighty") ? 1.7 : 1.3;
+  m.armor += 12;
+  m.speedMul = has("Fast") ? 1.5 : 1.1;
+  m.leash += 8;
+  m.blinkAt = 0;
+  m.shieldAt = 0;
+  m.shieldUntil = 0;
+  return m;
+}
+
+const hasAffix = (m, a) => !!(m.elite && m.elite.affixes.includes(a));
+const speedOf = (m) => m.def.speed * (m.speedMul || 1);
+
+/** Per-tick elite abilities while chasing. */
+function eliteAbilities(m, s, d, t) {
+  if (hasAffix(m, "Teleporter") && d > 5 && t >= m.blinkAt) {
+    m.blinkAt = t + rand(4, 6);
+    for (let i = 0; i < 8; i++) {
+      const a = Math.random() * Math.PI * 2, x = s.x + Math.cos(a) * 1.5, z = s.z + Math.sin(a) * 1.5;
+      if (!walkable(x, z)) continue;
+      const ox = m.x, oz = m.z;
+      m.x = x; m.z = z; m.path = [];
+      sendNear(m.x, m.z, PLAYER_VIEW, { t: "matk", mid: m.id, tid: -1, dmg: 0, k: "blink", x: r2(x), z: r2(z), tx: r2(ox), tz: r2(oz) });
+      break;
+    }
+  }
+  if (hasAffix(m, "Shielding") && t >= m.shieldAt && m.hp < m.maxHp * 0.9) {
+    m.shieldAt = t + rand(9, 12);
+    m.shieldUntil = t + 3;
+  }
 }
 
 function spawnMonster(type, level, x, z, spawner) {
@@ -284,6 +337,7 @@ function sendNear(x, z, range, msg) {
 }
 
 function monsterAttack(m, s, kind, dmg) {
+  if (s && hasAffix(m, "Vampiric") && dmg > 0) m.hp = Math.min(m.maxHp, m.hp + dmg * 0.6);
   sendNear(m.x, m.z, PLAYER_VIEW, { t: "matk", mid: m.id, tid: s ? s.id : -1, dmg: r2(dmg), k: kind, x: r2(s ? s.x : m.x), z: r2(s ? s.z : m.z) });
 }
 
@@ -303,7 +357,7 @@ function updateMonster(m, t) {
         const wx = m.homeX + rand(-4, 4), wz = m.homeZ + rand(-4, 4);
         if (walkable(wx, wz) && lineOfSight(m.x, m.z, wx, wz)) m.path = [[wx, wz]];
       }
-      moveAlongPath(m, m.def.speed * 0.35);
+      moveAlongPath(m, speedOf(m) * 0.35);
       break;
     }
 
@@ -326,6 +380,7 @@ function updateMonster(m, t) {
 
       const d = dist(m.x, m.z, s.x, s.z);
       if (m.type === "Lich King") lichAbilities(m, s, d, t);
+      if (m.elite) eliteAbilities(m, s, d, t);
 
       const canHit = d <= m.def.range + 0.45 && (!m.def.ranged || lineOfSight(m.x, m.z, s.x, s.z, 0.1));
       if (canHit) {
@@ -342,7 +397,7 @@ function updateMonster(m, t) {
         m.repathAt = t + rand(0.4, 0.7);
         m.path = findPath(m.x, m.z, s.x, s.z);
       }
-      moveAlongPath(m, m.def.speed * (slowed ? 0.5 : 1));
+      moveAlongPath(m, speedOf(m) * (slowed ? 0.5 : 1));
       separate(m);
       break;
     }
@@ -354,7 +409,7 @@ function updateMonster(m, t) {
         m.path = findPath(m.x, m.z, m.homeX, m.homeZ, 6000);
         if (!m.path.length) { m.x = m.homeX; m.z = m.homeZ; }
       }
-      moveAlongPath(m, m.def.speed * 1.3);
+      moveAlongPath(m, speedOf(m) * 1.3);
       break;
     }
   }
@@ -391,6 +446,7 @@ function lichAbilities(m, s, d, t) {
 
 function damageMonster(m, s, dmg) {
   if (m.hp <= 0) return;
+  if (now() < (m.shieldUntil || 0)) dmg = 0; // Shielding elites are immune for a moment
   m.hp -= dmg;
   m.threat.set(s.id, (m.threat.get(s.id) || 0) + dmg);
   if (m.state !== "chase") { aggro(m, s.id); alertNearby(m, s.id); }
@@ -400,6 +456,7 @@ function damageMonster(m, s, dmg) {
 function killMonster(m) {
   monsters.delete(m.id);
   sendNear(m.x, m.z, PLAYER_VIEW + 10, { t: "mdie", mid: m.id });
+  if (hasAffix(m, "Fire Enchanted")) monsterAttack(m, null, "explode", m.dmg * 1.6);
   // Everyone who fought it gets credit, plus their party members who are nearby (WoW-style shared kills).
   const credited = new Set();
   for (const [sid] of m.threat) {
@@ -412,10 +469,12 @@ function killMonster(m) {
   for (const s of credited) {
     const diff = m.level - s.lvl;
     const mul = diff < -6 ? 0.1 : diff < -3 ? 0.5 : diff > 3 ? 1.3 : 1;
-    const xp = Math.max(1, Math.round(m.def.xp * (1 + 0.12 * (m.level - 1)) * mul));
-    safeSend(s, JSON.stringify({ t: "kill", mid: m.id, name: m.type, l: m.level, xp, x: r2(m.x), z: r2(m.z) }));
+    const eliteMul = m.elite ? 3 + m.elite.affixes.length * 0.5 : 1;
+    const xp = Math.max(1, Math.round(m.def.xp * (1 + 0.12 * (m.level - 1)) * mul * eliteMul));
+    safeSend(s, JSON.stringify({ t: "kill", mid: m.id, name: m.type, l: m.level, xp, x: r2(m.x), z: r2(m.z), ...(m.elite ? { el: m.elite.name } : {}) }));
   }
   if (m.def.boss) broadcast({ t: "sys", msg: `${m.type} has been slain!` });
+  else if (m.elite) sendNear(m.x, m.z, PLAYER_VIEW, { t: "sys", msg: `${m.elite.name} (${m.type}) has been slain!` });
   if (m.spawner) m.spawner.pending.push(now() + m.spawner.respawn);
 }
 
@@ -800,7 +859,8 @@ function tick() {
     const ms = [];
     for (const m of monsters.values()) {
       if (dist(m.x, m.z, s.x, s.z) > MONSTER_VIEW) continue;
-      ms.push({ id: m.id, n: m.type, l: m.level, x: r2(m.x), z: r2(m.z), ry: Math.round(m.ry), hp: Math.ceil(m.hp), mhp: m.maxHp, ar: m.armor, sl: t < m.slowUntil });
+      ms.push({ id: m.id, n: m.type, l: m.level, x: r2(m.x), z: r2(m.z), ry: Math.round(m.ry), hp: Math.ceil(m.hp), mhp: m.maxHp, ar: m.armor, sl: t < m.slowUntil,
+        ...(m.elite ? { el: m.elite.name, af: m.elite.affixes.join(","), sh: t < m.shieldUntil } : {}) });
     }
     const ps = [];
     for (const o of online) {

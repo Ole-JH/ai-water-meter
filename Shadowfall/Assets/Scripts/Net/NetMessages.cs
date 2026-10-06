@@ -14,6 +14,8 @@ namespace Shadowfall
         public int l;          // level
         public float x, z, ry, hp, mhp, ar;
         public bool sl;        // slowed
+        public string el, af;  // elite name and comma-separated affixes (empty for normal monsters)
+        public bool sh;        // elite shield up (immune)
     }
 
     [Serializable]
@@ -36,6 +38,7 @@ namespace Shadowfall
         public string name, msg, err, k;
         public float x, z, tx, tz, dmg;
         public bool hasSave;
+        public string el;       // "kill": the elite's name when an elite died (better loot)
         public double now;      // server clock (ms since 1970) in "welcome", for the day/night cycle
         public string ch;       // chat channel: "" = everyone, "p" = party, "w" = whisper to you, "wto" = your whisper
         public NetPartyMember[] pm; // "party": members (id = leader)

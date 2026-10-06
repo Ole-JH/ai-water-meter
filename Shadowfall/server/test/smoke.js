@@ -44,7 +44,7 @@ const state = (c, x, z) => c.ws.send(JSON.stringify({ t: "state", x, z, ry: 0, h
 
 async function main() {
   const server = spawn(process.execPath, [path.join(__dirname, "..", "server.js")], {
-    env: { ...process.env, PORT: String(PORT), DATA_DIR, PUBLIC_DIR: path.join(__dirname, "..", "public") },
+    env: { ...process.env, PORT: String(PORT), DATA_DIR, PUBLIC_DIR: path.join(__dirname, "..", "public"), ELITE_CHANCE: "0" },
     stdio: ["ignore", "pipe", "pipe"],
   });
   let serverLog = "";
@@ -142,6 +142,34 @@ async function main() {
 
     again.ws.close();
     b.ws.close();
+
+    // ---- elites: a second server where every monster is a champion
+    server.kill("SIGTERM");
+    await sleep(300);
+    const elite = spawn(process.execPath, [path.join(__dirname, "..", "server.js")], {
+      env: { ...process.env, PORT: String(PORT), DATA_DIR, PUBLIC_DIR: path.join(__dirname, "..", "public"), ELITE_CHANCE: "1" },
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    elite.stdout.on("data", (d) => (serverLog += d));
+    await sleep(700);
+    try {
+      const e = await connect("Erin", "secret5");
+      state(e, 80, 104);
+      await sleep(1200);
+      const champ = e.all("snap").at(-1).m.find((m) => m.el);
+      assert.ok(champ, "elite monsters appear in snapshots");
+      assert.ok(champ.af.split(",").length >= 1, "elites have affixes");
+      e.ws.send(JSON.stringify({ t: "hit", mid: champ.id, dmg: 999999 }));
+      for (let i = 0; i < 40 && !e.all("kill").some((k) => k.mid === champ.id); i++) {
+        e.ws.send(JSON.stringify({ t: "hit", mid: champ.id, dmg: 999999 }));
+        await sleep(60);
+      }
+      const kill = e.all("kill").find((k) => k.mid === champ.id);
+      assert.ok(kill && kill.el === champ.el, "elite kills are flagged for better loot");
+      e.ws.close();
+    } finally {
+      elite.kill("SIGTERM");
+    }
     ok = true;
     console.log("All smoke tests passed.");
   } catch (e) {

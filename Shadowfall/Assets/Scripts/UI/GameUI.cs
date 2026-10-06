@@ -426,14 +426,17 @@ namespace Shadowfall
                 if (e == null || e.IsDead) continue;
                 if (Factory.FlatDistance(e.transform.position, p.transform.position) > 32f) continue;
                 if (!WorldToGui(e.transform.position + Vector3.up * (e.Height + 0.35f), out var g)) continue;
-                bool focus = e == hovered || e == p.AttackTarget || e.Def.Boss;
+                bool focus = e == hovered || e == p.AttackTarget || e.Def.Boss || e.Elite;
                 bool hurt = e.Health < e.MaxHealth;
                 if (!focus && !hurt) continue;
-                float bw = e.Def.Boss ? 120 : 64;
-                Plate(new Rect(g.x - bw / 2, g.y, bw, 7), e.Health / e.MaxHealth, new Color(0.85f, 0.12f, 0.1f));
+                float bw = e.Def.Boss ? 120 : e.Elite ? 96 : 64;
+                Plate(new Rect(g.x - bw / 2, g.y, bw, 7), e.Health / e.MaxHealth, e.Shielded ? new Color(0.4f, 0.8f, 1f) : new Color(0.85f, 0.12f, 0.1f));
                 if (focus)
-                    UISkin.Shadowed(new Rect(g.x - 140, g.y - 22, 280, 22), e.DisplayName + "  " + e.Level + (e.Slowed ? "  <color=#88ccff>slowed</color>" : ""),
-                        UISkin.SmallCenter, LevelColor(e.Level, p.Level));
+                    UISkin.Shadowed(new Rect(g.x - 160, g.y - 22, 320, 22), e.DisplayName + "  " + e.Level + (e.Slowed ? "  <color=#88ccff>slowed</color>" : ""),
+                        UISkin.SmallCenter, e.Elite ? Enemy.ChampionColor : LevelColor(e.Level, p.Level));
+                if (e.Elite)
+                    UISkin.Shadowed(new Rect(g.x - 160, g.y + 8, 320, 20), string.Join("  \u2022  ", e.Affixes),
+                        new GUIStyle(UISkin.SmallCenter) { fontSize = 12 }, new Color(0.75f, 0.82f, 1f));
             }
 
             foreach (var rp in RemotePlayer.ById.Values)
@@ -550,9 +553,12 @@ namespace Shadowfall
                 UISkin.Box(t, UISkin.PanelPlain);
                 var e = target as Enemy;
                 bool boss = e != null && e.Def.Boss;
-                UISkin.Shadowed(new Rect(t.x + 16, t.y + 12, 290, 24), target.DisplayName, UISkin.Heading, LevelColor(target.Level, p.Level));
-                UISkin.Shadowed(new Rect(t.x + 16, t.y + 12, 288, 24), (boss ? "<color=#ff9a3c>Boss</color>  " : "") + "Level " + target.Level,
+                bool elite = e != null && e.Elite;
+                UISkin.Shadowed(new Rect(t.x + 16, t.y + 12, 290, 24), target.DisplayName, UISkin.Heading, elite ? Enemy.ChampionColor : LevelColor(target.Level, p.Level));
+                UISkin.Shadowed(new Rect(t.x + 16, t.y + 12, 288, 24), (boss ? "<color=#ff9a3c>Boss</color>  " : elite ? "<color=#7fa6ff>Champion</color>  " : "") + "Level " + target.Level,
                     new GUIStyle(UISkin.Small) { alignment = TextAnchor.UpperRight }, UISkin.Cream);
+                if (elite)
+                    UISkin.Shadowed(new Rect(t.x + 16, t.yMax + 4, 288, 20), e.Def.Name + "  -  " + string.Join(", ", e.Affixes), UISkin.Small, new Color(0.75f, 0.82f, 1f));
                 UISkin.Bar(new Rect(t.x + 16, t.y + 44, 288, 20), target.Health / target.MaxHealth, "Red",
                     Mathf.CeilToInt(target.Health) + " / " + Mathf.CeilToInt(target.MaxHealth), new Color(0.75f, 0.12f, 0.1f));
             }
@@ -712,7 +718,7 @@ namespace Shadowfall
             foreach (var it in Interactable.All)
                 if (it is Npc npc) Dot(r, toMap(npc.Position), npc.Marker(p, out _) != null ? new Color(1f, 0.85f, 0.1f) : new Color(0.3f, 1f, 0.3f), 7);
             foreach (var e in Enemy.ById.Values)
-                if (e != null && !e.IsDead) Dot(r, toMap(e.transform.position), e.Def.Boss ? new Color(1f, 0.5f, 0f) : new Color(0.9f, 0.15f, 0.1f), e.Def.Boss ? 9 : 5);
+                if (e != null && !e.IsDead) Dot(r, toMap(e.transform.position), e.Def.Boss ? new Color(1f, 0.5f, 0f) : e.Elite ? Enemy.ChampionColor : new Color(0.9f, 0.15f, 0.1f), e.Def.Boss ? 9 : e.Elite ? 8 : 5);
             foreach (var rp in RemotePlayer.ById.Values)
                 if (rp != null) Dot(r, toMap(rp.transform.position), NetClient.I.IsPartyMember(rp.Id) ? new Color(0.35f, 1f, 0.45f) : new Color(0.3f, 0.6f, 1f), 7);
             foreach (var m in NetClient.I.Party) // party members out of view range
