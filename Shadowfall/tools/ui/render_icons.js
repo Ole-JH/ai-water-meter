@@ -75,6 +75,14 @@ const ICONS = {
   talents: ['delapouite/upgrade', '#4a3524', '#f3e3c8'],
   stash: ['lorc/locked-chest', '#4a3524', '#f3e3c8'],
   trade: ['delapouite/shaking-hands', '#4a3524', '#f3e3c8'],
+  companions: ['lorc/paw', '#4a3524', '#f3e3c8'],
+  // companions
+  companion_hound: ['lorc/wolf-head', '#5a3a20', '#ffe6c8'],
+  companion_squire: ['lorc/visored-helm', '#3b4a66', '#eef2ff'],
+  companion_witch: ['lorc/witch-flight', '#2c4a2a', '#eaffe0'],
+  companion_ranger: ['lorc/bowman', '#3a4a2a', '#f0ffe0'],
+  companion_acolyte: ['lorc/prayer', '#8c7418', '#fffbe0'],
+  companion_golem: ['delapouite/golem-head', '#3a3f4e', '#e6ecff'],
   // hero classes
   knight: ['delapouite/knight-banner', '#3b4a66', '#eef2ff'],
   barbarian: ['delapouite/barbarian', '#6a3420', '#ffeede'],

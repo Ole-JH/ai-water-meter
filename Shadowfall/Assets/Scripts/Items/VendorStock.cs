@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace Shadowfall
 {
-    public enum VendorKind { General, Armor, Weapons, Food, Curios }
+    public enum VendorKind { General, Armor, Weapons, Food, Curios, Companions }
 
     /// <summary>
     /// What a vendor sells. Equipment stock is rolled for the hero's level and restocked every

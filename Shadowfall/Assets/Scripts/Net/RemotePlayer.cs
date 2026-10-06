@@ -21,6 +21,8 @@ namespace Shadowfall
         string appearance, modelName;
         HumanoidModel model;       // primitive fallback
         CharacterView view;        // animated model
+        Companion companion;       // cosmetic follower
+        string companionId = "";
 
         public static RemotePlayer Get(NetPlayer p)
         {
@@ -73,6 +75,15 @@ namespace Shadowfall
             if (Dead && !wasDead) view?.Die();
             if (!Dead && wasDead) view?.Revive();
             wasDead = Dead;
+
+            string cp = p.cp ?? "";
+            if (cp != companionId)
+            {
+                companionId = cp;
+                if (companion != null) companion.Dismiss();
+                var def = CompanionDef.Get(cp);
+                companion = def != null ? Companion.Spawn(def, transform, false) : null;
+            }
 
             string key = p.body + p.legs + p.weapon + p.helm + p.wk;
             if (key == appearance) return;
@@ -135,6 +146,7 @@ namespace Shadowfall
         void OnDestroy()
         {
             if (ById.TryGetValue(Id, out var rp) && rp == this) ById.Remove(Id);
+            if (companion != null) Destroy(companion.gameObject);
         }
     }
 }

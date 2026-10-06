@@ -418,6 +418,8 @@ namespace Shadowfall
                 "Welcome to the Prancing Boar! Sit, eat, drink, and don't start any fights.", npcs, false, true, false).SellsAs(VendorKind.Food);
             Npc.Create("Curio Dealer Vex", "Rings & Amulets", NpcRole.Vendor, new Vector3(71.5f, 0, 78.5f), new Color(0.3f, 0.2f, 0.45f),
                 "Trinkets with a past. Some of them even have a future.", npcs, false, true, false).SellsAs(VendorKind.Curios);
+            Npc.Create("Beastmaster Orla", "Companions for Hire", NpcRole.Vendor, new Vector3(97.5f, 0, 76.5f), new Color(0.4f, 0.3f, 0.2f),
+                "Hounds, blades, spells and stone. Nobody should walk these roads alone.", npcs, false, false, false).SellsAs(VendorKind.Companions);
 
             // Market stalls & crates
             for (int i = 0; i < 3; i++)

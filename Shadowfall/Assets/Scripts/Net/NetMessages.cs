@@ -28,6 +28,7 @@ namespace Shadowfall
         public int lvl;
         public bool mv, atk, dead;
         public string body, legs, weapon, helm, mdl, wk; // wk = weapon model kind
+        public string cp;      // companion following them (id, empty = none)
     }
 
     /// <summary>Union of every server -> client message.</summary>
@@ -75,6 +76,7 @@ namespace Shadowfall
         public int lvl;
         public bool mv, atk, dead;
         public string body, legs, weapon, helm, mdl, wk; // wk = weapon model kind
+        public string cp;      // active companion id
     }
 
     [Serializable]
@@ -112,5 +114,7 @@ namespace Shadowfall
         public SlotSave[] inventory;
         public Item[] equipped;
         public SlotSave[] stash;
+        public string[] companions;   // hired companion ids
+        public string companion;      // the one following (empty = none)
     }
 }

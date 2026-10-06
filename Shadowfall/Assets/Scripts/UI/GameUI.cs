@@ -562,12 +562,15 @@ namespace Shadowfall
             UISkin.Bar(new Rect(r.x + 96, r.y + 66, 220, 18), p.Mana / p.MaxMana, "Blue",
                 Mathf.FloorToInt(p.Mana) + " / " + Mathf.FloorToInt(p.MaxMana), new Color(0.2f, 0.35f, 0.9f));
 
+            float below = r.yMax + 6;
             if (p.StatPoints > 0)
             {
-                var sr = new Rect(r.x, r.yMax + 6, 330, 40);
+                var sr = new Rect(r.x, below, 330, 40);
                 if (UISkin.Btn(sr, "+" + p.StatPoints + " attribute points  [C]", UISkin.Button)) showChar = true;
                 Block(sr);
+                below += 46;
             }
+            DrawCompanionFrame(p, below);
 
             Combatant target = p.HoveredEnemy != null ? p.HoveredEnemy : p.AttackTarget;
             if (target != null && !target.IsDead)
@@ -1210,7 +1213,8 @@ namespace Shadowfall
                 "Click a player's name to invite them or trade. Party members nearby share kills; share quests from the quest log.\n\n" +
                 "<b>Loot</b>\n" +
                 "Legendaries (orange) carry unique powers; set pieces (green) grant bonuses at 2 and 4 pieces. Click a gem, then an item with a socket. " +
-                "Vex fuses three gems into a better one. Keep spare loot in the stash chest in the square.\n\n" +
+                "Vex fuses three gems into a better one. Keep spare loot in the stash chest in the square. " +
+                "Beastmaster Orla, by the east road, hires out companions that fight at your side.\n\n" +
                 "<b>The world</b>\n" +
                 "Villagers with a <b>!</b> have quests; return to them when you see a <b>?</b>. Click trees, rocks and fishing spots to gather. " +
                 "Smith at the anvil and cook at campfires. Sell loot to Merchant Lysa.\n\n" +
@@ -1242,7 +1246,8 @@ namespace Shadowfall
         void DrawDialog(Player p)
         {
             var npc = dialogNpc;
-            float height = npc.Role == NpcRole.Vendor && npc.Shop != null ? 330 + npc.Shop.Items.Count * 54 + (npc.Shop.Kind == VendorKind.Curios ? 54 : 0) : 520;
+            float height = npc.Role == NpcRole.Vendor && npc.Shop != null && npc.Shop.Kind == VendorKind.Companions ? 250 + CompanionDef.All.Length * 80
+                : npc.Role == NpcRole.Vendor && npc.Shop != null ? 330 + npc.Shop.Items.Count * 54 + (npc.Shop.Kind == VendorKind.Curios ? 54 : 0) : 520;
             var r = new Rect(14, 120, 470, Mathf.Min(height, VH - 140));
             if (UISkin.Window(r, npc.DisplayName, true, true)) { dialogNpc = null; return; }
             Block(r);
@@ -1293,6 +1298,7 @@ namespace Shadowfall
                 case NpcRole.Vendor:
                 {
                     var shop = npc.Shop;
+                    if (shop.Kind == VendorKind.Companions) { DrawCompanionShop(p, r, y); break; }
                     shop.Refresh(p.Level);
                     UISkin.Shadowed(new Rect(r.x + 26, y, 420, 28), "For Sale", UISkin.Heading, UISkin.Gold);
                     if (shop.Rotates)

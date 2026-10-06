@@ -40,7 +40,7 @@ function connect(name, pass, hash = HASH) {
   });
 }
 
-const state = (c, x, z) => c.ws.send(JSON.stringify({ t: "state", x, z, ry: 0, hp: 100, mhp: 100, lvl: 1, mv: false, atk: false, dead: false }));
+const state = (c, x, z, extra = {}) => c.ws.send(JSON.stringify({ t: "state", x, z, ry: 0, hp: 100, mhp: 100, lvl: 1, mv: false, atk: false, dead: false, ...extra }));
 
 async function main() {
   const server = spawn(process.execPath, [path.join(__dirname, "..", "server.js")], {
@@ -127,6 +127,13 @@ async function main() {
       await sleep(250);
       assert.ok(a.all("snap").at(-1).m.find((x) => x.id === wolf3.id)?.st, "stunned monsters are flagged in snapshots");
     }
+    // ---- companions are shown to other players (unknown ids are dropped)
+    state(a, 80, 104, { cp: "hound" });
+    state(b, 81, 104, { cp: "dragon" });
+    await sleep(300);
+    assert.strictEqual(b.all("snap").at(-1).p.find((x) => x.name === "Alice")?.cp, "hound", "companions are relayed");
+    assert.strictEqual(a.all("snap").at(-1).p.find((x) => x.name === "Bob")?.cp, "", "unknown companions are rejected");
+
     // ---- trading between Alice and Bob (standing next to each other)
     const aliceId = a.find("welcome").id, bobId = b.find("welcome").id;
     a.ws.send(JSON.stringify({ t: "treq", id: bobId }));

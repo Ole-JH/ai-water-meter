@@ -97,6 +97,7 @@ namespace Shadowfall
             { "Weaponsmith Hilda", new CharacterLook { Model = "Characters/Barbarian", Height = 1.9f, Tint = new Color(1.05f, 0.9f, 0.85f), Weapon = "axe" } },
             { "Innkeeper Rosie", new CharacterLook { Model = "Characters/Keeper", Height = 1.8f, Anims = AnimSet.Kenney, Tint = new Color(1.1f, 0.95f, 0.9f) } },
             { "Curio Dealer Vex", new CharacterLook { Model = "Characters/RogueHooded", Height = 1.85f, Tint = new Color(0.8f, 0.7f, 1f) } },
+            { "Beastmaster Orla", new CharacterLook { Model = "Characters/Barbarian", Height = 1.9f, Tint = new Color(0.95f, 0.85f, 0.7f), Weapon = "axe" } },
         };
 
         public static CharacterLook ForNpc(string name) => npcs.TryGetValue(name, out var l) ? l : null;

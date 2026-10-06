@@ -339,6 +339,9 @@ function moveAlongPath(m, speed) {
   return true;
 }
 
+/** Companions a hero can have following them (shown to other players). */
+const COMPANIONS = ["hound", "squire", "witch", "ranger", "acolyte", "golem"];
+
 /** Effects a client may relay to the players around it (ability visuals). */
 const FX_KINDS = new Set(["fireball", "nova", "heal", "meteor", "cleave", "levelup",
   "bash", "holybolt", "consecrate", "dshield", "judgement", "axe", "whirl", "leap", "warcry",
@@ -936,7 +939,8 @@ const handlers = {
     s.mv = !!m.mv; s.atk = !!m.atk; s.dead = !!m.dead;
     s.look = { body: String(m.body || "").slice(0, 6), legs: String(m.legs || "").slice(0, 6), weapon: String(m.weapon || "").slice(0, 6), helm: String(m.helm || "").slice(0, 6),
       mdl: HERO_MODELS.includes(m.mdl) ? m.mdl : "Knight",
-      wk: ["sword", "axe", "mace", "dagger", "staff"].includes(m.wk) ? m.wk : "" };
+      wk: ["sword", "axe", "mace", "dagger", "staff"].includes(m.wk) ? m.wk : "",
+      cp: COMPANIONS.includes(m.cp) ? m.cp : "" };
   },
 
   hit(s, m) {

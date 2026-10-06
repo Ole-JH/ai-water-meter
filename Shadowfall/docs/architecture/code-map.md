@@ -23,6 +23,7 @@
 | `Characters/Player.cs` | Click-to-move, targeting, melee, abilities, stats, potions, gathering, save and load |
 | `Characters/Enemy.cs` | `EnemyDef` (looks) and the `Enemy` network proxy (interpolation, hit prediction, death, personal loot) |
 | `Characters/CharacterView.cs` | Animated model wrapper (`AnimSet`, `CharacterLook`) for heroes, NPCs and monsters |
+| `Characters/Companion.cs` | Companions for hire (`CompanionDef`) and the follower AI: pathing after the hero, targeting, melee/ranged/area attacks, heals (cosmetic for other players) |
 | `Characters/HumanoidModel.cs` | Blocky procedural humanoid with walk and attack animation |
 | `Characters/Abilities.cs` | Ability definitions, class kits and starting stats (`ClassKits`), talents, buffs, meteor/Judgement and ground effects (Consecration, Rain of Arrows) |
 | `Combat/Combatant.cs` | Base class for health, armor, damage numbers and area queries |
@@ -44,6 +45,7 @@
 | `UI/Speech.cs` | Speech bubbles (chat and NPC chatter) |
 | `UI/GameUI.cs` | HUD, windows, dialogs, vendor, crafting, chat, minimap, tooltips |
 | `UI/GameUI.Login.cs` | Login screen |
+| `UI/GameUI.Companions.cs` | Beastmaster Orla's companion shop and the companion frame |
 | `UI/GameUI.Items.cs` | Talent window, buff icons, gem sockets, stash and trade windows |
 | `UI/LoginShowcase.cs` | Live, lit hero preview in the village square behind the login screen |
 

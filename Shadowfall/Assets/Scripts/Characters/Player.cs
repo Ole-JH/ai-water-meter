@@ -25,6 +25,10 @@ namespace Shadowfall
         /// <summary>Talent ranks by id (see <see cref="Shadowfall.Talents"/>).</summary>
         public readonly Dictionary<string, int> Talents = new Dictionary<string, int>();
         public readonly List<Buff> Buffs = new List<Buff>();
+        /// <summary>Companions hired from Beastmaster Orla (ids), and the one following us (null = none).</summary>
+        public readonly List<string> OwnedCompanions = new List<string>();
+        public string ActiveCompanion { get; private set; }
+        public Companion CompanionInstance { get; private set; }
         float whirlUntil, nextWhirlTick, leapT = -1f;
         Vector3 leapFrom, leapTo;
 
@@ -1128,6 +1132,50 @@ namespace Shadowfall
             }
         }
 
+        // =====================================================================================
+        // Companions
+        // =====================================================================================
+
+        public bool OwnsCompanion(string id) => OwnedCompanions.Contains(id);
+
+        /// <summary>Buys a companion from Beastmaster Orla; it starts following right away.</summary>
+        public bool HireCompanion(CompanionDef def)
+        {
+            if (OwnsCompanion(def.Id)) return false;
+            if (Level < def.RequiredLevel) { GameUI.Log(def.Name + " won't follow anyone below level " + def.RequiredLevel + ".", new Color(1f, 0.4f, 0.4f)); return false; }
+            if (Gold < def.Price) { GameUI.Log("You need " + def.Price + " gold to hire " + def.Name + ".", new Color(1f, 0.4f, 0.4f)); return false; }
+            Gold -= def.Price;
+            OwnedCompanions.Add(def.Id);
+            Sfx.Play2D("coins", 0.6f);
+            GameUI.Log(def.Name + " joins you!", def.Color);
+            SummonCompanion(def.Id);
+            NetClient.I?.SaveNow();
+            return true;
+        }
+
+        public void SummonCompanion(string id, bool silent = false)
+        {
+            var def = CompanionDef.Get(id);
+            if (def == null || !OwnsCompanion(id)) return;
+            DismissCompanion(true);
+            ActiveCompanion = id;
+            CompanionInstance = Companion.Spawn(def, transform, true);
+            if (!silent) Sfx.Play2D("ui_confirm", 0.5f);
+        }
+
+        public void DismissCompanion(bool silent = false)
+        {
+            if (CompanionInstance != null) CompanionInstance.Dismiss();
+            CompanionInstance = null;
+            if (!silent && ActiveCompanion != null) GameUI.Log("Your companion waits for you in Hollowmere.", Color.gray);
+            ActiveCompanion = null;
+        }
+
+        void OnDestroy()
+        {
+            if (CompanionInstance != null) Destroy(CompanionInstance.gameObject);
+        }
+
         /// <summary>Puts the gem at bag index <paramref name="gemIndex"/> into the first empty socket of <paramref name="target"/>.</summary>
         public bool SocketGem(int gemIndex, Item target)
         {
@@ -1301,6 +1349,7 @@ namespace Shadowfall
                 level = Level, xp = Xp, gold = Gold + (NetClient.I != null ? NetClient.I.EscrowGold : 0), look = Look,
                 stash = stash.ToArray(),
                 talents = SaveTalents(),
+                companions = OwnedCompanions.ToArray(), companion = ActiveCompanion ?? "",
                 str = Strength, dex = Dexterity, intel = Intelligence, vit = Vitality, statPoints = StatPoints,
                 x = transform.position.x, z = transform.position.z,
                 hp = IsDead ? MaxHealth : Health, mana = Mana,
@@ -1328,6 +1377,9 @@ namespace Shadowfall
             Gold = s.gold;
             Strength = s.str; Dexterity = s.dex; Intelligence = s.intel; Vitality = s.vit;
             StatPoints = s.statPoints;
+            OwnedCompanions.Clear();
+            if (s.companions != null)
+                foreach (var c in s.companions) if (CompanionDef.Get(c) != null && !OwnedCompanions.Contains(c)) OwnedCompanions.Add(c);
             Talents.Clear();
             if (s.talents != null)
                 foreach (var t in s.talents)
@@ -1368,6 +1420,7 @@ namespace Shadowfall
             RecalculateStats();
             Health = s.hp > 0 ? Mathf.Min(s.hp, MaxHealth) : MaxHealth;
             Mana = Mathf.Min(s.mana, MaxMana);
+            if (!string.IsNullOrEmpty(s.companion) && OwnedCompanions.Contains(s.companion)) SummonCompanion(s.companion, true);
         }
 
         // =====================================================================================

@@ -22,7 +22,8 @@ The map is 160 × 160 tiles, with the walled village of **Hollowmere** (45 × 45
 | Armorer Brann | Sells armor for your level (restocks every 10 minutes) |
 | Weaponsmith Hilda | Sells weapons for your level (restocks every 10 minutes) |
 | Innkeeper Rosie | Food and drink: bread, cooked fish, hearty stew, mulled wine (restores mana) |
-| Curio Dealer Vex | Magic and rare rings and amulets (restocks every 10 minutes) |
+| Curio Dealer Vex | Magic and rare rings and amulets (restocks every 10 minutes), Chipped gems, gem fusing |
+| Beastmaster Orla | Companions for hire, by the east road (see [Companions](progression.md#companions)) |
 | Sister Mae | Restores your health and mana for free |
 | Thomas | Farmer by the west houses. Wants the quarry-road bandits dealt with |
 | Jenkins | The village's butler of automation, dressed like the Jenkins mascot. Quests about his broken build and pipeline |

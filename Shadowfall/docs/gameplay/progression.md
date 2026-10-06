@@ -90,6 +90,21 @@ Weapons, helms, chests and legs can roll **0–2 sockets** (shown as small diamo
 
 Click a gem in your bags, then click an item (in the bags or worn) with an empty socket. Vex fuses three gems of the same kind and quality into the next quality (50 gold for Flawless, 250 for Perfect).
 
+## Companions
+
+Beastmaster Orla, by Hollowmere's east road, hires out companions. You pay once; after that you can summon any companion you own from her for free. One follows you at a time, and the active one is saved with your character.
+
+| Companion | Price | Level | Fights with |
+| --- | --- | --- | --- |
+| War Hound | 300 | 1 | Fast bites that often slow |
+| Squire Edric | 800 | 4 | Sword and shield; stuns a foe every 7 s |
+| Hedge Witch Nell | 1,400 | 7 | Fireballs that burn around the target |
+| Ranger Kestrel | 2,000 | 10 | Two arrows per shot |
+| Acolyte Mira | 2,800 | 12 | Holy bolts; heals you for 10% life when you drop below 70% |
+| Stone Golem | 5,000 | 15 | Slow ground slams that hit everything nearby |
+
+Companions grow 12% stronger per hero level, follow you into the Catacombs, attack what you attack (or whatever is nearest) and rest while you are in town. Monsters don't target them, so they never die. Their hits count as yours for kills and loot. Other players see your companion following you.
+
 ## Stash
 
 The stash chest by the village square holds 40 items and is saved with your character. Click it to open it; right-click items in your bags to store them and click stashed items to take them back.
