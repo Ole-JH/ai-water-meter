@@ -20,6 +20,9 @@
 ??? question "Pink / magenta objects"
     You switched render pipelines after materials were created. Restart Play mode. Materials are always cloned from the active pipeline's default material.
 
+??? question "Models are all white (no textures)"
+    The headless build (`-nographics`) has no GPU, and glTFast keeps textures only on the GPU by default, so the texture pixels were never saved. The build now marks the model textures readable before building, and the affected models are re-imported automatically. Rebuild with `task client:build`. If they are still white, clear the import cache with `task client:clean-cache` and build again.
+
 ??? question "Glow or fog missing in the WebGL build only"
     Run **Shadowfall → Open Main Scene** once (the build menu does this too). It creates `Assets/Resources/ShadowfallVariants.mat` and enables fog in the scene, so those shader variants are kept in the build.
 

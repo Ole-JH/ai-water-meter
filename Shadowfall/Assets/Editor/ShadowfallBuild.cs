@@ -58,6 +58,8 @@ namespace Shadowfall.EditorTools
         [MenuItem("Shadowfall/Open Main Scene")]
         public static void PrepareProject()
         {
+            MakeModelTexturesReadable();
+
             // Material with emission enabled so the emission shader variant survives build stripping.
             if (AssetDatabase.LoadAssetAtPath<Material>(GlowMaterialPath) == null)
             {
@@ -94,6 +96,39 @@ namespace Shadowfall.EditorTools
 
             EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(ScenePath, true) };
             AssetDatabase.SaveAssets();
+        }
+
+        /// <summary>
+        /// glTFast imports textures as GPU-only (non-readable) by default. In headless builds
+        /// (-nographics) there is no GPU, so the pixels are lost and every model renders white.
+        /// Readable textures keep a CPU copy that gets saved with the asset.
+        /// </summary>
+        static void MakeModelTexturesReadable()
+        {
+            int changed = 0;
+            AssetDatabase.StartAssetEditing();
+            try
+            {
+                foreach (var guid in AssetDatabase.FindAssets("", new[] { "Assets/Resources/Art" }))
+                {
+                    var path = AssetDatabase.GUIDToAssetPath(guid);
+                    if (!path.EndsWith(".glb") && !path.EndsWith(".gltf")) continue;
+                    var importer = AssetImporter.GetAtPath(path);
+                    if (importer == null) continue;
+                    var so = new SerializedObject(importer);
+                    var readable = so.FindProperty("importSettings.texturesReadable");
+                    if (readable == null || readable.boolValue) continue;
+                    readable.boolValue = true;
+                    so.ApplyModifiedPropertiesWithoutUndo();
+                    importer.SaveAndReimport();
+                    changed++;
+                }
+            }
+            finally
+            {
+                AssetDatabase.StopAssetEditing();
+            }
+            if (changed > 0) Debug.Log("[Shadowfall] Re-imported " + changed + " models with readable textures.");
         }
     }
 }
