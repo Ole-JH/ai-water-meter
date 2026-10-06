@@ -19,21 +19,21 @@ const MONSTERS = {
 // [x, z, count, minLevel, maxLevel, [types], radius?, respawnSeconds?]
 const SPAWNERS = [
   // Whisperwood (north)
-  [80, 114, 4, 1, 3, ["Dire Wolf"]],
-  [100, 118, 5, 2, 4, ["Dire Wolf"]],
-  [60, 114, 4, 2, 4, ["Dire Wolf"]],
+  [80, 117, 4, 1, 3, ["Dire Wolf"]],
+  [100, 120, 5, 2, 4, ["Dire Wolf"]],
+  [60, 118, 4, 2, 4, ["Dire Wolf"]],
   [70, 140, 5, 4, 6, ["Dire Wolf"]],
   [130, 145, 5, 5, 7, ["Dire Wolf", "Bandit"]],
   // Goblin Encampment (east)
-  [114, 80, 4, 3, 5, ["Goblin"]],
+  [117, 80, 4, 3, 5, ["Goblin"]],
   [124, 92, 6, 4, 7, ["Goblin", "Goblin", "Goblin Shaman"]],
   [124, 68, 6, 4, 7, ["Goblin", "Goblin", "Goblin Shaman"]],
   [140, 110, 5, 6, 8, ["Bandit"]],
   [140, 45, 5, 6, 9, ["Goblin", "Bandit"]],
   [130, 80, 1, 10, 10, ["Goblin Warchief"], 1, 90],
   // Forsaken Graveyard (south)
-  [62, 48, 5, 6, 8, ["Skeleton", "Zombie"]],
-  [98, 48, 5, 6, 9, ["Skeleton", "Zombie"]],
+  [62, 45, 5, 6, 8, ["Skeleton", "Zombie"]],
+  [98, 45, 5, 6, 9, ["Skeleton", "Zombie"]],
   [80, 34, 6, 7, 10, ["Skeleton", "Skeleton Archer"]],
   [110, 25, 5, 9, 11, ["Zombie", "Skeleton Archer"]],
   // Crypt of the Lich
@@ -41,13 +41,13 @@ const SPAWNERS = [
   [87, 14, 4, 11, 13, ["Skeleton", "Skeleton Archer"]],
   [80.5, 9.5, 1, 16, 16, ["Lich King"], 0.5, 180],
   // Ironvein Quarry (west)
-  [46, 64, 4, 3, 5, ["Bandit"]],
+  [43, 64, 4, 3, 5, ["Bandit"]],
   [36, 82, 4, 8, 11, ["Rock Golem"]],
   [24, 60, 4, 10, 13, ["Rock Golem"]],
   [20, 105, 4, 12, 15, ["Rock Golem"]],
 ];
 
 // Safe zone: monsters never follow players inside the village walls.
-const TOWN = { x0: 58, z0: 58, x1: 103, z1: 103 };
+const TOWN = { x0: 52, z0: 52, x1: 109, z1: 109 };
 
 module.exports = { MONSTERS, SPAWNERS, TOWN };

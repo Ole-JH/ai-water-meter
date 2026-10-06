@@ -1,6 +1,13 @@
 # The world
 
-The map is 160 × 160 tiles, with the walled village of **Hollowmere** (45 × 45 tiles) at its centre. Cobbled cross streets lead from the four gates to the central square with the well; around them are grassy yards with the tavern, homes, the smithy, a church with a fountain plaza, a windmill, a market hall, a fenced farm plot and a guards' training yard. A road leaves each gate. Monsters never follow you inside the walls.
+The map is 160 × 160 tiles, with the walled village of **Hollowmere** (57 × 57 tiles) at its centre. Cobbled cross streets lead from the four gates to the central plaza with the well. Each quarter is its own district:
+
+- **North-west:** the Prancing Boar tavern (Innkeeper Rosie), the windmill, and Forester Wren by the north gate.
+- **North-east:** the church with Sister Mae, Jenkins, and Captain Aldric at the north gate; the fountain sits on the north street.
+- **South-west:** the market hall with Merchant Lysa and Curio Dealer Vex's stalls, and Thomas's fenced farm.
+- **South-east:** the smithy (Smith Gorrin, Weaponsmith Hilda, Armorer Brann), the training yard and Beastmaster Orla's animal pen.
+
+The stash chest stands by the plaza. A road leaves each gate. Monsters never follow you inside the walls.
 
 | Zone | Direction | Monsters (level) | Resources |
 | --- | --- | --- | --- |

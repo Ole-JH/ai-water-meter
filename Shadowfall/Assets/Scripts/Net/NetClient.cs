@@ -241,7 +241,7 @@ namespace Shadowfall
             {
                 State = ConnState.LoggingIn;
                 Status = "Logging in...";
-                Send(new HelloMsg { name = pendingName, pass = pendingPass, hash = GameManager.I.GridHash, ver = ProtocolVersion });
+                Send(new HelloMsg { name = pendingName, pass = pendingPass, hash = GameManager.I.GridHash, ver = ProtocolVersion, wv = WorldGenerator.LayoutVersion });
                 return;
             }
             if (raw.StartsWith("__close:") || raw.StartsWith("__error:"))

@@ -58,7 +58,7 @@ namespace Shadowfall
 
     // ---------------------------------------------------------------- client -> server
 
-    [Serializable] public class HelloMsg { public string t = "hello"; public string name, pass, hash; public int ver; }
+    [Serializable] public class HelloMsg { public string t = "hello"; public string name, pass, hash; public int ver, wv; }
     [Serializable] public class WorldMsg { public string t = "world"; public string hash, cells; public int w, h; }
     [Serializable] public class HitMsg { public string t = "hit"; public int mid, dmg; public bool crit; }
     [Serializable] public class SlowMsg { public string t = "slow"; public int mid; public float dur; }

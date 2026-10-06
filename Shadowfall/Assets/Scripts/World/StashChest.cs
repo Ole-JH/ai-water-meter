@@ -15,8 +15,8 @@ namespace Shadowfall
 
         static readonly Vector3[] candidates =
         {
-            new Vector3(77.5f, 0f, 74.5f), new Vector3(83.5f, 0f, 80.5f), new Vector3(76.5f, 0f, 80.5f),
-            new Vector3(83.5f, 0f, 73.5f), new Vector3(79.5f, 0f, 83.5f), new Vector3(74.5f, 0f, 77.5f),
+            new Vector3(85.5f, 0f, 75.5f), new Vector3(75.5f, 0f, 75.5f), new Vector3(85.5f, 0f, 85.5f),
+            new Vector3(84.5f, 0f, 73.5f), new Vector3(76.5f, 0f, 73.5f), new Vector3(74.5f, 0f, 77.5f),
         };
 
         public static void Spawn()

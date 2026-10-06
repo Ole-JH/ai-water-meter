@@ -4,7 +4,7 @@
     `server/public` only contains the placeholder page. Build the client with `task client:build` (Docker; see [Building the client in Docker](deployment/docker-client-build.md)) or **Shadowfall → Build WebGL** in Unity, then refresh. With Docker Compose the folder is mounted, so you don't need to restart.
 
 ??? question "*“Your game client doesn't match this server's world”*"
-    The world generation changed since the server stored its map, or your browser cached an old build. Hard-refresh the page (++ctrl+shift+r++). If you changed the world on purpose, run `task world:reset` and restart the server.
+    The world generation changed since the server stored its map, or your browser cached an old build. Hard-refresh the page (++ctrl+shift+r++). After an update that changes the world, the server switches to the new map when the first updated player logs in while nobody else is online; if it says it is still running the previous version, wait until everyone has logged out (or run `task world:reset` and restart the server).
 
 ??? question "*“Could not connect: could not reach the game server”*"
     - In the editor, check the **Server** field on the login screen (default `ws://localhost:7341/ws`).

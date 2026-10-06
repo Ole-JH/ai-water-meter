@@ -17,11 +17,17 @@
 | --- | --- |
 | Client code only (UI, items, abilities, visuals) | Rebuild WebGL; players refresh the page |
 | `server.js` or `content.js` | `task up` (rebuilds the image) |
-| **World generation** (`WorldGenerator.cs`: tree/wall/water layout, or the seed) | Rebuild the client, run `task world:reset`, then restart. The first player to log in uploads the new map |
+| **World generation** (`WorldGenerator.cs`: tree/wall/water layout, or the seed) | Bump `WorldGenerator.LayoutVersion` and rebuild. The first player to log in once nobody is online uploads the new map automatically |
 | Network protocol (`NetMessages.cs` / handlers) | Bump `ProtocolVersion` in `NetClient.cs` **and** `PROTOCOL_VERSION` in `server.js`. Old clients are told to refresh |
 
-!!! info "Why `world:reset`?"
-    The server stores a hash of the uploaded map and rejects clients whose map differs, with the message *"Your game client doesn't match this server's world"*. That stops players with a stale cached client from desyncing monster pathing.
+!!! info "How world updates work"
+    The server stores the uploaded map with its hash and the client's `LayoutVersion`. A client whose map differs is handled like this:
+
+    - **Higher layout version, nobody online:** the server asks it for the new map, replaces the old one and respawns the overworld's monsters on it.
+    - **Higher layout version, others still playing on the old map:** refused until they log out (*"still running the previous version of the world"*).
+    - **Same or lower layout version** (usually a stale browser cache): refused with *"Your game client is older than this server's world. Refresh the page"*, so an old client can never swap the world back.
+
+    `task world:reset` still works if you want to force a fresh upload.
 
 ## Restoring a backup
 

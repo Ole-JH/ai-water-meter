@@ -41,7 +41,7 @@ new QuestDef
 
 Call `Npc.Create(...)` in `WorldGenerator.BuildTown()`. Roles are `QuestGiver`, `Vendor` and `Healer`. A quest giver offers the chain in `QuestDatabase.Chains[npcName]`.
 
-NPCs block their tile, so adding one changes the world hash. Run `task world:reset` after deploying.
+Pass `blocksTile: false` (all of Hollowmere's NPCs do), so adding or moving an NPC doesn't change the walkable map. If you do change the map (buildings, walls, the town size), bump `WorldGenerator.LayoutVersion`; the server takes the new map from the first updated client.
 
 ## Add an ability
 

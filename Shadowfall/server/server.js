@@ -111,7 +111,8 @@ function loadWorld() {
   try {
     const j = JSON.parse(fs.readFileSync(WORLD_FILE, "utf8"));
     world = decodeWorld(j.w, j.h, j.cells);
-    if (world) log(`Loaded world ${world.hash}`);
+    if (world) world.version = j.version | 0;
+    if (world) log(`Loaded world ${world.hash} (layout version ${world.version})`);
   } catch { /* no world yet */ }
 }
 
@@ -903,19 +904,38 @@ const handlers = {
     if (!/^[A-Za-z][A-Za-z0-9_]{2,15}$/.test(name)) return fail(s, "Names must be 3-16 letters, digits or _ and start with a letter.");
     if (pass.length < 4 || pass.length > 64) return fail(s, "Password must be 4-64 characters.");
     s.pendingLogin = { name, pass };
+    s.worldVersion = m.wv | 0;
     if (!world) { s.clientHash = String(m.hash || ""); return safeSend(s, JSON.stringify({ t: "needworld" })); }
-    if (m.hash !== world.hash) return fail(s, "Your game client doesn't match this server's world. Refresh the page (or delete data/world.json after updating the game).");
+    if (m.hash !== world.hash) {
+      // The game was updated and its world changed (a higher layout version). Nobody is playing on the old
+      // one, so take the new world from this client instead of locking everyone out. An older client
+      // (a stale browser cache) must never swap the world back.
+      if ((m.wv | 0) <= world.version) return fail(s, "Your game client is older than this server's world. Refresh the page (Ctrl+F5).");
+      const others = [...sessions.values()].some((o) => o !== s && o.inWorld);
+      if (others) return fail(s, "This server is still running the previous version of the world. Try again once everyone has logged out, or refresh the page.");
+      s.clientHash = String(m.hash || "");
+      s.replacesWorld = true;
+      return safeSend(s, JSON.stringify({ t: "needworld" }));
+    }
     completeLogin(s);
   },
 
   world(s, m) {
     if (!s.pendingLogin) return;
-    if (!world) {
+    if (!world || s.replacesWorld) {
       const w = parseInt(m.w, 10), h = parseInt(m.h, 10);
       const decoded = w > 0 && h > 0 && w * h <= 1 << 20 ? decodeWorld(w, h, String(m.cells || "")) : null;
       if (!decoded || decoded.hash !== m.hash || decoded.hash !== s.clientHash) return fail(s, "World upload was invalid.");
+      if (world && [...sessions.values()].some((o) => o !== s && o.inWorld)) return fail(s, "Someone joined the old world meanwhile. Try again.");
+      if (world) {
+        log(`World changed (${world.hash} -> ${decoded.hash}): respawning the overworld's monsters`);
+        for (const [id, mon] of monsters) if (mon.inst === 0) monsters.delete(id);
+        spawners.length = 0;
+      }
+      s.replacesWorld = false;
       world = decoded;
-      fs.writeFileSync(WORLD_FILE, JSON.stringify({ w, h, cells: m.cells, hash: world.hash }));
+      world.version = s.worldVersion | 0;
+      fs.writeFileSync(WORLD_FILE, JSON.stringify({ w, h, cells: m.cells, hash: world.hash, version: world.version }));
       log(`World received from ${s.pendingLogin.name}: ${world.hash}`);
       initSpawners();
     } else if (m.hash !== world.hash) {

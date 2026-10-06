@@ -10,7 +10,9 @@ namespace Shadowfall
     {
         public const int W = 160, H = 160;
         public const int Seed = 20261006;
-        public static readonly RectInt Town = new RectInt(58, 58, 45, 45); // cells 58..102
+        public static readonly RectInt Town = new RectInt(52, 52, 57, 57); // cells 52..108
+        /// <summary>Bumped whenever the walkable layout changes; lets an updated client hand the server the new world map.</summary>
+        public const int LayoutVersion = 2;
         public static readonly RectInt Crypt = new RectInt(68, 4, 25, 19);  // cells 68..92, 4..22
 
         public Texture2D MapTexture { get; private set; }
@@ -149,7 +151,7 @@ namespace Shadowfall
         static bool IsTownStreet(int x, int y)
         {
             bool cross = (x >= 78 && x <= 82) || (y >= 78 && y <= 82);
-            bool square = x >= 72 && x <= 89 && y >= 72 && y <= 89;
+            bool square = x >= 72 && x <= 88 && y >= 72 && y <= 88;
             return cross || square;
         }
 
@@ -178,7 +180,7 @@ namespace Shadowfall
             w[GroundSurface.Dry] += west * (1f - rock) * 0.6f;
             w[GroundSurface.Dirt] += west * (1f - rock) * 0.4f;
             // Green meadow around the village.
-            float meadow = 1f - Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(28f, 44f, Vector2.Distance(new Vector2(x, y), new Vector2(80f, 80f))));
+            float meadow = 1f - Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(34f, 50f, Vector2.Distance(new Vector2(x, y), new Vector2(80f, 80f))));
             for (int i = 0; i < w.Length; i++) w[i] *= 1f - meadow;
             w[GroundSurface.Grass] += meadow;
             surface.SetWeights(x, y, w);
@@ -328,6 +330,10 @@ namespace Shadowfall
 
         // ------------------------------------------------------------------ town
 
+        // Hollowmere, cells 52..108 with gates at 78..82 on every side. Four districts around a central plaza:
+        //   north-west: tavern, windmill, Wren by the north gate      north-east: church, Sister Mae, Jenkins, the captain
+        //   south-west: farm and market (Lysa, Vex)                    south-east: smithy (Gorrin, Hilda, Brann), training yard, Orla's pen
+        // NPCs never block tiles, so they can be moved around without changing the world map.
         void BuildTown()
         {
             var wood = new Color(0.42f, 0.3f, 0.18f);
@@ -355,90 +361,94 @@ namespace Shadowfall
                 Factory.Prim(PrimitiveType.Sphere, deco, new Vector3(g.x + 0.5f, 4.3f, g.y + 0.5f), Vector3.one * 0.4f, torchC, false, Mat.Glow(torchC));
             }
 
-            House(new RectInt(68, 86, 7, 6), new Color(0.75f, 0.68f, 0.55f), new Color(0.55f, 0.2f, 0.15f), "Buildings/building_tavern_blue", 180f);
-            House(new RectInt(86, 86, 7, 6), new Color(0.7f, 0.65f, 0.55f), new Color(0.25f, 0.3f, 0.5f), "Buildings/building_home_B_blue", 180f);
-            House(new RectInt(68, 68, 6, 6), new Color(0.72f, 0.62f, 0.5f), new Color(0.3f, 0.45f, 0.25f), "Buildings/building_home_A_green", 0f);
-            // Smithy: open-sided shelter
-            var smithy = new RectInt(87, 68, 6, 5);
-            for (int i = 0; i < 4; i++)
+            // ---- buildings
+            House(new RectInt(57, 89, 8, 7), new Color(0.75f, 0.68f, 0.55f), new Color(0.55f, 0.2f, 0.15f), "Buildings/building_tavern_blue", 90f);
+            House(new RectInt(56, 98, 8, 8), new Color(0.72f, 0.65f, 0.55f), new Color(0.5f, 0.3f, 0.2f), "Buildings/building_windmill_blue", 135f);
+            House(new RectInt(67, 99, 6, 6), new Color(0.72f, 0.62f, 0.5f), new Color(0.3f, 0.45f, 0.25f), "Buildings/building_home_A_green", 180f);
+            House(new RectInt(57, 83, 6, 5), new Color(0.72f, 0.65f, 0.55f), new Color(0.3f, 0.35f, 0.55f), "Buildings/building_home_A_blue", 90f);
+            House(new RectInt(92, 95, 10, 8), new Color(0.75f, 0.73f, 0.68f), new Color(0.3f, 0.32f, 0.45f), "Buildings/building_church_blue", 180f);
+            House(new RectInt(86, 99, 6, 6), new Color(0.7f, 0.65f, 0.55f), new Color(0.25f, 0.3f, 0.5f), "Buildings/building_home_B_blue", 180f);
+            House(new RectInt(99, 84, 6, 6), new Color(0.7f, 0.64f, 0.55f), new Color(0.3f, 0.35f, 0.55f), "Buildings/building_home_B_blue", 270f);
+            House(new RectInt(56, 67, 7, 7), new Color(0.74f, 0.66f, 0.52f), new Color(0.55f, 0.25f, 0.2f), "Buildings/building_market_blue", 90f);
+            House(new RectInt(93, 66, 7, 6), new Color(0.6f, 0.55f, 0.5f), new Color(0.35f, 0.25f, 0.18f), "Buildings/building_blacksmith_blue", -90f);
+
+            // Well in the middle of the plaza
+            if (Art("Buildings/building_well_blue", new Vector3(80.5f, 0, 80.5f), 2.3f, ArtLibrary.Fit.Width) == null)
             {
-                float px = i % 2 == 0 ? smithy.xMin + 0.5f : smithy.xMax - 0.5f;
-                float pz = i < 2 ? smithy.yMin + 0.5f : smithy.yMax - 0.5f;
-                if (!art) Factory.Prim(PrimitiveType.Cube, deco, new Vector3(px, 1.5f, pz), new Vector3(0.4f, 3f, 0.4f), wood);
-                grid.SetBlocked((int)px, (int)pz, true);
+                Factory.Prim(PrimitiveType.Cylinder, deco, new Vector3(80.5f, 0.5f, 80.5f), new Vector3(1.8f, 0.5f, 1.8f), new Color(0.5f, 0.48f, 0.45f));
+                Factory.Prim(PrimitiveType.Cylinder, deco, new Vector3(80.5f, 1.01f, 80.5f), new Vector3(1.4f, 0.01f, 1.4f), waterC);
             }
-            var forgeC = new Color(1f, 0.35f, 0.05f);
-            if (Art("Buildings/building_blacksmith_blue", new Vector3(91.7f, 0, 71.3f), 3.8f, ArtLibrary.Fit.Width, -90f) != null)
-            {
-                Art("Props/barrel_large", new Vector3(92.4f, 0, 68.6f), 0.9f);
-                Art("Props/crates_stacked", new Vector3(87.6f, 0, 68.6f), 1.2f, ArtLibrary.Fit.Height, 20f);
-            }
-            else
-            {
-                Factory.Prim(PrimitiveType.Cube, deco, new Vector3(smithy.center.x, 3.1f, smithy.center.y), new Vector3(smithy.width + 0.6f, 0.3f, smithy.height + 0.6f), new Color(0.35f, 0.25f, 0.18f));
-                Factory.Prim(PrimitiveType.Cube, deco, new Vector3(91.5f, 0.6f, 71.5f), new Vector3(1.6f, 1.2f, 1.6f), new Color(0.3f, 0.28f, 0.27f));
-                Factory.Prim(PrimitiveType.Cube, deco, new Vector3(91.5f, 1.25f, 71.5f), new Vector3(1.2f, 0.1f, 1.2f), forgeC, false, Mat.Glow(forgeC));
-            }
-            grid.BlockRect(91, 71, 92, 72);
+            grid.BlockRect(80, 80, 80, 80);
 
-            // Well in the square
-            if (Art("Buildings/building_well_blue", new Vector3(80.5f, 0, 82.5f), 2.3f, ArtLibrary.Fit.Width) == null)
-            {
-                Factory.Prim(PrimitiveType.Cylinder, deco, new Vector3(80.5f, 0.5f, 82.5f), new Vector3(1.8f, 0.5f, 1.8f), new Color(0.5f, 0.48f, 0.45f));
-                Factory.Prim(PrimitiveType.Cylinder, deco, new Vector3(80.5f, 1.01f, 82.5f), new Vector3(1.4f, 0.01f, 1.4f), waterC);
-                Factory.Prim(PrimitiveType.Cube, deco, new Vector3(80.5f, 2.3f, 82.5f), new Vector3(2.2f, 0.2f, 0.3f), wood);
-            }
-            grid.BlockRect(80, 82, 80, 82);
+            // Fountain on the north street
+            grid.BlockRect(79, 95, 81, 97);
+            if (Art("Town/fountain-round", new Vector3(80.5f, 0, 96.5f), 3.2f, ArtLibrary.Fit.Width) == null)
+                Factory.Prim(PrimitiveType.Cylinder, deco, new Vector3(80.5f, 0.4f, 96.5f), new Vector3(3f, 0.4f, 3f), new Color(0.55f, 0.53f, 0.5f));
 
-            CraftingStation.Create(SkillType.Smithing, new Vector3(89.5f, 0, 70.5f), root);
-            CraftingStation.Create(SkillType.Cooking, new Vector3(75.5f, 0, 80.5f), root);
-
-            Npc.Create("Captain Aldric", "Captain of the Guard", NpcRole.QuestGiver, new Vector3(80.5f, 0, 86.5f), new Color(0.6f, 0.15f, 0.12f),
-                "Stay sharp, traveller. These are dark days for Hollowmere.", npcs, true);
-            Npc.Create("Forester Wren", "Woodcutting & Fishing", NpcRole.QuestGiver, new Vector3(76.5f, 0, 84.5f), new Color(0.25f, 0.45f, 0.2f),
-                "The forest provides, if you know how to ask.", npcs);
-            Npc.Create("Smith Gorrin", "Blacksmith", NpcRole.QuestGiver, new Vector3(87.5f, 0, 74.5f), new Color(0.35f, 0.3f, 0.28f),
-                "Bring me ore and I'll teach you to work it.", npcs, true);
-            Npc.Create("Merchant Lysa", "General Goods", NpcRole.Vendor, new Vector3(75.5f, 0, 74.5f), new Color(0.55f, 0.3f, 0.6f),
-                "Potions! Fresh potions! I also buy anything you drag out of those monsters.", npcs).SellsAs(VendorKind.General);
-            Npc.Create("Sister Mae", "Healer", NpcRole.Healer, new Vector3(85.5f, 0, 84.5f), new Color(0.9f, 0.9f, 0.85f),
-                "The Light watches over you, child. Let me tend your wounds.", npcs);
-            Npc.Create("Thomas", "Farmer", NpcRole.QuestGiver, new Vector3(71.5f, 0, 82.5f), new Color(0.45f, 0.55f, 0.3f),
-                "Morning! Don't mind the mud. Bandits ran off with half my harvest again.", npcs, false, false);
-            Npc.Create("Jenkins", "Butler of Automation", NpcRole.QuestGiver, new Vector3(89.5f, 0, 83.5f), new Color(0.08f, 0.08f, 0.1f),
-                "Good day. I have taken the liberty of automating the village. Nearly all of it. The rest is merely failing.", npcs, false, false)
-                .DressAsButler();
-
-            // Shopkeepers (added later: they don't block tiles, so existing servers' world maps stay valid)
-            Npc.Create("Armorer Brann", "Armor", NpcRole.Vendor, new Vector3(85.5f, 0, 71.5f), new Color(0.45f, 0.42f, 0.4f),
-                "Helms, mail, boots. Everything a body needs to stay a body.", npcs, true, false, false).SellsAs(VendorKind.Armor);
-            Npc.Create("Weaponsmith Hilda", "Weapons", NpcRole.Vendor, new Vector3(85.5f, 0, 76.5f), new Color(0.55f, 0.3f, 0.2f),
-                "Looking for something with an edge? You've come to the right woman.", npcs, true, false, false).SellsAs(VendorKind.Weapons);
-            Npc.Create("Innkeeper Rosie", "Food & Drink", NpcRole.Vendor, new Vector3(73.5f, 0, 84.5f), new Color(0.75f, 0.45f, 0.35f),
-                "Welcome to the Prancing Boar! Sit, eat, drink, and don't start any fights.", npcs, false, true, false).SellsAs(VendorKind.Food);
-            Npc.Create("Curio Dealer Vex", "Rings & Amulets", NpcRole.Vendor, new Vector3(71.5f, 0, 78.5f), new Color(0.3f, 0.2f, 0.45f),
-                "Trinkets with a past. Some of them even have a future.", npcs, false, true, false).SellsAs(VendorKind.Curios);
-            Npc.Create("Beastmaster Orla", "Companions for Hire", NpcRole.Vendor, new Vector3(97.5f, 0, 76.5f), new Color(0.4f, 0.3f, 0.2f),
-                "Hounds, blades, spells and stone. Nobody should walk these roads alone.", npcs, false, false, false).SellsAs(VendorKind.Companions);
-
-            // Market stalls & crates
+            // Market stalls west of the plaza
             for (int i = 0; i < 3; i++)
             {
-                var p = new Vector3(70.5f + i * 2f, 0, 76.5f);
+                var p = new Vector3(66.5f + i * 2f, 0, 74.5f);
                 grid.SetBlocked((int)p.x, (int)p.z, true);
                 if (Art(i % 2 == 0 ? "Town/stall-red" : "Town/stall-green", p, 1.8f, ArtLibrary.Fit.Width) != null) continue;
                 Factory.Prim(PrimitiveType.Cube, deco, p + Vector3.up * 0.4f, new Vector3(1.4f, 0.8f, 1f), wood);
                 Factory.Prim(PrimitiveType.Cube, deco, p + Vector3.up * 2f, new Vector3(1.7f, 0.1f, 1.3f), i % 2 == 0 ? new Color(0.7f, 0.2f, 0.2f) : new Color(0.85f, 0.8f, 0.6f));
             }
 
-            BuildOuterTown(wood);
+            // Farm plot (south-west) and Orla's animal pen (south-east): fenced, with a gap to walk in
+            FencedPlot(new RectInt(56, 55, 13, 7), 62, true, wood);
+            FencedPlot(new RectInt(99, 57, 6, 5), 101, false, wood);
+
+            // Training yard (south): posts and banners
+            for (int y = 55; y < 62; y++)
+                for (int x = 84; x < 96; x++)
+                    surface.Set(x, y, GroundSurface.Dirt, 0.8f);
+            foreach (var px in new[] { 86.5f, 89.5f, 92.5f })
+            {
+                grid.SetBlocked((int)px, 58, true);
+                if (Art("Town/pillar-wood", new Vector3(px, 0, 58.5f), 2f, ArtLibrary.Fit.Height) == null)
+                    Factory.Prim(PrimitiveType.Cylinder, deco, new Vector3(px, 1f, 58.5f), new Vector3(0.4f, 1f, 0.4f), wood);
+            }
+
+            // ---- crafting stations and people
+            CraftingStation.Create(SkillType.Smithing, new Vector3(91.5f, 0, 66.5f), root);
+            CraftingStation.Create(SkillType.Cooking, new Vector3(74.5f, 0, 86.5f), root);
+
+            Npc.Create("Captain Aldric", "Captain of the Guard", NpcRole.QuestGiver, new Vector3(84.5f, 0, 104.5f), new Color(0.6f, 0.15f, 0.12f),
+                "Stay sharp, traveller. These are dark days for Hollowmere.", npcs, true, null, false);
+            Npc.Create("Forester Wren", "Woodcutting & Fishing", NpcRole.QuestGiver, new Vector3(75.5f, 0, 103.5f), new Color(0.25f, 0.45f, 0.2f),
+                "The forest provides, if you know how to ask.", npcs, false, null, false);
+            Npc.Create("Smith Gorrin", "Blacksmith", NpcRole.QuestGiver, new Vector3(90.5f, 0, 69.5f), new Color(0.35f, 0.3f, 0.28f),
+                "Bring me ore and I'll teach you to work it.", npcs, true, null, false);
+            Npc.Create("Merchant Lysa", "General Goods", NpcRole.Vendor, new Vector3(64.5f, 0, 70.5f), new Color(0.55f, 0.3f, 0.6f),
+                "Potions! Fresh potions! I also buy anything you drag out of those monsters.", npcs, false, null, false).SellsAs(VendorKind.General);
+            Npc.Create("Sister Mae", "Healer", NpcRole.Healer, new Vector3(96.5f, 0, 92.5f), new Color(0.9f, 0.9f, 0.85f),
+                "The Light watches over you, child. Let me tend your wounds.", npcs, false, null, false);
+            Npc.Create("Thomas", "Farmer", NpcRole.QuestGiver, new Vector3(70.5f, 0, 59.5f), new Color(0.45f, 0.55f, 0.3f),
+                "Morning! Don't mind the mud. Bandits ran off with half my harvest again.", npcs, false, false, false);
+            Npc.Create("Jenkins", "Butler of Automation", NpcRole.QuestGiver, new Vector3(88.5f, 0, 90.5f), new Color(0.08f, 0.08f, 0.1f),
+                "Good day. I have taken the liberty of automating the village. Nearly all of it. The rest is merely failing.", npcs, false, false, false)
+                .DressAsButler();
+            Npc.Create("Armorer Brann", "Armor", NpcRole.Vendor, new Vector3(98.5f, 0, 74.5f), new Color(0.45f, 0.42f, 0.4f),
+                "Helms, mail, boots. Everything a body needs to stay a body.", npcs, true, false, false).SellsAs(VendorKind.Armor);
+            Npc.Create("Weaponsmith Hilda", "Weapons", NpcRole.Vendor, new Vector3(90.5f, 0, 75.5f), new Color(0.55f, 0.3f, 0.2f),
+                "Looking for something with an edge? You've come to the right woman.", npcs, true, false, false).SellsAs(VendorKind.Weapons);
+            Npc.Create("Innkeeper Rosie", "Food & Drink", NpcRole.Vendor, new Vector3(66.5f, 0, 91.5f), new Color(0.75f, 0.45f, 0.35f),
+                "Welcome to the Prancing Boar! Sit, eat, drink, and don't start any fights.", npcs, false, true, false).SellsAs(VendorKind.Food);
+            Npc.Create("Curio Dealer Vex", "Rings & Amulets", NpcRole.Vendor, new Vector3(71.5f, 0, 70.5f), new Color(0.3f, 0.2f, 0.45f),
+                "Trinkets with a past. Some of them even have a future.", npcs, false, true, false).SellsAs(VendorKind.Curios);
+            Npc.Create("Beastmaster Orla", "Companions for Hire", NpcRole.Vendor, new Vector3(102.5f, 0, 64.5f), new Color(0.4f, 0.3f, 0.2f),
+                "Hounds, blades, spells and stone. Nobody should walk these roads alone.", npcs, false, false, false).SellsAs(VendorKind.Companions);
 
             if (art)
             {
-                // Lantern posts around the square and along the streets (visual only).
+                // Lantern posts around the plaza and along the streets (visual only).
                 var posts = new System.Collections.Generic.List<Vector3>
-                    { new Vector3(77.6f, 0, 79.4f), new Vector3(83.4f, 0, 79.4f), new Vector3(77.6f, 0, 85.6f), new Vector3(83.4f, 0, 85.6f) };
-                foreach (float d in new[] { 63.5f, 69.5f, 92.5f, 98.5f })
+                {
+                    new Vector3(71.6f, 0, 71.6f), new Vector3(89.4f, 0, 71.6f), new Vector3(71.6f, 0, 89.4f), new Vector3(89.4f, 0, 89.4f),
+                    new Vector3(77.6f, 0, 77.6f), new Vector3(83.4f, 0, 77.6f), new Vector3(77.6f, 0, 83.4f), new Vector3(83.4f, 0, 83.4f),
+                };
+                foreach (float d in new[] { 57.5f, 65.5f, 93.5f, 102.5f })
                 {
                     posts.Add(new Vector3(77.4f, 0, d));
                     posts.Add(new Vector3(83.6f, 0, d));
@@ -457,70 +467,45 @@ namespace Shadowfall
                     l.intensity = 1.4f;
                     NightLight.Add(l, 0.15f);
                 }
-                Art("Town/cart", new Vector3(73.5f, 0, 73.0f), 2.2f, ArtLibrary.Fit.Width, 35f);
-                Art("Props/barrel_small_stack", new Vector3(69.0f, 0, 76.6f), 1.0f);
-                Art("Props/box_stacked", new Vector3(76.4f, 0, 77.0f), 1.0f, ArtLibrary.Fit.Height, 15f);
-            }
-        }
-
-        /// <summary>The newer, outer part of the village: church, windmill, market hall, homes, a farm plot and a training yard.</summary>
-        void BuildOuterTown(Color wood)
-        {
-            // Visual variety only uses vr (see the class comment); blocking uses fixed rectangles, so the layout stays deterministic.
-            House(new RectInt(86, 92, 10, 8), new Color(0.75f, 0.73f, 0.68f), new Color(0.3f, 0.32f, 0.45f), "Buildings/building_church_blue", 180f);
-            House(new RectInt(60, 92, 8, 8), new Color(0.72f, 0.65f, 0.55f), new Color(0.5f, 0.3f, 0.2f), "Buildings/building_windmill_blue", 135f);
-            House(new RectInt(60, 84, 6, 6), new Color(0.72f, 0.65f, 0.55f), new Color(0.3f, 0.35f, 0.55f), "Buildings/building_home_A_blue", 90f);
-            House(new RectInt(60, 69, 7, 7), new Color(0.74f, 0.66f, 0.52f), new Color(0.55f, 0.25f, 0.2f), "Buildings/building_market_blue", 90f);
-            House(new RectInt(96, 86, 6, 6), new Color(0.7f, 0.64f, 0.55f), new Color(0.3f, 0.35f, 0.55f), "Buildings/building_home_B_blue", 270f);
-            House(new RectInt(96, 68, 6, 6), new Color(0.7f, 0.64f, 0.55f), new Color(0.3f, 0.45f, 0.25f), "Buildings/building_home_A_blue", 270f);
-
-            // Fountain on the north street
-            grid.BlockRect(79, 92, 81, 94);
-            if (Art("Town/fountain-round", new Vector3(80.5f, 0, 93.5f), 3.2f, ArtLibrary.Fit.Width) == null)
-                Factory.Prim(PrimitiveType.Cylinder, deco, new Vector3(80.5f, 0.4f, 93.5f), new Vector3(3f, 0.4f, 3f), new Color(0.55f, 0.53f, 0.5f));
-
-            // Farm plot (south-west): tilled soil with rows of crops behind a fence
-            var farm = new RectInt(61, 60, 13, 7);
-            for (int y = farm.yMin; y < farm.yMax; y++)
-                for (int x = farm.xMin; x < farm.xMax; x++)
-                {
-                    surface.Set(x, y, GroundSurface.Dirt, 0.95f);
-                    surface.Tint(x, y, new Color(0.8f, 0.75f, 0.7f));
-                    Paint(x, y, dirtC * 0.8f);
-                    bool edge = x == farm.xMin || x == farm.xMax - 1 || y == farm.yMin || y == farm.yMax - 1;
-                    if (edge)
-                    {
-                        if (y == farm.yMax - 1 && (x == 67 || x == 68)) continue; // gap to walk in
-                        grid.SetBlocked(x, y, true);
-                        bool alongX = y == farm.yMin || y == farm.yMax - 1;
-                        if (ArtBox("Town/fence", new Vector3(x + 0.5f, 0, y + 0.5f), new Vector3(0.3f, 1f, 1.02f), alongX ? 90f : 0f) == null)
-                            Factory.Prim(PrimitiveType.Cube, deco, new Vector3(x + 0.5f, 0.5f, y + 0.5f), alongX ? new Vector3(1f, 1f, 0.2f) : new Vector3(0.2f, 1f, 1f), wood);
-                    }
-                    else if (art && (y - farm.yMin) % 2 == 1)
-                        Art(Pick("Nature/plant_bush", "Nature/grass_large"), new Vector3(x + 0.5f, 0, y + 0.5f), VR(0.5f, 0.75f), ArtLibrary.Fit.Height, VR(0, 360), false);
-                }
-
-            // Training yard (south-east): posts, targets and banners
-            for (int y = 60; y < 67; y++)
-                for (int x = 87; x < 100; x++)
-                    surface.Set(x, y, GroundSurface.Dirt, 0.8f);
-            foreach (var px in new[] { 89.5f, 92.5f, 95.5f })
-            {
-                grid.SetBlocked((int)px, 63, true);
-                if (Art("Town/pillar-wood", new Vector3(px, 0, 63.5f), 2f, ArtLibrary.Fit.Height) == null)
-                    Factory.Prim(PrimitiveType.Cylinder, deco, new Vector3(px, 1f, 63.5f), new Vector3(0.4f, 1f, 0.4f), wood);
-            }
-            if (art)
-            {
-                Art("Town/banner-red", new Vector3(98.5f, 0, 65.5f), 3f, ArtLibrary.Fit.Height, 270f);
-                Art("Props/barrel_large", new Vector3(98.5f, 0, 61.5f), 1f);
-                Art("Props/crates_stacked", new Vector3(88.0f, 0, 60.8f), 1.1f, ArtLibrary.Fit.Height, 10f);
-                // Banners by the north and south gates
+                Art("Town/cart", new Vector3(68.5f, 0, 77.0f), 2.2f, ArtLibrary.Fit.Width, 35f);
+                Art("Props/barrel_small_stack", new Vector3(63.5f, 0, 75.6f), 1.0f);
+                Art("Props/box_stacked", new Vector3(73.4f, 0, 75.0f), 1.0f, ArtLibrary.Fit.Height, 15f);
+                Art("Props/barrel_large", new Vector3(89.0f, 0, 66.6f), 0.9f);
+                Art("Props/crates_stacked", new Vector3(91.0f, 0, 72.6f), 1.1f, ArtLibrary.Fit.Height, 20f);
+                Art("Props/barrel_large", new Vector3(94.5f, 0, 56.0f), 1f);
+                Art("Town/banner-red", new Vector3(96.0f, 0, 61.0f), 3f, ArtLibrary.Fit.Height, 270f);
+                Art("Props/barrel_small_stack", new Vector3(65.5f, 0, 88.0f), 1.0f);
+                Art("Town/hedge", new Vector3(91.5f, 0, 93.5f), 1.2f, ArtLibrary.Fit.Height, 90f);
+                // Banners by the gates
                 Art("Town/banner-green", new Vector3(76.6f, 0, Town.yMax - 2.5f), 3f, ArtLibrary.Fit.Height, 180f);
                 Art("Town/banner-green", new Vector3(84.4f, 0, Town.yMax - 2.5f), 3f, ArtLibrary.Fit.Height, 180f);
                 Art("Town/banner-red", new Vector3(76.6f, 0, Town.yMin + 2.5f), 3f, ArtLibrary.Fit.Height, 0f);
                 Art("Town/banner-red", new Vector3(84.4f, 0, Town.yMin + 2.5f), 3f, ArtLibrary.Fit.Height, 0f);
             }
+        }
+
+        /// <summary>A fenced rectangle (farm plot, animal pen) with a two-cell gap in its top side at <paramref name="gapX"/>.</summary>
+        void FencedPlot(RectInt r, int gapX, bool crops, Color wood)
+        {
+            for (int y = r.yMin; y < r.yMax; y++)
+                for (int x = r.xMin; x < r.xMax; x++)
+                {
+                    surface.Set(x, y, GroundSurface.Dirt, crops ? 0.95f : 0.7f);
+                    if (crops) { surface.Tint(x, y, new Color(0.8f, 0.75f, 0.7f)); Paint(x, y, dirtC * 0.8f); }
+                    bool edge = x == r.xMin || x == r.xMax - 1 || y == r.yMin || y == r.yMax - 1;
+                    if (edge)
+                    {
+                        if (y == r.yMax - 1 && (x == gapX || x == gapX + 1)) continue; // gap to walk in
+                        grid.SetBlocked(x, y, true);
+                        bool alongX = y == r.yMin || y == r.yMax - 1;
+                        if (ArtBox("Town/fence", new Vector3(x + 0.5f, 0, y + 0.5f), new Vector3(0.3f, 1f, 1.02f), alongX ? 90f : 0f) == null)
+                            Factory.Prim(PrimitiveType.Cube, deco, new Vector3(x + 0.5f, 0.5f, y + 0.5f), alongX ? new Vector3(1f, 1f, 0.2f) : new Vector3(0.2f, 1f, 1f), wood);
+                    }
+                    else if (crops && art && (y - r.yMin) % 2 == 1)
+                        Art(Pick("Nature/plant_bush", "Nature/grass_large"), new Vector3(x + 0.5f, 0, y + 0.5f), VR(0.5f, 0.75f), ArtLibrary.Fit.Height, VR(0, 360), false);
+                    else if (!crops && art && vr.NextDouble() < 0.25)
+                        Art("Nature/grass_large", new Vector3(x + 0.5f, 0, y + 0.5f), VR(0.4f, 0.6f), ArtLibrary.Fit.Height, VR(0, 360), false);
+                }
         }
 
         void Palisade(int x, int y, Color wood)
