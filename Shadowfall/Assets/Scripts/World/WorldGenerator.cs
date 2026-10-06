@@ -269,6 +269,11 @@ namespace Shadowfall
                 "Potions! Fresh potions! I also buy anything you drag out of those monsters.", npcs);
             Npc.Create("Sister Mae", "Healer", NpcRole.Healer, new Vector3(85.5f, 0, 84.5f), new Color(0.9f, 0.9f, 0.85f),
                 "The Light watches over you, child. Let me tend your wounds.", npcs);
+            Npc.Create("Thomas", "Farmer", NpcRole.QuestGiver, new Vector3(71.5f, 0, 82.5f), new Color(0.45f, 0.55f, 0.3f),
+                "Morning! Don't mind the mud. Bandits ran off with half my harvest again.", npcs, false, false);
+            Npc.Create("Jenkins", "Butler of Automation", NpcRole.QuestGiver, new Vector3(89.5f, 0, 83.5f), new Color(0.08f, 0.08f, 0.1f),
+                "Good day. I have taken the liberty of automating the village. Nearly all of it. The rest is merely failing.", npcs, false, false)
+                .DressAsButler();
 
             // Market stalls & crates
             for (int i = 0; i < 3; i++)

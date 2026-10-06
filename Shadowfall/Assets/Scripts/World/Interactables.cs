@@ -469,7 +469,8 @@ namespace Shadowfall
         public override float LabelHeight => 2.6f;
         public override string HoverText => DisplayName + (string.IsNullOrEmpty(Title) ? "" : "\n<" + Title + ">");
 
-        public static Npc Create(string name, string title, NpcRole role, Vector3 pos, Color robe, string greeting, Transform parent, bool hasWeapon = false)
+        public static Npc Create(string name, string title, NpcRole role, Vector3 pos, Color robe, string greeting, Transform parent,
+            bool hasWeapon = false, bool? wearsRobe = null)
         {
             var go = new GameObject(name);
             go.transform.SetParent(parent, false);
@@ -482,10 +483,45 @@ namespace Shadowfall
             n.Greeting = greeting;
             n.InteractRange = 2.4f;
             n.model = HumanoidModel.Build(go.transform, 1f, new Color(0.9f, 0.75f, 0.6f), robe, Factory.Shade(robe, 0.7f),
-                new Color(0.7f, 0.7f, 0.75f), hasWeapon, !hasWeapon);
+                new Color(0.7f, 0.7f, 0.75f), hasWeapon, wearsRobe ?? !hasWeapon);
             n.AddClickCollider(0.5f, 2.1f);
             WorldGrid.Instance.SetBlocked(Mathf.FloorToInt(pos.x), Mathf.FloorToInt(pos.z), true);
             return n;
+        }
+
+        /// <summary>
+        /// Restyles the NPC after the Jenkins automation server's butler mascot:
+        /// black tailcoat, white shirt, red bow tie, neat grey hair and a napkin over the arm.
+        /// </summary>
+        public void DressAsButler()
+        {
+            var black = new Color(0.08f, 0.08f, 0.1f);
+            var white = new Color(0.95f, 0.95f, 0.93f);
+            var red = new Color(0.8f, 0.1f, 0.1f);
+            var grey = new Color(0.72f, 0.72f, 0.74f);
+
+            model.BodyRenderer.sharedMaterial = Mat.Get(black);
+            model.ArmRendererL.sharedMaterial = model.ArmRendererR.sharedMaterial = Mat.Get(black);
+            model.LegRendererL.sharedMaterial = model.LegRendererR.sharedMaterial = Mat.Get(Factory.Shade(black, 1.4f));
+
+            // White shirt front with a red bow tie
+            Factory.Prim(PrimitiveType.Cube, model.Root, new Vector3(0, 1.38f, 0.185f), new Vector3(0.24f, 0.62f, 0.02f), white);
+            Factory.Prim(PrimitiveType.Cube, model.Root, new Vector3(-0.07f, 1.63f, 0.2f), new Vector3(0.13f, 0.09f, 0.04f), red)
+                .transform.localRotation = Quaternion.Euler(0, 0, 15);
+            Factory.Prim(PrimitiveType.Cube, model.Root, new Vector3(0.07f, 1.63f, 0.2f), new Vector3(0.13f, 0.09f, 0.04f), red)
+                .transform.localRotation = Quaternion.Euler(0, 0, -15);
+            Factory.Prim(PrimitiveType.Cube, model.Root, new Vector3(0, 1.63f, 0.21f), new Vector3(0.05f, 0.06f, 0.04f), Factory.Shade(red, 0.8f));
+            // Tailcoat tails
+            Factory.Prim(PrimitiveType.Cube, model.Root, new Vector3(0, 0.85f, -0.16f), new Vector3(0.5f, 0.4f, 0.05f), black);
+
+            // Neat grey hair on top and back of the head (face stays visible)
+            Factory.Prim(PrimitiveType.Sphere, model.Head, new Vector3(0, 0.12f, -0.1f), new Vector3(1.06f, 0.92f, 1.0f), grey);
+            // Eyebrows
+            Factory.Prim(PrimitiveType.Cube, model.Head, new Vector3(-0.2f, 0.18f, 0.45f), new Vector3(0.22f, 0.06f, 0.06f), grey);
+            Factory.Prim(PrimitiveType.Cube, model.Head, new Vector3(0.2f, 0.18f, 0.45f), new Vector3(0.22f, 0.06f, 0.06f), grey);
+
+            // Napkin draped over the left forearm
+            Factory.Prim(PrimitiveType.Cube, model.LArm, new Vector3(0, -0.5f, 0.06f), new Vector3(0.24f, 0.38f, 0.26f), white);
         }
 
         /// <summary>The next quest this NPC can offer or accept, or null.</summary>

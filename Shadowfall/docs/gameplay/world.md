@@ -20,6 +20,8 @@ The map is 160 × 160 tiles, with the village of **Hollowmere** at its centre. A
 | Smith Gorrin | Mining quests. Stands next to the anvil |
 | Merchant Lysa | Sells potions and buys anything |
 | Sister Mae | Restores your health and mana for free |
+| Thomas | Farmer by the west houses. Wants the quarry-road bandits dealt with |
+| Jenkins | The village's butler of automation, dressed like the Jenkins mascot. Quests about his broken build and pipeline |
 
 ## Monsters
 

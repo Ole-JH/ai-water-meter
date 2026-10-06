@@ -164,6 +164,43 @@ namespace Shadowfall
                 }
             },
             {
+                "Thomas", new[]
+                {
+                    new QuestDef
+                    {
+                        Id = "thomas_harvest", Title = "Stolen Harvest", Type = QuestType.Kill, Target = "Bandit", Count = 6, MinLevel = 2,
+                        Description = "Bandits have been raiding my fields at night and hauling the sacks off toward the quarry road, " +
+                                      "west of the village. I'm a farmer, not a fighter. Could you have a word with them? A firm word.",
+                        Objective = "Slay 6 Bandits along the west road to Ironvein Quarry.",
+                        CompletionText = "That'll teach 'em! Here, it isn't much, but it's honest coin.",
+                        RewardXp = 300, RewardGold = 60, RewardItemLevel = 5, RewardRarity = Rarity.Magic
+                    },
+                }
+            },
+            {
+                "Jenkins", new[]
+                {
+                    new QuestDef
+                    {
+                        Id = "jenkins_build", Title = "The Broken Build", Type = QuestType.Collect, Target = "Copper Ore", Count = 4,
+                        Description = "The bell tower's clockwork has seized, and with it the nightly build. Pardon me: the nightly bell. " +
+                                      "I shall need copper to replace the stripped gears. The quarry to the west should oblige.",
+                        Objective = "Bring 4 Copper Ore to Jenkins.",
+                        CompletionText = "Splendid. The build is green once more. I do so prefer it green.",
+                        RewardXp = 160, RewardGold = 40
+                    },
+                    new QuestDef
+                    {
+                        Id = "jenkins_pipeline", Title = "Pests in the Pipeline", Type = QuestType.Kill, Target = "Goblin Shaman", Count = 4, MinLevel = 4,
+                        Description = "Goblin shamans east of the village keep hexing my pipeline. Every job fails at the same stage. " +
+                                      "I have retried them all twice. I believe the remedy is now... manual intervention.",
+                        Objective = "Slay 4 Goblin Shamans at the Goblin Encampment (east).",
+                        CompletionText = "All stages passing. You have my thanks, and this, with my compliments.",
+                        RewardXp = 520, RewardGold = 110, RewardItemLevel = 8, RewardRarity = Rarity.Rare
+                    },
+                }
+            },
+            {
                 "Smith Gorrin", new[]
                 {
                     new QuestDef
