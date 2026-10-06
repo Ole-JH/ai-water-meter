@@ -35,7 +35,7 @@ The four zones start a short walk outside the walls and stretch about 115 tiles 
 | Beastmaster Orla | Companions for hire, by the east road (see [Companions](progression.md#companions)) |
 | Sister Mae | Restores your health and mana for free |
 | Thomas | Farmer by the west houses. Wants the quarry-road bandits dealt with |
-| Jenkins | The village's butler of automation, dressed like the Jenkins mascot. Quests about his broken build and pipeline |
+| Jenkins | The village's butler of automation, dressed like the Jenkins mascot. Runs Hollowmere like a production system: a 14-quest DevOps chain taken painfully literally, from *Check the Logs* (bring him oak logs to inspect) and *Containerization* (trout in barrels) through *kill -9* (nine zombie processes) and *Breaking Up the Monolith* (rock golems into pebbles) to *Chaos Engineering* against the Crypt Lord |
 
 Every vendor buys your loot: right-click an item in your bags while trading.
 

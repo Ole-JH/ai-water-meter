@@ -1356,11 +1356,23 @@ namespace Shadowfall
         // NPC dialog / vendor / healer / crafting
         // =====================================================================================
 
+        /// <summary>Tall enough for the quest's text (descriptions vary a lot in length).</summary>
+        float QuestDialogHeight(Npc npc)
+        {
+            var q = npc.CurrentQuest(Player.I);
+            if (q == null) return 300;
+            var st = Player.I.Quests.Get(q.Id);
+            string body = st != null && st.IsReady(Player.I) ? q.CompletionText : q.Description;
+            float bodyH = Mathf.Max(60f, UISkin.V(UISkin.Ink14, wordWrap: true).CalcHeight(new GUIContent(body), 420));
+            return 122 + 32 + bodyH + 10 + 46 + 40 + 46 + 40;
+        }
+
         void DrawDialog(Player p)
         {
             var npc = dialogNpc;
             float height = npc.Role == NpcRole.Vendor && npc.Shop != null && npc.Shop.Kind == VendorKind.Companions ? 250 + CompanionDef.All.Length * 80
-                : npc.Role == NpcRole.Vendor && npc.Shop != null ? 330 + npc.Shop.Items.Count * 54 + (npc.Shop.Kind == VendorKind.Curios ? 54 : 0) : 520;
+                : npc.Role == NpcRole.Vendor && npc.Shop != null ? 330 + npc.Shop.Items.Count * 54 + (npc.Shop.Kind == VendorKind.Curios ? 54 : 0)
+                : npc.Role == NpcRole.QuestGiver ? QuestDialogHeight(npc) : 520;
             var r = new Rect(14, 120, 470, Mathf.Min(height, VH - 140));
             if (UISkin.Window(r, npc.DisplayName, true, true)) { dialogNpc = null; return; }
             Block(r);
@@ -1383,8 +1395,10 @@ namespace Shadowfall
                     UISkin.Shadowed(new Rect(r.x + 26, y, 420, 28), q.Title, UISkin.Heading, UISkin.Gold);
                     y += 32;
                     string body = state != null && state.IsReady(p) ? q.CompletionText : q.Description;
-                    GUI.Label(new Rect(r.x + 26, y, 420, 120), body, UISkin.Ink14);
-                    y += 124;
+                    var bodyStyle = UISkin.V(UISkin.Ink14, wordWrap: true);
+                    float bodyH = Mathf.Max(60f, bodyStyle.CalcHeight(new GUIContent(body), 420));
+                    GUI.Label(new Rect(r.x + 26, y, 420, bodyH), body, bodyStyle);
+                    y += bodyH + 10;
                     GUI.Label(new Rect(r.x + 26, y, 420, 44), "<b>Objective:</b> " + q.Objective, UISkin.Ink14);
                     y += 46;
                     string reward = "<b>Rewards:</b>  <color=#c49cff>" + q.RewardXp + " xp</color>,  <color=#f0c45a>" + q.RewardGold + " gold</color>";
