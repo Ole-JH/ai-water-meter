@@ -58,7 +58,7 @@ namespace Shadowfall
             try
             {
                 loginName = PlayerPrefs.GetString("sf_name", "");
-                serverUrl = PlayerPrefs.GetString("sf_server", "ws://localhost:8080/ws");
+                serverUrl = PlayerPrefs.GetString("sf_server", "ws://localhost:7341/ws");
             }
             catch (System.Exception) { }
         }

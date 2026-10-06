@@ -5,7 +5,7 @@ Common commands are defined in `Taskfile.yml` and run with [Task](https://taskfi
 | Command | What it does |
 | --- | --- |
 | `task setup` | Install server dependencies |
-| `task server:dev` | Run the server locally with auto-reload on <http://localhost:8080> (data in `server/data`) |
+| `task server:dev` | Run the server locally with auto-reload on <http://localhost:7341> (data in `server/data`) |
 | `task server:test` | End-to-end smoke test against a throwaway server |
 | `task client:check` | Compile the C# scripts with the .NET SDK (no Unity) |
 | `task client:build` | Headless Unity WebGL build into `server/public` (needs `UNITY_PATH`) |
@@ -23,7 +23,8 @@ Common commands are defined in `Taskfile.yml` and run with [Task](https://taskfi
 | Variable | Default | Used by |
 | --- | --- | --- |
 | `UNITY_PATH` | `unity` | `client:build`, `deploy` |
-| `PORT` | `8080` | `server:dev` |
+| `PORT` | `7341` | `server:dev` |
+| `SHADOWFALL_PORT` | `7341` | Host port for `up` and `ps` |
 | `DOCS_PORT` | `8000` | `docs:serve` |
 
 ```bash

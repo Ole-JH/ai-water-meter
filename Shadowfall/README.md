@@ -13,7 +13,7 @@ An **online, browser-playable top-down action RPG** built with Unity: Diablo-sty
 # 2. Run the server
 task up            # or: cd server && docker compose up -d --build
 # 3. Play
-open http://localhost:8080
+open http://localhost:7341
 ```
 
 Run `task` to see every command (dev server, tests, compile check, backups, docs).

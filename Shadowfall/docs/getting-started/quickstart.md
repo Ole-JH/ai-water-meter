@@ -54,7 +54,7 @@ This gets you from a fresh checkout to playing in the browser.
     npm start
     ```
 
-Open **<http://localhost:8080>** in your browser.
+Open **<http://localhost:7341>** in your browser.
 
 ## 3. Play
 
@@ -67,6 +67,6 @@ Open **<http://localhost:8080>** in your browser.
 
 ## Playing from the Unity editor
 
-You can also press **Play** in the editor while the server runs locally. On the login screen, the **Server** field defaults to `ws://localhost:8080/ws`. Browser builds always connect back to the server that served the page.
+You can also press **Play** in the editor while the server runs locally. On the login screen, the **Server** field defaults to `ws://localhost:7341/ws`. Browser builds always connect back to the server that served the page.
 
 Invite friends by sending them your server's address. Everyone shares the same world.

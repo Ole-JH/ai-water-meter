@@ -11,6 +11,8 @@ vars:
   UNITY: '{{.UNITY_PATH | default "unity"}}'
   MKDOCS_IMAGE: squidfunk/mkdocs-material:9
   DOCS_PORT: '{{.DOCS_PORT | default "8000"}}'
+  # Host port for the game (Docker). Override: SHADOWFALL_PORT=9000 task up
+  GAME_PORT: '{{.SHADOWFALL_PORT | default "7341"}}'
 
 tasks:
   default:
@@ -36,11 +38,11 @@ tasks:
       - npm ci
 
   server:dev:
-    desc: Run the game server locally with auto-reload (http://localhost:8080)
+    desc: Run the game server locally with auto-reload (http://localhost:7341)
     dir: "{{.SERVER_DIR}}"
     deps: [server:install]
     env:
-      PORT: '{{.PORT | default "8080"}}'
+      PORT: '{{.PORT | default "7341"}}'
       DATA_DIR: ./data
     cmds:
       - npm run dev
@@ -67,11 +69,13 @@ tasks:
   # ---------------------------------------------------------------- docker
 
   up:
-    desc: Build and start the server container in the background (http://localhost:8080)
+    desc: Build and start the server container in the background (http://localhost:7341)
     dir: "{{.SERVER_DIR}}"
+    env:
+      SHADOWFALL_PORT: "{{.GAME_PORT}}"
     cmds:
       - docker compose up -d --build
-      - echo "Shadowfall is running on http://localhost:8080"
+      - echo "Shadowfall is running on http://localhost:{{.GAME_PORT}}"
 
   down:
     desc: Stop the server container
@@ -96,7 +100,7 @@ tasks:
     dir: "{{.SERVER_DIR}}"
     cmds:
       - docker compose ps
-      - curl -fsS http://localhost:8080/healthz && echo
+      - curl -fsS http://localhost:{{.GAME_PORT}}/healthz && echo
 
   docker:build:
     desc: Build the server image only (tag shadowfall-server:latest)

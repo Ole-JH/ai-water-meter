@@ -7,7 +7,7 @@
     The world generation changed since the server stored its map, or your browser cached an old build. Hard-refresh the page (++ctrl+shift+r++). If you changed the world on purpose, run `task world:reset` and restart the server.
 
 ??? question "*“Could not connect: could not reach the game server”*"
-    - In the editor, check the **Server** field on the login screen (default `ws://localhost:8080/ws`).
+    - In the editor, check the **Server** field on the login screen (default `ws://localhost:7341/ws`).
     - Behind a reverse proxy, make sure `/ws` forwards the `Upgrade` and `Connection` headers. See [HTTPS & reverse proxy](deployment/reverse-proxy.md).
     - Pages served over HTTPS need the proxy to terminate TLS, because the client uses `wss://` on HTTPS pages.
 

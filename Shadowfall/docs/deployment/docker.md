@@ -19,7 +19,7 @@ services:
     build: .
     restart: unless-stopped
     ports:
-      - "8080:8080"
+      - "${SHADOWFALL_PORT:-7341}:7341"
     volumes:
       - ./data:/data              # accounts, characters, world map
       - ./public:/app/public:ro   # the Unity WebGL build
@@ -27,11 +27,26 @@ services:
 
 The WebGL build is **copied into the image** and also **mounted** by Compose. With Compose, a new client build only needs a browser refresh. A standalone image (`task docker:build`) works on its own anywhere.
 
+## Ports & firewall
+
+Shadowfall needs **one TCP port**: **7341**. The web page, the game files and the live game connection (a WebSocket on `/ws`) all share it. Players don't need any ports open, and there's no UDP.
+
+| Setup | Forward / open |
+| --- | --- |
+| Plain HTTP, direct | TCP **7341** → players open `http://your-host:7341` |
+| Behind an HTTPS reverse proxy | TCP **443** (and **80** for Let's Encrypt) to the proxy. Keep 7341 private to the host |
+
+If 7341 is taken on your machine, change the **host** side without touching the image:
+
+```bash
+SHADOWFALL_PORT=9000 task up          # or: SHADOWFALL_PORT=9000 docker compose up -d
+```
+
 ## Configuration
 
 | Variable | Default (in the image) | Meaning |
 | --- | --- | --- |
-| `PORT` | `8080` | HTTP + WebSocket port |
+| `PORT` | `7341` | HTTP + WebSocket port inside the container |
 | `DATA_DIR` | `/data` | Where accounts, characters and `world.json` are stored |
 | `PUBLIC_DIR` | `/app/public` | Folder with the WebGL build |
 

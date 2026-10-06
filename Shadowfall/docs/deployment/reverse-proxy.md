@@ -9,7 +9,7 @@ Browsers only allow secure WebSockets (`wss://`) from pages loaded over HTTPS. T
     ```caddyfile
     play.example.com {
         encode zstd gzip
-        reverse_proxy shadowfall:8080
+        reverse_proxy shadowfall:7341
     }
     ```
 
@@ -39,7 +39,7 @@ Browsers only allow secure WebSockets (`wss://`) from pages loaded over HTTPS. T
         ssl_certificate_key /etc/letsencrypt/live/play.example.com/privkey.pem;
 
         location /ws {
-            proxy_pass http://127.0.0.1:8080;
+            proxy_pass http://127.0.0.1:7341;
             proxy_http_version 1.1;
             proxy_set_header Upgrade $http_upgrade;
             proxy_set_header Connection "upgrade";
@@ -48,7 +48,7 @@ Browsers only allow secure WebSockets (`wss://`) from pages loaded over HTTPS. T
         }
 
         location / {
-            proxy_pass http://127.0.0.1:8080;
+            proxy_pass http://127.0.0.1:7341;
             proxy_set_header Host $host;
         }
     }
@@ -63,7 +63,7 @@ Browsers only allow secure WebSockets (`wss://`) from pages loaded over HTTPS. T
           - traefik.http.routers.shadowfall.rule=Host(`play.example.com`)
           - traefik.http.routers.shadowfall.entrypoints=websecure
           - traefik.http.routers.shadowfall.tls.certresolver=letsencrypt
-          - traefik.http.services.shadowfall.loadbalancer.server.port=8080
+          - traefik.http.services.shadowfall.loadbalancer.server.port=7341
     ```
 
 !!! warning "Don't double-compress"

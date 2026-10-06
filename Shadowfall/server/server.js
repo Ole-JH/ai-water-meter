@@ -11,7 +11,7 @@ const crypto = require("crypto");
 const { WebSocketServer } = require("ws");
 const { MONSTERS, SPAWNERS, TOWN } = require("./content");
 
-const PORT = parseInt(process.env.PORT || "8080", 10);
+const PORT = parseInt(process.env.PORT || "7341", 10);
 const DATA_DIR = path.resolve(process.env.DATA_DIR || path.join(__dirname, "data"));
 const PUBLIC_DIR = path.resolve(process.env.PUBLIC_DIR || path.join(__dirname, "public"));
 const CHAR_DIR = path.join(DATA_DIR, "characters");

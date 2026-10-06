@@ -4,7 +4,9 @@ services:
     container_name: shadowfall
     restart: unless-stopped
     ports:
-      - "8080:8080"          # open http://your-server:8080 in a browser
+      # The only port the game needs (web page + game connection on /ws).
+      # Change the host side with SHADOWFALL_PORT, e.g. SHADOWFALL_PORT=9000 docker compose up -d
+      - "${SHADOWFALL_PORT:-7341}:7341"
     volumes:
       - ./data:/data         # accounts, characters and the world map
       - ./public:/app/public:ro   # the Unity WebGL build

@@ -44,7 +44,7 @@ namespace Shadowfall
         public void Connect(string url)
         {
             Close();
-            if (string.IsNullOrEmpty(url)) url = "ws://localhost:8080/ws";
+            if (string.IsNullOrEmpty(url)) url = "ws://localhost:7341/ws";
             ws = new ClientWebSocket();
             cts = new CancellationTokenSource();
             _ = Run(ws, url, cts.Token);

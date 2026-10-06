@@ -29,7 +29,7 @@ This builds `Assets/Scripts` with warnings treated as errors, against Unity's re
 ## Playtesting multiplayer locally
 
 1. `task server:dev`
-2. Make a WebGL build and open <http://localhost:8080> in two browser windows, or press Play in the editor for one of them.
+2. Make a WebGL build and open <http://localhost:7341> in two browser windows, or press Play in the editor for one of them.
 3. Log in with two different names. You'll see each other, can chat with ++enter++, and can fight the same monsters.
 
 ## Everything at once
