@@ -42,7 +42,17 @@ function connect(name, pass, hash = HASH) {
 
 const state = (c, x, z, extra = {}) => c.ws.send(JSON.stringify({ t: "state", x, z, ry: 0, hp: 100, mhp: 100, lvl: 1, mv: false, atk: false, dead: false, ...extra }));
 
+/** The Docker image must contain every module server.js requires (a missing COPY broke a deploy once). */
+function checkDockerfile() {
+  const docker = fs.readFileSync(path.join(__dirname, "..", "Dockerfile"), "utf8");
+  const copiesAllJs = /^COPY \*\.js /m.test(docker);
+  const src = fs.readFileSync(path.join(__dirname, "..", "server.js"), "utf8");
+  for (const [, mod] of src.matchAll(/require\("\.\/([\w-]+)"\)/g))
+    assert.ok(copiesAllJs || new RegExp(`COPY .*\\b${mod}\\.js\\b`).test(docker), `Dockerfile copies ${mod}.js`);
+}
+
 async function main() {
+  checkDockerfile();
   const server = spawn(process.execPath, [path.join(__dirname, "..", "server.js")], {
     env: { ...process.env, PORT: String(PORT), DATA_DIR, PUBLIC_DIR: path.join(__dirname, "..", "public"), ELITE_CHANCE: "0" },
     stdio: ["ignore", "pipe", "pipe"],

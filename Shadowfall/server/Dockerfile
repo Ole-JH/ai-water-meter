@@ -11,7 +11,8 @@ ENV NODE_ENV=production \
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev && npm cache clean --force
 
-COPY server.js content.js ./
+# Every server module (server.js, content.js, dungeon.js, ...). Tests are excluded by .dockerignore.
+COPY *.js ./
 # The Unity WebGL build (Shadowfall > Build WebGL in the editor writes it to server/public).
 # docker-compose also mounts this folder, so you can rebuild the client without rebuilding the image.
 COPY public/ ./public/
