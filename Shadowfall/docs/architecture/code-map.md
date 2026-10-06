@@ -8,8 +8,14 @@
 | `Core/GameInput.cs` | Mouse and keyboard wrapper for both Unity input backends |
 | `Core/CameraRig.cs` | High-angle follow camera, zoom, screen shake |
 | `Core/ArtLibrary.cs` | Loads the CC0 models (glTFast), scales and places them, tints them |
+| `Core/DayNight.cs` | Day/night cycle on the server clock: sun, moon, ambient light, fog, `NightLight` |
+| `Core/ColorGrade.cs` | Full-screen color grade (darker, grittier palette) |
 | `Core/Util.cs` | Material cache (`Mat`), primitive builder (`Factory`), pulse/burst effects (`FxPulse`) |
 | `World/WorldGenerator.cs` | Seeded world: ground texture, village, zones, trees, rocks, lakes, NPCs |
+| `World/GroundSurface.cs` | Splat control maps, curving roads, ground mesh with lake beds, water, grass blades |
+| `World/TownLife.cs` | Strolling villagers, patrolling guards, the village hound |
+| `World/Ambience.cs` | Crows, bats, fireflies and falling leaves around the hero |
+| `World/NpcChatter.cs` | What NPCs and villagers say in speech bubbles |
 | `World/WorldGrid.cs` | Tile walkability, A* pathfinding, line of sight, hashing and packing |
 | `World/Interactables.cs` | `LootDrop`, `ResourceNode` (gathering), `CraftingStation` + `Recipe`, `Npc` |
 | `Characters/Player.cs` | Click-to-move, targeting, melee, abilities, stats, potions, gathering, save and load |
@@ -19,6 +25,7 @@
 | `Characters/Abilities.cs` | Ability definitions and the meteor effect |
 | `Combat/Combatant.cs` | Base class for health, armor, damage numbers and area queries |
 | `Combat/Projectile.cs` | Damaging and cosmetic projectiles |
+| `Items/VendorStock.cs` | What each vendor sells, prices and restocking |
 | `Items/*` | `Item` model and tooltips, random gear generator, inventory |
 | `Progression/SkillSet.cs` | RuneScape-style professions and XP curve |
 | `Progression/Quests.cs` | Quest definitions (chains per NPC) and quest log |
@@ -27,6 +34,7 @@
 | `Net/WebSocketConnection.cs` | Polling WebSocket (`.jslib` in WebGL, `ClientWebSocket` elsewhere) |
 | `Net/RemotePlayer.cs` | Other players: interpolation, appearance, animation |
 | `UI/UISkin.cs` | Fantasy UI skin: panels, buttons, bars, fonts, icons, drawing helpers |
+| `UI/Speech.cs` | Speech bubbles (chat and NPC chatter) |
 | `UI/GameUI.cs` | Login screen, HUD, windows, dialogs, vendor, crafting, chat, minimap, tooltips |
 
 ## Server (`server/`)

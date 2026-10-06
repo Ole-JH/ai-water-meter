@@ -36,7 +36,12 @@ sequenceDiagram
 | `state` | `x`, `z`, `ry`, `hp`, `mhp`, `lvl`, `mv`, `atk`, `dead`, `body`, `legs`, `weapon`, `helm` | Own position, health and appearance, 10× per second |
 | `hit` | `mid`, `dmg`, `crit` | Report damage dealt to monster `mid` (after armor) |
 | `slow` | `mid`, `dur` | Frost Nova slow |
-| `chat` | `msg` | Chat to everyone (`/who` lists players) |
+| `chat` | `msg` | Chat to everyone. Commands handled by the server: `/who`, `/p` (party), `/w name` (whisper), `/invite name`, `/leave` |
+| `pinvite` | `name` | Invite a player to your party (leader only once in a party) |
+| `paccept` / `pdecline` | — | Answer a pending invitation (they expire after 60 s) |
+| `pleave` | — | Leave your party |
+| `pkick` | `id` | Leader removes a member |
+| `pshare` | `q` | Offer quest `q` (quest id) to the rest of the party |
 | `fx` | `k`, `x`, `z`, `tx`, `tz` | Cosmetic spell effect: `fireball`, `nova`, `heal`, `meteor`, `cleave`, `levelup` |
 | `save` | `save` | Full character snapshot (`SaveData`) |
 
@@ -46,13 +51,16 @@ sequenceDiagram
 | --- | --- | --- |
 | `needworld` | — | Ask this client to upload the world map |
 | `error` | `err` | Fatal error; the socket is closed afterwards |
-| `welcome` | `id`, `hasSave`, `save` | Login OK: your session id and stored character |
+| `welcome` | `id`, `hasSave`, `save`, `now` | Login OK: your session id, stored character and the server clock (ms, drives the day/night cycle) |
 | `snap` | `l` (online count), `m[]`, `p[]` | Nearby monsters `{id,n,l,x,z,ry,hp,mhp,ar,sl}` and players `{id,name,x,z,ry,hp,mhp,lvl,mv,atk,dead,body,legs,weapon,helm}` |
 | `matk` | `mid`, `tid`, `dmg`, `k`, `x`, `z` | Monster attack: `k` = `melee`, `shot`, `nova` or `summon`; `tid` = target session (−1 for area effects) |
 | `mdie` | `mid` | Monster died (play the death animation) |
-| `kill` | `mid`, `name`, `l`, `xp`, `x`, `z` | You get credit for a kill: award XP, update quests, roll loot |
+| `kill` | `mid`, `name`, `l`, `xp`, `x`, `z` | You get credit for a kill (you damaged it, or a party member did within 60 m): award XP, update quests, roll loot |
 | `fx` | `id`, `k`, `x`, `z`, `tx`, `tz` | Another player's spell effect |
-| `chat` | `id`, `name`, `msg` | Chat line |
+| `chat` | `id`, `name`, `msg`, `ch` | Chat line. `ch`: empty = everyone, `p` = party, `w` = whisper to you, `wto` = echo of your whisper (`name` = recipient) |
+| `party` | `id` (leader), `pm[]` | Your party, sent on every change and once a second: `{id,name,lvl,hp,mhp,mdl,x,z,dead}`. Empty `pm` = not in a party |
+| `pinv` | `id`, `name` | Someone invites you to their party |
+| `qshare` | `id`, `name`, `k` | A party member shares quest `k` |
 | `sys` | `msg` | System message (joins, leaves, boss kills, `/who`) |
 | `leave` | `id` | A player logged out |
 

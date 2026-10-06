@@ -110,6 +110,11 @@ tasks:
     cmds:
       - python3 tools/art/build_art.py .art-cache
 
+  art:ground:
+    desc: Regenerate the procedural ground textures in Assets/Resources/Ground (needs numpy and Pillow)
+    cmds:
+      - python3 tools/art/make_ground.py
+
   ui:icons:
     desc: Re-render the UI icons from a game-icons.net checkout (ICONS_DIR, needs playwright-core + CHROMIUM_PATH)
     cmds:

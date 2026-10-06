@@ -35,6 +35,9 @@ namespace Shadowfall
         GameObject ArtBox(string path, Vector3 pos, Vector3 size, float yaw = 0f) =>
             art ? ArtLibrary.SpawnBox(path, deco, pos, size, yaw) : null;
 
+        /// <summary>How grassy the ground is at a point (0..1), for ambient critters.</summary>
+        public float GrassAt(Vector3 p) => fancyGround ? surface.GrassAmount(p.x, p.z) : 0.5f;
+
         public static bool InTown(Vector3 p) =>
             p.x >= Town.xMin && p.x < Town.xMax && p.z >= Town.yMin && p.z < Town.yMax;
 
@@ -375,7 +378,7 @@ namespace Shadowfall
             Npc.Create("Smith Gorrin", "Blacksmith", NpcRole.QuestGiver, new Vector3(87.5f, 0, 74.5f), new Color(0.35f, 0.3f, 0.28f),
                 "Bring me ore and I'll teach you to work it.", npcs, true);
             Npc.Create("Merchant Lysa", "General Goods", NpcRole.Vendor, new Vector3(75.5f, 0, 74.5f), new Color(0.55f, 0.3f, 0.6f),
-                "Potions! Fresh potions! I also buy anything you drag out of those monsters.", npcs);
+                "Potions! Fresh potions! I also buy anything you drag out of those monsters.", npcs).SellsAs(VendorKind.General);
             Npc.Create("Sister Mae", "Healer", NpcRole.Healer, new Vector3(85.5f, 0, 84.5f), new Color(0.9f, 0.9f, 0.85f),
                 "The Light watches over you, child. Let me tend your wounds.", npcs);
             Npc.Create("Thomas", "Farmer", NpcRole.QuestGiver, new Vector3(71.5f, 0, 82.5f), new Color(0.45f, 0.55f, 0.3f),
@@ -383,6 +386,16 @@ namespace Shadowfall
             Npc.Create("Jenkins", "Butler of Automation", NpcRole.QuestGiver, new Vector3(89.5f, 0, 83.5f), new Color(0.08f, 0.08f, 0.1f),
                 "Good day. I have taken the liberty of automating the village. Nearly all of it. The rest is merely failing.", npcs, false, false)
                 .DressAsButler();
+
+            // Shopkeepers (added later: they don't block tiles, so existing servers' world maps stay valid)
+            Npc.Create("Armorer Brann", "Armor", NpcRole.Vendor, new Vector3(85.5f, 0, 71.5f), new Color(0.45f, 0.42f, 0.4f),
+                "Helms, mail, boots. Everything a body needs to stay a body.", npcs, true, false, false).SellsAs(VendorKind.Armor);
+            Npc.Create("Weaponsmith Hilda", "Weapons", NpcRole.Vendor, new Vector3(85.5f, 0, 76.5f), new Color(0.55f, 0.3f, 0.2f),
+                "Looking for something with an edge? You've come to the right woman.", npcs, true, false, false).SellsAs(VendorKind.Weapons);
+            Npc.Create("Innkeeper Rosie", "Food & Drink", NpcRole.Vendor, new Vector3(73.5f, 0, 84.5f), new Color(0.75f, 0.45f, 0.35f),
+                "Welcome to the Prancing Boar! Sit, eat, drink, and don't start any fights.", npcs, false, true, false).SellsAs(VendorKind.Food);
+            Npc.Create("Curio Dealer Vex", "Rings & Amulets", NpcRole.Vendor, new Vector3(71.5f, 0, 78.5f), new Color(0.3f, 0.2f, 0.45f),
+                "Trinkets with a past. Some of them even have a future.", npcs, false, true, false).SellsAs(VendorKind.Curios);
 
             // Market stalls & crates
             for (int i = 0; i < 3; i++)

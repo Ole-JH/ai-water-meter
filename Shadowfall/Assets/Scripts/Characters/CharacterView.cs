@@ -91,6 +91,10 @@ namespace Shadowfall
             { "Merchant Lysa", new CharacterLook { Model = "Characters/Mage", Height = 1.9f, Tint = new Color(1f, 0.9f, 1f) } },
             { "Sister Mae", new CharacterLook { Model = "Characters/Mage", Height = 1.9f, Tint = new Color(1.15f, 1.15f, 1.1f) } },
             { "Thomas", new CharacterLook { Model = "Characters/Keeper", Height = 1.85f, Anims = AnimSet.Kenney } },
+            { "Armorer Brann", new CharacterLook { Model = "Characters/Knight", Height = 2.0f, Tint = new Color(0.8f, 0.8f, 0.85f) } },
+            { "Weaponsmith Hilda", new CharacterLook { Model = "Characters/Barbarian", Height = 1.9f, Tint = new Color(1.05f, 0.9f, 0.85f) } },
+            { "Innkeeper Rosie", new CharacterLook { Model = "Characters/Keeper", Height = 1.8f, Anims = AnimSet.Kenney, Tint = new Color(1.1f, 0.95f, 0.9f) } },
+            { "Curio Dealer Vex", new CharacterLook { Model = "Characters/RogueHooded", Height = 1.85f, Tint = new Color(0.8f, 0.7f, 1f) } },
         };
 
         public static CharacterLook ForNpc(string name) => npcs.TryGetValue(name, out var l) ? l : null;

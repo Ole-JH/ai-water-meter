@@ -18,10 +18,9 @@
 | Input | Action |
 | --- | --- |
 | Mouse wheel | Zoom in and out |
-| ++"Middle mouse"++ drag | Rotate (side to side) and tilt (up and down) |
+| ++"Middle mouse"++ drag | Rotate around your hero and tilt (the camera always stays on your hero) |
 | ++arrow-left++ / ++arrow-right++ | Rotate |
 | ++arrow-up++ / ++arrow-down++ | Tilt |
-| ++w++ ++a++ ++s++ ++d++ | Pan the camera away from your hero (up to 30 m) |
 | ++space++ | Back to the classic Diablo view, centered on your hero |
 
 ## Windows
@@ -34,7 +33,7 @@
 | ++l++ | Quest log |
 | ++m++ | World map |
 | ++f1++ or ++h++ | Help |
-| ++enter++ | Chat. Type `/who` to list online players |
+| ++enter++ or ++slash++ | Chat. `/p` party, `/w name` whisper, `/r` reply, `/invite name`, `/leave`, `/who` |
 | ++esc++ | Close windows |
 
 ## Inventory

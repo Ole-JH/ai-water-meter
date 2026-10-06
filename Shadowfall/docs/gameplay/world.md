@@ -19,9 +19,30 @@ The map is 160 × 160 tiles, with the village of **Hollowmere** at its centre. A
 | Forester Wren | Woodcutting and fishing quests |
 | Smith Gorrin | Mining quests. Stands next to the anvil |
 | Merchant Lysa | Sells potions and buys anything |
+| Armorer Brann | Sells armor for your level (restocks every 10 minutes) |
+| Weaponsmith Hilda | Sells weapons for your level (restocks every 10 minutes) |
+| Innkeeper Rosie | Food and drink: bread, cooked fish, hearty stew, mulled wine (restores mana) |
+| Curio Dealer Vex | Magic and rare rings and amulets (restocks every 10 minutes) |
 | Sister Mae | Restores your health and mana for free |
 | Thomas | Farmer by the west houses. Wants the quarry-road bandits dealt with |
 | Jenkins | The village's butler of automation, dressed like the Jenkins mascot. Quests about his broken build and pipeline |
+
+Every vendor buys your loot: right-click an item in your bags while trading.
+
+NPCs greet you when you walk up and talk among themselves in speech bubbles. Villagers stroll around the square (and go home after dark), two guards patrol between the gates with torches at night, and a hound roams the village.
+
+## Day and night
+
+A full day takes **48 minutes** (2 real minutes per in-game hour) and follows the server's clock, so everyone sees the same sunset. The time is shown under the minimap. Nights are dark and blue: lanterns and windows light up, your torch burns brighter and reaches further, fireflies come out in Whisperwood and bats replace the crows.
+
+## Parties
+
+Click another player's name above their head and choose **Invite to Party**, or type `/invite name`. Up to 5 players per party.
+
+- **Shared kills:** party members within 60 m of a monster when it dies get the kill: XP, quest progress and their own loot roll.
+- **Shared quests:** open the quest log (++l++) and click **Share** to offer a quest to your party. A shared quest can be turned in to its giver even if it's later in their quest chain.
+- **Chat:** `/p message` talks to your party. `/w name message` whispers, `/r message` replies to the last whisper, `/leave` leaves the party.
+- The party leader can remove members with the **x** on their party frame.
 
 ## Monsters
 

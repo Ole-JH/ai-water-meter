@@ -105,8 +105,15 @@ namespace Shadowfall
         {
             dialogNpc = npc;
             craftStation = null;
-            if (npc.Role == NpcRole.Vendor) showBags = true;
+            if (npc.Role == NpcRole.Vendor)
+            {
+                showBags = true;
+                if (npc.Shop == null) npc.SellsAs(VendorKind.General);
+                if (Player.I != null) npc.Shop.Refresh(Player.I.Level);
+            }
         }
+
+        public bool IsTalkingTo(Npc npc) => dialogNpc == npc;
 
         public void OpenCrafting(CraftingStation s)
         {
@@ -1171,7 +1178,7 @@ namespace Shadowfall
                 "Right-click casts Fireball.  <b>1-5</b> abilities,  <b>Q / E</b> health / mana potions,  mouse wheel zooms.\n\n" +
                 "<b>Windows</b>\n" +
                 "<b>I</b> bags   <b>C</b> character   <b>K</b> skills   <b>L</b> quests   <b>M</b> map   <b>Enter</b> chat   <b>Esc</b> close\n" +
-                "<b>Camera:</b> middle-drag or arrow keys rotate and tilt,  <b>WASD</b> pans,  <b>Space</b> resets\n\n" +
+                "<b>Camera:</b> middle-drag or arrow keys rotate and tilt,  <b>Space</b> resets\n\n" +
                 "<b>Chat & parties</b>\n" +
                 "<b>/p</b> party chat,  <b>/w name</b> whisper,  <b>/r</b> reply,  <b>/invite name</b>,  <b>/leave</b>,  <b>/who</b>. " +
                 "Click a player's name to invite them. Party members nearby share kills; share quests from the quest log.\n\n" +
@@ -1202,7 +1209,8 @@ namespace Shadowfall
         void DrawDialog(Player p)
         {
             var npc = dialogNpc;
-            var r = new Rect(14, 140, 470, 520);
+            float height = npc.Role == NpcRole.Vendor && npc.Shop != null ? 330 + npc.Shop.Items.Count * 54 : 520;
+            var r = new Rect(14, 120, 470, Mathf.Min(height, VH - 140));
             if (UISkin.Window(r, npc.DisplayName, true, true)) { dialogNpc = null; return; }
             Block(r);
 
@@ -1251,10 +1259,15 @@ namespace Shadowfall
 
                 case NpcRole.Vendor:
                 {
+                    var shop = npc.Shop;
+                    shop.Refresh(p.Level);
                     UISkin.Shadowed(new Rect(r.x + 26, y, 420, 28), "For Sale", UISkin.Heading, new Color(0.5f, 0.24f, 0.06f));
+                    if (shop.Rotates)
+                        GUI.Label(new Rect(r.x + 200, y + 4, 244, 24), "New stock in " + Mathf.CeilToInt(shop.SecondsUntilRestock / 60f) + " min",
+                            new GUIStyle(UISkin.Ink14) { alignment = TextAnchor.UpperRight });
                     y += 36;
-                    y = VendorRow(p, r, y, "Health Potion", "health_potion", 25, ItemDatabase.HealthPotion);
-                    y = VendorRow(p, r, y, "Mana Potion", "mana_potion", 25, ItemDatabase.ManaPotion);
+                    for (int i = 0; i < shop.Items.Count; i++)
+                        y = ShopRow(p, r, y, shop, i);
                     y += 14;
                     GUI.Label(new Rect(r.x + 26, y, 420, 50),
                         "Right-click items in your bags to sell them. You have <color=#8a6400><b>" + p.Gold + " gold</b></color>.", UISkin.Ink14);
@@ -1284,21 +1297,32 @@ namespace Shadowfall
             }
         }
 
-        float VendorRow(Player p, Rect r, float y, string name, string icon, int price, System.Func<Item> make)
+        /// <summary>One item for sale. Stackables can be bought 1 or 5 at a time; equipment is unique and leaves the shop.</summary>
+        float ShopRow(Player p, Rect r, float y, VendorStock shop, int index)
         {
+            var item = shop.Items[index];
+            int price = VendorStock.Price(item);
             var slot = new Rect(r.x + 26, y, 44, 44);
-            UISkin.Box(slot, UISkin.Inset);
-            UISkin.IconInSlot(slot, UISkin.Icon(icon), Color.white, 5);
-            GUI.Label(new Rect(r.x + 80, y + 2, 170, 26), "<b>" + name + "</b>", UISkin.InkRich);
-            GUI.Label(new Rect(r.x + 80, y + 22, 170, 22), "<color=#8a6400>" + price + " gold</color>", UISkin.Ink14);
-            foreach (int n in new[] { 1, 5 })
+            DrawItemSlot(slot, item, p);
+            if (slot.Contains(Event.current.mousePosition))
+                tooltip = item.Tooltip(p, item.Kind == ItemKind.Equipment ? p.Inventory.GetEquipped(item.Slot) : null);
+            var nameColor = item.Kind == ItemKind.Equipment ? Factory.Shade(Item.RarityColor(item.Rarity), 0.6f) : new Color(0.25f, 0.15f, 0.05f);
+            GUI.Label(new Rect(r.x + 80, y + 2, 190, 24), "<b><color=#" + Item.Hex(nameColor) + ">" + item.Name + "</color></b>", UISkin.InkRich);
+            GUI.Label(new Rect(r.x + 80, y + 23, 190, 22), "<color=#8a6400>" + price + " gold</color>" +
+                (item.Kind == ItemKind.Equipment && item.RequiredLevel > p.Level ? "   <color=#9a2a1a>level " + item.RequiredLevel + "</color>" : ""), UISkin.Ink14);
+
+            int[] amounts = item.Stackable ? new[] { 1, 5 } : new[] { 1 };
+            foreach (int n in amounts)
             {
-                if (!UISkin.Btn(new Rect(r.x + (n == 1 ? 270 : 360), y + 2, 84, 40), "Buy " + n, UISkin.Button)) continue;
+                var b = item.Stackable ? new Rect(r.x + (n == 1 ? 280 : 366), y + 2, 80, 40) : new Rect(r.x + 336, y + 2, 110, 40);
+                if (!UISkin.Btn(b, item.Stackable ? "Buy " + n : "Buy", UISkin.Button)) continue;
                 if (p.Gold < price * n) { Log("You don't have enough gold.", new Color(1f, 0.4f, 0.4f)); continue; }
-                var item = make();
-                item.Count = n;
-                if (!p.Inventory.Add(item)) { Log("Your bags are full.", new Color(1f, 0.4f, 0.4f)); continue; }
+                var bought = item.Stackable ? ItemDatabase.ByName(item.Name) : item;
+                bought.Count = n;
+                if (!p.Inventory.Add(bought)) { Log("Your bags are full.", new Color(1f, 0.4f, 0.4f)); continue; }
                 p.Gold -= price * n;
+                Log("Bought " + item.Name + (n > 1 ? " x" + n : "") + " for " + price * n + " gold.", new Color(1f, 0.85f, 0.2f));
+                if (!item.Stackable) { shop.Items.RemoveAt(index); NetClient.I?.SaveNow(); break; }
             }
             return y + 54;
         }

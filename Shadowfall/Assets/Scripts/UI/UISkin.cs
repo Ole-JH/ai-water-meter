@@ -183,6 +183,8 @@ namespace Shadowfall
             if (n == "Health Potion") return "health_potion";
             if (n == "Mana Potion") return "mana_potion";
             if (n.StartsWith("Cooked")) return "cooked_fish";
+            if (n == "Bread" || n == "Hearty Stew") return "cooking";
+            if (n == "Mulled Wine") return "mana_potion";
             if (n.StartsWith("Burnt")) return "burnt_fish";
             if (n.StartsWith("Raw")) return "raw_fish";
             if (n.Contains("Logs")) return "logs";
@@ -192,7 +194,7 @@ namespace Shadowfall
 
         /// <summary>Materials share one icon and are tinted by their item color (copper, iron, mithril...).</summary>
         public static Color IconTint(Item it) =>
-            it != null && it.Kind == ItemKind.Material && (it.Name.Contains("Ore") || it.Name.Contains("Logs"))
+            it != null && ((it.Kind == ItemKind.Material && (it.Name.Contains("Ore") || it.Name.Contains("Logs"))) || it.Name == "Mulled Wine")
                 ? Color.Lerp(Color.white, it.IconColor, 0.65f) : Color.white;
 
         public static string AbilityIcon(AbilityId id)

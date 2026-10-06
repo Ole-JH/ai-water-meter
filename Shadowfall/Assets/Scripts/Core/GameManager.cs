@@ -36,6 +36,8 @@ namespace Shadowfall
             World = new WorldGenerator();
             World.Generate();
             GridHash = WorldGrid.Instance.Hash();
+            TownLife.Spawn(null);                  // visual only: after the hash, so it can never affect it
+            gameObject.AddComponent<Ambience>();
 
             gameObject.AddComponent<NetClient>();
             gameObject.AddComponent<GameUI>();
@@ -56,6 +58,7 @@ namespace Shadowfall
             Cam.clearFlags = CameraClearFlags.SolidColor;
             Cam.backgroundColor = new Color(0.05f, 0.05f, 0.07f);
             if (Cam.GetComponent<CameraRig>() == null) Cam.gameObject.AddComponent<CameraRig>();
+            if (Cam.GetComponent<ColorGrade>() == null) Cam.gameObject.AddComponent<ColorGrade>();
         }
 
         void SetupLighting()
@@ -69,7 +72,7 @@ namespace Shadowfall
             sun.color = new Color(1f, 0.92f, 0.8f);
             sun.intensity = 1.05f;
             sun.shadows = LightShadows.Soft;
-            sun.shadowStrength = 0.75f;
+            sun.shadowStrength = 0.85f;
             QualitySettings.shadowDistance = 70f;
             QualitySettings.shadowCascades = 2;
             QualitySettings.pixelLightCount = 6; // lanterns and torches at night
@@ -81,8 +84,8 @@ namespace Shadowfall
             RenderSettings.fog = true;
             RenderSettings.fogMode = FogMode.Linear;
             RenderSettings.fogColor = new Color(0.05f, 0.05f, 0.07f);
-            RenderSettings.fogStartDistance = 42f;
-            RenderSettings.fogEndDistance = 95f;
+            RenderSettings.fogStartDistance = 34f;
+            RenderSettings.fogEndDistance = 85f;
 
             gameObject.AddComponent<DayNight>().Init(sun, Cam);
         }

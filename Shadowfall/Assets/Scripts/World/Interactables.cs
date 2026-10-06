@@ -496,16 +496,23 @@ namespace Shadowfall
     {
         public NpcRole Role;
         public string Title, Greeting;
+        public VendorStock Shop;    // vendors only
         HumanoidModel model;
         CharacterView view;
         float idleTimer;
+        float chatterAt, greetedAt = -999f;
+        bool playerWasNear;
 
         public override Color LabelColor => new Color(0.4f, 1f, 0.4f);
         public override float LabelHeight => 2.6f;
         public override string HoverText => DisplayName + (string.IsNullOrEmpty(Title) ? "" : "\n<" + Title + ">");
 
+        /// <param name="blocksTile">
+        /// False for NPCs added after the world map was first uploaded to servers, so existing servers keep
+        /// accepting the client (the walkability map, and its hash, stay the same).
+        /// </param>
         public static Npc Create(string name, string title, NpcRole role, Vector3 pos, Color robe, string greeting, Transform parent,
-            bool hasWeapon = false, bool? wearsRobe = null)
+            bool hasWeapon = false, bool? wearsRobe = null, bool blocksTile = true)
         {
             var go = new GameObject(name);
             go.transform.SetParent(parent, false);
@@ -522,8 +529,15 @@ namespace Shadowfall
             n.model = HumanoidModel.Build(go.transform, 1f, new Color(0.9f, 0.75f, 0.6f), robe, Factory.Shade(robe, 0.7f),
                 new Color(0.7f, 0.7f, 0.75f), hasWeapon, wearsRobe ?? !hasWeapon);
             n.AddClickCollider(0.5f, 2.1f);
-            WorldGrid.Instance.SetBlocked(Mathf.FloorToInt(pos.x), Mathf.FloorToInt(pos.z), true);
+            if (blocksTile) WorldGrid.Instance.SetBlocked(Mathf.FloorToInt(pos.x), Mathf.FloorToInt(pos.z), true);
+            n.chatterAt = Time.time + Random.Range(5f, 25f);
             return n;
+        }
+
+        public Npc SellsAs(VendorKind kind)
+        {
+            Shop = new VendorStock(kind);
+            return this;
         }
 
         /// <summary>
@@ -596,13 +610,34 @@ namespace Shadowfall
             if (view != null) view.UpdateLocomotion(0f);
             else model.Animate(0f, -1f, Time.deltaTime);
             var p = Player.I;
-            if (p != null && Factory.FlatDistance(p.transform.position, transform.position) < 6f)
+            float dist = p != null ? Factory.FlatDistance(p.transform.position, transform.position) : 999f;
+            Chatter(p, dist);
+            if (dist < 6f)
                 Factory.Face(transform, p.transform.position, Time.deltaTime * 4f);
             else if ((idleTimer -= Time.deltaTime) < 0f)
             {
                 idleTimer = Random.Range(4f, 9f);
                 transform.rotation = Quaternion.Euler(0, Random.Range(0f, 360f), 0);
             }
+        }
+
+        /// <summary>Greets heroes who walk up, and mutters to itself now and then.</summary>
+        void Chatter(Player p, float dist)
+        {
+            if (p == null) return;
+            bool near = dist < 5f;
+            if (near && !playerWasNear && Time.time - greetedAt > 90f && Random.value < 0.6f)
+            {
+                greetedAt = Time.time;
+                Speech.Say(transform, LabelHeight + 0.9f, NpcChatter.Greeting(p.DisplayName));
+                chatterAt = Time.time + Random.Range(12f, 25f);
+            }
+            playerWasNear = near;
+            if (Time.time < chatterAt) return;
+            chatterAt = Time.time + Random.Range(20f, 45f);
+            if (dist > 22f || GameUI.I == null || GameUI.I.IsTalkingTo(this)) return;
+            var line = NpcChatter.Line(DisplayName, p.DisplayName);
+            if (line != null) Speech.Say(transform, LabelHeight + 0.9f, line);
         }
 
         public override void Interact(Player p)

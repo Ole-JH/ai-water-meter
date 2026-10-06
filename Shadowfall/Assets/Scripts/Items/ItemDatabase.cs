@@ -58,8 +58,25 @@ namespace Shadowfall
             };
         }
 
+        /// <summary>Food and drink sold at the inn.</summary>
+        public static Item Provision(string name)
+        {
+            switch (name)
+            {
+                case "Bread": return new Item { Name = name, Kind = ItemKind.Consumable, MaxStack = 50, Value = 2, HealAmount = 45,
+                    IconColor = new Color(0.8f, 0.6f, 0.35f), Icon = "Fd", Flavor = "Baked this morning. Probably." };
+                case "Hearty Stew": return new Item { Name = name, Kind = ItemKind.Consumable, MaxStack = 20, Value = 12, HealAmount = 240,
+                    IconColor = new Color(0.6f, 0.35f, 0.2f), Icon = "Fd", Flavor = "Rosie won't say what's in it." };
+                case "Mulled Wine": return new Item { Name = name, Kind = ItemKind.Consumable, MaxStack = 20, Value = 6, ManaAmount = 50,
+                    IconColor = new Color(0.55f, 0.1f, 0.25f), Icon = "Dr", Flavor = "Warms the soul and the spellbook." };
+                default: return null;
+            }
+        }
+
         public static Item ByName(string name)
         {
+            var provision = Provision(name);
+            if (provision != null) return provision;
             if (name == "Health Potion") return HealthPotion();
             if (name == "Mana Potion") return ManaPotion();
             if (name.StartsWith("Cooked")) return Food(name);
@@ -155,10 +172,10 @@ namespace Shadowfall
         }
 
         /// <param name="rarityBonus">0 = normal drop, 1 = boss-quality.</param>
-        public static Item RandomEquipment(int itemLevel, float rarityBonus = 0f, Rarity? forced = null)
+        public static Item RandomEquipment(int itemLevel, float rarityBonus = 0f, Rarity? forced = null, EquipSlot? forcedSlot = null)
         {
             itemLevel = Mathf.Max(1, itemLevel);
-            var slot = slots[Random.Range(0, slots.Length)];
+            var slot = forcedSlot ?? slots[Random.Range(0, slots.Length)];
             var rarity = forced ?? RollRarity(rarityBonus);
             int tier = Mathf.Clamp(itemLevel / 6, 0, 3);
 

@@ -3,9 +3,8 @@ using UnityEngine;
 namespace Shadowfall
 {
     /// <summary>
-    /// Diablo-style high-angle follow camera that the player can also steer freely:
-    /// mouse wheel zooms, middle mouse drag (or the arrow keys) rotates and tilts,
-    /// W/A/S/D pans away from the hero, and Space snaps back to the default view.
+    /// Diablo-style high-angle camera, always locked on the hero. Mouse wheel zooms, middle mouse drag
+    /// (or the arrow keys) rotates and tilts within a limited range, and Space snaps back to the default view.
     /// </summary>
     public class CameraRig : MonoBehaviour
     {
@@ -13,13 +12,12 @@ namespace Shadowfall
         public Transform Target;
 
         public const float DefaultPitch = 55f, DefaultYaw = 0f, DefaultDistance = 20f;
-        public float MinDistance = 6f, MaxDistance = 42f, MinPitch = 22f, MaxPitch = 85f, MaxPan = 30f;
+        public float MinDistance = 9f, MaxDistance = 32f, MinPitch = 38f, MaxPitch = 75f;
 
         public float Yaw => yaw;
 
         float yaw = DefaultYaw, pitch = DefaultPitch, distance = DefaultDistance;            // smoothed
         float yawGoal = DefaultYaw, pitchGoal = DefaultPitch, distanceGoal = DefaultDistance; // input targets
-        Vector3 pan, panGoal;
         Vector3 focus;
         Vector2 lastMouse;
         bool dragging;
@@ -42,7 +40,6 @@ namespace Shadowfall
             yawGoal = Mathf.Round(yaw / 360f) * 360f + DefaultYaw;
             pitchGoal = DefaultPitch;
             distanceGoal = DefaultDistance;
-            panGoal = Vector3.zero;
         }
 
         void LateUpdate()
@@ -57,7 +54,6 @@ namespace Shadowfall
             {
                 // Slow orbit over the village while on the login screen.
                 dragging = false;
-                panGoal = pan = Vector3.zero;
                 yawGoal = yaw = Time.time * 4f;
                 pitchGoal = pitch = 48f;
                 distanceGoal = distance = 24f;
@@ -68,11 +64,7 @@ namespace Shadowfall
             yaw = Mathf.Lerp(yaw, yawGoal, k);
             pitch = Mathf.Lerp(pitch, pitchGoal, k);
             distance = Mathf.Lerp(distance, distanceGoal, k);
-            pan = Vector3.Lerp(pan, panGoal, k);
-
-            var center = focus + pan;
-            center.x = Mathf.Clamp(center.x, 4f, WorldGenerator.W - 4f);
-            center.z = Mathf.Clamp(center.z, 4f, WorldGenerator.H - 4f);
+            var center = focus;
 
             var rot = Quaternion.Euler(pitch, yaw, 0f);
             var pos = center + Vector3.up * 1f + rot * new Vector3(0f, 0f, -distance);
@@ -120,19 +112,6 @@ namespace Shadowfall
             if (GameInput.Held(GKey.Right)) yawGoal -= 90f * dt;
             if (GameInput.Held(GKey.Up)) pitchGoal = Mathf.Clamp(pitchGoal + 45f * dt, MinPitch, MaxPitch);
             if (GameInput.Held(GKey.Down)) pitchGoal = Mathf.Clamp(pitchGoal - 45f * dt, MinPitch, MaxPitch);
-
-            // W/A/S/D: pan, relative to where the camera is looking
-            var move = Vector3.zero;
-            if (GameInput.Held(GKey.W)) move.z += 1f;
-            if (GameInput.Held(GKey.S)) move.z -= 1f;
-            if (GameInput.Held(GKey.D)) move.x += 1f;
-            if (GameInput.Held(GKey.A)) move.x -= 1f;
-            if (move != Vector3.zero)
-            {
-                move = Quaternion.Euler(0f, yaw, 0f) * move.normalized;
-                panGoal += move * (8f + distance * 0.8f) * dt;
-                if (panGoal.magnitude > MaxPan) panGoal = panGoal.normalized * MaxPan;
-            }
 
             if (GameInput.Down(GKey.Space)) ResetView();
         }
