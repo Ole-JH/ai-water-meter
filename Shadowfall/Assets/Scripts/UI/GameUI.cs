@@ -28,7 +28,11 @@ namespace Shadowfall
 
         // ---- chat
         string chatText = "";
-        bool focusChat;
+        string replyTo;
+
+        // ---- social
+        RemotePlayer menuPlayer;
+        Vector2 menuPos;
 
         // ---- layout
         const float RefHeight = 900f;
@@ -187,8 +191,10 @@ namespace Shadowfall
 
             DrawVignette();
             DrawWorldOverlays(p);
+            DrawBubbles(p);
             DrawFloatingText();
             DrawUnitFrames(p);
+            DrawPartyFrames(p);
             DrawMinimap(p);
             DrawQuestTracker(p);
             DrawActionBar(p);
@@ -203,6 +209,8 @@ namespace Shadowfall
             if (craftStation != null) DrawCrafting(p);
             if (showHelp) DrawHelp();
             if (showMap) DrawWorldMap(p);
+            if (menuPlayer != null) DrawPlayerMenu();
+            DrawOffers();
             if (p.IsDead) DrawDeath(p);
 
             DrawBanner();
@@ -328,6 +336,130 @@ namespace Shadowfall
             GUI.color = Color.white;
         }
 
+        // =====================================================================================
+        // Speech bubbles, party frames, social popups
+        // =====================================================================================
+
+        static GUIStyle bubbleStyle;
+
+        void DrawBubbles(Player p)
+        {
+            if (bubbleStyle == null) bubbleStyle = new GUIStyle(UISkin.Ink14) { wordWrap = true, alignment = TextAnchor.MiddleCenter, richText = false };
+            var list = Speech.Active;
+            for (int i = list.Count - 1; i >= 0; i--)
+                if (list[i].Who == null || Time.time - list[i].Start > list[i].Duration) list.RemoveAt(i);
+
+            foreach (var b in list)
+            {
+                if (Factory.FlatDistance(b.Who.position, p.transform.position) > 35f) continue;
+                if (!WorldToGui(b.Who.position + Vector3.up * b.Height, out var g)) continue;
+                float age = Time.time - b.Start;
+                float a = Mathf.Clamp01(age / 0.15f) * Mathf.Clamp01((b.Duration - age) / 0.5f);
+                var content = new GUIContent(b.Text);
+                float w = Mathf.Min(240f, bubbleStyle.CalcSize(content).x + 6f);
+                float h = bubbleStyle.CalcHeight(content, w);
+                var r = new Rect(g.x - w / 2 - 14, g.y - h - 46, w + 28, h + 20);
+                GUI.color = new Color(1, 1, 1, a);
+                UISkin.Box(r, UISkin.Parchment);
+                GUI.color = new Color(0.86f, 0.78f, 0.62f, a); // a little tail pointing at the speaker
+                GUI.DrawTexture(new Rect(g.x - 5, r.yMax - 4, 10, 6), UISkin.White);
+                GUI.DrawTexture(new Rect(g.x - 2.5f, r.yMax + 2, 5, 5), UISkin.White);
+                GUI.color = new Color(1, 1, 1, a);
+                GUI.Label(new Rect(r.x + 14, r.y + 10, w, h), content, bubbleStyle);
+                GUI.color = Color.white;
+            }
+        }
+
+        void DrawPartyFrames(Player p)
+        {
+            var net = NetClient.I;
+            if (!net.InParty) return;
+            float y = 12 + 96 + 10 + (p.StatPoints > 0 ? 46 : 0);
+            foreach (var m in net.Party)
+            {
+                if (m.id == net.MyId) continue;
+                float hp = m.hp, mhp = m.mhp;
+                bool near = RemotePlayer.ById.TryGetValue(m.id, out var rp) && rp != null;
+                if (near) { hp = rp.Health; mhp = rp.MaxHealth; }
+                var r = new Rect(12, y, 250, 58);
+                UISkin.Box(r, UISkin.Panel);
+                Block(r);
+                var icon = new Rect(r.x + 9, r.y + 9, 40, 40);
+                UISkin.Box(icon, UISkin.Inset);
+                UISkin.IconInSlot(icon, UISkin.Icon((m.mdl ?? "knight").ToLower()), m.dead ? new Color(0.5f, 0.5f, 0.5f) : Color.white, 3);
+                bool leader = m.id == net.PartyLeader;
+                UISkin.Shadowed(new Rect(r.x + 58, r.y + 7, 160, 20), m.name + "  " + m.lvl + (leader ? "  (Leader)" : ""),
+                    UISkin.Small, leader ? UISkin.Gold : near ? new Color(0.45f, 1f, 0.5f) : UISkin.Muted);
+                UISkin.Bar(new Rect(r.x + 58, r.y + 30, 180, 16), mhp > 0 ? hp / mhp : 0f, "Red",
+                    m.dead ? "Dead" : Mathf.CeilToInt(hp) + " / " + Mathf.CeilToInt(mhp), new Color(0.75f, 0.12f, 0.1f));
+                if (net.IsLeader)
+                {
+                    var kick = new Rect(r.xMax - 30, r.y + 6, 22, 22);
+                    if (UISkin.Btn(kick, "x", UISkin.SquareButton)) net.KickFromParty(m.id);
+                    if (kick.Contains(Event.current.mousePosition)) tooltip = "Remove " + m.name + " from the party";
+                }
+                y += 62;
+            }
+            var leave = new Rect(12, y, 130, 32);
+            Block(leave);
+            if (UISkin.Btn(leave, "Leave Party", UISkin.Button)) net.LeaveParty();
+        }
+
+        void DrawPlayerMenu()
+        {
+            var rp = menuPlayer;
+            if (rp == null) { menuPlayer = null; return; }
+            var net = NetClient.I;
+            bool canInvite = !net.IsPartyMember(rp.Id) && (!net.InParty || net.IsLeader);
+            var r = new Rect(menuPos.x - 100, menuPos.y + 10, 200, 60 + (canInvite ? 44 : 0) + 88);
+            UISkin.Box(r, UISkin.Panel);
+            Block(r);
+            UISkin.Shadowed(new Rect(r.x, r.y + 12, r.width, 24), rp.Name, UISkin.HeadingCenter, UISkin.Gold);
+            float y = r.y + 48;
+            if (canInvite)
+            {
+                if (UISkin.Btn(new Rect(r.x + 16, y, r.width - 32, 38), "Invite to Party", UISkin.Button)) { net.InviteToParty(rp.Name); menuPlayer = null; }
+                y += 44;
+            }
+            if (UISkin.Btn(new Rect(r.x + 16, y, r.width - 32, 38), "Whisper", UISkin.Button)) { OpenChat("/w " + rp.Name + " "); menuPlayer = null; }
+            y += 44;
+            if (UISkin.Btn(new Rect(r.x + 16, y, r.width - 32, 38), "Close", UISkin.Button)) menuPlayer = null;
+            if (Event.current.type == EventType.MouseDown && !r.Contains(Event.current.mousePosition)) menuPlayer = null;
+        }
+
+        /// <summary>Party invitations and shared quests waiting for an answer.</summary>
+        void DrawOffers()
+        {
+            var net = NetClient.I;
+            var inv = net.PartyInvite;
+            float y = 150;
+            if (inv != null)
+            {
+                if (Time.time - inv.Time > 60f) net.AnswerPartyInvite(false);
+                else if (OfferBox(y, "<b>" + inv.Name + "</b> invites you to join a party.", out bool yes)) net.AnswerPartyInvite(yes);
+                y += 140;
+            }
+            var q = net.QuestOffer;
+            if (q != null)
+            {
+                if (Time.time - q.Time > 60f) net.AnswerQuestOffer(false);
+                else if (OfferBox(y, "<b>" + q.Name + "</b> shares a quest:\n<b>" + q.Quest.Title + "</b>  -  " + q.Quest.Objective, out bool yes))
+                    net.AnswerQuestOffer(yes);
+            }
+        }
+
+        bool OfferBox(float y, string text, out bool accepted)
+        {
+            accepted = false;
+            var r = new Rect((VW - 440) / 2, y, 440, 128);
+            UISkin.Box(r, UISkin.Parchment);
+            Block(r);
+            GUI.Label(new Rect(r.x + 24, r.y + 14, r.width - 48, 54), text, new GUIStyle(UISkin.InkRich) { wordWrap = true, alignment = TextAnchor.MiddleCenter });
+            if (UISkin.Btn(new Rect(r.x + 50, r.y + 74, 150, 40), "Accept", UISkin.Button)) { accepted = true; return true; }
+            if (UISkin.Btn(new Rect(r.xMax - 200, r.y + 74, 150, 40), "Decline", UISkin.Button)) return true;
+            return false;
+        }
+
         void Plate(Rect r, float frac, Color c)
         {
             GUI.color = new Color(0, 0, 0, 0.8f);
@@ -364,8 +496,14 @@ namespace Shadowfall
             {
                 if (rp == null) continue;
                 if (!WorldToGui(rp.transform.position + Vector3.up * 2.45f, out var g)) continue;
-                UISkin.Shadowed(new Rect(g.x - 140, g.y - 22, 280, 22), rp.Name + "  " + rp.Level + (rp.Dead ? "  (dead)" : ""),
-                    UISkin.SmallCenter, new Color(0.5f, 0.78f, 1f));
+                bool mate = NetClient.I.IsPartyMember(rp.Id);
+                string plate = rp.Name + "  " + rp.Level + (rp.Dead ? "  (dead)" : "");
+                UISkin.Shadowed(new Rect(g.x - 140, g.y - 22, 280, 22), plate, UISkin.SmallCenter,
+                    mate ? new Color(0.45f, 1f, 0.5f) : new Color(0.5f, 0.78f, 1f));
+                float pw = UISkin.SmallCenter.CalcSize(new GUIContent(plate)).x + 12f;
+                var plateRect = new Rect(g.x - pw / 2, g.y - 22, pw, 22);
+                Block(plateRect);
+                if (ClickedIn(plateRect) >= 0) { menuPlayer = rp; menuPos = Event.current.mousePosition; }
                 Plate(new Rect(g.x - 32, g.y, 64, 5), rp.Health / rp.MaxHealth, new Color(0.25f, 0.85f, 0.25f));
             }
 
@@ -625,7 +763,9 @@ namespace Shadowfall
             foreach (var e in Enemy.ById.Values)
                 if (e != null && !e.IsDead) Dot(r, toMap(e.transform.position), e.Def.Boss ? new Color(1f, 0.5f, 0f) : new Color(0.9f, 0.15f, 0.1f), e.Def.Boss ? 9 : 5);
             foreach (var rp in RemotePlayer.ById.Values)
-                if (rp != null) Dot(r, toMap(rp.transform.position), new Color(0.3f, 0.6f, 1f), 7);
+                if (rp != null) Dot(r, toMap(rp.transform.position), NetClient.I.IsPartyMember(rp.Id) ? new Color(0.35f, 1f, 0.45f) : new Color(0.3f, 0.6f, 1f), 7);
+            foreach (var m in NetClient.I.Party) // party members out of view range
+                if (m.id != NetClient.I.MyId && !RemotePlayer.ById.ContainsKey(m.id)) Dot(r, toMap(new Vector3(m.x, 0, m.z)), new Color(0.35f, 1f, 0.45f), 6);
             Dot(r, toMap(pp), Color.white, 8);
 
             var net = NetClient.I;
@@ -679,32 +819,54 @@ namespace Shadowfall
         // Chat
         // =====================================================================================
 
+        /// <summary>Opens the chat box with some text already typed (e.g. "/w Name ").</summary>
+        public void OpenChat(string prefill = "")
+        {
+            ChatOpen = true;
+            chatText = prefill;
+        }
+
+        public void SetReplyTarget(string name) => replyTo = name;
+
+        /// <summary>
+        /// The chat box reads key events itself instead of using a focused GUI.TextField, whose focus handling
+        /// is unreliable (in WebGL the box would open but never receive the typed characters).
+        /// </summary>
         void HandleChatKeys()
         {
             var e = Event.current;
             if (Player.I == null || e.type != EventType.KeyDown) return;
             bool enter = e.keyCode == KeyCode.Return || e.keyCode == KeyCode.KeypadEnter;
-            if (!ChatOpen && enter)
+            if (!ChatOpen)
             {
-                ChatOpen = true;
-                focusChat = true;
-                chatText = "";
-                e.Use();
+                if (enter) { OpenChat(); e.Use(); }
+                else if (e.keyCode == KeyCode.Slash) { OpenChat(); e.Use(); } // the '/' itself arrives as the next (character) event
+                return;
             }
-            else if (ChatOpen && enter)
+
+            if (enter)
             {
-                NetClient.I.SendChat(chatText);
+                string text = chatText.Trim();
+                if (text.StartsWith("/r ") && !string.IsNullOrEmpty(replyTo)) text = "/w " + replyTo + " " + text.Substring(3);
+                NetClient.I.SendChat(text);
                 chatText = "";
                 ChatOpen = false;
-                GUI.FocusControl(null);
-                e.Use();
             }
-            else if (ChatOpen && e.keyCode == KeyCode.Escape)
+            else if (e.keyCode == KeyCode.Escape)
             {
+                chatText = "";
                 ChatOpen = false;
-                GUI.FocusControl(null);
-                e.Use();
             }
+            else if (e.keyCode == KeyCode.Backspace)
+            {
+                if (chatText.Length > 0) chatText = chatText.Substring(0, chatText.Length - 1);
+            }
+            else
+            {
+                char c = e.character;
+                if (c != '\0' && !char.IsControl(c) && chatText.Length < 200) chatText += c;
+            }
+            e.Use(); // keep typed keys away from hotkeys
         }
 
         /// <summary>Left edge of the health orb (the HUD's widest element), used to keep side panels clear of it.</summary>
@@ -740,9 +902,20 @@ namespace Shadowfall
             {
                 var r = new Rect(x - 8, y + lines * lh + 12, w + 16, 34);
                 Block(r);
-                GUI.SetNextControlName("chat");
-                chatText = GUI.TextField(r, chatText, 200, UISkin.Field);
-                if (focusChat) { GUI.FocusControl("chat"); focusChat = false; }
+                UISkin.Box(r, UISkin.Field);
+                var style = new GUIStyle(UISkin.Field) { normal = { background = null }, clipping = TextClipping.Clip };
+                bool empty = chatText.Length == 0;
+                string caret = Time.unscaledTime % 1f < 0.55f ? "|" : " ";
+                string shown = chatText;
+                float room = r.width - style.padding.horizontal - 12;
+                while (shown.Length > 0 && style.CalcSize(new GUIContent(shown + "|")).x > room) shown = shown.Substring(1); // keep the end visible
+                if (empty)
+                {
+                    GUI.color = new Color(1, 1, 1, 0.45f);
+                    GUI.Label(r, "Say something...   /p party   /w name   /r reply   /invite name", style);
+                    GUI.color = Color.white;
+                }
+                else GUI.Label(r, shown + caret, style);
             }
         }
 
@@ -951,6 +1124,8 @@ namespace Shadowfall
             {
                 bool ready = q.IsReady(p);
                 GUI.Label(new Rect(r.x + 26, y, 420, 26), "<b>" + q.Def.Title + "</b>" + (ready ? "  <color=#2f7a2a>(complete)</color>" : ""), UISkin.InkRich);
+                if (NetClient.I.InParty && UISkin.Btn(new Rect(r.xMax - 112, y - 4, 86, 32), "Share", UISkin.Button))
+                    NetClient.I.ShareQuest(q.Def);
                 y += 26;
                 GUI.Label(new Rect(r.x + 26, y, 420, 44), q.Def.Objective + "  <b>" + q.Progress(p) + "/" + q.Def.Count + "</b>", UISkin.Ink14);
                 y += 46;
@@ -995,7 +1170,11 @@ namespace Shadowfall
                 "Left-click the ground to move (hold to keep walking). Left-click a monster to attack it; Shift+click attacks in place.\n" +
                 "Right-click casts Fireball.  <b>1-5</b> abilities,  <b>Q / E</b> health / mana potions,  mouse wheel zooms.\n\n" +
                 "<b>Windows</b>\n" +
-                "<b>I</b> bags   <b>C</b> character   <b>K</b> skills   <b>L</b> quests   <b>M</b> map   <b>Enter</b> chat   <b>Esc</b> close\n\n" +
+                "<b>I</b> bags   <b>C</b> character   <b>K</b> skills   <b>L</b> quests   <b>M</b> map   <b>Enter</b> chat   <b>Esc</b> close\n" +
+                "<b>Camera:</b> middle-drag or arrow keys rotate and tilt,  <b>WASD</b> pans,  <b>Space</b> resets\n\n" +
+                "<b>Chat & parties</b>\n" +
+                "<b>/p</b> party chat,  <b>/w name</b> whisper,  <b>/r</b> reply,  <b>/invite name</b>,  <b>/leave</b>,  <b>/who</b>. " +
+                "Click a player's name to invite them. Party members nearby share kills; share quests from the quest log.\n\n" +
                 "<b>The world</b>\n" +
                 "Villagers with a <b>!</b> have quests; return to them when you see a <b>?</b>. Click trees, rocks and fishing spots to gather. " +
                 "Smith at the anvil and cook at campfires. Sell loot to Merchant Lysa.\n\n" +

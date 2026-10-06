@@ -37,6 +37,8 @@ namespace Shadowfall
         public float x, z, tx, tz, dmg;
         public bool hasSave;
         public double now;      // server clock (ms since 1970) in "welcome", for the day/night cycle
+        public string ch;       // chat channel: "" = everyone, "p" = party, "w" = whisper to you, "wto" = your whisper
+        public NetPartyMember[] pm; // "party": members (id = leader)
         public SaveData save;
         public NetMonster[] m;
         public NetPlayer[] p;
@@ -61,6 +63,18 @@ namespace Shadowfall
         public bool mv, atk, dead;
         public string body, legs, weapon, helm, mdl;
     }
+
+    [Serializable]
+    public class NetPartyMember
+    {
+        public int id, lvl;
+        public string name, mdl;
+        public float hp, mhp, x, z;
+        public bool dead;
+    }
+
+    /// <summary>Party commands: pinvite (name), paccept, pdecline, pleave, pkick (id), pshare (q).</summary>
+    [Serializable] public class PartyCmd { public string t, name, q; public int id; }
 
     // ---------------------------------------------------------------- character save (stored by the server)
 

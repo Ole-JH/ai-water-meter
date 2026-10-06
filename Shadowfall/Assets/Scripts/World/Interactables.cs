@@ -566,6 +566,9 @@ namespace Shadowfall
         public QuestDef CurrentQuest(Player p)
         {
             if (!QuestDatabase.Chains.TryGetValue(DisplayName, out var chain)) return null;
+            // A quest you already have (it may have been shared out of order by a party member) comes first.
+            foreach (var q in chain)
+                if (p.Quests.IsActive(q.Id)) return q;
             foreach (var q in chain)
                 if (!p.Quests.Completed.Contains(q.Id)) return q;
             return null;

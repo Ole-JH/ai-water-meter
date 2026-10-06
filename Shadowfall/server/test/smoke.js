@@ -1,6 +1,6 @@
 "use strict";
 // End-to-end smoke test: starts the server on a temp data dir, connects two fake clients and
-// exercises login, world upload, monsters, kill credit, chat, fx, saves and error paths.
+// exercises login, world upload, monsters, kill credit, chat, fx, parties, saves and error paths.
 // Run with: npm test   (or: task server:test)
 
 const { spawn } = require("child_process");
@@ -29,7 +29,7 @@ function connect(name, pass, hash = HASH) {
   return new Promise((resolve, reject) => {
     const ws = new WebSocket(URL);
     const c = { ws, msgs: [], find: (t) => c.msgs.find((m) => m.t === t), all: (t) => c.msgs.filter((m) => m.t === t) };
-    ws.on("open", () => ws.send(JSON.stringify({ t: "hello", name, pass, hash, ver: 1 })));
+    ws.on("open", () => ws.send(JSON.stringify({ t: "hello", name, pass, hash, ver: 2 })));
     ws.on("error", reject);
     ws.on("message", (d) => {
       const m = JSON.parse(d);
@@ -90,6 +90,40 @@ async function main() {
     await sleep(300);
     assert.strictEqual(b.find("chat")?.msg, "hello bthere/b", "chat is relayed and sanitised");
     assert.ok(b.find("fx"), "spell effects are relayed");
+    assert.ok(b.find("welcome").now > 0, "welcome carries the server clock");
+
+    // ---- parties
+    const d = await connect("Dana", "secret4");
+    state(d, 82, 104);
+    a.ws.send(JSON.stringify({ t: "pinvite", name: "bob" }));
+    await sleep(200);
+    assert.strictEqual(b.find("pinv")?.name, "Alice", "Bob receives Alice's invitation");
+    b.ws.send(JSON.stringify({ t: "paccept" }));
+    a.ws.send(JSON.stringify({ t: "chat", msg: "/invite Dana" }));
+    await sleep(200);
+    d.ws.send(JSON.stringify({ t: "paccept" }));
+    await sleep(300);
+    const party = d.all("party").at(-1);
+    assert.strictEqual(party.pm.length, 3, "party has three members");
+    assert.strictEqual(party.id, a.find("welcome").id, "Alice leads the party");
+
+    b.ws.send(JSON.stringify({ t: "chat", msg: "/p group up" }));
+    b.ws.send(JSON.stringify({ t: "pshare", q: "wolves" }));
+    await sleep(300);
+    assert.strictEqual(d.all("chat").find((m) => m.ch === "p")?.msg, "group up", "party chat reaches members");
+    assert.strictEqual(d.find("qshare")?.k, "wolves", "quests can be shared with the party");
+
+    // Dana never hits the wolf but is nearby and in the party: she shares the kill.
+    const snap2 = b.all("snap").at(-1);
+    const wolf2 = snap2.m.filter((x) => x.id !== wolf.id).sort((p, q) => Math.hypot(p.x - 80, p.z - 104) - Math.hypot(q.x - 80, q.z - 104))[0];
+    b.ws.send(JSON.stringify({ t: "hit", mid: wolf2.id, dmg: 999999 }));
+    await sleep(300);
+    assert.ok(d.all("kill").some((k) => k.mid === wolf2.id), "nearby party member shares kill credit");
+
+    d.ws.send(JSON.stringify({ t: "pleave" }));
+    await sleep(200);
+    assert.strictEqual(a.all("party").at(-1).pm.length, 2, "leaving updates the party");
+    d.ws.close();
 
     a.ws.close();
     await sleep(300);

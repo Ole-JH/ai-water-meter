@@ -16,7 +16,7 @@ const DATA_DIR = path.resolve(process.env.DATA_DIR || path.join(__dirname, "data
 const PUBLIC_DIR = path.resolve(process.env.PUBLIC_DIR || path.join(__dirname, "public"));
 const CHAR_DIR = path.join(DATA_DIR, "characters");
 const WORLD_FILE = path.join(DATA_DIR, "world.json");
-const PROTOCOL_VERSION = 1;
+const PROTOCOL_VERSION = 2;
 const TICK = 0.1; // seconds
 const HERO_MODELS = ["Knight", "Barbarian", "Mage", "Rogue"]; // must match CharacterLook.HeroModels
 const MONSTER_VIEW = 45;
@@ -400,9 +400,16 @@ function damageMonster(m, s, dmg) {
 function killMonster(m) {
   monsters.delete(m.id);
   sendNear(m.x, m.z, PLAYER_VIEW + 10, { t: "mdie", mid: m.id });
+  // Everyone who fought it gets credit, plus their party members who are nearby (WoW-style shared kills).
+  const credited = new Set();
   for (const [sid] of m.threat) {
     const s = sessions.get(sid);
     if (!s || !s.inWorld) continue;
+    credited.add(s);
+    const p = partyOf(s);
+    if (p) for (const o of partyMembers(p)) if (!o.dead && dist(o.x, o.z, m.x, m.z) <= PARTY_RANGE) credited.add(o);
+  }
+  for (const s of credited) {
     const diff = m.level - s.lvl;
     const mul = diff < -6 ? 0.1 : diff < -3 ? 0.5 : diff > 3 ? 1.3 : 1;
     const xp = Math.max(1, Math.round(m.def.xp * (1 + 0.12 * (m.level - 1)) * mul));
@@ -503,7 +510,130 @@ function completeLogin(s) {
   log(`${acc.name} logged in (${sessions.size} connected)`);
 }
 
+// =====================================================================================
+// Parties: up to 5 players share kill credit (when nearby), a chat channel and quests.
+// =====================================================================================
+
+const parties = new Map();
+let nextPartyId = 1;
+const MAX_PARTY = 5;
+const PARTY_RANGE = 60;
+const INVITE_TIMEOUT = 60;
+
+function partyOf(s) { return s.party ? parties.get(s.party) || null : null; }
+function partyMembers(p) { return [...p.members].map((id) => sessions.get(id)).filter((o) => o && o.inWorld); }
+function sys(s, msg) { safeSend(s, JSON.stringify({ t: "sys", msg })); }
+function partySys(p, msg) { for (const o of partyMembers(p)) sys(o, msg); }
+
+function findOnline(name) {
+  const n = String(name || "").trim().toLowerCase();
+  if (!n) return null;
+  for (const o of sessions.values()) if (o.inWorld && o.name && o.name.toLowerCase() === n) return o;
+  return null;
+}
+
+function sendParty(p) {
+  const pm = partyMembers(p).map((o) => ({
+    id: o.id, name: o.name, lvl: o.lvl, hp: Math.ceil(o.hp || 0), mhp: Math.ceil(o.mhp || 1),
+    mdl: (o.look && o.look.mdl) || "Knight", x: r2(o.x), z: r2(o.z), dead: !!o.dead,
+  }));
+  const data = JSON.stringify({ t: "party", id: p.leader, pm });
+  for (const o of partyMembers(p)) safeSend(o, data);
+}
+
+function leaveParty(s, why) {
+  const p = partyOf(s);
+  if (!p) return;
+  p.members.delete(s.id);
+  s.party = 0;
+  safeSend(s, JSON.stringify({ t: "party", id: 0, pm: [] }));
+  const rest = partyMembers(p);
+  if (rest.length <= 1) {
+    for (const o of rest) {
+      o.party = 0;
+      safeSend(o, JSON.stringify({ t: "party", id: 0, pm: [] }));
+      sys(o, "Your party has been disbanded.");
+    }
+    parties.delete(p.id);
+    return;
+  }
+  partySys(p, `${s.name} ${why}`);
+  if (p.leader === s.id) {
+    p.leader = rest[0].id;
+    partySys(p, `${rest[0].name} is now the party leader.`);
+  }
+  sendParty(p);
+}
+
+function invite(s, name) {
+  const target = findOnline(name);
+  if (!target) return sys(s, `No player named "${String(name || "").slice(0, 16)}" is online.`);
+  if (target === s) return sys(s, "You can't invite yourself.");
+  const p = partyOf(s);
+  if (p && p.leader !== s.id) return sys(s, "Only the party leader can invite.");
+  if (p && p.members.size >= MAX_PARTY) return sys(s, "Your party is full.");
+  if (partyOf(target)) return sys(s, `${target.name} is already in a party.`);
+  target.invite = { from: s.id, at: now() };
+  safeSend(target, JSON.stringify({ t: "pinv", id: s.id, name: s.name }));
+  sys(s, `You invited ${target.name} to your party.`);
+}
+
+const QUEST_ID = /^[a-z0-9_]{1,32}$/;
+
+const partyHandlers = {
+  pinvite(s, m) { if (s.inWorld) invite(s, m.name); },
+
+  paccept(s) {
+    if (!s.inWorld || !s.invite) return;
+    const inv = s.invite;
+    s.invite = null;
+    const from = sessions.get(inv.from);
+    if (now() - inv.at > INVITE_TIMEOUT || !from || !from.inWorld) return sys(s, "That invitation has expired.");
+    if (partyOf(s)) return sys(s, "You are already in a party.");
+    let p = partyOf(from);
+    if (!p) {
+      p = { id: nextPartyId++, leader: from.id, members: new Set([from.id]) };
+      parties.set(p.id, p);
+      from.party = p.id;
+    }
+    if (p.members.size >= MAX_PARTY) return sys(s, "That party is full.");
+    p.members.add(s.id);
+    s.party = p.id;
+    partySys(p, `${s.name} joins the party.`);
+    sendParty(p);
+  },
+
+  pdecline(s) {
+    if (!s.invite) return;
+    const from = sessions.get(s.invite.from);
+    s.invite = null;
+    if (from && from.inWorld) sys(from, `${s.name} declines your invitation.`);
+  },
+
+  pleave(s) { if (partyOf(s)) leaveParty(s, "has left the party."); else sys(s, "You are not in a party."); },
+
+  pkick(s, m) {
+    const p = partyOf(s);
+    if (!p || p.leader !== s.id) return;
+    const target = sessions.get(parseInt(m.id, 10));
+    if (!target || target === s || target.party !== p.id) return;
+    sys(target, "You have been removed from the party.");
+    leaveParty(target, "was removed from the party.");
+  },
+
+  pshare(s, m) {
+    const p = partyOf(s);
+    const q = String(m.q || "");
+    if (!p || !QUEST_ID.test(q)) return;
+    const data = JSON.stringify({ t: "qshare", id: s.id, name: s.name, k: q });
+    for (const o of partyMembers(p)) if (o !== s) safeSend(o, data);
+    sys(s, "Quest shared with your party.");
+  },
+};
+
 const handlers = {
+  ...partyHandlers,
+
   hello(s, m) {
     if (s.account || s.pendingLogin) return;
     if (m.ver !== PROTOCOL_VERSION) return fail(s, "Your game client is out of date. Refresh the page.");
@@ -576,6 +706,32 @@ const handlers = {
       const names = [...sessions.values()].filter((o) => o.inWorld).map((o) => `${o.name} (${o.lvl})`);
       return safeSend(s, JSON.stringify({ t: "sys", msg: `${names.length} online: ${names.join(", ")}` }));
     }
+    const [cmd, ...rest] = msg.split(" ");
+    const arg = rest.join(" ").trim();
+    switch (cmd.toLowerCase()) {
+      case "/p": case "/party": {
+        const p = partyOf(s);
+        if (!p) return sys(s, "You are not in a party.");
+        if (!arg) return;
+        const data = JSON.stringify({ t: "chat", ch: "p", id: s.id, name: s.name, msg: arg });
+        for (const o of partyMembers(p)) safeSend(o, data);
+        return;
+      }
+      case "/w": case "/whisper": case "/tell": {
+        const [to, ...words] = rest;
+        const target = findOnline(to);
+        const text = words.join(" ").trim();
+        if (!target) return sys(s, `No player named "${String(to || "").slice(0, 16)}" is online.`);
+        if (!text) return;
+        safeSend(target, JSON.stringify({ t: "chat", ch: "w", id: s.id, name: s.name, msg: text }));
+        safeSend(s, JSON.stringify({ t: "chat", ch: "wto", id: s.id, name: target.name, msg: text }));
+        return;
+      }
+      case "/invite": case "/inv": return invite(s, arg);
+      case "/leave": return partyHandlers.pleave(s);
+      default:
+        if (cmd.startsWith("/")) return sys(s, "Commands: /p party chat, /w name whisper, /invite name, /leave, /who");
+    }
     broadcast({ t: "chat", id: s.id, name: s.name, msg });
   },
 
@@ -603,6 +759,7 @@ const handlers = {
 };
 
 function onDisconnect(s) {
+  if (partyOf(s)) leaveParty(s, "has gone offline.");
   sessions.delete(s.id);
   if (s.account && s.inWorld) {
     if (s.account.save) {
@@ -621,9 +778,11 @@ function onDisconnect(s) {
 // Game loop: monster AI + snapshots
 // =====================================================================================
 
+let tickCount = 0;
 function tick() {
   if (!world) return;
   const t = now();
+  if (++tickCount % 10 === 0) for (const p of parties.values()) sendParty(p); // party frames: 1 Hz
   for (const m of monsters.values()) {
     // Monsters with no player anywhere nearby sleep (unless they need to walk home).
     if (m.state === "idle") {

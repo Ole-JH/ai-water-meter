@@ -9,7 +9,7 @@ namespace Shadowfall
     /// </summary>
     public class NetClient : MonoBehaviour
     {
-        public const int ProtocolVersion = 1;
+        public const int ProtocolVersion = 2;
         public static NetClient I;
 
         public enum ConnState { Offline, Connecting, LoggingIn, InWorld }
@@ -17,6 +17,17 @@ namespace Shadowfall
         public string Status { get; private set; } = "";
         public int MyId { get; private set; }
         public int PlayersOnline { get; private set; }
+
+        // ---- party
+        public NetPartyMember[] Party { get; private set; } = new NetPartyMember[0];
+        public int PartyLeader { get; private set; }
+        public bool InParty => Party.Length > 0;
+        public bool IsLeader => InParty && PartyLeader == MyId;
+
+        /// <summary>A pending party invitation or shared quest, shown as a popup.</summary>
+        public class Offer { public int From; public string Name; public QuestDef Quest; public float Time; }
+        public Offer PartyInvite { get; private set; }
+        public Offer QuestOffer { get; private set; }
 
         readonly WebSocketConnection socket = new WebSocketConnection();
         string pendingName, pendingPass, pendingLook;
@@ -50,6 +61,8 @@ namespace Shadowfall
             socket.Close();
             bool wasInWorld = State == ConnState.InWorld;
             State = ConnState.Offline;
+            Party = new NetPartyMember[0];
+            PartyInvite = QuestOffer = null;
             Status = reason;
             if (wasInWorld) GameManager.I.LeaveWorld();
         }
@@ -82,6 +95,37 @@ namespace Shadowfall
             if (text.Length == 0 || State != ConnState.InWorld) return;
             if (text.Length > 200) text = text.Substring(0, 200);
             Send(new ChatMsg { msg = text });
+        }
+
+        // ---- party
+
+        void PartySend(string t, string name = null, int id = 0, string q = null)
+        {
+            if (State == ConnState.InWorld) Send(new PartyCmd { t = t, name = name, id = id, q = q });
+        }
+
+        public void InviteToParty(string name) => PartySend("pinvite", name);
+        public void LeaveParty() => PartySend("pleave");
+        public void KickFromParty(int id) => PartySend("pkick", id: id);
+        public void ShareQuest(QuestDef q) => PartySend("pshare", q: q.Id);
+
+        public void AnswerPartyInvite(bool accept)
+        {
+            PartySend(accept ? "paccept" : "pdecline");
+            PartyInvite = null;
+        }
+
+        public void AnswerQuestOffer(bool accept)
+        {
+            var offer = QuestOffer;
+            QuestOffer = null;
+            if (accept && offer != null && Player.I != null) Player.I.Quests.Accept(offer.Quest);
+        }
+
+        public bool IsPartyMember(int id)
+        {
+            foreach (var m in Party) if (m.id == id) return true;
+            return false;
         }
 
         public void SendFx(string kind, Vector3 from, Vector3 to)
@@ -176,10 +220,18 @@ namespace Shadowfall
                 case "matk": HandleMonsterAttack(m); break;
                 case "fx": HandleFx(m); break;
 
-                case "chat":
-                    GameUI.Log("[" + m.name + "]: " + m.msg, m.id == MyId ? new Color(0.85f, 0.85f, 1f) : Color.white);
-                    if (RemotePlayer.ById.TryGetValue(m.id, out var speaker)) GameUI.Float(speaker.transform.position + Vector3.up * 3f, m.msg, Color.white, 0.9f);
+                case "chat": HandleChat(m); break;
+                case "party":
+                    bool wasInParty = InParty;
+                    Party = m.pm ?? new NetPartyMember[0];
+                    PartyLeader = m.id;
+                    if (!wasInParty && InParty) GameUI.Log("You joined a party. Type /p to talk to your party.", PartyColor);
                     break;
+                case "pinv":
+                    PartyInvite = new Offer { From = m.id, Name = m.name, Time = Time.time };
+                    GameUI.Log(m.name + " invites you to join a party.", PartyColor);
+                    break;
+                case "qshare": HandleQuestShare(m); break;
 
                 case "sys":
                     GameUI.Log(m.msg, new Color(1f, 0.85f, 0.4f));
@@ -189,6 +241,48 @@ namespace Shadowfall
                     if (RemotePlayer.ById.TryGetValue(m.id, out var gone)) Destroy(gone.gameObject);
                     break;
             }
+        }
+
+        public static readonly Color PartyColor = new Color(0.55f, 0.75f, 1f);
+        public static readonly Color WhisperColor = new Color(1f, 0.55f, 0.9f);
+
+        void HandleChat(NetMsg m)
+        {
+            switch (m.ch)
+            {
+                case "p":
+                    GameUI.Log("[Party] " + m.name + ": " + m.msg, PartyColor);
+                    Bubble(m.id, m.msg);
+                    break;
+                case "w":
+                    GameUI.Log(m.name + " whispers: " + m.msg, WhisperColor);
+                    GameUI.I?.SetReplyTarget(m.name);
+                    break;
+                case "wto":
+                    GameUI.Log("To " + m.name + ": " + m.msg, WhisperColor);
+                    break;
+                default:
+                    GameUI.Log("[" + m.name + "]: " + m.msg, m.id == MyId ? new Color(0.85f, 0.85f, 1f) : Color.white);
+                    Bubble(m.id, m.msg);
+                    break;
+            }
+        }
+
+        void Bubble(int id, string text)
+        {
+            if (id == MyId && Player.I != null) Speech.Say(Player.I.transform, 2.6f, text);
+            else if (RemotePlayer.ById.TryGetValue(id, out var speaker) && speaker != null) Speech.Say(speaker.transform, 2.6f, text);
+        }
+
+        void HandleQuestShare(NetMsg m)
+        {
+            var p = Player.I;
+            var q = QuestDatabase.Find(m.k);
+            if (p == null || q == null) return;
+            if (p.Quests.IsActive(q.Id)) { GameUI.Log(m.name + " shared \"" + q.Title + "\", which you already have.", PartyColor); return; }
+            if (p.Quests.Completed.Contains(q.Id)) { GameUI.Log(m.name + " shared \"" + q.Title + "\", which you have completed.", PartyColor); return; }
+            if (p.Level < q.MinLevel) { GameUI.Log(m.name + " shared \"" + q.Title + "\", but you need level " + q.MinLevel + ".", PartyColor); return; }
+            QuestOffer = new Offer { From = m.id, Name = m.name, Quest = q, Time = Time.time };
         }
 
         void HandleSnapshot(NetMsg m)
