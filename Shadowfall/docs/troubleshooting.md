@@ -29,5 +29,8 @@
 ??? question "Docker client build: *“No Unity license found”* or activation errors"
     See [Building the client in Docker → License](deployment/docker-client-build.md#1-provide-a-unity-license). The easiest fix is `task license:activate`. If Unity rejects an existing license file, get a fresh one the same way.
 
+??? question "Build fails with *“Machine bindings don't match”* / *“'com.unity.editor.headless' was not found”*"
+    The license was activated for a different machine id than the build container's. This happens with licenses from older versions of the license helper, or `.ulf` files copied from a normal Unity Hub install. Pull the latest code, run `task license:activate` again, copy the **whole** `unity-license/` folder (including `licenses/`) to the build machine, and rebuild.
+
 ??? question "`task license:activate`: the sign-in doesn't come back to Unity Hub"
     After you sign in, Firefox (inside the desktop) has to open a `unityhub://` link. If it shows a dialog, choose **Open link** / **Unity Hub**. If nothing happens, close Firefox and click **Sign in** in the Hub again. Unity Hub's log is at `/tmp/unityhub.log` in the container (`docker exec -it <container> cat /tmp/unityhub.log`).

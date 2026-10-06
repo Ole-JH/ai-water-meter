@@ -12,6 +12,7 @@ set -euo pipefail
 PROJECT=/project
 LICENSE_DIR=/root/.local/share/unity3d/Unity
 LICENSE_FILE="$LICENSE_DIR/Unity_lic.ulf"
+ENTITLEMENT_DIR=/root/.config/unity3d/Unity/licenses
 SERIAL_ACTIVATED=0
 
 log() { echo "[client-build] $*"; }
@@ -20,6 +21,9 @@ mkdir -p "$LICENSE_DIR"
 if [[ -f "$PROJECT/unity-license/Unity_lic.ulf" ]]; then
   log "Using license file unity-license/Unity_lic.ulf"
   cp "$PROJECT/unity-license/Unity_lic.ulf" "$LICENSE_FILE"
+  if [[ -d "$PROJECT/unity-license/licenses" ]]; then
+    mkdir -p "$ENTITLEMENT_DIR" && cp -r "$PROJECT/unity-license/licenses/." "$ENTITLEMENT_DIR/"
+  fi
 elif [[ -n "${UNITY_LICENSE:-}" ]]; then
   log "Using license from UNITY_LICENSE"
   printf '%s' "$UNITY_LICENSE" > "$LICENSE_FILE"
@@ -60,9 +64,19 @@ fix_ownership() {
 trap 'return_license; fix_ownership' EXIT
 
 log "Building WebGL (the first build imports the project and takes a while; later builds reuse the Library cache)"
-unity-editor -batchmode -nographics -quit -logFile /dev/stdout \
+if ! unity-editor -batchmode -nographics -quit -logFile /dev/stdout \
   -projectPath "$PROJECT" -buildTarget WebGL \
-  -executeMethod Shadowfall.EditorTools.ShadowfallBuild.BuildWebGL
+  -executeMethod Shadowfall.EditorTools.ShadowfallBuild.BuildWebGL 2>&1 | tee /tmp/unity-build.log; then
+  if grep -q -e "Machine bindings don't match" -e "No valid Unity Editor license" /tmp/unity-build.log; then
+    cat >&2 <<'EOF'
+
+[client-build] Unity rejected the license. Licenses are tied to a machine id; this build container uses
+GameCI's fixed id. Licenses from an older version of the license helper used a different id.
+Fix: run  task license:activate  again, copy the whole unity-license/ folder here, and rebuild.
+EOF
+  fi
+  exit 1
+fi
 
 if [[ ! -d "$PROJECT/server/public/Build" ]]; then
   log "Build finished but server/public/Build is missing - check the log above."

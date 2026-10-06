@@ -30,7 +30,14 @@ The Unity editor won't run without a license, even in batch mode in a container.
     2. Click **Sign in**. Firefox opens inside the desktop; sign in to your Unity account. When Firefox asks to open the `unityhub` link, allow it. You're then back in the Hub, signed in.
     3. Open **Preferences** (gear icon) **→ Licenses → Add → Get a free personal license**. Skip any offer to install an editor.
 
-    As soon as Unity Hub writes the license, it's saved to `unity-license/Unity_lic.ulf` (readable only by you) and the container stops and removes itself. Press ++ctrl+c++ to cancel at any time.
+    As soon as Unity Hub writes the license, it's saved to `unity-license/` (`Unity_lic.ulf` plus Unity 6's `licenses/` entitlement files, readable only by you), and the container stops and removes itself. Press ++ctrl+c++ to cancel at any time.
+
+    !!! info "Why the helper pretends to be the build machine"
+        Unity ties a license to the machine id (`/etc/machine-id`). GameCI's build images all use the same fixed id, so the helper uses that id too. The license then works in the build container on **any** computer. To build on another machine, copy the whole `unity-license/` folder:
+
+        ```bash
+        scp -r ole@server:~/ai-water-meter/Shadowfall/unity-license .
+        ```
 
     | Setting | Default | Purpose |
     | --- | --- | --- |

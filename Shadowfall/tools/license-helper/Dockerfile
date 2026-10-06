@@ -23,6 +23,11 @@ RUN rm /usr/bin/unityhub \
     && chmod +x /usr/bin/unityhub
 
 RUN useradd -m -u 1000 -s /bin/bash unity
+
+# Unity binds licenses to the machine id. Use the same fixed id as GameCI's unityci/editor images
+# (see game-ci/docker images/ubuntu/base/Dockerfile) so the license works in the build container.
+RUN echo "576562626572264761624c65526f7578" > /etc/machine-id \
+    && mkdir -p /var/lib/dbus && ln -sf /etc/machine-id /var/lib/dbus/machine-id
 COPY start.sh session.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/start.sh /usr/local/bin/session.sh
 

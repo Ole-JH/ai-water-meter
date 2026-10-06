@@ -40,8 +40,12 @@ while kill -0 "$SESSION" 2>/dev/null; do
   if [[ -n "$lic" ]]; then
     sleep 3   # let the Hub finish writing
     cp "$lic" "$OUT/Unity_lic.ulf"
-    chown "$HOST_UID:$HOST_GID" "$OUT/Unity_lic.ulf" 2>/dev/null || true
-    chmod 600 "$OUT/Unity_lic.ulf"
+    # Unity 6 also keeps entitlement licenses here; the build container needs them too.
+    if [[ -d /home/unity/.config/unity3d/Unity/licenses ]]; then
+      rm -rf "$OUT/licenses" && cp -r /home/unity/.config/unity3d/Unity/licenses "$OUT/licenses"
+    fi
+    chown -R "$HOST_UID:$HOST_GID" "$OUT" 2>/dev/null || true
+    chmod -R go-rwx "$OUT"
     echo "[license-helper] License saved to unity-license/Unity_lic.ulf - you can now run: task client:build"
     pkill -u unity
     exit 0
