@@ -23,6 +23,11 @@
 | `World/Interactables.cs` | `LootDrop`, `ResourceNode` (gathering), `CraftingStation` + `Recipe` (anvil sparks, cooking flare and steam), `Npc` |
 | `Combat/Gore.cs` | Blood and gore: directional hit sprays, death bursts, gibs, and ground splats/pools drawn as one decal mesh (`Shadowfall/Decal` shader, procedurally generated splat atlas) that dry and fade; per-monster kinds (blood, goblin ichor, rot, bone, stone) and the Gore setting |
 | `World/PropFire.cs` | Animated fire on a prop (campfires, gate torches, braziers, dungeon torches): flames, embers, smoke, a wobbling glow core and a flickering light; pauses when the hero is far away |
+| `World/Weather.cs` | Seasons and weather from the server: clouds, rain, snow, fog, lightning, wet ground, frozen lakes; snow cover per region; shader globals |
+| `World/SnowField.cs` | Where the snow has been shoveled or trodden (a mask the terrain and grass shaders read), snow depth for slow walking |
+| `World/SeasonalTown.cs` | The festival decorations for each season, autumn and winter tree colours, the maypole, petals, the summer bonfire |
+| `World/SnowElves.cs` | Winterfest's elves who shovel the streets clear, and the snow piles they leave |
+| `World/LeafPiles.cs` | Autumn leaf piles that burst when you run through them, and the villagers who rake them (and chase you) |
 | `Core/Music.cs` | Background music: picks the context (town, wilds, graveyard, dungeon, combat, boss, login), crossfades, gaps between pieces |
 | `Progression/Achievements.cs` | Achievement definitions (`AchievementDatabase`) and each hero's counters, earned achievements and title (`AchievementLog`) |
 | `UI/GameUI.Achievements.cs` | The achievements window (++y++), the "Achievement earned" toasts and the title picker |
@@ -82,6 +87,7 @@
 | `admin-cli.js` | Command-line account admin: `reset-code`, `admin on\|off`, `accounts` ([Accounts & passwords](../deployment/accounts.md#admin-command-line)) |
 | `content.js` | Monster stats, spawner table, dungeons (`DUNGEONS`), global `BALANCE`, dungeon `DIFFICULTIES`, town safe-zone rectangle, spawn point |
 | `dungeon.js` | Dungeon level generators: rooms and corridors (`generate`) and natural caverns (`generateCaves`), with start, stairs, boss, chests and packs |
+| `weather.js` | Seasons (from the clock, `SEASON_MINUTES`) and the weather: what fits the season, changing every 6 to 16 minutes |
 | `metrics.js` | Dependency-free Prometheus metrics (counters, histograms, scrape-time gauges, process metrics), served on `METRICS_PORT` |
 | `test/smoke.js` | End-to-end test with fake clients, against files or PostgreSQL (`PG_TEST_URL`) |
 | `Dockerfile`, `docker-compose.yml` | Container build and run, the PostgreSQL database, plus the monitoring stack |

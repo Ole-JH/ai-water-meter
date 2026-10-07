@@ -12,6 +12,7 @@ namespace Shadowfall
         public string Name;
         public int Level;
         public string Title;   // worn under their name (empty = none)
+        float nextTrample;
         public float Health, MaxHealth;
         public bool Dead;
         public float LastSeen;
@@ -124,6 +125,7 @@ namespace Shadowfall
             else transform.position = Vector3.MoveTowards(transform.position, netPos, Mathf.Max(to.magnitude * 8f, 3f) * dt);
             transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.Euler(0, netRy, 0), dt * 12f);
             float moved = Factory.FlatDistance(before, transform.position);
+            if (moved > 0.001f && Time.time >= nextTrample) { nextTrample = Time.time + 0.25f; SnowField.Trample(transform.position); }
             if (dt > 0f && moved < 3f) moveSpeed = Mathf.Lerp(moveSpeed, moving ? moved / dt : 0f, dt * 10f);
 
             if (view != null)

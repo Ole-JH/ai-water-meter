@@ -19,6 +19,10 @@ Shader "Shadowfall/Grass"
 
         float _Wind, _WindSpeed;
         float4 _SfPlayerPos; // xyz = hero position, set by GrassField
+        // weather globals (Weather.cs): snow flattens and whitens the blades, autumn browns them
+        sampler2D _SfSnowMask;
+        float4 _SfSnow, _SfWorld;
+        float _SfLeaves;
 
         struct Input
         {
@@ -42,6 +46,16 @@ Shader "Shadowfall/Grass"
             offs.y -= push * 0.5;
 
             wp += offs;
+
+            // Under snow the blades sink in (and what still shows is frosted); autumn turns them straw-coloured.
+            float region = saturate((wp.z - _SfSnow.z) / max(_SfSnow.w, 0.01) + 0.5);
+            float cover = lerp(_SfSnow.y, _SfSnow.x, region);
+            float cleared = tex2Dlod(_SfSnowMask, float4(wp.xz / max(_SfWorld.xy, 1), 0, 0)).r;
+            float depth = cover * (1.0 - cleared * 0.8);
+            // (scaled by the vertex alpha: blade tips; critters and decorations drawn with this shader use alpha 0)
+            wp.y = lerp(wp.y, -0.05, saturate(depth * 1.4) * v.color.a);
+            v.color.rgb = lerp(v.color.rgb, float3(0.62, 0.52, 0.24), _SfLeaves * 0.55 * v.color.a);
+            v.color.rgb = lerp(v.color.rgb, float3(0.85, 0.88, 0.93), saturate(cover * 1.5) * 0.7 * v.color.a);
             v.vertex.xyz = mul(unity_WorldToObject, float4(wp, 1)).xyz;
             v.normal = mul((float3x3)unity_WorldToObject, float3(0, 1, 0));
         }

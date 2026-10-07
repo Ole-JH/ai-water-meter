@@ -150,6 +150,7 @@ All sound effects are **CC0**: Kenney's RPG Audio, Impact Sounds and Interface S
 
 - Clips live in `Assets/Resources/Audio` as `key_N.ogg`. `Sfx.Play("swing", position)` picks a random variant with slight pitch variation.
 - Sounds are positional and heard from the hero (not from the camera high above).
+- **Weather:** a rain loop, three thunderclaps, snow footsteps, and the seasonal town work (shovels, rakes, bursting leaf piles), synthesized by `weather_sounds()` in `build_audio.py`.
 - **Ambience:** wind everywhere, crickets and distant wolf howls at night outside the walls, crackling campfires and braziers, lapping water at the lakes.
 - **Volume:** a slider in the game menu (++esc++ → **Settings**), saved in the browser.
 
@@ -194,7 +195,8 @@ also teach `Music.Want()` when it applies.
 | KayKit Adventurers, Skeletons, Medieval Hexagon, Dungeon Remastered | Kay Lousberg | CC0 | Heroes, villagers, skeletons, buildings, props |
 | Stylized Nature MegaKit (free edition) | Quaternius | CC0 | Trees, boulders, pebbles, bushes, ferns, flowers, mushrooms |
 | Resource Bits | Kay Lousberg | CC0 | Ore nuggets on mining rocks |
-| Nature Kit, Fantasy Town Kit, Graveyard Kit, UI Pack RPG Expansion | Kenney | CC0 | Stumps, tents, campfires, town props, graveyard, zombie, UI skin, cursors |
+| Nature Kit, Fantasy Town Kit, Graveyard Kit, UI Pack RPG Expansion | Kenney | CC0 | Stumps, tents, campfires, town props, graveyard, zombie, pumpkins, hay bales, the elves' shovels, UI skin, cursors |
+| Holiday Kit | Kenney | CC0 | Winterfest: the decorated tree, snowmen, presents, sled, reindeer, lights, snow piles |
 | Ultimate Monsters, Ultimate Animated Animals | Quaternius | CC0 | Goblins, warchief, golem, wolves |
 | game-icons.net | Lorc, Delapouite, DarkZaitzev, Faithtoken, Sbed | CC BY 3.0 | All UI icons (recolored), achievement badges |
 | Music from OpenGameArt | Nikke, The Cynic Project, RandomMind, Komiku, northivanastan, yd, qubodup, Paul Wortmann, Eponasoft, Emma_MA, Bobjt, nene | CC0 | Music (see `Assets/Resources/Music/CREDITS.md`) |

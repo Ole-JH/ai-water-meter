@@ -1,5 +1,7 @@
 // Ground splat shader: eight tiling layers blended by two control maps, using each layer's
 // height (alpha) so grass pokes through dirt and stones sit on top of the mortar, instead of a smeary crossfade.
+// On top, the weather (globals set by Weather.cs): snow cover (north and south levels) minus what has been shoveled or
+// trodden (_SfSnowMask), autumn leaves on the natural ground, and wet, darker ground after rain.
 Shader "Shadowfall/Terrain"
 {
     Properties
@@ -32,6 +34,18 @@ Shader "Shadowfall/Terrain"
         sampler2D _L0, _L1, _L2, _L3, _L4, _L5, _L6, _L7;
         float _Tiling, _BlendDepth;
         float4 _WorldSize;
+        // weather globals
+        sampler2D _SfSnowMask;   // r: 1 = shoveled to the ground, ~0.5 = trodden, 0 = untouched
+        float4 _SfSnow;          // x = snow in the north, y = in the south, z = where the north begins (world z), w = blend width
+        float _SfWet, _SfLeaves;
+
+        float Hash(float2 p) { return frac(sin(dot(p, float2(127.1, 311.7))) * 43758.5453); }
+        float VNoise(float2 p)
+        {
+            float2 i = floor(p), f = frac(p);
+            f = f * f * (3.0 - 2.0 * f);
+            return lerp(lerp(Hash(i), Hash(i + float2(1, 0)), f.x), lerp(Hash(i + float2(0, 1)), Hash(i + 1), f.x), f.y);
+        }
 
         struct Input
         {
@@ -72,7 +86,32 @@ Shader "Shadowfall/Terrain"
                           t4.rgb * b1.x + t5.rgb * b1.y + t6.rgb * b1.z + t7.rgb * b1.w) / sum;
 
             fixed3 tint = tex2D(_Tint, cuv).rgb * 2.0; // 0.5 = neutral
-            o.Albedo = col * tint;
+            col *= tint;
+
+            // Fallen leaves on grass, forest floor and dirt (not on cobbles or sand).
+            float natural = (dot(b0, 1) + b1.x) / sum;
+            float ln = VNoise(wp * 1.7) * 0.65 + VNoise(wp * 6.3) * 0.35;
+            float leaves = saturate((ln - (1.0 - _SfLeaves * 0.7)) * 5.0) * natural;
+            fixed3 leafCol = lerp(fixed3(0.62, 0.22, 0.05), fixed3(0.85, 0.55, 0.12), VNoise(wp * 9.1));
+            col = lerp(col, leafCol * (0.75 + 0.35 * Hash(floor(wp * 5.0))), leaves);
+
+            // Rain darkens the ground.
+            col *= lerp(1.0, 0.6, _SfWet);
+
+            // Snow: deeper where untouched, a grey trodden slush, dark damp ground where shoveled.
+            float region = saturate((IN.worldPos.z - _SfSnow.z) / max(_SfSnow.w, 0.01) + 0.5);
+            float cover = lerp(_SfSnow.y, _SfSnow.x, region);
+            float cleared = tex2D(_SfSnowMask, cuv).r;
+            float sn = VNoise(wp * 0.6) * 0.55 + VNoise(wp * 2.7) * 0.3 + VNoise(wp * 11.0) * 0.15;
+            float depth = cover * (1.0 - cleared);
+            float snow = saturate((depth * 1.7 - (1.0 - sn) * 0.7) * 4.0);
+            float trodden = cover * saturate(cleared * 2.5) * saturate((0.85 - cleared) * 5.0);
+            col *= lerp(1.0, 0.72, cover * saturate((cleared - 0.6) * 3.0)); // damp where the snow was cleared
+            col = lerp(col, fixed3(0.6, 0.62, 0.66) * (0.85 + sn * 0.2), trodden * 0.7);
+            fixed3 snowCol = lerp(fixed3(0.74, 0.79, 0.88), fixed3(0.96, 0.97, 1.0), sn);
+            snowCol += step(0.985, Hash(floor(wp * 23.0))) * 0.35; // glitter
+            col = lerp(col, snowCol, snow);
+            o.Albedo = col;
             o.Alpha = 1;
         }
         ENDCG

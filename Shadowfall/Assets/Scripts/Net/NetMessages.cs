@@ -73,6 +73,11 @@ namespace Shadowfall
         public int rarity, restock;
         public bool burnt;
         public int[] slots;            // "tmine": the bag slots of our trade offer
+        // "weather": s = season (0 spring, 1 summer, 2 autumn, 3 winter), sky = clear|cloudy|rain|storm|fog,
+        // i = intensity 0..1, left = seconds until the next season
+        public int s, left;
+        public string sky;
+        public float i;
         public NetMonster[] m;
         public NetPlayer[] p;
     }
@@ -122,7 +127,7 @@ namespace Shadowfall
     /// <summary>Dungeon commands: denter, dstairs, dleave (town = after dying).</summary>
     [Serializable] public class DungeonCmd { public string t; public bool town; public int d, df; }
     /// <summary>Admin command (the server checks the sender is an admin). Unused fields are ignored.</summary>
-    [Serializable] public class AdminCmd { public string t = "adm"; public string c, name, type, text, phase, what; public float x, z, r, chance; public int d, l, n, df; public bool elite, fresh; }
+    [Serializable] public class AdminCmd { public string t = "adm"; public string c, name, type, text, phase, what, kind; public float x, z, r, chance; public int d, l, n, df; public bool elite, fresh; }
 
     /// <summary>Party commands: pinvite (name), paccept, pdecline, pleave, pkick (id), pshare (q).</summary>
     [Serializable] public class PartyCmd { public string t, name, q; public int id; }

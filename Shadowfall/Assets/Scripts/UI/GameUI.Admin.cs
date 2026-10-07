@@ -28,7 +28,7 @@ namespace Shadowfall
 
         void DrawAdmin(Player p)
         {
-            var r = new Rect(14, 120, 470, 560);
+            var r = new Rect(14, 110, 470, 680);
             if (UISkin.Window(r, "Admin")) { showAdmin = false; return; }
             Block(r);
             float x = r.x + 22, w = r.width - 44, y = r.y + 56;
@@ -131,6 +131,19 @@ namespace Shadowfall
             for (int i = 0; i < phases.Length; i++)
                 if (AdminButton(new Rect(x + i * (bw + 6), y, bw, 32), char.ToUpper(phases[i][0]) + phases[i].Substring(1)))
                     AdminTools.Send(new AdminCmd { c = "time", phase = phases[i] });
+            y += 44;
+
+            Section(ref y, x, w, "Season and weather (everyone)  -  now " + Weather.Season + ", " + Weather.Sky);
+            string[] seasons = { "spring", "summer", "autumn", "winter" };
+            for (int i = 0; i < seasons.Length; i++)
+                if (AdminButton(new Rect(x + i * (bw + 6), y, bw, 32), char.ToUpper(seasons[i][0]) + seasons[i].Substring(1)))
+                    AdminTools.Send(new AdminCmd { c = "season", kind = seasons[i] });
+            y += 38;
+            string[] skies = { "clear", "cloudy", "rain", "storm", "fog" };
+            float sw = (w - 24) / 5f;
+            for (int i = 0; i < skies.Length; i++)
+                if (AdminButton(new Rect(x + i * (sw + 6), y, sw, 32), char.ToUpper(skies[i][0]) + skies[i].Substring(1)))
+                    AdminTools.Send(new AdminCmd { c = "weather", kind = skies[i], n = 15 });
             y += 44;
 
             Section(ref y, x, w, "Elite chance for new spawns");

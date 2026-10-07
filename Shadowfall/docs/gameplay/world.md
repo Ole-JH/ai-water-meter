@@ -113,6 +113,44 @@ Monsters live on the server, so every player sees the same ones. They:
 
 Everyone who damages a monster gets **full XP and quest credit**. Each player then rolls **their own loot**, which only they can see.
 
+## Seasons and weather
+
+The year turns: **spring, summer, autumn and winter**, two hours each (so a whole year every eight hours; server
+operators can change that with `SEASON_MINUTES`). The weather is the same for everyone and changes every few minutes,
+picked from what fits the season: clear skies, clouds, rain, thunderstorms or fog. The minimap plate shows the season and
+the weather.
+
+- **Rain** darkens and soaks the ground (it dries out slowly afterwards), splashes on the ground and drums on your ears.
+  **Thunderstorms** add lightning flashes and thunder.
+- **Fog** closes in until you can barely see the next house.
+- **Snow** falls where it's cold: everywhere in winter, and in the north (Whisperwood) in spring and autumn. It **piles up**
+  while it snows and melts slowly when it stops (in winter it never quite goes). Storms in winter are blizzards.
+- **Deep snow slows you down**, and the longer you wade through it the more of it cakes onto your boots and legs, slowing
+  you further (the icon above your action bar shows how much). Shoveled streets shake it off, and so does standing by a
+  fire. Your feet, and everyone else's, pack the snow into trails as you go.
+- Lakes **freeze** over in winter; trees turn golden and orange in autumn, and pines go dark and cold in winter.
+
+## Festivals
+
+Hollowmere celebrates every season:
+
+| Season | Festival | In the village |
+| --- | --- | --- |
+| Spring | The Bloom Festival | Flower garlands across the streets, flowers by every door, petals drifting on the breeze |
+| Summer | The Midsummer Fair | Bunting, a maypole with turning ribbons, lanterns, and a bonfire on the square from dusk |
+| Autumn | The Harvest Festival | Pumpkins and jack-o'-lanterns, hay bales, and villagers raking the leaves into big piles |
+| Winter | Winterfest | A decorated tree with presents, snowmen, a sled and a reindeer, coloured lights over the market, and elves |
+
+**Winterfest's elves** keep the streets clear: each has a street (or the square), walks it side by side, and wherever the
+snow is deep stops to dig and throws the snow onto piles at the street edge. You can watch the paths open up bit by bit;
+while it keeps snowing they fill in again, and the elves start over.
+
+**Autumn's leaf piles** are very tempting. Run through one and the leaves burst everywhere. The villager who raked it will
+drop everything, chase you down, give you one good whack with the rake (1 life, and an achievement), then go back and rake
+it all up again, leaf by leaf.
+
+The villagers talk about the weather and the festival, too.
+
 ## Music
 
 Every place has its own music: a harp and a minstrel's dance in Hollowmere, brooding strings and guitar in the wilds, a dark

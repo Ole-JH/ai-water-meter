@@ -151,6 +151,12 @@ namespace Shadowfall
             return s;
         }
 
+        /// <summary>Extra wind on top of the ambience (storms and blizzards), set by the weather.</summary>
+        public static float WindBoost;
+
+        /// <summary>A looping 2D sound the caller controls (volume, stop), e.g. rain.</summary>
+        public static AudioSource Loop(string key, float volume) => Instance.Loop2D(key, volume);
+
         AudioSource Loop2D(string key, float volume)
         {
             var clip = Pick(key);
@@ -199,7 +205,7 @@ namespace Shadowfall
             bool town = WorldGenerator.InTown(pos);
             bool inWorld = p != null;
             bool underground = Dungeon.Active;
-            if (wind != null) wind.volume = Mathf.MoveTowards(wind.volume, underground ? 0.06f : inWorld ? Mathf.Lerp(0.2f, 0.14f, night) : 0.12f, Time.deltaTime * 0.2f);
+            if (wind != null) wind.volume = Mathf.MoveTowards(wind.volume, underground ? 0.06f : inWorld ? Mathf.Lerp(0.2f, 0.14f, night) + WindBoost : 0.12f, Time.deltaTime * 0.2f);
             if (crickets != null) crickets.volume = Mathf.MoveTowards(crickets.volume, underground ? 0f : inWorld && !town ? night * 0.3f : night * 0.08f, Time.deltaTime * 0.1f);
             if (inWorld && !underground && night > 0.7f && !town && Time.time > nextHowl)
             {

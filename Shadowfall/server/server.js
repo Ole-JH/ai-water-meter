@@ -14,6 +14,7 @@ const dungeonGen = require("./dungeon");
 const metrics = require("./metrics");
 const { createStore, Taken } = require("./store");
 const I = require("./items");
+const { Weather, SEASONS, KINDS: WEATHER_KINDS } = require("./weather");
 const A = require("./accounts");
 
 const PORT = parseInt(process.env.PORT || "7341", 10);
@@ -627,6 +628,7 @@ function completeLogin(s) {
   s.z = ch.save && ch.save.z ? ch.save.z : SPAWN.z;
   safeSend(s, JSON.stringify({ t: "welcome", id: s.id, name: ch.name, look: ch.look, hasSave: !isNew, save: isNew ? undefined : ch.save, now: worldClock(), admin: !!s.admin }));
   sendInv(s);
+  safeSend(s, JSON.stringify(weather.message()));
   broadcast({ t: "sys", msg: `${ch.name} has entered the world.` });
   log(`${ch.name} entered the world (${sessions.size} connected)`);
 }
@@ -1115,6 +1117,9 @@ const isAdmin = (s) => !!(s.acc && (s.acc.admin || ADMINS.has(s.acc.username.toL
 
 const CYCLE_MS = 48 * 60000; // must match DayNight.CycleMinutes on the client
 let clockOffset = 0;
+const weather = new Weather({ seasonMinutes: Number(process.env.SEASON_MINUTES) || 120 });
+setInterval(() => { if (weather.tick()) broadcast(weather.message()); }, 5000);
+metrics.gauge("shadowfall_weather_info", "The current season and weather.", () => [[{ season: SEASONS[weather.season()], weather: weather.kind }, 1]]);
 const worldClock = () => Date.now() + clockOffset;
 const PHASE_HOURS = { dawn: 6, morning: 9, day: 12, noon: 12, dusk: 19, evening: 20, night: 23, midnight: 0 };
 
@@ -1147,7 +1152,7 @@ async function adminResetPassword(s, name) {
     `They choose "Forgot password?" > "I have a code" and enter it with their account name.`;
 }
 
-const ADMIN_COMMANDS = new Set(["tp", "tpto", "summon", "dungeon", "regen", "spawn", "killall", "time", "elites", "announce", "kick", "who", "resetpw", "give"]);
+const ADMIN_COMMANDS = new Set(["tp", "tpto", "summon", "dungeon", "regen", "spawn", "killall", "time", "elites", "announce", "kick", "who", "resetpw", "give", "weather", "season"]);
 
 function runAdmin(s, c, a) {
   a = a || {};
@@ -1230,6 +1235,20 @@ function runAdmin(s, c, a) {
       broadcast({ t: "clock", now: worldClock() });
       return `The time is now ${hour}:00.`;
     }
+    case "weather": {
+      const kind = String(a.kind || "").toLowerCase();
+      if (!WEATHER_KINDS.includes(kind)) return `Usage: weather ${WEATHER_KINDS.join("|")} [minutes]  (now ${weather.kind})`;
+      weather.set(kind, Math.max(1, Math.min(120, Number(a.n) || 15)), Number(a.i) || 0.9);
+      broadcast(weather.message());
+      return `The weather is now ${kind}.`;
+    }
+    case "season": {
+      const i = SEASONS.indexOf(String(a.kind || "").toLowerCase());
+      if (i < 0) return `Usage: season ${SEASONS.join("|")}  (now ${SEASONS[weather.season()]})`;
+      weather.setSeason(i);
+      broadcast(weather.message());
+      return `It is now ${SEASONS[i]}.`;
+    }
     case "elites": {
       const v = Number(a.chance);
       if (!Number.isFinite(v)) return `Elite chance is ${ELITE_CHANCE}.`;
@@ -1290,13 +1309,15 @@ function adminFromChat(s, line) {
     case "spawn": return runAdmin(s, "spawn", { type: w.filter((x) => isNaN(x) && x !== "elite").join(" "), l: w.find((x) => !isNaN(x)), n: w.filter((x) => !isNaN(x))[1], elite: w.includes("elite") });
     case "killall": return runAdmin(s, "killall", { r: w[0] });
     case "time": return runAdmin(s, "time", { phase: w[0] });
+    case "weather": return runAdmin(s, "weather", { kind: w[0], n: w[1] });
+    case "season": return runAdmin(s, "season", { kind: w[0] });
     case "elites": return runAdmin(s, "elites", { chance: w[0] });
     case "announce": return runAdmin(s, "announce", { text: rest });
     case "kick": return runAdmin(s, "kick", { name: w[0] });
     case "who": return runAdmin(s, "who");
     case "resetpw": return runAdmin(s, "resetpw", { name: w[0] });
     case "give": return runAdmin(s, "give", { what: w[0], n: w[1] });
-    default: return "Admin commands: tp x z, tpto name, summon name, dungeon <id|0-3> [depth], regen, spawn <type> [level] [count] [elite], killall [radius], time dawn|day|dusk|night, elites <0-1>, announce text, kick name, who, resetpw <account or character>, give gold [n]|legendary|set|gems|potions";
+    default: return "Admin commands: tp x z, tpto name, summon name, dungeon <id|0-3> [depth], regen, spawn <type> [level] [count] [elite], killall [radius], time dawn|day|dusk|night, elites <0-1>, announce text, kick name, who, resetpw <account or character>, give gold [n]|legendary|set|gems|potions, weather clear|cloudy|rain|storm|fog [minutes], season spring|summer|autumn|winter";
   }
 }
 

@@ -110,6 +110,13 @@ MODELS = [
         "gravestone-cross", "gravestone-round", "gravestone-bevel", "gravestone-broken", "gravestone-decorative",
         "grave", "crypt-large", "crypt", "iron-fence", "iron-fence-border", "lightpost-single", "trunk", "candle-multiple", "fire-basket", "altar-stone", "pillar-large", "coffin",
         "stone-wall", "stone-wall-column"]],
+    # --- Seasonal decorations: Kenney Holiday Kit and Graveyard Kit (CC0)
+    *[(f"Seasonal/{n}", f"{n}.glb", "holiday", None) for n in [
+        "snowman", "snowman-hat", "tree-decorated-snow", "tree-snow-a", "snow-pile", "snow-bunker", "sled", "reindeer",
+        "present-a-cube", "present-b-round", "present-a-rectangle", "lights-colored", "lantern-hanging", "wreath-decorated",
+        "candy-cane-red", "gingerbread-man"]],
+    *[(f"Seasonal/{n}", f"{n}.glb", "graveyard", None) for n in [
+        "pumpkin", "pumpkin-carved", "pumpkin-tall-carved", "hay-bale", "hay-bale-bundled", "shovel", "lantern-candle"]],
 ]
 
 

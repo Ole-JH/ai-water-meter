@@ -365,6 +365,10 @@
    "name": "Through Hell",
    "title": "the Hellborn"
   },
+  "four_seasons": {
+   "name": "Four Seasons",
+   "title": ""
+  },
   "explore_25": {
    "name": "Pathfinder",
    "title": ""
@@ -472,6 +476,10 @@
   "crafted_50": {
    "name": "Busy Hands",
    "title": ""
+  },
+  "hooligan": {
+   "name": "Hooligan",
+   "title": "the Hooligan"
   },
   "party_1": {
    "name": "Better Together",

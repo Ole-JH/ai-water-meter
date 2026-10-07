@@ -71,7 +71,7 @@ namespace Shadowfall
         CharacterView view;
         readonly List<Vector3> path = new List<Vector3>();
         int pathIndex;
-        float waitUntil, chatterAt;
+        float waitUntil, chatterAt, nextTrample;
         Light torch;
         Renderer[] renderers;
         bool hidden;
@@ -133,6 +133,7 @@ namespace Shadowfall
                     Factory.Face(transform, target, Time.deltaTime * 8f);
                 }
                 moved = speed;
+                if (Time.time >= nextTrample) { nextTrample = Time.time + 0.3f; SnowField.Trample(transform.position); }
                 if (pathIndex >= path.Count) waitUntil = Time.time + Pause();
             }
             else if (Time.time >= waitUntil) PickDestination();

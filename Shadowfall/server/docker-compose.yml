@@ -12,8 +12,10 @@ services:
       - ./public:/app/public:ro   # the Unity WebGL build
     environment:
       # Comma-separated account names with admin rights (admin panel: F10 in game, or /a in chat).
-      # Set it in server/.env, e.g.  ADMINS=Kissmypiss
+      # Set it in server/.env, e.g.  ADMINS=YourAccount
       ADMINS: ${ADMINS:-}
+      # Real minutes per season (spring, summer, autumn, winter). Default 120: the year comes round every 8 hours.
+      SEASON_MINUTES: ${SEASON_MINUTES:-120}
       # Prometheus metrics on a private port (only reachable from the monitoring containers).
       METRICS_PORT: "9464"
       # Accounts and characters (see docs/deployment/accounts.md). Characters in ./data from older versions are

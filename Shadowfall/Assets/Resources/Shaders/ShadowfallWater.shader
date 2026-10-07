@@ -23,6 +23,7 @@ Shader "Shadowfall/Water"
         sampler2D _Normal;
         fixed4 _Deep, _Shallow;
         float _Scale, _Speed;
+        float _SfFrost; // 1 = frozen over (winter), set by Weather.cs
 
         struct Input
         {
@@ -50,6 +51,16 @@ Shader "Shadowfall/Water"
             o.Alpha = lerp(_Deep.a, 0.95, fres);
             o.Specular = 0.9;
             o.Gloss = 1.0;
+
+            // Ice: still, pale and nearly opaque, with cracks and patches of frost.
+            float frost = _SfFrost;
+            float2 wp = IN.worldPos.xz;
+            float crack = 1.0 - saturate(abs(frac(wp.x * 0.37 + sin(wp.y * 0.21) * 1.3) - 0.5) * 40.0);
+            fixed3 ice = lerp(fixed3(0.62, 0.74, 0.84), fixed3(0.88, 0.93, 0.97), saturate(n1.x * 0.5 + 0.5)) - crack * 0.12;
+            o.Normal = normalize(lerp(o.Normal, float3(0, 0, 1), frost * 0.85));
+            o.Albedo = lerp(o.Albedo, ice, frost);
+            o.Alpha = lerp(o.Alpha, 0.96, frost);
+            o.Specular = lerp(o.Specular, 0.4, frost);
         }
         ENDCG
     }

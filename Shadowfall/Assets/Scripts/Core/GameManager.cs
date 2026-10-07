@@ -51,6 +51,8 @@ namespace Shadowfall
             StashChest.Spawn();
             gameObject.AddComponent<Ambience>();
             Music.Ensure();
+            Weather.Ensure();
+            SeasonalTown.Ensure();
 
             gameObject.AddComponent<NetClient>();
             gameObject.AddComponent<GameUI>();

@@ -64,6 +64,7 @@ exploration count from the day achievements arrived.
 
 | Achievement | How | Points | Title |
 | --- | --- | --- | --- |
+| **Four Seasons** | Be in Hollowmere for the Bloom Festival, the Midsummer Fair, the Harvest Festival and Winterfest. | 25 |  |
 | **Pathfinder** | Explore a quarter of the world. | 10 |  |
 | **Cartographer** | Explore three quarters of the world. | 25 | Cartographer |
 | **Wanderer** | Visit Hollowmere, Whisperwood, the Goblin Encampment, the Forsaken Graveyard, Ironvein Quarry and the Crypt of the Lich. | 25 | the Wanderer |
@@ -106,6 +107,7 @@ exploration count from the day achievements arrived.
 
 | Achievement | How | Points | Title |
 | --- | --- | --- | --- |
+| **Hooligan** | Run through a villager's leaf pile, and get what's coming to you. | 5 | the Hooligan |
 | **Better Together** | Join a party. | 5 |  |
 | **Fair Deal** | Complete a trade with another player. | 5 |  |
 | **Merchant Prince** | Complete 25 trades. | 25 | Merchant Prince |

@@ -505,6 +505,9 @@ namespace Shadowfall
                 case "clock":
                     DayNight.SyncServerTime(m.now);
                     break;
+                case "weather":
+                    Weather.Apply(m);
+                    break;
                 case "admwho":
                     AdminWho = m.items ?? new string[0];
                     break;

@@ -313,6 +313,42 @@ def synth(rng):
     return s
 
 
+def weather_sounds(rng):
+    """Rain, thunder, snow and the seasonal town work: shovels, rakes, rustling leaf piles."""
+    s = {}
+    n = int(SR * 8)
+    hiss = bandnoise(n, 900, 9000, rng) * 0.35 + lowpass(rng.standard_normal(n), 500) * 0.25
+    drops = crackle(n, 900, rng) * 0.5 + crackle(n, 120, rng)
+    s["rain_loop"] = [norm(seamless(hiss + drops, 0.6), 0.55)]
+    for k in range(3):
+        sec = 4.5 + k
+        m = int(SR * sec)
+        tt = t(sec)
+        rumble = lowpass(rng.standard_normal(m), 140 + 60 * k) * (0.6 + 0.4 * np.sin(2 * np.pi * tt * rng.uniform(1.5, 3)))
+        crack = bandnoise(m, 400, 5000, rng) * np.exp(-tt * (9 + 4 * k))
+        s.setdefault("thunder", []).append(norm((rumble * 3 + crack * 0.6) * env(m, 0.01 + 0.2 * k, sec * 0.7)))
+    for k in range(4):
+        m = int(SR * 0.22)
+        crunch = bandnoise(m, 900, 5500, rng) * env(m, 0.01, 0.15) + crackle(m, 900, rng) * 0.4
+        s.setdefault("step_snow", []).append(norm(crunch, 0.5))
+    for k in range(3):
+        m = int(SR * 0.7)
+        tt = t(0.7)
+        scrape = bandnoise(m, 1200, 4500, rng) * np.clip(np.sin(np.pi * tt / 0.45), 0, 1) * 0.6
+        thump = lowpass(rng.standard_normal(m), 300) * np.exp(-np.maximum(tt - 0.5, 0) * 30) * (tt > 0.5)
+        s.setdefault("shovel", []).append(norm(scrape + thump * 2, 0.6))
+    for k in range(2):
+        m = int(SR * 0.9)
+        tt = t(0.9)
+        tines = bandnoise(m, 2500, 9000, rng) * (0.5 + 0.5 * np.sin(2 * np.pi * tt * 23)) * np.sin(np.pi * tt / 0.9)
+        rustle = crackle(m, 500, rng) * np.sin(np.pi * tt / 0.9) * 0.6
+        s.setdefault("rake", []).append(norm(tines * 0.5 + rustle, 0.5))
+    for k in range(3):
+        m = int(SR * 1.1)
+        s.setdefault("leaves", []).append(norm((crackle(m, 2500, rng) + bandnoise(m, 2000, 8000, rng) * 0.4) * env(m, 0.01, 0.9), 0.75))
+    return s
+
+
 # ----------------------------------------------------------------------------- output
 
 def ffmpeg_to_ogg(src_bytes, dst, is_wav):
@@ -355,6 +391,7 @@ def main():
 
     clips_by_key = synth(np.random.default_rng(7))
     clips_by_key.update(class_spells(np.random.default_rng(11)))
+    clips_by_key.update(weather_sounds(np.random.default_rng(23)))
     for key, clips in clips_by_key.items():
         for i, x in enumerate(clips):
             ffmpeg_to_ogg(wav_bytes(x), os.path.join(OUT, f"{key}_{i}.ogg"), True)

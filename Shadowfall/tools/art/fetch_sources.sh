@@ -15,7 +15,7 @@ for repo in KayKit-Character-Pack-Adventures-1.0 KayKit-Character-Pack-Skeletons
 done
 
 echo "== Kenney (kenney.nl)"
-for kit in nature-kit fantasy-town-kit graveyard-kit; do
+for kit in nature-kit fantasy-town-kit graveyard-kit holiday-kit; do
   [[ -d "kenney_$kit" ]] && continue
   url=$(curl -fsSL "https://kenney.nl/assets/$kit" | grep -oE "https://kenney.nl/media/pages/assets/$kit/[^\"]+\.zip" | head -n 1)
   curl -fsSL -o "kenney_$kit.zip" "$url"

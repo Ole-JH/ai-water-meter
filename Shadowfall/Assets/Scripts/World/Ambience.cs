@@ -6,7 +6,7 @@ namespace Shadowfall
 {
     /// <summary>
     /// Little bits of life around the hero: fireflies in the woods at night, crows by day and bats by
-    /// night circling overhead, and dead leaves drifting down in Whisperwood.
+    /// night circling overhead, and dead leaves drifting down in Whisperwood (and everywhere in autumn).
     /// Critters live in a pool around the hero and are recycled when they drift too far away.
     /// </summary>
     public class Ambience : MonoBehaviour
@@ -121,9 +121,10 @@ namespace Shadowfall
             bool town = WorldGenerator.InTown(hero);
             bool wild = !town && !WorldGenerator.InCrypt(hero) && !Dungeon.Active;
 
-            int wantFireflies = night > 0.6f && wild && zone == "Whisperwood" ? fireflies.Count : 0;
+            // Fireflies only in summer and spring nights; dead leaves drift down in Whisperwood, and everywhere in autumn.
+            int wantFireflies = night > 0.6f && wild && zone == "Whisperwood" && (Weather.Season == Season.Summer || Weather.Season == Season.Spring) ? fireflies.Count : 0;
             int wantBirds = Dungeon.Active ? 0 : town ? 2 : zone == "Forsaken Graveyard" ? birds.Count : 3;
-            int wantLeaves = zone == "Whisperwood" && !town ? leaves.Count : 0;
+            int wantLeaves = Dungeon.Active || Weather.Season == Season.Winter ? 0 : Weather.Season == Season.Autumn ? leaves.Count : zone == "Whisperwood" && !town ? leaves.Count / 2 : 0;
 
             float t = Time.time, dt = Time.deltaTime;
             for (int i = 0; i < fireflies.Count; i++) UpdateFirefly(fireflies[i], i < wantFireflies, hero, t, world);

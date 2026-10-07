@@ -494,6 +494,18 @@ async function main() {
     a.ws.send(JSON.stringify({ t: "adm", c: "time", phase: "night" }));
     await sleep(150);
     assert.ok(b.find("clock"), "changing the time is broadcast");
+    // ---- seasons and weather: sent at login, changed by admins and broadcast
+    const w0 = a.find("weather");
+    assert.ok(w0 && w0.s >= 0 && w0.s < 4 && ["clear", "cloudy", "rain", "storm", "fog"].includes(w0.sky) && w0.left > 0, "the weather is sent at login");
+    a.ws.send(JSON.stringify({ t: "chat", msg: "/a season winter" }));
+    await sleep(600); // chat is limited to two lines a second
+    a.ws.send(JSON.stringify({ t: "chat", msg: "/a weather storm 5" }));
+    await sleep(300);
+    const w1 = b.all("weather").at(-1);
+    assert.ok(w1 && w1.s === 3 && w1.sky === "storm", "admins can set the season and the weather, and everyone sees it");
+    b.ws.send(JSON.stringify({ t: "adm", c: "weather", kind: "clear" }));
+    await sleep(150);
+    assert.strictEqual(a.all("weather").at(-1).sky, "storm", "only admins change the weather");
     a.ws.send(JSON.stringify({ t: "adm", c: "who" }));
     await sleep(150);
     assert.ok(a.find("admwho").items.some((x) => x.includes("|Bob|")), "admins can list players");

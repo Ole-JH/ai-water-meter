@@ -118,10 +118,38 @@ namespace Shadowfall
             "Up early, {name}?",
         };
 
+        // What everyone talks about: the weather, and the festival of the season.
+        static readonly string[] rainLines = { "Rain again. The well's never been fuller.", "Mind the puddles, {name}.", "Thomas says his knee predicted this.", "Good weather for ducks. And for staying indoors." };
+        static readonly string[] stormLines = { "Did you hear that thunder? Shook the windows!", "Stay away from the tall trees, {name}.", "The Light protect us, what a storm." };
+        static readonly string[] snowLines = { "Look at it come down!", "Don't walk in the deep snow, it'll soak you to the knees.", "The elves will have the streets clear in no time.", "Brrr. Cocoa weather." };
+        static readonly string[] fogLines = { "Can't see my own hand in this fog.", "Fog like this, the wolves come close. Stay near the torches.", "Something's moving out there in the murk..." };
+        static readonly string[][] festivalLines =
+        {
+            new[] { "Happy Bloom Festival, {name}!", "Smell the blossoms? Spring at last.", "The garlands went up this morning. Aren't they lovely?", "Flowers on every doorstep. That's Hollowmere in spring." },
+            new[] { "The Midsummer Fair! Dance round the maypole with us, {name}!", "Bonfire on the square tonight. Bring a friend.", "Hottest summer in years.", "Ribbons, bunting, and far too much cider." },
+            new[] { "Happy Harvest, {name}! The pumpkins came in big this year.", "Don't you dare run through the leaf piles.", "Somebody ran through Old Mara's leaves again. She's still chasing them.", "The trees are on fire with colour this year." },
+            new[] { "Merry Winterfest, {name}!", "Have you seen the tree on the square? The elves decorated it.", "Who keeps making snowmen in front of the church?", "The lake froze solid last night.", "Elves! Shoveling! Whatever next." },
+        };
+
+        static string SeasonalLine()
+        {
+            var p = Player.I;
+            var at = p != null ? p.transform.position : Vector3.zero;
+            if (Weather.Precip > 0.2f)
+            {
+                if (Weather.ColdAt(at)) return snowLines[Random.Range(0, snowLines.Length)];
+                return Weather.Sky == "storm" ? stormLines[Random.Range(0, stormLines.Length)] : rainLines[Random.Range(0, rainLines.Length)];
+            }
+            if (Weather.Fog > 0.4f) return fogLines[Random.Range(0, fogLines.Length)];
+            var f = festivalLines[(int)Weather.Season];
+            return f[Random.Range(0, f.Length)];
+        }
+
         public static string Line(string speaker, string heroName)
         {
             string line;
-            if (DayNight.Night > 0.7f && Random.value < 0.35f) line = night[Random.Range(0, night.Length)];
+            if (Random.value < 0.3f) line = SeasonalLine();
+            else if (DayNight.Night > 0.7f && Random.value < 0.35f) line = night[Random.Range(0, night.Length)];
             else if (DayNight.Phase == "Dawn" && Random.value < 0.3f) line = dawn[Random.Range(0, dawn.Length)];
             else if (lines.TryGetValue(speaker, out var own)) line = own[Random.Range(0, own.Length)];
             else return null;

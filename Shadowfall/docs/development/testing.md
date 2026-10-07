@@ -17,6 +17,7 @@ task server:test:pg # the same against PostgreSQL
 - shared kill credit and XP, including the damage cap;
 - chat relay and sanitising, spell-effect relay and the server clock;
 - parties: invitations, what the party frames get (class, mana, weapon, facing, the dungeon a member is in), party chat, quest sharing, shared kill credit, leaving;
+- seasons and weather: sent at login, set by admins only and broadcast;
 - achievements: announced to the party once by name, unknown ids ignored, titles only shown once earned;
 - stuns, vanishing (Smoke Bomb) and companions in snapshots;
 - items and gold: the starter kit, loot in kill messages, client saves that can't change gold, equipping, dropping and picking up (once), drinking, merchants only in town, buying (stacks, the current stock only) and selling, admin `give`, quest rewards paid once and collect quests;

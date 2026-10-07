@@ -102,6 +102,7 @@ namespace Shadowfall
 
         void DrawBuffs(Player p)
         {
+            if (p.SnowCaked > 0.05f || p.SnowDepth > 0.15f) DrawSnowChip(p);
             if (p.Buffs.Count == 0) return;
             const float s = 40, gap = 6;
             float x = (VW - (p.Buffs.Count * (s + gap) - gap)) / 2f, y = VH - 58 - 46 - 12 - s - 14;
@@ -124,6 +125,21 @@ namespace Shadowfall
                 }
                 x += s + gap;
             }
+        }
+
+        /// <summary>Deep snow and snow caked onto you, shown left of the buffs (how much slower you are).</summary>
+        void DrawSnowChip(Player p)
+        {
+            const float s = 40;
+            var r = new Rect(VW / 2f - 260f, VH - 58 - 46 - 12 - s - 14, s, s);
+            UISkin.Box(r, UISkin.Slot);
+            UISkin.IconInSlot(r, UISkin.Icon("frostnova"), new Color(0.85f, 0.92f, 1f, 0.6f + p.SnowCaked * 0.4f), 3);
+            int slow = Mathf.RoundToInt((1f - p.SnowSlow) * 100f);
+            UISkin.Shadowed(new Rect(r.x - 6, r.yMax - 2, r.width + 12, 18), "-" + slow + "%", UISkin.SmallCenter, new Color(0.8f, 0.9f, 1f), 2);
+            if (r.Contains(Event.current.mousePosition))
+                tooltip = "<b>Snow</b>\nWading through snow " + Mathf.RoundToInt(p.SnowDepth * 100) + "% deep" +
+                          (p.SnowCaked > 0.05f ? ", caked to the knees (" + Mathf.RoundToInt(p.SnowCaked * 100) + "%)" : "") +
+                          ".\n" + slow + "% slower. Shoveled streets and fires shake it off.";
         }
 
         // =====================================================================================

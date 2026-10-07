@@ -11,6 +11,8 @@ namespace Shadowfall
     {
         const float ActiveRange = 45f;
 
+        public static readonly System.Collections.Generic.List<PropFire> All = new System.Collections.Generic.List<PropFire>();
+
         ParticleSystem[] systems;
         Light fireLight;
         Transform core;
@@ -77,6 +79,9 @@ namespace Shadowfall
             }
             return f;
         }
+
+        void OnEnable() => All.Add(this);
+        void OnDisable() => All.Remove(this);
 
         void Update()
         {

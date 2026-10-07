@@ -917,7 +917,7 @@ namespace Shadowfall
             UISkin.Shadowed(new Rect(info.x + 14, info.y + 42, info.width - 28, 20), net.PlayersOnline + " online",
                 UISkin.V(UISkin.Small, alignment: TextAnchor.MiddleRight), UISkin.Muted);
             bool dark = DayNight.Night > 0.5f;
-            UISkin.Shadowed(new Rect(info.x + 14, info.y + 62, info.width - 28, 18), DayNight.Phase + "  " + DayNight.Clock,
+            UISkin.Shadowed(new Rect(info.x + 14, info.y + 62, info.width - 28, 18), DayNight.Phase + "  " + DayNight.Clock + "  -  " + Weather.Season + ", " + SkyWord(pp),
                 UISkin.V(UISkin.Small, alignment: TextAnchor.MiddleCenter), dark ? new Color(0.65f, 0.75f, 1f) : new Color(1f, 0.85f, 0.5f));
 
             // The map itself, then markers clipped to the circle.
@@ -1019,6 +1019,18 @@ namespace Shadowfall
             GUI.DrawTexture(rect, tex);
             GUI.matrix = saved;
             GUI.color = Color.white;
+        }
+
+        /// <summary>"clear", "snow", "blizzard", "fog"... for the minimap plate.</summary>
+        static string SkyWord(Vector3 at)
+        {
+            bool cold = Weather.ColdAt(at);
+            switch (Weather.Sky)
+            {
+                case "rain": return cold ? "snow" : "rain";
+                case "storm": return cold ? "blizzard" : "storm";
+                default: return Weather.Sky;
+            }
         }
 
         static bool InCircle(Rect circle, Vector2 pos, float margin) =>

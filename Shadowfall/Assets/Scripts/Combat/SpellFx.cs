@@ -41,6 +41,9 @@ namespace Shadowfall
             }
         }
 
+        /// <summary>The soft alpha-blended particle material (smoke, snow, rain), or null without the Fx shader.</summary>
+        public static Material SoftMaterial => Ready ? smoke : null;
+
         static Material Make(Shader s, float mode, BlendMode src, BlendMode dst)
         {
             var m = new Material(s);

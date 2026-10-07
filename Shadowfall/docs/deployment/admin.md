@@ -11,7 +11,7 @@ Either:
   keeps working. With Docker, put it in `server/.env` (git-ignored):
 
     ```bash
-    ADMINS=Kissmypiss,SomeFriend
+    ADMINS=YourAccount,SomeFriend
     ```
 
     then `task up` (or `task update`). Or
@@ -32,7 +32,7 @@ Press ++f10++ (or ++esc++ → **Admin**) to open the admin panel:
 | --- | --- |
 | **Map & Hero** | Reveal the whole map (no fog) · show enemies on the maps · show dungeon entrances · god mode · run fast · +1000 gold · +1 level · full heal and reset cooldowns · a legendary, a set piece, 5 gems or 10 potions · reset the recall cooldown · save now |
 | **Dungeons** | Enter any dungeon at any depth from anywhere · regenerate the current level (new layout and monsters for everyone inside) · get a fresh private copy of the current level |
-| **World** | Set the time of day for everyone · elite chance for new spawns (0 / 8 / 50 / 100%) · spawn any monster (level, count, elite) next to you · kill everything nearby · send an announcement |
+| **World** | Set the time of day for everyone · the season and the weather · elite chance for new spawns (0 / 8 / 50 / 100%) · spawn any monster (level, count, elite) next to you · kill everything nearby · send an announcement |
 | **Players** | Everyone online and where they are · go to them · summon them · kick |
 
 On the world map (++m++), admins can **right-click** to teleport there.
@@ -50,6 +50,8 @@ The same server-side commands work from chat with `/a` (or `/admin`):
 | `spawn <type> [level] [count] [elite]` | `/a spawn Goblin King 12 1 elite` |
 | `killall [radius]` | `/a killall 30` |
 | `time dawn\|day\|dusk\|night\|<hour>` | `/a time night` |
+| `season spring\|summer\|autumn\|winter` | `/a season winter`: jump to the start of that season, for everyone |
+| `weather clear\|cloudy\|rain\|storm\|fog [minutes]` | `/a weather storm 10` (rain and storms fall as snow where it's cold) |
 | `elites <0-1>` | `/a elites 0.5` |
 | `announce <text>` | `/a announce Server restart in 5 minutes` |
 | `kick <name>` | `/a kick Bob` |

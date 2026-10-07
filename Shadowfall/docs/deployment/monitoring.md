@@ -60,6 +60,7 @@ The game server exports these (all prefixed `shadowfall_`):
 | --- | --- | --- |
 | `players_online`, `players_in_dungeons`, `connections`, `parties`, `trades_open`, `accounts`, `characters`, `elites_alive`, `world_loaded` | gauge | |
 | `storage_info` | gauge (always 1) | `kind` (postgres, files) |
+| `weather_info` | gauge (always 1) | `season`, `weather` |
 | `players_by_class`, `players_by_level` | gauge | `class`, `band` |
 | `monsters_alive` | gauge | `zone` (overworld, dungeon) |
 | `dungeon_instances` | gauge | `dungeon` |

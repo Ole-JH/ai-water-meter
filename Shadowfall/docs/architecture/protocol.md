@@ -144,6 +144,7 @@ Server → client:
 | `tclose` | `msg` | Trade cancelled (by either player, distance, dungeon, logout) |
 | `tp` | `x`, `z` | Admin teleport: move there (in the current space) |
 | `clock` | `now` | The server clock changed (an admin set the time of day) |
+| `weather` | `s`, `sky`, `i`, `left` | At login and on every change: season `s` (0 spring, 1 summer, 2 autumn, 3 winter), `sky` (`clear`, `cloudy`, `rain`, `storm`, `fog`; rain and storms fall as snow where it's cold), intensity `i` (0..1), seconds `left` in the season |
 | `admwho` | `items[]` | Admin player list: `id\|name\|level\|where` |
 | `sys` | `msg` | System message (joins, leaves, boss kills, `/who`) |
 | `leave` | `id` | A player left the world |

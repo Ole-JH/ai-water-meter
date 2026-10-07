@@ -54,6 +54,7 @@ namespace Shadowfall
             new AchievementDef { Id = "dungeon_hell", Name = "Through Hell", Description = "Defeat a dungeon boss on Hell.", Category = AchievementCategory.Dungeons, Icon = "ach_hell", Points = 50, Stat = "hardest_boss", Goal = 3, Title = "the Hellborn" },
 
             // ---- exploration
+            new AchievementDef { Id = "four_seasons", Name = "Four Seasons", Description = "Be in Hollowmere for the Bloom Festival, the Midsummer Fair, the Harvest Festival and Winterfest.", Category = AchievementCategory.Exploration, Icon = "ach_castle", Points = 25, Stat = "season", Goal = 4 },
             new AchievementDef { Id = "explore_25", Name = "Pathfinder", Description = "Explore a quarter of the world.", Category = AchievementCategory.Exploration, Icon = "ach_footprint", Points = 10, Stat = "explored", Goal = 25 },
             new AchievementDef { Id = "explore_75", Name = "Cartographer", Description = "Explore three quarters of the world.", Category = AchievementCategory.Exploration, Icon = "ach_explore", Points = 25, Stat = "explored", Goal = 75, Title = "Cartographer" },
             new AchievementDef { Id = "zones_all", Name = "Wanderer", Description = "Visit Hollowmere, Whisperwood, the Goblin Encampment, the Forsaken Graveyard, Ironvein Quarry and the Crypt of the Lich.", Category = AchievementCategory.Exploration, Icon = "ach_compass", Points = 25, Stat = "zone", Goal = 6, Title = "the Wanderer" },
@@ -87,6 +88,7 @@ namespace Shadowfall
             new AchievementDef { Id = "crafted_50", Name = "Busy Hands", Description = "Forge or cook 50 times.", Category = AchievementCategory.Professions, Icon = "ach_anvil", Points = 10, Stat = "crafted", Goal = 50 },
 
             // ---- social
+            new AchievementDef { Id = "hooligan", Name = "Hooligan", Description = "Run through a villager's leaf pile, and get what's coming to you.", Category = AchievementCategory.Social, Icon = "ach_footprint", Points = 5, Stat = "raked", Goal = 1, Title = "the Hooligan" },
             new AchievementDef { Id = "party_1", Name = "Better Together", Description = "Join a party.", Category = AchievementCategory.Social, Icon = "ach_party", Points = 5, Stat = "parties", Goal = 1 },
             new AchievementDef { Id = "trade_1", Name = "Fair Deal", Description = "Complete a trade with another player.", Category = AchievementCategory.Social, Icon = "ach_trade", Points = 5, Stat = "trades", Goal = 1 },
             new AchievementDef { Id = "trade_25", Name = "Merchant Prince", Description = "Complete 25 trades.", Category = AchievementCategory.Social, Icon = "ach_trade", Points = 25, Stat = "trades", Goal = 25, Title = "Merchant Prince" },

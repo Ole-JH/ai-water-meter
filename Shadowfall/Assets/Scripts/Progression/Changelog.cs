@@ -24,6 +24,18 @@ namespace Shadowfall
         {
             new Entry
             {
+                Id = 22, Date = "2026-10-07", Title = "Seasons, weather and festivals",
+                Items = new[]
+                {
+                    "The year turns: spring, summer, autumn and winter, with weather to match. Rain soaks the ground, storms bring thunder and lightning, fog rolls in.",
+                    "Snow falls in winter, and up north in spring and autumn. It piles up while it snows, and deep snow slows you down, more the longer it cakes onto your boots.",
+                    "Hollowmere celebrates every season: the Bloom Festival, the Midsummer Fair, the Harvest Festival and Winterfest.",
+                    "At Winterfest, elves shovel the streets clear, a path at a time. Lakes freeze over.",
+                    "In autumn the villagers rake the leaves into big piles. Do <b>not</b> run through them.",
+                },
+            },
+            new Entry
+            {
                 Id = 21, Date = "2026-10-07", Title = "Music and achievements",
                 Items = new[]
                 {

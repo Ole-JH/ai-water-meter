@@ -126,8 +126,71 @@ namespace Shadowfall
             if (stepDistance < 1.15f) return;
             stepDistance = 0f;
             var pos = transform.position;
+            if (SnowDepth > 0.15f)
+            {
+                Sfx.Play("step_snow", pos, 0.3f + SnowDepth * 0.3f, 0.1f, 20f);
+                if (SpellFx.Ready)
+                    SpellFx.Emit(new SpellFx.P { Burst = Mathf.RoundToInt(4 + SnowDepth * 8), Duration = 0.1f, Life = new Vector2(0.4f, 0.8f), Speed = new Vector2(0.4f, 1.4f),
+                        Size = new Vector2(0.08f, 0.2f), Start = new Color(0.95f, 0.97f, 1f, 0.8f), End = new Color(0.95f, 0.97f, 1f, 0f), Gravity = 0.6f, Smoke = true,
+                        Radius = 0.15f }, pos + Vector3.up * 0.1f);
+                return;
+            }
             bool stone = WorldGenerator.InTown(pos) || WorldGenerator.InCrypt(pos) || Dungeon.Active;
             Sfx.Play(stone ? "step_stone" : "step_grass", pos, stone ? 0.35f : 0.45f, 0.1f, 20f);
+        }
+
+        // =====================================================================================
+        // Snow: deep snow slows you down, and the more you wade through it the more of it cakes onto your boots
+        // and legs (shaken off on cleared streets, or by a fire). Your feet pack a trail as you go.
+        // =====================================================================================
+
+        /// <summary>Snow depth 0..1 where the hero stands.</summary>
+        public float SnowDepth { get; private set; }
+        /// <summary>Snow caked onto the hero, 0..1: builds up while wading through deep snow.</summary>
+        public float SnowCaked { get; private set; }
+        /// <summary>Movement speed multiplier from the snow (1 = no snow).</summary>
+        public float SnowSlow { get; private set; } = 1f;
+        /// <summary>How fast the hero is moving right now.</summary>
+        public float CurrentSpeed => currentSpeed;
+        float nextTrample;
+        static bool snowHintShown;
+
+        void UpdateSnow(float dt)
+        {
+            var pos = transform.position;
+            SnowDepth = Dungeon.Active ? 0f : SnowField.DepthAt(pos);
+            bool moving = currentSpeed > 0.5f;
+            if (moving && SnowDepth > 0.3f) SnowCaked = Mathf.Min(1f, SnowCaked + dt * SnowDepth * 0.06f);
+            else SnowCaked = Mathf.Max(0f, SnowCaked - dt * (SnowDepth < 0.1f ? 0.08f : 0.02f) - (PropNearFire(pos) ? dt * 0.3f : 0f));
+            SnowSlow = Mathf.Max(0.45f, 1f - SnowDepth * 0.45f - SnowCaked * 0.2f);
+            if (moving && Time.time >= nextTrample)
+            {
+                nextTrample = Time.time + 0.2f;
+                SnowField.Trample(pos);
+            }
+            if (!snowHintShown && SnowDepth > 0.35f && moving)
+            {
+                snowHintShown = true;
+                GameUI.Log("Deep snow slows you down, and it cakes onto your boots the longer you wade through it. Stick to the shoveled streets!",
+                    new Color(0.75f, 0.85f, 1f));
+            }
+        }
+
+        static bool PropNearFire(Vector3 pos)
+        {
+            foreach (var f in PropFire.All) if (f != null && (f.transform.position - pos).sqrMagnitude < 9f) return true;
+            return false;
+        }
+
+        /// <summary>A little poke that ignores armor (a rake to the shins): exactly <paramref name="amount"/> life.</summary>
+        public void Poke(int amount, Vector3 from)
+        {
+            if (IsDead || AdminTools.God) return;
+            Health = Mathf.Max(1f, Health - amount);
+            GameUI.Float(transform.position + Vector3.up * 2.4f, "-" + amount, new Color(1f, 0.35f, 0.3f), 0.9f);
+            Sfx.Play("hit_flesh", transform.position + Vector3.up, 0.6f, 0.1f);
+            CameraRig.Shake(0.06f);
+            view?.Hit();
         }
 
         void AnimCast(Color? glow = null)
@@ -357,6 +420,7 @@ namespace Shadowfall
             }
             AutoPickupGold();
             UpdateZone();
+            UpdateSnow(dt);
 
             float atk = -1f;
             if (attackAnim >= 0f)
@@ -614,7 +678,7 @@ namespace Shadowfall
             if (path.Count == 0 || Time.time < castLockUntil) return;
             Vector3 target = path[0];
             Vector3 to = Factory.Flat(target - transform.position);
-            float step = MoveSpeed * dt;
+            float step = MoveSpeed * SnowSlow * dt;
             if (to.magnitude <= step)
             {
                 transform.position = new Vector3(target.x, 0f, target.z);
@@ -624,7 +688,7 @@ namespace Shadowfall
             {
                 transform.position += to.normalized * step;
             }
-            currentSpeed = MoveSpeed;
+            currentSpeed = MoveSpeed * SnowSlow;
             if (to.sqrMagnitude > 0.0001f)
                 transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(to), dt * 15f);
         }
