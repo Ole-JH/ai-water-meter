@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Builds Assets/Resources/Art/**.glb from the downloaded CC0 source packs.
 
-    python3 tools/art/build_art.py <sources-dir>
+    python3 tools/art/build_art.py <sources-dir> [Characters/ ...]   (optional: only these outputs)
 
 <sources-dir> is created by tools/art/fetch_sources.sh. Every model is repacked into a single
 .glb with embedded textures and only the animations the game uses (see gltf_pack.py).
@@ -11,6 +11,7 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(__file__))
+import emotes  # noqa: E402
 import gltf_pack  # noqa: E402
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
@@ -18,7 +19,10 @@ OUT = os.path.join(ROOT, "Assets", "Resources", "Art")
 
 HERO = ["Idle", "Walking_A", "Running_A", "1H_Melee_Attack_Chop", "1H_Melee_Attack_Slice_Diagonal",
         "2H_Melee_Attack_Spin", "1H_Ranged_Shoot", "Spellcast_Shoot", "Spellcast_Raise", "Hit_A",
-        "Death_A", "Death_A_Pose", "PickUp", "Interact", "Cheer"]
+        "Death_A", "Death_A_Pose", "PickUp", "Interact", "Cheer",
+        # emotes: the pack's own clips, plus the ones authored in emotes.py
+        "Sit_Floor_Down", "Sit_Floor_Idle", "Lie_Down", "Lie_Idle", "Jump_Full_Short", "Unarmed_Melee_Attack_Kick",
+        "Unarmed_Melee_Attack_Punch_A", "Blocking", *emotes.EMOTES]
 SKELETON = ["Idle", "Idle_Combat", "Walking_A", "Running_A", "1H_Melee_Attack_Chop", "1H_Melee_Attack_Slice_Diagonal",
             "1H_Ranged_Shoot", "Spellcast_Shoot", "Spellcast_Summon", "Hit_A", "Death_A", "Death_A_Pose",
             "Skeletons_Awaken_Standing"]
@@ -105,15 +109,19 @@ def find_source(src_root, name, hint):
 
 
 def main():
-    if len(sys.argv) != 2:
+    if len(sys.argv) < 2:
         print(__doc__)
         sys.exit(2)
     src = os.path.abspath(sys.argv[1])
+    only = sys.argv[2:]   # optional output-path prefixes, e.g. Characters/
     total = 0
     for out_rel, name, hint, anims in MODELS:
+        if only and not any(out_rel.startswith(o) for o in only):
+            continue
         source = find_source(src, name, hint)
         out = os.path.join(OUT, out_rel + ".glb")
-        stats = gltf_pack.repack(source, out, anims if anims is not None else [])
+        stats = gltf_pack.repack(source, out, anims if anims is not None else [],
+                                 synthesize=emotes.add if anims is HERO else None)
         total += stats["bytes"]
         print(f"{out_rel:40s} {stats['bytes'] / 1024:8.0f} KB  {len(stats['animations'])} anims")
     print(f"\n{len(MODELS)} models, {total / 1024 / 1024:.1f} MB total -> {OUT}")

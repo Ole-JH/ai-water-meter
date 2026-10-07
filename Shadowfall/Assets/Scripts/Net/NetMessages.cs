@@ -38,6 +38,7 @@ namespace Shadowfall
         public string t;
         public int id, mid, tid, l, xp;
         public string name, msg, err, k;
+        public string e;        // "emote": the emote id
         public float x, z, tx, tz, dmg;
         public bool hasSave;
         public string el;       // "kill": the elite's name when an elite died (better loot)
@@ -68,6 +69,7 @@ namespace Shadowfall
     [Serializable] public class StunMsg { public string t = "stun"; public int mid; public float dur; }
     [Serializable] public class VanishMsg { public string t = "vanish"; public float dur; }
     [Serializable] public class ChatMsg { public string t = "chat"; public string msg; }
+    [Serializable] public class EmoteMsg { public string t = "emote"; public string e; }
     [Serializable] public class FxMsg { public string t = "fx"; public string k; public float x, z, tx, tz; }
     [Serializable] public class SaveMsg { public string t = "save"; public SaveData save; }
 

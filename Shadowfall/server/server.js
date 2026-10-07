@@ -9,7 +9,7 @@ const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
 const { WebSocketServer } = require("ws");
-const { MONSTERS, SPAWNERS, TOWN, SPAWN, DUNGEONS, BALANCE, DIFFICULTIES, map: designToWorld } = require("./content");
+const { MONSTERS, SPAWNERS, TOWN, SPAWN, DUNGEONS, BALANCE, DIFFICULTIES, EMOTES, map: designToWorld } = require("./content");
 const dungeonGen = require("./dungeon");
 const metrics = require("./metrics");
 
@@ -1347,6 +1347,19 @@ const handlers = {
         if (cmd.startsWith("/")) return sys(s, "Commands: /p party chat, /w name whisper, /invite name, /leave, /who");
     }
     broadcast({ t: "chat", id: s.id, name: s.name, msg });
+  },
+
+  // Emotes (/wave, /dance...): shown to players nearby, who also get the "Alice waves." line.
+  emote(s, m) {
+    if (!s.inWorld || s.dead) return;
+    const t = now();
+    if (t - (s.lastEmote || 0) < 0.8) return;
+    s.lastEmote = t;
+    const e = String(m.e || "");
+    if (!EMOTES.includes(e)) return;
+    const msg = JSON.stringify({ t: "emote", id: s.id, name: s.name, e });
+    for (const o of sessions.values())
+      if (o !== s && o.inWorld && (o.inst || 0) === (s.inst || 0) && dist(o.x, o.z, s.x, s.z) < PLAYER_VIEW) safeSend(o, msg);
   },
 
   fx(s, m) {

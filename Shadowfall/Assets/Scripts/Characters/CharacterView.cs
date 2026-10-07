@@ -246,10 +246,60 @@ namespace Shadowfall
             t.localPosition = new Vector3(0f, t.localPosition.y, lunge);
         }
 
+        // ------------------------------------------------------------------ emotes
+
+        bool emoting;
+
+        /// <summary>True while an emote plays (a looping one, like a dance, until the character moves).</summary>
+        public bool Emoting => emoting && (Time.time < actionUntil);
+
+        /// <summary>Plays an emote: once, looping, or an intro followed by a looping pose (sit, sleep).</summary>
+        public bool Emote(EmoteDef e)
+        {
+            if (anim == null || dead || e == null || !Has(e.Clip)) return false;
+            var st = anim[e.Clip];
+            st.speed = 1f;
+            st.time = 0f;
+            emoting = true;
+            if (e.Loop)
+            {
+                st.wrapMode = WrapMode.Loop;
+                anim.CrossFade(e.Clip, 0.25f);
+                actionUntil = float.MaxValue;
+            }
+            else if (Has(e.Then))
+            {
+                st.wrapMode = WrapMode.Once;
+                anim[e.Then].wrapMode = WrapMode.Loop;
+                anim.CrossFade(e.Clip, 0.25f);
+                anim.CrossFadeQueued(e.Then, 0.3f, QueueMode.CompleteOthers);
+                actionUntil = float.MaxValue;
+            }
+            else
+            {
+                st.wrapMode = WrapMode.Once;
+                anim.CrossFade(e.Clip, 0.25f);
+                actionUntil = Time.time + st.length * 0.95f;
+            }
+            current = e.Clip;
+            return true;
+        }
+
+        /// <summary>Ends an emote (moving, attacking or getting hit does this by itself).</summary>
+        public void StopEmote()
+        {
+            if (!emoting) return;
+            emoting = false;
+            if (actionUntil > Time.time) actionUntil = 0f;
+            current = null;
+        }
+
         /// <summary>Call every frame with the character's current ground speed.</summary>
         public void UpdateLocomotion(float speed)
         {
             Juice();
+            if (emoting && speed >= 0.2f) StopEmote();
+            if (emoting && Time.time >= actionUntil) emoting = false;
             if (anim == null || dead || Time.time < actionUntil) return;
             if (speed < 0.2f) Play(look.Anims.Idle, 0.15f);
             else if (speed < look.RunSpeed * 0.45f) Play(look.Anims.Walk, 0.15f, Mathf.Clamp(speed / (look.RunSpeed * 0.3f), 0.6f, 1.5f));
@@ -260,6 +310,7 @@ namespace Shadowfall
         public void Action(string clip, float maxDuration = 0f)
         {
             if (anim == null || dead || !Has(clip)) return;
+            emoting = false;
             float length = anim[clip].length;
             float speed = maxDuration > 0f && length > maxDuration ? length / maxDuration : 1f;
             anim[clip].wrapMode = WrapMode.Once;
@@ -287,6 +338,7 @@ namespace Shadowfall
         public void Hit()
         {
             punch = 1f;
+            if (emoting) StopEmote();             // getting hit snaps you out of a dance or a nap
             if (Time.time < actionUntil) return; // don't interrupt attacks
             Action(look.Anims.Hit, 0.4f);
         }
@@ -295,6 +347,7 @@ namespace Shadowfall
         {
             if (anim == null || dead) return;
             dead = true;
+            emoting = false;
             if (Has(look.Anims.Death)) { anim[look.Anims.Death].speed = 1f; anim.CrossFade(look.Anims.Death, 0.1f); }
             else Root.transform.localRotation = Quaternion.Euler(-80f, 0, 0);
         }

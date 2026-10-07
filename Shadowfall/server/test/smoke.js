@@ -107,6 +107,15 @@ async function main() {
     await sleep(300);
     assert.strictEqual(b.find("chat")?.msg, "hello bthere/b", "chat is relayed and sanitised");
     assert.ok(b.find("fx"), "spell effects are relayed");
+
+    a.ws.send(JSON.stringify({ t: "emote", e: "dance" }));
+    await sleep(300);
+    const emote = b.find("emote");
+    assert.ok(emote && emote.e === "dance" && emote.name === "Alice", "emotes are shown to players nearby");
+    await sleep(900);
+    a.ws.send(JSON.stringify({ t: "emote", e: "backflip-into-the-void" }));
+    await sleep(300);
+    assert.strictEqual(b.all("emote").length, 1, "unknown emotes are ignored");
     assert.ok(b.find("welcome").now > 0, "welcome carries the server clock");
 
     // ---- parties

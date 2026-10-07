@@ -26,6 +26,7 @@
 | `Characters/Enemy.cs` | `EnemyDef` (looks) and the `Enemy` network proxy (interpolation, hit prediction, death, personal loot) |
 | `Characters/CharacterView.cs` | Animated model wrapper (`AnimSet`, `CharacterLook`: model, weapon kind, headgear, extra `Parts`) for heroes, NPCs, companions and monsters |
 | `Characters/Avatar.cs` | The hero's avatar: a copy of the model in the current loadout, rendered off-screen for the portrait and character window |
+| `Characters/Emotes.cs` | `EmoteDef`: the emotes, their clips, chat lines and `/commands` |
 | `Characters/Companion.cs` | Companions for hire (`CompanionDef`: look, gear, stats) and the follower AI: pathing after the hero, targeting, melee/ranged/area attacks, heals, plus their arrival, idle and attack effects (cosmetic for other players) |
 | `Characters/HumanoidModel.cs` | Blocky procedural humanoid with walk and attack animation |
 | `Characters/Abilities.cs` | Ability definitions, class kits and starting stats (`ClassKits`), talents, buffs, meteor/Judgement and ground effects (Consecration, Rain of Arrows) |
@@ -41,6 +42,7 @@
 | `UI/GameUI.Admin.cs` | Admin panel (F10) |
 | `UI/GameUI.Menu.cs` | Esc game menu: settings (graphics, UI scale, FPS, loot labels, volume), What's New, admin, log out |
 | `UI/GameUI.News.cs` | *What's New* window; unread entries are marked NEW |
+| `UI/GameUI.Emotes.cs` | Emote menu (++g++) and the `/e` list |
 | `Items/VendorStock.cs` | What each vendor sells, prices and restocking |
 | `Items/Item.cs` | `Item` model, rarity colors and tier, type line and tooltips |
 | `Items/ItemDatabase.cs` | Random gear generator: base types, affixes, legendary names, materials |
@@ -80,6 +82,7 @@
 | `compile-check/` | .NET project that compiles `Assets/Scripts` without Unity (`task client:check`) |
 | `docker-build-client.sh` | Entry point of the Docker WebGL build (`task client:build`) |
 | `license-helper/` | Unity Hub in a container for `task license:activate` |
+| `art/emotes.py` | Authors the Wave, Dance, Bow, Point, Clap and Flex animations for the hero rig (and previews them as stick figures) |
 | `monitoring/shadowfall_dashboard.py` | Generates the Grafana "Shadowfall" dashboard (`task monitoring:dashboard`) |
 | `art/` | Fetch and repack the 3D models, generate ground textures |
 | `audio/` | Fetch and build the sound effects |

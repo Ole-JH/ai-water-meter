@@ -117,6 +117,20 @@ namespace Shadowfall
             if (State == ConnState.InWorld) Send(new VanishMsg { dur = duration });
         }
 
+        public void SendEmote(string id)
+        {
+            if (State == ConnState.InWorld) Send(new EmoteMsg { e = id });
+        }
+
+        void HandleEmote(NetMsg m)
+        {
+            if (m.id == MyId) return;
+            var e = EmoteDef.Get(m.e);
+            if (e == null || !RemotePlayer.ById.TryGetValue(m.id, out var rp) || rp == null) return;
+            rp.Emote(e);
+            GameUI.Log(string.Format(e.Other, m.name), Player.EmoteColor);
+        }
+
         public void SendChat(string text)
         {
             text = (text ?? "").Trim();
@@ -316,6 +330,7 @@ namespace Shadowfall
                 case "kill": HandleKill(m); break;
                 case "matk": HandleMonsterAttack(m); break;
                 case "fx": HandleFx(m); break;
+                case "emote": HandleEmote(m); break;
 
                 case "chat": HandleChat(m); break;
                 case "dungeon": HandleDungeon(m); break;

@@ -110,4 +110,7 @@ const TOWN = { x0: 116, z0: 116, x1: 173, z1: 173 };
 // Where new heroes start and dead ones wake up (the plaza, matches WorldGenerator.SpawnPoint).
 const SPAWN = { x: 144.5, z: 141.5 };
 
-module.exports = { MONSTERS, SPAWNERS, TOWN, SPAWN, DUNGEONS, BALANCE, DIFFICULTIES, map };
+// Emote ids players may broadcast (Characters/Emotes.cs EmoteDef.All).
+const EMOTES = ["wave", "dance", "bow", "cheer", "clap", "point", "flex", "sit", "sleep", "jump", "kick", "shadowbox", "guard"];
+
+module.exports = { MONSTERS, SPAWNERS, TOWN, SPAWN, DUNGEONS, BALANCE, DIFFICULTIES, EMOTES, map };

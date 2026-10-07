@@ -24,6 +24,16 @@ namespace Shadowfall
         {
             new Entry
             {
+                Id = 15, Date = "2026-10-07", Title = "Emotes",
+                Items = new[]
+                {
+                    "Press <b>G</b> for the emote menu, or type /wave, /dance, /bow, /clap, /flex, /point, /cheer, /sit, /sleep, /jump and more in chat.",
+                    "Every emote is fully animated, and players around you see it too.",
+                    "The camera now starts at the normal angle after logging in, instead of skimming the ground.",
+                },
+            },
+            new Entry
+            {
                 Id = 14, Date = "2026-10-07", Title = "What's New and server monitoring",
                 Items = new[]
                 {

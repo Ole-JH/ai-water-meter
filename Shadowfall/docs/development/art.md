@@ -45,6 +45,22 @@ task ui:icons      # re-render icons (needs playwright-core and CHROMIUM_PATH)
 
 To use another model, add a line to `MODELS` in `tools/art/build_art.py`, listing the animations to keep, and reference its path from code. For example, to give the Goblin Warchief a different model, change its entry in `CharacterLook` (`Assets/Scripts/Characters/CharacterView.cs`).
 
+`python3 tools/art/build_art.py .art-cache Characters/` rebuilds only the outputs starting with that path.
+
+### Emote animations
+
+The KayKit hero rig has sitting, lying, jumping and unarmed clips but nothing social, so `tools/art/emotes.py` authors
+**Wave**, **Dance**, **Bow**, **Point**, **Clap** and **Flex**. Each starts from the rig's own *Idle* (so breathing stays)
+and poses bones by aiming them at directions in model space (+X is the hero's left, +Y up, +Z forward) or turning them
+about model axes, then bakes 30 fps keyframes into the hero models during `task art:build`. To tweak or add one, edit its
+function and `EMOTES` table, check the poses with
+
+```bash
+python3 tools/art/emotes.py .art-cache/<...>/Knight.glb emotes.png   # stick figures, front and side, over time
+```
+
+then rebuild the heroes and add it to `EmoteDef.All` (`Characters/Emotes.cs`) and `EMOTES` in `server/content.js`.
+
 ## Spell effects
 
 `SpellFx` (`Assets/Scripts/Combat/SpellFx.cs`) builds effects from Unity particle systems and a few procedural meshes, all drawn with the soft `Shadowfall/Fx` shader (additive glow, or alpha for smoke):

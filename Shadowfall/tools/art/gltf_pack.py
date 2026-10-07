@@ -45,9 +45,13 @@ def load(path):
     return js, [_read_uri(b["uri"], base_dir) for b in js.get("buffers", [])], base_dir
 
 
-def repack(path, out_path, keep_animations=None, rename_animations=None):
-    """keep_animations: iterable of names to keep (None = keep all). Returns dict of stats."""
+def repack(path, out_path, keep_animations=None, rename_animations=None, synthesize=None):
+    """keep_animations: iterable of names to keep (None = keep all).
+    synthesize: optional callable(js, buffers) that adds animations before filtering (see emotes.py).
+    Returns dict of stats."""
     js, buffers, base_dir = load(path)
+    if synthesize:
+        synthesize(js, buffers)
     anims = js.get("animations", [])
     if keep_animations is not None:
         keep = list(keep_animations)

@@ -50,6 +50,12 @@ namespace Shadowfall
                 : null;
         }
 
+        public void Emote(EmoteDef e)
+        {
+            if (view == null || Dead) return;
+            if (view.Emote(e) && e.Sound != null) Sfx.Play(e.Sound, transform.position + Vector3.up, 0.35f, 0.1f);
+        }
+
         public void Apply(NetPlayer p)
         {
             LastSeen = Time.time;

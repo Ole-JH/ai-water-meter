@@ -165,6 +165,7 @@ namespace Shadowfall
                 if (GameInput.Down(GKey.T)) showTalents = !showTalents;
                 if (GameInput.Down(GKey.M)) showMap = !showMap;
                 if (GameInput.Down(GKey.F1) || GameInput.Down(GKey.H)) showHelp = !showHelp;
+                if (GameInput.Down(GKey.G)) showEmotes = !showEmotes;
                 if (GameInput.Down(GKey.Escape))
                 {
                     if (chooseDungeon >= 0) chooseDungeon = -1;
@@ -172,6 +173,7 @@ namespace Shadowfall
                     else if (tradeOpen) NetClient.I?.CancelTrade();
                     else if (menu != MenuPage.None) menu = menu == MenuPage.Main ? MenuPage.None : MenuPage.Main;
                     else if (showNews) CloseNews(Player.I);
+                    else if (showEmotes) showEmotes = false;
                     else if (showBags | showChar | showSkills | showQuests | showMap | showHelp | showTalents | showStash | showAdmin)
                         showBags = showChar = showSkills = showQuests = showMap = showHelp = showTalents = showStash = showAdmin = false;
                     else menu = MenuPage.Main; // nothing to close: open the game menu
@@ -252,6 +254,7 @@ namespace Shadowfall
             if (craftStation != null) DrawCrafting(p);
             if (showHelp) DrawHelp();
             if (showNews) DrawNews(p);
+            if (showEmotes) DrawEmotes(p);
             if (showMap) DrawWorldMap(p);
             if (menuPlayer != null) DrawPlayerMenu();
             DrawOffers();
@@ -982,7 +985,10 @@ namespace Shadowfall
                 }
                 historyIndex = -1;
                 if (text.StartsWith("/r ") && !string.IsNullOrEmpty(replyTo)) text = "/w " + replyTo + " " + text.Substring(3);
-                NetClient.I.SendChat(text);
+                var emote = EmoteDef.FromChat(text);
+                if (emote != null) Player.I?.DoEmote(emote);
+                else if (text == "/e" || text == "/emote" || text == "/emotes") ListEmotes();
+                else NetClient.I.SendChat(text);
                 chatText = "";
                 ChatOpen = false;
             }
@@ -1393,6 +1399,7 @@ namespace Shadowfall
                 "<b>Windows</b>\n" +
                 "<b>I</b> bags   <b>C</b> character   <b>T</b> talents   <b>K</b> skills   <b>L</b> quests   <b>M</b> map   <b>Enter</b> chat   <b>Esc</b> close / game menu\n" +
                 "<b>Camera:</b> middle-drag or arrow keys rotate and tilt,  <b>Space</b> resets\n\n" +
+                "<b>Emotes:</b> <b>G</b> opens the emote menu, or type /wave, /dance, /bow, /sit, /sleep... (/e lists them all)\n\n" +
                 "<b>Chat & parties</b>\n" +
                 "<b>/p</b> party chat,  <b>/w name</b> whisper,  <b>/r</b> reply,  <b>/invite name</b>,  <b>/leave</b>,  <b>/who</b>. " +
                 "Click a player's name to invite them or trade. Party members nearby share kills; share quests from the quest log.\n\n" +

@@ -54,6 +54,7 @@ sequenceDiagram
 | `dstairs` | — | Take the stairs to the next depth (must be near them) |
 | `dleave` | `town` | Leave the dungeon: to the entrance, or to Hollowmere (`town`, after dying) |
 | `fx` | `k`, `x`, `z`, `tx`, `tz` | Cosmetic spell effect (drawn by `NetClient.HandleFx`, class abilities by `AbilityFx.Remote`): `fireball`, `nova`, `heal`, `meteor`, `cleave`, `levelup`, `bash`, `holybolt`, `consecrate`, `dshield`, `judgement`, `axe`, `whirl`, `leap`, `warcry`, `chain`, `teleport`, `twin`, `multi`, `knives`, `smoke`, `rain` |
+| `emote` | `e` | Play emote `e` (`wave`, `dance`, `bow`, `cheer`, `clap`, `point`, `flex`, `sit`, `sleep`, `jump`, `kick`, `shadowbox`, `guard`) for players nearby |
 | `save` | `save` | Full character snapshot (`SaveData`) |
 
 ## Server → client
@@ -68,6 +69,7 @@ sequenceDiagram
 | `mdie` | `mid` | Monster died (play the death animation) |
 | `kill` | `mid`, `name`, `l`, `xp`, `x`, `z`, `el`, `lb` | You get credit for a kill (you damaged it, or a party member did within 60 m): award XP, update quests, roll loot |
 | `fx` | `id`, `k`, `x`, `z`, `tx`, `tz` | Another player's spell effect |
+| `emote` | `id`, `name`, `e` | Another player's emote (play it and print "Alice waves.") |
 | `chat` | `id`, `name`, `msg`, `ch` | Chat line. `ch`: empty = everyone, `p` = party, `w` = whisper to you, `wto` = echo of your whisper (`name` = recipient) |
 | `party` | `id` (leader), `pm[]` | Your party, sent on every change and once a second: `{id,name,lvl,hp,mhp,mdl,x,z,dead,di}`. Empty `pm` = not in a party |
 | `pinv` | `id`, `name` | Someone invites you to their party |
@@ -95,6 +97,7 @@ Each dungeon level is an instance with its own grid, monsters and id. Positions 
 - `hit`: the monster must be within 30 units of the player, and damage is capped at `100 + level × 60`.
 - `chat`: limited to 2 per second, 200 characters, with `<` and `>` stripped so it can't inject IMGUI rich-text tags.
 - `fx`: limited to 10 per second, and only whitelisted kinds are relayed.
+- `emote`: at most one every 0.8 s, only the ids in `EMOTES` (`content.js`), not while dead.
 - `save`: at most 256 KB, and `level` must be between 1 and 100.
 - Trades: both players must be within 10 m in the same instance when accepting, at most 12 items per offer, and an offer change resets both acceptances so nobody can swap items after the other accepted.
 - Connections that stop answering pings for 20 seconds are dropped.

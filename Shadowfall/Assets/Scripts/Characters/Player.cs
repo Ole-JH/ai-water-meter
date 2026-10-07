@@ -482,6 +482,30 @@ namespace Shadowfall
 
         void StopMoving() => path.Clear();
 
+        // =====================================================================================
+        // Emotes
+        // =====================================================================================
+
+        float nextEmote;
+        public static readonly Color EmoteColor = new Color(1f, 0.75f, 0.45f);
+
+        /// <summary>Plays an emote (stops walking, attacking and gathering) and shows it to nearby players.</summary>
+        public void DoEmote(EmoteDef e)
+        {
+            if (e == null || IsDead) return;
+            if (Time.time < nextEmote) return;
+            nextEmote = Time.time + 1f;
+            StopMoving();
+            action = Action.None;
+            AttackTarget = null;
+            StopGathering();
+            CancelRecall(null);
+            if (view == null || !view.Emote(e)) return;
+            if (e.Sound != null) Sfx.Play(e.Sound, transform.position + Vector3.up, 0.4f, 0.1f);
+            GameUI.Log(e.You, EmoteColor);
+            NetClient.I?.SendEmote(e.Id);
+        }
+
         /// <summary>Instantly moves the hero (entering or leaving a dungeon).</summary>
         public void TeleportTo(Vector3 pos)
         {

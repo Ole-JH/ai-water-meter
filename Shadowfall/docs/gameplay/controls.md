@@ -25,6 +25,8 @@
 | ++arrow-up++ / ++arrow-down++ | Tilt |
 | ++space++ | Back to the classic Diablo view, centered on your hero |
 
+Every time you enter the world the camera starts in the classic view.
+
 ## Windows
 
 | Key | Window |
@@ -64,6 +66,29 @@ The settings are in the game menu (++esc++ → **Settings**):
 - **Volume**.
 
 Settings are remembered in your browser.
+
+## Emotes
+
+Press ++g++ for the emote menu, or type an emote in chat. Players nearby see the animation and a line in their chat
+("Alice waves.").
+
+| Command | Emote |
+| --- | --- |
+| `/wave` (`/hi`, `/bye`) | Wave |
+| `/dance` | Dance until you move |
+| `/bow` | A graceful bow |
+| `/cheer` | Cheer |
+| `/clap` | Applaud |
+| `/point` | Point ahead |
+| `/flex` | Show off your arms |
+| `/sit` | Sit on the ground until you move |
+| `/sleep` (`/lie`, `/rest`) | Lie down for a nap until you move |
+| `/jump` | Jump for joy |
+| `/kick` | Kick the dirt |
+| `/shadowbox` (`/punch`) | Punch the air |
+| `/guard` (`/block`) | Hold your guard up until you move |
+
+`/e` lists them all; `/e wave` works too. Moving, attacking, casting or getting hit ends an emote.
 
 ## What's New
 
