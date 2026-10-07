@@ -47,6 +47,9 @@ namespace Shadowfall
         {
             var net = NetClient.I;
             bool wide = VW >= 1100f;
+            // Catch Enter before any field is drawn: a focused text field eats the key, so checking it at the
+            // button (drawn after the fields) never saw it while you were typing.
+            loginEnter = EnterPressed;
 
             // The screen follows the connection: logged in = your heroes, logged out = the login form.
             if (net.SignedIn && loginScreen != LoginScreen.Characters && loginScreen != LoginScreen.Create)
@@ -163,12 +166,20 @@ namespace Shadowfall
         static bool EnterPressed => Event.current.type == EventType.KeyDown &&
                                     (Event.current.keyCode == KeyCode.Return || Event.current.keyCode == KeyCode.KeypadEnter);
 
-        bool BigButton(float x, ref float y, float w, string text, bool enabled = true)
+        /// <summary>Enter was pressed this event; the first big button on the screen that takes it fires.</summary>
+        bool loginEnter;
+
+        bool BigButton(float x, ref float y, float w, string text, bool enabled = true, bool takesEnter = true)
         {
             var net = NetClient.I;
             GUI.enabled = enabled && !net.Busy;
-            bool go = UISkin.Btn(new Rect(x, y, w, 54), net.Busy ? "Please wait..." : text, UISkin.V(UISkin.Button, fontSize: 20)) ||
-                      (EnterPressed && GUI.enabled && !confirmDelete);
+            bool go = UISkin.Btn(new Rect(x, y, w, 54), net.Busy ? "Please wait..." : text, UISkin.V(UISkin.Button, fontSize: 20));
+            if (!go && takesEnter && loginEnter && GUI.enabled && !confirmDelete)
+            {
+                go = true;
+                loginEnter = false;
+                if (Event.current.type == EventType.KeyDown) Event.current.Use();
+            }
             GUI.enabled = true;
             y += 62;
             return go;
@@ -255,7 +266,7 @@ namespace Shadowfall
                 "<color=#c8a060>Gave us an email address?</color> We can email you a reset code.\n" +
                 "<color=#c8a060>Neither?</color> Ask an admin for a reset code.", text);
             y += 118;
-            if (BigButton(x, ref y, w, "I have a code")) ShowLoginScreen(LoginScreen.Reset);
+            if (BigButton(x, ref y, w, "I have a code", takesEnter: false)) ShowLoginScreen(LoginScreen.Reset);
             UISkin.Divider(new Rect(x, y, w, 18));
             y += 24;
             loginName = LoginField(x, ref y, w, "ACCOUNT NAME OR EMAIL", loginName, false, 254);
