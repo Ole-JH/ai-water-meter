@@ -30,7 +30,9 @@ namespace Shadowfall
         void DrawMenuMain(Player p)
         {
             const float w = 340, bh = 50, gap = 12;
-            string[] items = AdminTools.IsAdmin ? new[] { "Resume", "Settings", "How to Play", "Admin  (F10)", "Log Out" } : new[] { "Resume", "Settings", "How to Play", "Log Out" };
+            int unread = Changelog.UnreadCount(p.NewsSeen);
+            string news = unread > 0 ? "What's New  (" + unread + ")" : "What's New";
+            string[] items = AdminTools.IsAdmin ? new[] { "Resume", "Settings", "How to Play", news, "Admin  (F10)", "Log Out" } : new[] { "Resume", "Settings", "How to Play", news, "Log Out" };
             float h = 80 + items.Length * (bh + gap) + 30;
             var r = new Rect((VW - w) / 2, (VH - h) / 2, w, h);
             if (UISkin.Window(r, "Game Menu")) { menu = MenuPage.None; return; }
@@ -45,6 +47,7 @@ namespace Shadowfall
                         case 0: menu = MenuPage.None; break;
                         case 1: menu = MenuPage.Settings; break;
                         case 2: menu = MenuPage.None; showHelp = true; break;
+                        case 3: menu = MenuPage.None; OpenNews(p); break;
                         default:
                             if (items[i] == "Log Out") menu = MenuPage.ConfirmLogout;
                             else { menu = MenuPage.None; showAdmin = true; }
@@ -81,7 +84,7 @@ namespace Shadowfall
 
         void CloseAllWindows()
         {
-            showBags = showChar = showSkills = showQuests = showMap = showHelp = showTalents = showStash = showAdmin = false;
+            showBags = showChar = showSkills = showQuests = showMap = showHelp = showTalents = showStash = showAdmin = showNews = false;
             dialogNpc = null;
             craftStation = null;
             menuPlayer = null;

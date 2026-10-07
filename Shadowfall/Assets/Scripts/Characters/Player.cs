@@ -1487,6 +1487,9 @@ namespace Shadowfall
         // Persistence (characters are stored by the server)
         // =====================================================================================
 
+        /// <summary>The newest changelog entry this hero has read. New heroes start with everything read.</summary>
+        public int NewsSeen = Changelog.Latest;
+
         public SaveData ToSave()
         {
             var slots = new List<SlotSave>();
@@ -1512,6 +1515,7 @@ namespace Shadowfall
                 talents = SaveTalents(),
                 companions = OwnedCompanions.ToArray(), companion = ActiveCompanion ?? "", wv = WorldGenerator.LayoutVersion,
                 fog = Exploration.Save(),
+                news = NewsSeen,
                 str = Strength, dex = Dexterity, intel = Intelligence, vit = Vitality, statPoints = StatPoints,
                 x = transform.position.x, z = transform.position.z,
                 hp = IsDead ? MaxHealth : Health, mana = Mana,
@@ -1580,6 +1584,7 @@ namespace Shadowfall
             var pos = new Vector3(s.x, 0, s.z);
             if (s.wv < 3) pos = WorldGenerator.Map(pos); // saved on the smaller world: same place in the new layout
             Exploration.Load(s.wv < 3 ? null : s.fog);
+            NewsSeen = s.news > 0 ? s.news : Changelog.Baseline;
             if (s.x > 0 && WorldGrid.Instance.IsWalkable(pos)) transform.position = pos;
             RecalculateStats();
             Health = s.hp > 0 ? Mathf.Min(s.hp, MaxHealth) : MaxHealth;

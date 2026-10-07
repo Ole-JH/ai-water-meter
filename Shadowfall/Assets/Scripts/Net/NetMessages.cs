@@ -122,6 +122,7 @@ namespace Shadowfall
         public string[] companions;   // hired companion ids
         public string companion;      // the one following (empty = none)
         public string fog;            // explored overworld tiles, 1 bit each, base64 (see Exploration)
+        public int news;              // the newest Changelog entry this hero has read (0 = saved before the changelog)
         public int wv;                // WorldGenerator.LayoutVersion when saved (older positions get converted)
     }
 }

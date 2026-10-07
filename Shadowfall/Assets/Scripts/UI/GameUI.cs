@@ -138,6 +138,7 @@ namespace Shadowfall
             var p = Player.I;
             UpdateCursor(p);
             if (p == null) { ChatOpen = false; return; }
+            CheckNews(p);
 
             if (!ChatOpen)
             {
@@ -170,6 +171,7 @@ namespace Shadowfall
                     else if (dialogNpc != null || craftStation != null) { dialogNpc = null; craftStation = null; }
                     else if (tradeOpen) NetClient.I?.CancelTrade();
                     else if (menu != MenuPage.None) menu = menu == MenuPage.Main ? MenuPage.None : MenuPage.Main;
+                    else if (showNews) CloseNews(Player.I);
                     else if (showBags | showChar | showSkills | showQuests | showMap | showHelp | showTalents | showStash | showAdmin)
                         showBags = showChar = showSkills = showQuests = showMap = showHelp = showTalents = showStash = showAdmin = false;
                     else menu = MenuPage.Main; // nothing to close: open the game menu
@@ -249,6 +251,7 @@ namespace Shadowfall
             if (dialogNpc != null) DrawDialog(p);
             if (craftStation != null) DrawCrafting(p);
             if (showHelp) DrawHelp();
+            if (showNews) DrawNews(p);
             if (showMap) DrawWorldMap(p);
             if (menuPlayer != null) DrawPlayerMenu();
             DrawOffers();
@@ -798,6 +801,7 @@ namespace Shadowfall
                     UISkin.Shadowed(new Rect(b.xMax - 16, b.y - 4, 20, 20), Player.I.TalentPoints.ToString(), UISkin.SmallCenter, new Color(0.8f, 0.6f, 1f), 2);
                 if (b.Contains(Event.current.mousePosition)) tooltip = tips[i];
             }
+            if (Player.I != null) DrawNewsChip(Player.I, r);
         }
 
         void DrawMinimap(Player p)
