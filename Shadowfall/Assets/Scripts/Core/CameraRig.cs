@@ -35,6 +35,8 @@ namespace Shadowfall
         }
 
         /// <summary>Jump straight to the hero (after a teleport) instead of gliding there.</summary>
+        bool hadTarget;
+
         public void SnapToTarget()
         {
             if (Target != null) focus = Target.position;
@@ -53,17 +55,29 @@ namespace Shadowfall
             float dt = Time.unscaledDeltaTime;
             if (Target != null)
             {
+                // Coming from the login screen's low cinematic shot (or a free orbit): start from the normal
+                // gameplay view instead of keeping that angle.
+                if (!hadTarget)
+                {
+                    hadTarget = true;
+                    ResetView();
+                    yaw = yawGoal;
+                    pitch = pitchGoal;
+                    distance = distanceGoal;
+                    focus = Target.position;
+                }
                 HandleInput(dt);
                 focus = Vector3.Lerp(focus, Target.position, 1f - Mathf.Exp(-dt * 10f));
             }
             else if (LoginShowcase.Focus.HasValue)
             {
+                hadTarget = false;
                 // Login screen: a slow, low cinematic shot of the hero preview, framed off-centre so the
                 // login panel doesn't cover it.
                 dragging = false;
                 yawGoal = yaw = Mathf.Sin(Time.time * 0.12f) * 10f;
-                pitchGoal = pitch = 9f;
-                distanceGoal = distance = 6.2f;
+                pitchGoal = pitch = 16f;
+                distanceGoal = distance = 6.8f;
                 var cam = GetComponent<Camera>();
                 float halfWidth = Mathf.Tan(cam.fieldOfView * 0.5f * Mathf.Deg2Rad) * distance * cam.aspect;
                 var right = Quaternion.Euler(0f, yaw, 0f) * Vector3.right;
@@ -75,6 +89,7 @@ namespace Shadowfall
             else
             {
                 // Slow orbit over the village (before the preview exists).
+                hadTarget = false;
                 dragging = false;
                 yawGoal = yaw = Time.time * 4f;
                 pitchGoal = pitch = 48f;
