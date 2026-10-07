@@ -24,6 +24,19 @@ namespace Shadowfall
         {
             new Entry
             {
+                Id = 16, Date = "2026-10-07", Title = "Accounts, heroes and password resets",
+                Items = new[]
+                {
+                    "You now log in with an <b>account</b> that can hold up to 10 heroes. Pick one on the new hero screen, or create another.",
+                    "Your old hero became an account with the same name and password. Nothing is lost.",
+                    "Every account has a <b>recovery code</b>. Keep it safe: with it you can choose a new password if you forget yours.",
+                    "Forgot your password? Use your recovery code, a code emailed to you (add an email under Esc > Account), or ask an admin.",
+                    "Esc > Account: change your password, set your email, get a new recovery code. Esc > Character Select switches heroes.",
+                    "Typos on the login screen no longer create new heroes, and repeated wrong passwords lock an account for a short while.",
+                },
+            },
+            new Entry
+            {
                 Id = 15, Date = "2026-10-07", Title = "Emotes",
                 Items = new[]
                 {

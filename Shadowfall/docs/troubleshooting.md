@@ -30,7 +30,23 @@
     Run **Shadowfall → Open Main Scene** once (the build menu does this too). It creates `Assets/Resources/ShadowfallVariants.mat` and enables fog in the scene, so those shader variants are kept in the build.
 
 ??? question "I forgot my password"
-    See [Operations → Resetting a character's password](deployment/operations.md#resetting-a-characters-password).
+    On the login screen choose **Forgot password?**. With your recovery code: **I have a code**. With an email address on the account (and a server that can send mail): **Email Me a Code**. Otherwise an admin can give you a one-time code with `/a resetpw <name>` or `task account:reset -- <name>`. See [Accounts & passwords](deployment/accounts.md#resetting-a-password).
+
+??? question "*“... is a character name. Log in with the name of its account.”* / *“No account with that name”*"
+    You log in with your **account** name, which may differ from your heroes' names. Characters from before accounts were imported as accounts with the same name and password, so for those the old character name works. `task accounts -- <part of the name>` shows which account a character belongs to.
+
+??? question "*“Too many wrong attempts. Try again in ...”*"
+    After 5 wrong passwords in 10 minutes an account is locked for 2 minutes; after 25 failures from one address in 15 minutes the address is blocked for 15 minutes. Wait, or restart the game server (`task restart`) to clear the counters. If **everyone** gets this behind a reverse proxy, set `TRUST_PROXY=1`. See [Accounts → Rate limits](deployment/accounts.md#rate-limits).
+
+??? question "*“You logged in from another location.”*"
+    The same account (or the same hero) was logged in somewhere else, which logs out the older session. If that wasn't you, change your password (++esc++ → **Account**): that logs out every other session.
+
+??? question "The server doesn't start: *“Could not open the database”* / *“password authentication failed”*"
+    The game server waits up to about 30 seconds for PostgreSQL and then exits. Check `docker compose logs postgres` (in `server/`) and `task ps`.
+
+    - *password authentication failed*: `POSTGRES_PASSWORD` in `server/.env` was changed after the database was created. Put the old one back, or change it in the database too; see [Accounts → Database password](deployment/accounts.md#password).
+    - The `postgres` container is restarting: often a full disk (`df -h`).
+    - With `npm start` or `task server:dev`, leave `DATABASE_URL` unset to store accounts in files, or point it at a running PostgreSQL server.
 
 ??? question "Docker client build: *“No Unity license found”* or activation errors"
     See [Building the client in Docker → License](deployment/docker-client-build.md#1-provide-a-unity-license). The easiest fix is `task license:activate`. If Unity rejects an existing license file, get a fresh one the same way.

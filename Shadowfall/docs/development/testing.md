@@ -4,13 +4,14 @@
 
 ```bash
 task server:test    # or: cd server && npm test
+task server:test:pg # the same against PostgreSQL
 ```
 
-`server/test/smoke.js` starts a real server on a random port with a temporary data directory. It then connects fake clients and checks:
+`server/test/smoke.js` starts a real server on a random port with a temporary data directory, storing accounts in files. It then connects fake clients and checks:
 
 - that the Dockerfile copies every server module;
 - the health endpoint and static page;
-- the world upload handshake and account creation;
+- the world upload handshake, account registration and character creation;
 - snapshots containing monsters and the other player;
 - monster attacks;
 - shared kill credit and XP, including the damage cap;
@@ -22,7 +23,21 @@ task server:test    # or: cd server && npm test
 - dungeons: layouts, separate instances, difficulty, returning to the right entrance, admin depth and regeneration;
 - logout notifications;
 - that saves persist across logins;
+- accounts: name and password rules, unique account and character names, several characters per account, character select and back, a helpful error for logging in with a character name, no email resets without SMTP, changing the password, logging out the old session, recovery codes (work once and are replaced), admin reset codes (`resetpw`, by character name too, work once), deleting characters, locking an account after 5 wrong passwords, and importing an old-format character file with its password and progress;
 - that wrong passwords are rejected, and world updates: a changed world is refused while others play, an older layout version can't replace it, and a newer one uploads the new map.
+
+### Against PostgreSQL
+
+`task server:test:pg` runs the same test with accounts in PostgreSQL. It starts a throwaway `postgres:17` container on
+`127.0.0.1:55432` (needs Docker) and removes it afterwards. To use an existing server instead, set `PG_TEST_URL` to a user that may
+create databases; the test creates its own `shadowfall_test_*` database and drops it at the end:
+
+```bash
+PG_TEST_URL=postgres://postgres:secret@localhost:5432/postgres task server:test:pg
+# or: cd server && npm run test:pg   (default PG_TEST_URL: postgres://postgres:postgres@localhost:5432/postgres)
+```
+
+`task ci` runs only the file-based test.
 
 ## C# compile check
 
@@ -36,7 +51,7 @@ This builds `Assets/Scripts` with warnings treated as errors, against Unity's re
 
 1. `task server:dev`
 2. Make a WebGL build and open <http://localhost:7341> in two browser windows, or press Play in the editor for one of them.
-3. Log in with two different names. You'll see each other, can chat with ++enter++, and can fight the same monsters.
+3. Create two accounts (one per window) and a hero on each. You'll see each other, can chat with ++enter++, and can fight the same monsters.
 
 ## Everything at once
 

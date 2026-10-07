@@ -320,13 +320,13 @@
   },
   {
    "type": "stat",
-   "title": "Characters",
+   "title": "Accounts",
    "id": 6,
    "datasource": {
     "type": "prometheus",
     "uid": "prometheus"
    },
-   "description": "Character files on disk.",
+   "description": "Player accounts (each can have several characters).",
    "gridPos": {
     "h": 4,
     "w": 4,
@@ -647,7 +647,7 @@
     "type": "prometheus",
     "uid": "prometheus"
    },
-   "description": "ok = returning player, new = character created, bad_password = failed login.",
+   "description": "ok = logged in, new = account created, bad_password = wrong password, locked = refused after too many wrong tries.",
    "gridPos": {
     "h": 8,
     "w": 12,
@@ -696,7 +696,7 @@
   },
   {
    "type": "row",
-   "title": "World & combat",
+   "title": "Accounts",
    "id": 13,
    "collapsed": false,
    "gridPos": {
@@ -709,8 +709,195 @@
   },
   {
    "type": "timeseries",
-   "title": "Monsters alive",
+   "title": "Accounts and characters",
    "id": 14,
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "description": "",
+   "gridPos": {
+    "h": 8,
+    "w": 8,
+    "x": 0,
+    "y": 23
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "expr": "shadowfall_accounts",
+     "legendFormat": "accounts",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     }
+    },
+    {
+     "refId": "B",
+     "expr": "shadowfall_characters",
+     "legendFormat": "characters",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     }
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short",
+     "custom": {
+      "drawStyle": "line",
+      "fillOpacity": 12,
+      "lineWidth": 2,
+      "showPoints": "never",
+      "stacking": {
+       "mode": "none",
+       "group": "A"
+      },
+      "gradientMode": "opacity"
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom",
+     "showLegend": true
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   }
+  },
+  {
+   "type": "timeseries",
+   "title": "Failed and blocked logins (per 10 min)",
+   "id": 15,
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "description": "Wrong passwords, and attempts refused because an account or address was locked out.",
+   "gridPos": {
+    "h": 8,
+    "w": 8,
+    "x": 8,
+    "y": 23
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "expr": "sum by (result) (increase(shadowfall_logins_total{result=~\"bad_password|locked\"}[10m]))",
+     "legendFormat": "{{result}}",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     }
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short",
+     "custom": {
+      "drawStyle": "bars",
+      "fillOpacity": 60,
+      "lineWidth": 2,
+      "showPoints": "never",
+      "stacking": {
+       "mode": "none",
+       "group": "A"
+      },
+      "gradientMode": "opacity"
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom",
+     "showLegend": true
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   }
+  },
+  {
+   "type": "timeseries",
+   "title": "Password resets (per hour)",
+   "id": 16,
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "description": "recovery = with the recovery code, code = with an email or admin code, admin = codes issued by admins, change = changed in game.",
+   "gridPos": {
+    "h": 8,
+    "w": 8,
+    "x": 16,
+    "y": 23
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "expr": "sum by (method) (increase(shadowfall_password_resets_total[1h]))",
+     "legendFormat": "{{method}}",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     }
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short",
+     "custom": {
+      "drawStyle": "bars",
+      "fillOpacity": 60,
+      "lineWidth": 2,
+      "showPoints": "never",
+      "stacking": {
+       "mode": "none",
+       "group": "A"
+      },
+      "gradientMode": "opacity"
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom",
+     "showLegend": true
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   }
+  },
+  {
+   "type": "row",
+   "title": "World & combat",
+   "id": 17,
+   "collapsed": false,
+   "gridPos": {
+    "h": 1,
+    "w": 24,
+    "x": 0,
+    "y": 31
+   },
+   "panels": []
+  },
+  {
+   "type": "timeseries",
+   "title": "Monsters alive",
+   "id": 18,
    "datasource": {
     "type": "prometheus",
     "uid": "prometheus"
@@ -720,7 +907,7 @@
     "h": 8,
     "w": 12,
     "x": 0,
-    "y": 23
+    "y": 32
    },
    "targets": [
     {
@@ -774,7 +961,7 @@
   {
    "type": "timeseries",
    "title": "Kills per minute",
-   "id": 15,
+   "id": 19,
    "datasource": {
     "type": "prometheus",
     "uid": "prometheus"
@@ -784,7 +971,7 @@
     "h": 8,
     "w": 12,
     "x": 12,
-    "y": 23
+    "y": 32
    },
    "targets": [
     {
@@ -829,7 +1016,7 @@
   {
    "type": "bargauge",
    "title": "Most killed (selected range)",
-   "id": 16,
+   "id": 20,
    "datasource": {
     "type": "prometheus",
     "uid": "prometheus"
@@ -839,7 +1026,7 @@
     "h": 8,
     "w": 8,
     "x": 0,
-    "y": 31
+    "y": 40
    },
    "targets": [
     {
@@ -880,7 +1067,7 @@
   {
    "type": "bargauge",
    "title": "Bosses slain (selected range)",
-   "id": 17,
+   "id": 21,
    "datasource": {
     "type": "prometheus",
     "uid": "prometheus"
@@ -890,7 +1077,7 @@
     "h": 8,
     "w": 8,
     "x": 8,
-    "y": 31
+    "y": 40
    },
    "targets": [
     {
@@ -931,7 +1118,7 @@
   {
    "type": "timeseries",
    "title": "Player deaths & elite kills (per 10 min)",
-   "id": 18,
+   "id": 22,
    "datasource": {
     "type": "prometheus",
     "uid": "prometheus"
@@ -941,7 +1128,7 @@
     "h": 8,
     "w": 8,
     "x": 16,
-    "y": 31
+    "y": 40
    },
    "targets": [
     {
@@ -995,7 +1182,7 @@
   {
    "type": "timeseries",
    "title": "Open dungeon instances",
-   "id": 19,
+   "id": 23,
    "datasource": {
     "type": "prometheus",
     "uid": "prometheus"
@@ -1005,7 +1192,7 @@
     "h": 8,
     "w": 12,
     "x": 0,
-    "y": 39
+    "y": 48
    },
    "targets": [
     {
@@ -1050,7 +1237,7 @@
   {
    "type": "bargauge",
    "title": "Dungeon runs by difficulty (selected range)",
-   "id": 20,
+   "id": 24,
    "datasource": {
     "type": "prometheus",
     "uid": "prometheus"
@@ -1060,7 +1247,7 @@
     "h": 8,
     "w": 12,
     "x": 12,
-    "y": 39
+    "y": 48
    },
    "targets": [
     {
@@ -1101,20 +1288,20 @@
   {
    "type": "row",
    "title": "Economy & social",
-   "id": 21,
+   "id": 25,
    "collapsed": false,
    "gridPos": {
     "h": 1,
     "w": 24,
     "x": 0,
-    "y": 47
+    "y": 56
    },
    "panels": []
   },
   {
    "type": "timeseries",
    "title": "Trades",
-   "id": 22,
+   "id": 26,
    "datasource": {
     "type": "prometheus",
     "uid": "prometheus"
@@ -1124,7 +1311,7 @@
     "h": 8,
     "w": 8,
     "x": 0,
-    "y": 48
+    "y": 57
    },
    "targets": [
     {
@@ -1178,7 +1365,7 @@
   {
    "type": "timeseries",
    "title": "Chat messages per minute",
-   "id": 23,
+   "id": 27,
    "datasource": {
     "type": "prometheus",
     "uid": "prometheus"
@@ -1188,7 +1375,7 @@
     "h": 8,
     "w": 8,
     "x": 8,
-    "y": 48
+    "y": 57
    },
    "targets": [
     {
@@ -1233,7 +1420,7 @@
   {
    "type": "timeseries",
    "title": "Admin commands (per hour)",
-   "id": 24,
+   "id": 28,
    "datasource": {
     "type": "prometheus",
     "uid": "prometheus"
@@ -1243,7 +1430,7 @@
     "h": 8,
     "w": 8,
     "x": 16,
-    "y": 48
+    "y": 57
    },
    "targets": [
     {
@@ -1288,20 +1475,20 @@
   {
    "type": "row",
    "title": "Server health",
-   "id": 25,
+   "id": 29,
    "collapsed": false,
    "gridPos": {
     "h": 1,
     "w": 24,
     "x": 0,
-    "y": 56
+    "y": 65
    },
    "panels": []
   },
   {
    "type": "timeseries",
    "title": "Tick duration",
-   "id": 26,
+   "id": 30,
    "datasource": {
     "type": "prometheus",
     "uid": "prometheus"
@@ -1311,7 +1498,7 @@
     "h": 8,
     "w": 8,
     "x": 0,
-    "y": 57
+    "y": 66
    },
    "targets": [
     {
@@ -1374,7 +1561,7 @@
   {
    "type": "timeseries",
    "title": "Event loop lag (p99)",
-   "id": 27,
+   "id": 31,
    "datasource": {
     "type": "prometheus",
     "uid": "prometheus"
@@ -1384,7 +1571,7 @@
     "h": 8,
     "w": 8,
     "x": 8,
-    "y": 57
+    "y": 66
    },
    "targets": [
     {
@@ -1429,7 +1616,7 @@
   {
    "type": "timeseries",
    "title": "Errors",
-   "id": 28,
+   "id": 32,
    "datasource": {
     "type": "prometheus",
     "uid": "prometheus"
@@ -1439,7 +1626,7 @@
     "h": 8,
     "w": 8,
     "x": 16,
-    "y": 57
+    "y": 66
    },
    "targets": [
     {
@@ -1493,7 +1680,7 @@
   {
    "type": "timeseries",
    "title": "Memory",
-   "id": 29,
+   "id": 33,
    "datasource": {
     "type": "prometheus",
     "uid": "prometheus"
@@ -1503,7 +1690,7 @@
     "h": 8,
     "w": 8,
     "x": 0,
-    "y": 65
+    "y": 74
    },
    "targets": [
     {
@@ -1566,7 +1753,7 @@
   {
    "type": "timeseries",
    "title": "CPU",
-   "id": 30,
+   "id": 34,
    "datasource": {
     "type": "prometheus",
     "uid": "prometheus"
@@ -1576,7 +1763,7 @@
     "h": 8,
     "w": 8,
     "x": 8,
-    "y": 65
+    "y": 74
    },
    "targets": [
     {
@@ -1621,7 +1808,7 @@
   {
    "type": "timeseries",
    "title": "Network",
-   "id": 31,
+   "id": 35,
    "datasource": {
     "type": "prometheus",
     "uid": "prometheus"
@@ -1631,7 +1818,7 @@
     "h": 8,
     "w": 8,
     "x": 16,
-    "y": 65
+    "y": 74
    },
    "targets": [
     {
@@ -1685,7 +1872,7 @@
   {
    "type": "timeseries",
    "title": "Messages received per second",
-   "id": 32,
+   "id": 36,
    "datasource": {
     "type": "prometheus",
     "uid": "prometheus"
@@ -1695,7 +1882,7 @@
     "h": 8,
     "w": 12,
     "x": 0,
-    "y": 73
+    "y": 82
    },
    "targets": [
     {
@@ -1740,7 +1927,7 @@
   {
    "type": "timeseries",
    "title": "Messages sent per second",
-   "id": 33,
+   "id": 37,
    "datasource": {
     "type": "prometheus",
     "uid": "prometheus"
@@ -1750,7 +1937,7 @@
     "h": 8,
     "w": 12,
     "x": 12,
-    "y": 73
+    "y": 82
    },
    "targets": [
     {
@@ -1794,21 +1981,346 @@
   },
   {
    "type": "row",
-   "title": "Logs",
-   "id": 34,
+   "title": "Database",
+   "id": 38,
    "collapsed": false,
    "gridPos": {
     "h": 1,
     "w": 24,
     "x": 0,
-    "y": 81
+    "y": 90
+   },
+   "panels": []
+  },
+  {
+   "type": "stat",
+   "title": "PostgreSQL",
+   "id": 39,
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "description": "1 = the exporter can reach the database.",
+   "gridPos": {
+    "h": 4,
+    "w": 4,
+    "x": 0,
+    "y": 91
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "expr": "pg_up",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "instant": true
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short",
+     "color": {
+      "mode": "thresholds"
+     },
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "red",
+        "value": null
+       },
+       {
+        "color": "green",
+        "value": 1
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "colorMode": "background",
+    "graphMode": "area",
+    "textMode": "value",
+    "justifyMode": "center"
+   }
+  },
+  {
+   "type": "stat",
+   "title": "Database size",
+   "id": 40,
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "description": "",
+   "gridPos": {
+    "h": 4,
+    "w": 4,
+    "x": 4,
+    "y": 91
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "expr": "pg_database_size_bytes{datname=\"shadowfall\"}",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "instant": true
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "bytes",
+     "color": {
+      "mode": "thresholds"
+     },
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "blue",
+        "value": null
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "colorMode": "background",
+    "graphMode": "area",
+    "textMode": "value",
+    "justifyMode": "center"
+   }
+  },
+  {
+   "type": "timeseries",
+   "title": "Database connections",
+   "id": 41,
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "description": "",
+   "gridPos": {
+    "h": 8,
+    "w": 8,
+    "x": 0,
+    "y": 95
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "expr": "pg_stat_database_numbackends{datname=\"shadowfall\"}",
+     "legendFormat": "connections",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     }
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short",
+     "custom": {
+      "drawStyle": "line",
+      "fillOpacity": 12,
+      "lineWidth": 2,
+      "showPoints": "never",
+      "stacking": {
+       "mode": "none",
+       "group": "A"
+      },
+      "gradientMode": "opacity"
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom",
+     "showLegend": true
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   }
+  },
+  {
+   "type": "timeseries",
+   "title": "Transactions per second",
+   "id": 42,
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "description": "",
+   "gridPos": {
+    "h": 8,
+    "w": 8,
+    "x": 8,
+    "y": 95
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "expr": "rate(pg_stat_database_xact_commit{datname=\"shadowfall\"}[2m])",
+     "legendFormat": "commits",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     }
+    },
+    {
+     "refId": "B",
+     "expr": "rate(pg_stat_database_xact_rollback{datname=\"shadowfall\"}[2m])",
+     "legendFormat": "rollbacks",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     }
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short",
+     "custom": {
+      "drawStyle": "line",
+      "fillOpacity": 12,
+      "lineWidth": 2,
+      "showPoints": "never",
+      "stacking": {
+       "mode": "none",
+       "group": "A"
+      },
+      "gradientMode": "opacity"
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom",
+     "showLegend": true
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   }
+  },
+  {
+   "type": "timeseries",
+   "title": "Rows written per second",
+   "id": 43,
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "description": "",
+   "gridPos": {
+    "h": 8,
+    "w": 8,
+    "x": 16,
+    "y": 95
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "expr": "rate(pg_stat_database_tup_inserted{datname=\"shadowfall\"}[2m])",
+     "legendFormat": "inserted",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     }
+    },
+    {
+     "refId": "B",
+     "expr": "rate(pg_stat_database_tup_updated{datname=\"shadowfall\"}[2m])",
+     "legendFormat": "updated",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     }
+    },
+    {
+     "refId": "C",
+     "expr": "rate(pg_stat_database_tup_deleted{datname=\"shadowfall\"}[2m])",
+     "legendFormat": "deleted",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     }
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short",
+     "custom": {
+      "drawStyle": "line",
+      "fillOpacity": 12,
+      "lineWidth": 2,
+      "showPoints": "never",
+      "stacking": {
+       "mode": "none",
+       "group": "A"
+      },
+      "gradientMode": "opacity"
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom",
+     "showLegend": true
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   }
+  },
+  {
+   "type": "row",
+   "title": "Logs",
+   "id": 44,
+   "collapsed": false,
+   "gridPos": {
+    "h": 1,
+    "w": 24,
+    "x": 0,
+    "y": 103
    },
    "panels": []
   },
   {
    "type": "logs",
    "title": "Server log",
-   "id": 35,
+   "id": 45,
    "datasource": {
     "type": "loki",
     "uid": "loki"
@@ -1817,7 +2329,7 @@
     "h": 12,
     "w": 24,
     "x": 0,
-    "y": 82
+    "y": 104
    },
    "targets": [
     {

@@ -2,36 +2,84 @@
 
 Every message is a single JSON text frame on the WebSocket at `/ws`, and every message has a `t` (type) field. The C# definitions are in `Assets/Scripts/Net/NetMessages.cs`; the server handlers are the `handlers` object in `server/server.js`.
 
-Protocol version: **4**. It is checked in `hello`.
+Protocol version: **5**. It is checked in `hello`.
 
 ## Login sequence
+
+The client says `hello`, then logs in to an account (or registers, or resets a password), picks a character, and enters the
+world. Account errors come back as `autherr` and leave the connection open, so the player can try again; `error` always ends it.
 
 ```mermaid
 sequenceDiagram
   participant C as Client
   participant S as Server
-  C->>S: hello {name, pass, hash, ver, wv}
-  alt server has no world yet, or wv is newer and nobody is online
+  C->>S: hello {hash, ver, wv}
+  alt wrong protocol version
+    S->>C: error {err}
+  end
+  S->>C: hi {mail}
+  C->>S: login {user, pass} / register {user, pass, email} / reset {user, code, pass}
+  alt wrong password, name taken, locked out...
+    S->>C: autherr {err}
+  else ok
+    S->>C: account {user, email, mail, chars[], rc?, rcWhy?}
+  end
+  C->>S: play {name} / create {name, look}
+  alt server has no world yet, or wv is newer and nobody is in the world
     S->>C: needworld
     C->>S: world {hash, w, h, cells(base64 bitmap)}
   end
-  alt bad password / version / world hash
-    S->>C: error {err}
+  alt world hash mismatch
+    S->>C: error {err} / autherr {err}
   else ok
-    S->>C: welcome {id, hasSave, save}
+    S->>C: welcome {id, name, look, hasSave, save, now, admin}
     S-->>C: sys "X has entered the world."
     loop every 100 ms
       C->>S: state {...}
       S->>C: snap {l, m[], p[]}
     end
   end
+  C->>S: leave
+  S->>C: account {...} (back to character select)
 ```
 
-## Client → server
+See [Accounts & passwords](../deployment/accounts.md) for how accounts, recovery codes and resets work.
+
+## Accounts
+
+Client → server. All but `hello` need `hello` first; `login`, `register`, `forgot` and `reset` only work while logged out, the
+others only while logged in.
+
+| `t` | Fields | Purpose | Answer |
+| --- | --- | --- | --- |
+| `hello` | `hash`, `ver`, `wv` | Version check. `hash` = the client's world map hash, `wv` = `WorldGenerator.LayoutVersion`; a client with a newer layout may replace the stored world map (see [Operations](../deployment/operations.md#updating-the-game)) | `hi` or `error` |
+| `login` | `user`, `pass` | Log in to an account. Logs out any other session of the account | `account` or `autherr` |
+| `register` | `user`, `pass`, `email` (optional) | Create an account and log in | `account` with `rc`, or `autherr` |
+| `forgot` | `user` (account name or email) | Email a reset code. Same answer whether or not the account exists | `authok`, or `autherr` (no SMTP, too many requests) |
+| `reset` | `user`, `code`, `pass` | New password with the recovery code or a reset code (email or admin); logs in | `account` (with a new `rc` if the recovery code was used), or `autherr` |
+| `chpass` | `old`, `pass` | Change the password; logs out the account's other sessions | `authok` or `autherr` |
+| `setemail` | `pass`, `email` | Set the email address (empty removes it) | `authok` or `autherr` |
+| `newcode` | `pass` | Replace the recovery code | `rcode` or `autherr` |
+| `play` | `name` | Enter the world with one of the account's characters | `welcome` (maybe after `needworld`), or `autherr` |
+| `create` | `name`, `look` | Create a character (`look`: `Knight`, `Barbarian`, `Mage`, `Rogue`) and enter the world with it | like `play` |
+| `delchar` | `name`, `pass` | Delete a character (only at character select) | `account` with `msg`, or `autherr` |
+| `leave` | — | Save and leave the world, back to character select | `account` |
+
+Server → client:
 
 | `t` | Fields | Purpose |
 | --- | --- | --- |
-| `hello` | `name`, `pass`, `hash`, `ver`, `wv` | Log in, or create the account if the name is new. `wv` = `WorldGenerator.LayoutVersion`; a client with a newer layout may replace the stored world map (see [Operations](../deployment/operations.md#updating-the-game)) |
+| `hi` | `mail` | Version OK; `mail` = the server can send reset emails |
+| `account` | `user`, `email`, `mail`, `chars[]` (`{name, look, lvl}`), `msg`, `rc`, `rcWhy` | Logged in: the account and its characters (character select). `rc` = a recovery code to show once; `rcWhy`: `register`, `new` (an imported account's first login) or `used` |
+| `autherr` | `err` | An account request failed; the connection stays open |
+| `authok` | `msg` | An account request succeeded (password changed, email set, reset email on its way) |
+| `rcode` | `rc` | The new recovery code after `newcode` |
+
+## Client → server
+
+
+| `t` | Fields | Purpose |
+| --- | --- | --- |
 | `world` | `hash`, `w`, `h`, `cells` | Upload the walkability bitmap (bit set = blocked, LSB first, row-major) |
 | `state` | `x`, `z`, `ry`, `hp`, `mhp`, `lvl`, `mv`, `atk`, `dead`, `body`, `legs`, `weapon`, `helm`, `mdl`, `wk`, `cp` | Own position, health and appearance, 10× per second. `mdl` = hero model, `wk` = hero weapon in hand (`sword`, `axe`, `mace`, `dagger`, `staff` or empty; anything else is dropped), `cp` = companion following them (`hound`, `squire`, `witch`, `ranger`, `acolyte`, `golem` or empty) |
 | `hit` | `mid`, `dmg`, `crit` | Report damage dealt to monster `mid` (after armor) |
@@ -43,7 +91,7 @@ sequenceDiagram
 | `toffer` | `items[]`, `gold` | Your current offer: up to 12 items as JSON strings (`Item`) plus gold. Resets both acceptances |
 | `tok` | — | Accept the current offers |
 | `tcancel` | — | Cancel the trade |
-| `adm` | `c` + arguments | Admin command (`tp`, `tpto`, `summon`, `dungeon`, `regen`, `spawn`, `killall`, `time`, `elites`, `announce`, `kick`, `who`); refused unless the account is an admin. See [Admin module](../deployment/admin.md) |
+| `adm` | `c` + arguments | Admin command (`tp`, `tpto`, `summon`, `dungeon`, `regen`, `spawn`, `killall`, `time`, `elites`, `announce`, `kick`, `who`, `resetpw`); refused unless the account is an admin. See [Admin module](../deployment/admin.md) |
 | `chat` | `msg` | Chat to everyone. Commands handled by the server: `/who`, `/p` (party), `/w name` (whisper), `/invite name`, `/leave`, `/a` (admin). `/r` is turned into `/w` by the client |
 | `pinvite` | `name` | Invite a player to your party (leader only once in a party) |
 | `paccept` / `pdecline` | — | Answer a pending invitation (they expire after 60 s) |
@@ -63,7 +111,7 @@ sequenceDiagram
 | --- | --- | --- |
 | `needworld` | — | Ask this client to upload the world map |
 | `error` | `err` | Fatal error; the socket is closed afterwards |
-| `welcome` | `id`, `hasSave`, `save`, `now`, `admin` | Login OK: your session id, stored character and the server clock (ms, drives the day/night cycle) |
+| `welcome` | `id`, `name`, `look`, `hasSave`, `save`, `now`, `admin` | Entered the world: your session id, the character's name, class and save, and the server clock (ms, drives the day/night cycle) |
 | `snap` | `l` (online count), `m[]`, `p[]` | Nearby monsters `{id,n,l,x,z,ry,hp,mhp,ar,sl,st}` (`sl` slowed, `st` stunned) (elites also `el` name, `af` comma-separated affixes, `sh` shield up) and players `{id,name,x,z,ry,hp,mhp,lvl,mv,atk,dead,body,legs,weapon,helm,mdl,wk,cp}` |
 | `matk` | `mid`, `tid`, `dmg`, `k`, `x`, `z` | Monster attack: `k` = `melee`, `shot`, `nova`, `summon`, `blink` (elite teleports to `x`,`z` from `tx`,`tz`) or `explode` (Fire Enchanted death, area damage at `x`,`z`); `tid` = target session (−1 for area effects) |
 | `mdie` | `mid` | Monster died (play the death animation) |
@@ -85,7 +133,7 @@ sequenceDiagram
 | `clock` | `now` | The server clock changed (an admin set the time of day) |
 | `admwho` | `items[]` | Admin player list: `id\|name\|level\|where` |
 | `sys` | `msg` | System message (joins, leaves, boss kills, `/who`) |
-| `leave` | `id` | A player logged out |
+| `leave` | `id` | A player left the world |
 
 ## Dungeon instances
 
@@ -93,7 +141,10 @@ Each dungeon level is an instance with its own grid, monsters and id. Positions 
 
 ## Server-side validation
 
-- Names must match `^[A-Za-z][A-Za-z0-9_]{2,15}$`; passwords must be 4–64 characters.
+- Account and character names must match `^[A-Za-z][A-Za-z0-9_]{2,15}$` and are unique ignoring case; passwords must be 6–128 characters; emails must look like an address and are unique.
+- An account has at most 10 characters; `play` and `delchar` only accept the account's own characters.
+- Wrong passwords and codes are rate-limited per account and per address, as are registrations and reset emails (see [Accounts → Rate limits](../deployment/accounts.md#rate-limits)).
+- Connections that haven't logged in after 15 minutes are closed.
 - `hit`: the monster must be within 30 units of the player, and damage is capped at `100 + level × 60`.
 - `chat`: limited to 2 per second, 200 characters, with `<` and `>` stripped so it can't inject IMGUI rich-text tags.
 - `fx`: limited to 10 per second, and only whitelisted kinds are relayed.

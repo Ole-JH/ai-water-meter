@@ -5,8 +5,10 @@ namespace Shadowfall
     /// <summary>The Esc game menu: resume, settings, help and logging out.</summary>
     public partial class GameUI
     {
-        enum MenuPage { None, Main, Settings, ConfirmLogout }
+        enum MenuPage { None, Main, Settings, ConfirmLogout, Account }
         MenuPage menu = MenuPage.None;
+
+        bool logoutToSelect;
 
         /// <summary>Seconds after taking damage during which you can't log out (no escaping a fight by logging off).</summary>
         const float CombatLogoutLock = 6f;
@@ -24,6 +26,7 @@ namespace Shadowfall
                 case MenuPage.Main: DrawMenuMain(p); break;
                 case MenuPage.Settings: DrawMenuSettings(); break;
                 case MenuPage.ConfirmLogout: DrawMenuLogout(p); break;
+                case MenuPage.Account: DrawMenuAccount(); break;
             }
         }
 
@@ -32,26 +35,29 @@ namespace Shadowfall
             const float w = 340, bh = 50, gap = 12;
             int unread = Changelog.UnreadCount(p.NewsSeen);
             string news = unread > 0 ? "What's New  (" + unread + ")" : "What's New";
-            string[] items = AdminTools.IsAdmin ? new[] { "Resume", "Settings", "How to Play", news, "Admin  (F10)", "Log Out" } : new[] { "Resume", "Settings", "How to Play", news, "Log Out" };
-            float h = 80 + items.Length * (bh + gap) + 30;
+            var items = new System.Collections.Generic.List<string> { "Resume", "Settings", "How to Play", news, "Account" };
+            if (AdminTools.IsAdmin) items.Add("Admin  (F10)");
+            items.Add("Character Select");
+            items.Add("Log Out");
+            float h = 80 + items.Count * (bh + gap) + 30;
             var r = new Rect((VW - w) / 2, (VH - h) / 2, w, h);
             if (UISkin.Window(r, "Game Menu")) { menu = MenuPage.None; return; }
             float y = r.y + 64;
             var big = UISkin.V(UISkin.Button, fontSize: 19);
-            for (int i = 0; i < items.Length; i++)
+            for (int i = 0; i < items.Count; i++)
             {
                 if (UISkin.Btn(new Rect(r.x + 34, y, w - 68, bh), items[i], big))
                 {
-                    switch (i)
+                    switch (i == 3 ? "news" : items[i])
                     {
-                        case 0: menu = MenuPage.None; break;
-                        case 1: menu = MenuPage.Settings; break;
-                        case 2: menu = MenuPage.None; showHelp = true; break;
-                        case 3: menu = MenuPage.None; OpenNews(p); break;
-                        default:
-                            if (items[i] == "Log Out") menu = MenuPage.ConfirmLogout;
-                            else { menu = MenuPage.None; showAdmin = true; }
-                            break;
+                        case "Resume": menu = MenuPage.None; break;
+                        case "Settings": menu = MenuPage.Settings; break;
+                        case "How to Play": menu = MenuPage.None; showHelp = true; break;
+                        case "news": menu = MenuPage.None; OpenNews(p); break;
+                        case "Account": menu = MenuPage.Account; NetClient.I.ClearMessages(); break;
+                        case "Character Select": menu = MenuPage.ConfirmLogout; logoutToSelect = true; break;
+                        case "Log Out": menu = MenuPage.ConfirmLogout; logoutToSelect = false; break;
+                        default: menu = MenuPage.None; showAdmin = true; break;
                     }
                 }
                 y += bh + gap;
@@ -64,19 +70,21 @@ namespace Shadowfall
         {
             const float w = 420, h = 210;
             var r = new Rect((VW - w) / 2, (VH - h) / 2, w, h);
-            if (UISkin.Window(r, "Log Out")) { menu = MenuPage.Main; return; }
+            if (UISkin.Window(r, logoutToSelect ? "Character Select" : "Log Out")) { menu = MenuPage.Main; return; }
             float sinceHit = Time.time - p.LastDamagedTime;
             bool inCombat = sinceHit < CombatLogoutLock && !p.IsDead;
             string text = inCombat
                 ? "You can't log out in the middle of a fight.\n<color=#ff8866>Wait " + Mathf.CeilToInt(CombatLogoutLock - sinceHit) + "s without taking damage.</color>"
+                : logoutToSelect ? "Your character is saved on the server.\nLeave the world and pick another hero?"
                 : "Your character is saved on the server.\nLog out and return to the login screen?";
             GUI.Label(new Rect(r.x + 24, r.y + 56, w - 48, 64), text, UISkin.V(UISkin.Rich, alignment: TextAnchor.MiddleCenter, wordWrap: true));
             GUI.enabled = !inCombat;
-            if (UISkin.Btn(new Rect(r.x + 36, r.yMax - 70, 160, 46), "Log Out", UISkin.Button))
+            if (UISkin.Btn(new Rect(r.x + 36, r.yMax - 70, 160, 46), logoutToSelect ? "Leave" : "Log Out", UISkin.Button))
             {
                 menu = MenuPage.None;
                 CloseAllWindows();
-                NetClient.I.LogOut();
+                if (logoutToSelect) NetClient.I.BackToCharacterSelect();
+                else NetClient.I.LogOut();
             }
             GUI.enabled = true;
             if (UISkin.Btn(new Rect(r.xMax - 196, r.yMax - 70, 160, 46), "Cancel", UISkin.Button)) menu = MenuPage.Main;

@@ -40,7 +40,7 @@ Every time you enter the world the camera starts in the classic view.
 | ++f1++ or ++h++ | Help |
 | ++f10++ | Admin panel (admins only, see [Admin module](../deployment/admin.md)) |
 | ++enter++ or ++slash++ | Chat. `/p` party, `/w name` whisper, `/r` reply, `/invite name`, `/leave`, `/who` |
-| ++esc++ | Close the open windows; with nothing open, the **game menu** (also the cog button at the bottom right): Resume, Settings, How to Play, What's New, Log Out (and Admin for admins) |
+| ++esc++ | Close the open windows; with nothing open, the **game menu** (also the cog button at the bottom right): Resume, Settings, How to Play, What's New, Account, Character Select, Log Out (and Admin for admins) |
 | ++arrow-up++ / ++arrow-down++ in chat | Recall the messages you sent before |
 
 ## Inventory
@@ -100,4 +100,21 @@ When your life drops below 30%, the edges of the screen pulse red, faster the cl
 
 ## Logging out
 
-++esc++ → **Log Out** saves your character on the server and returns to the login screen, where you can log in again or with another character. You can't log out within 6 seconds of taking damage, so you can't escape a fight by logging off.
+++esc++ → **Character Select** saves your character and takes you back to your heroes, still logged in, to play or create another one. ++esc++ → **Log Out** saves and returns to the login screen. You can't do either within 6 seconds of taking damage, so you can't escape a fight by logging off.
+
+## Account
+
+++esc++ → **Account** changes your password, sets or removes your email address, or gives you a new recovery code. Each change needs your current password. Changing the password logs you out everywhere else.
+
+## Login screens
+
+| Screen | What's on it |
+| --- | --- |
+| **Enter the World** | Account name and password. **Create an account** and **Forgot password?** below |
+| **Create an Account** | Account name, password (twice, at least 6 characters), optional email for password resets. Afterwards you are shown your **recovery code**: keep it safe, it is shown only once |
+| **Forgot Your Password?** | **I have a code** (your recovery code, or a reset code from an email or an admin), or **Email Me a Code** if your account has an email address |
+| **Choose a New Password** | Account name, code and the new password. A link from a reset email opens this screen already filled in |
+| **Your Heroes** | Your characters with class and level: double-click or **Enter World**, **New Hero**, or **Delete Hero** (asks for your password) |
+| **Create a Hero** | Name and class (Knight, Barbarian, Mage, Rogue). The class can't be changed later |
+
+One account holds up to 10 heroes. See [Accounts & passwords](../deployment/accounts.md) for how resets work.

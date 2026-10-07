@@ -27,18 +27,39 @@ groups:
         annotations:
           summary: The game server threw errors while handling client messages
           description: "Look for 'handler error' in the server logs (Grafana: Shadowfall dashboard, Server log panel)."
+      - alert: ShadowfallLoginAttack
+        expr: sum(increase(shadowfall_logins_total{result=~"bad_password|locked"}[15m])) > 100
+        labels: { severity: warning }
+        annotations:
+          summary: Many failed logins in the last 15 minutes
+          description: Someone may be guessing passwords. Accounts lock briefly after 5 wrong tries; see the account events.
       - alert: ShadowfallSaveErrors
         expr: sum(increase(shadowfall_character_saves_total{result="error"}[10m])) > 0
         labels: { severity: critical }
         annotations:
           summary: Characters could not be saved to disk
-          description: Check free disk space and the permissions of server/data.
+          description: Check that the database is up (PostgresDown) and the game server's log.
       - alert: ShadowfallHighMemory
         expr: process_resident_memory_bytes{job="shadowfall"} > 1.5e9
         for: 10m
         labels: { severity: warning }
         annotations:
           summary: The game server uses more than 1.5 GB of memory
+  - name: database
+    rules:
+      - alert: PostgresDown
+        expr: pg_up == 0 or up{job="postgres"} == 0
+        for: 2m
+        labels: { severity: critical }
+        annotations:
+          summary: The account database is not reachable
+          description: Players can't log in or save. Check `docker compose logs postgres` in server/.
+      - alert: PostgresTooManyConnections
+        expr: sum(pg_stat_database_numbackends) / max(pg_settings_max_connections) > 0.8
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: The database is using more than 80% of its connections
   - name: host
     rules:
       - alert: HostDiskAlmostFull

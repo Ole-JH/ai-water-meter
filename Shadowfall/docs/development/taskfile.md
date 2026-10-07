@@ -5,8 +5,9 @@ Common commands are defined in `Taskfile.yml` and run with [Task](https://taskfi
 | Command | What it does |
 | --- | --- |
 | `task setup` / `task server:install` | Install server dependencies |
-| `task server:dev` | Run the server locally with auto-reload on <http://localhost:7341> (data in `server/data`) |
-| `task server:test` | End-to-end smoke test against a throwaway server |
+| `task server:dev` | Run the server locally with auto-reload on <http://localhost:7341> (accounts as JSON files in `server/data`, no database needed) |
+| `task server:test` | End-to-end smoke test against a throwaway server (accounts in files) |
+| `task server:test:pg` | The same test against PostgreSQL: a throwaway `postgres:17` container, or the server in `PG_TEST_URL` |
 | `task client:check` | Compile the C# scripts with the .NET SDK (no Unity) |
 | `task client:build` | Build the WebGL client **in Docker** into `server/public` (needs a Unity license) |
 | `task client:build:local` | Same, with a locally installed Unity editor (needs `UNITY_PATH`) |
@@ -22,7 +23,12 @@ Common commands are defined in `Taskfile.yml` and run with [Task](https://taskfi
 | `task deploy` | `client:build` (Docker) followed by `up` |
 | `task update` | `git pull`, then `deploy`: the one command to update everything when the game and server run on the same machine |
 | `task world:reset` | Delete the stored world map (after changing world generation) |
-| `task backup` | Archive `server/data` into `backups/` |
+| `task backup` | Dump the account database (`pg_dump`, if the `postgres` container runs) and archive `server/data` into `backups/` |
+| `task db:restore -- <file>` | Restore the account database from a `backups/shadowfall-db-*.sql.gz` dump (asks first; stops the game server meanwhile) |
+| `task db:psql` | SQL prompt on the account database |
+| `task account:reset -- <name>` | One-time password reset code (24 h) for an account, or for the account owning that character |
+| `task account:admin -- <account> on\|off` | Give or take admin rights |
+| `task accounts` / `task accounts -- <filter>` | List accounts with their email, characters and last login |
 | `task docs:serve` / `task docs:build` | Preview or build this documentation (local mkdocs, or Docker as a fallback). `task up` already serves it on :8000, so use `DOCS_PORT=8001 task docs:serve` alongside it |
 | `task docs:install` | Install mkdocs-material locally with pip (optional) |
 | `task art:fetch` / `task art:build` | Download the CC0 art packs into `.art-cache`; repack the models into `Assets/Resources/Art` |
@@ -41,6 +47,7 @@ Common commands are defined in `Taskfile.yml` and run with [Task](https://taskfi
 | `SHADOWFALL_PORT` | `7341` | Host port for `up` and `ps` |
 | `LICENSE_HELPER_PORT`, `LICENSE_HELPER_BIND`, `VNC_PASSWORD` | `6080`, `0.0.0.0`, random | `license:activate` |
 | `DOCS_PORT` | `8000` | `docs:serve`, and the docs container started by `up` |
+| `PG_TEST_URL` | — | `server:test:pg`: use this PostgreSQL server (it creates and drops a throwaway database) instead of starting a container |
 
 ```bash
 task deploy                     # build the client in Docker, then rebuild and restart the server

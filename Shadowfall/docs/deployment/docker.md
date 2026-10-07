@@ -1,12 +1,13 @@
 # Docker
 
-The game server is a single container. It serves the WebGL build over HTTP and runs the game on the WebSocket path `/ws`, both on the same port. `docker compose up` also starts this documentation site and the [monitoring stack](monitoring.md).
+The game server is a single container. It serves the WebGL build over HTTP and runs the game on the WebSocket path `/ws`, both on the same port. Accounts and characters are kept in a **PostgreSQL** container next to it. `docker compose up` also starts this documentation site and the [monitoring stack](monitoring.md).
 
 | Service | URL | Port variable |
 | --- | --- | --- |
 | Game | <http://localhost:7341> | `SHADOWFALL_PORT` |
 | Documentation | <http://localhost:8000> | `DOCS_PORT` (and `DOCS_BIND`, e.g. `127.0.0.1`) |
 | Grafana | <http://localhost:3000> | `GRAFANA_PORT` |
+| PostgreSQL (`postgres`) | Not published; `task db:psql` opens a SQL prompt | — |
 
 ## Run it
 
@@ -27,14 +28,29 @@ services:
     ports:
       - "${SHADOWFALL_PORT:-7341}:7341"
     volumes:
-      - ./data:/data              # accounts, characters, world map
+      - ./data:/data              # world map (and character files from older versions)
       - ./public:/app/public:ro   # the Unity WebGL build
     environment:
-      ADMINS: ${ADMINS:-}         # admin character names, e.g. from server/.env
+      ADMINS: ${ADMINS:-}         # admin account names, e.g. from server/.env
+      DATABASE_URL: postgres://shadowfall:${POSTGRES_PASSWORD:-shadowfall}@postgres:5432/shadowfall
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: shadowfall
+      POSTGRES_USER: shadowfall
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-shadowfall}   # only used when the database is first created
+    volumes:
+      - postgres-data:/var/lib/postgresql/data              # volume shadowfall-postgres-data
 ```
 
+(Shortened; the real file also sets the metrics port and the optional email and proxy settings below.)
+
 The `docs` service runs the `squidfunk/mkdocs-material` image and serves `docs/` live with only the docs and `mkdocs.yml`
-mounted, read-only, so a `git pull` shows up without a restart. To run only the game: `docker compose up -d shadowfall`.
+mounted, read-only, so a `git pull` shows up without a restart. To run only the game: `docker compose up -d shadowfall` (it starts `postgres` too, and waits until the database is ready).
 
 (The file also defines the `client-builder` and `license-helper` services, which only run on demand; see [Building the client in Docker](docker-client-build.md).)
 
@@ -60,23 +76,31 @@ SHADOWFALL_PORT=9000 task up          # or: SHADOWFALL_PORT=9000 docker compose 
 | Variable | Default (in the image) | Meaning |
 | --- | --- | --- |
 | `PORT` | `7341` | HTTP + WebSocket port inside the container |
-| `DATA_DIR` | `/data` | Where accounts, characters and `world.json` are stored |
+| `DATA_DIR` | `/data` | Where `world.json` is stored, and accounts and characters when there is no `DATABASE_URL` |
+| `DATABASE_URL` | empty (Compose: the `postgres` service) | PostgreSQL connection URL for accounts and characters. Empty = JSON files in `DATA_DIR` |
 | `PUBLIC_DIR` | `/app/public` | Folder with the WebGL build |
-| `ADMINS` | empty | Comma-separated character names with admin rights (see [Admin module](admin.md)); passed through by `docker-compose.yml` from `server/.env` |
+| `ADMINS` | empty | Comma-separated account names with admin rights (see [Admin module](admin.md)); passed through by `docker-compose.yml` from `server/.env` |
 | `ELITE_CHANCE` | `0.12` | Chance that a new open-world monster spawns as an elite (admins can change it at runtime) |
 | `DROP_PRIVILEGES` | `1` | Start as root only to `chown` the data volume, then run as the `node` user (uid/gid from `APP_UID`/`APP_GID`, default 1000) |
+| `SMTP_URL`, `MAIL_FROM`, `PUBLIC_URL` | empty | Optional password reset emails (see [Accounts & passwords](accounts.md#reset-emails-optional)) |
+| `TRUST_PROXY` | `0` | `1` behind a reverse proxy: take client addresses (for login rate limits) from `X-Forwarded-For` |
+| `METRICS_PORT` | `0` (off; Compose: `9464`) | Private Prometheus metrics port (see [Monitoring](monitoring.md)) |
 
-## Data volume
+Compose-only settings in `server/.env`:
 
-```text
-data/
-├── world.json             # walkability map uploaded by the first client
-└── characters/
-    ├── alice.json         # { name, salt, hash (scrypt), created, lastLogin, save: {...} }
-    └── bob.json
-```
+| Variable | Default | Meaning |
+| --- | --- | --- |
+| `POSTGRES_PASSWORD` | `shadowfall` | Password of the database user `shadowfall`, used by the database, the game server and postgres-exporter. Only applied when the database is first created; to change it later see [Accounts → Database password](accounts.md#password). Letters and digits only |
 
-Passwords are stored as salted **scrypt** hashes. Back up the folder with `task backup`.
+## Data
+
+| Where | What |
+| --- | --- |
+| Volume `shadowfall-postgres-data` | The PostgreSQL database: accounts, characters, reset codes, account events |
+| `server/data` (mounted at `/data`) | `world.json` (the walkability map uploaded by the first client), and `characters/*.json` from versions before accounts, which are imported once and then kept as a backup |
+
+Passwords are stored as salted **scrypt** hashes. `task backup` dumps the database and archives `server/data`; see
+[Accounts & passwords](accounts.md#backups-and-restore).
 
 ## Health check
 
@@ -101,4 +125,8 @@ rsync -av --exclude node_modules --exclude data server/ me@myhost:shadowfall/
 cd shadowfall && docker compose up -d --build
 ```
 
-For anything public-facing, put it behind HTTPS: see [HTTPS & reverse proxy](reverse-proxy.md).
+To move an existing installation, accounts have to come along: they are in the database volume, not in `data/`. Run
+`task backup` on the old host, copy `backups/` over, and on the new one run `task up` followed by
+`task db:restore -- backups/shadowfall-db-<stamp>.sql.gz`.
+
+For anything public-facing, put it behind HTTPS: see [HTTPS & reverse proxy](reverse-proxy.md). Set a real `POSTGRES_PASSWORD` in `server/.env` before the first `task up`.

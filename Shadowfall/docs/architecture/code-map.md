@@ -40,7 +40,7 @@
 | `Core/Exploration.cs` | Fog of war (revealed tiles, saved with the character) and the client side of the admin module (`AdminTools`) |
 | `UI/Minimap.cs` | Round minimap and fogged world map rendering |
 | `UI/GameUI.Admin.cs` | Admin panel (F10) |
-| `UI/GameUI.Menu.cs` | Esc game menu: settings (graphics, UI scale, FPS, loot labels, volume), What's New, admin, log out |
+| `UI/GameUI.Menu.cs` | Esc game menu: settings (graphics, UI scale, FPS, loot labels, volume), What's New, account, admin, character select, log out |
 | `UI/GameUI.News.cs` | *What's New* window; unread entries are marked NEW |
 | `UI/GameUI.Emotes.cs` | Emote menu (++g++) and the `/e` list |
 | `Items/VendorStock.cs` | What each vendor sells, prices and restocking |
@@ -50,15 +50,16 @@
 | `Progression/SkillSet.cs` | RuneScape-style professions and XP curve |
 | `Progression/Quests.cs` | Quest definitions (chains per NPC) and quest log |
 | `Progression/Changelog.cs` | The in-game *What's New* entries (newest first) |
-| `Net/NetClient.cs` | Login flow, message dispatch, state and save sending |
+| `Net/NetClient.cs` | Connection and account flow (log in, register, password resets, character select), message dispatch, state and save sending |
 | `Net/NetClient.Trade.cs` | Player trading: escrow, offers, accept/cancel |
-| `Net/NetMessages.cs` | All wire message and save-data classes |
+| `Net/NetMessages.cs` | All wire message and save-data classes (`AuthMsg` for every account request) |
 | `Net/WebSocketConnection.cs` | Polling WebSocket (`.jslib` in WebGL, `ClientWebSocket` elsewhere) |
 | `Net/RemotePlayer.cs` | Other players: interpolation, appearance, animation |
 | `UI/UISkin.cs` | Fantasy UI skin: panels, buttons, bars, fonts, icons, drawing helpers |
 | `UI/Speech.cs` | Speech bubbles (chat and NPC chatter) |
 | `UI/GameUI.cs` | HUD, windows, dialogs, vendor, crafting, chat, minimap, tooltips |
-| `UI/GameUI.Login.cs` | Login screen |
+| `UI/GameUI.Login.cs` | Login screens: log in, create account, forgot password, reset with a code (also from a `?reset=CODE&user=NAME` link), character select with delete, create hero |
+| `UI/GameUI.Account.cs` | Esc → **Account** (change password, email, new recovery code) and the recovery code popup |
 | `UI/GameUI.Companions.cs` | Beastmaster Orla's companion shop and the companion frame |
 | `UI/GameUI.Items.cs` | Talent window, buff icons, gem sockets, stash and trade windows |
 | `UI/LoginShowcase.cs` | Live, lit hero preview in the village square behind the login screen |
@@ -67,12 +68,15 @@
 
 | File | Responsibility |
 | --- | --- |
-| `server.js` | Static file host, WebSocket sessions, accounts, world grid and A*, monster AI (slows, stuns, vanished heroes), elites, parties, trades, dungeon instances, admin commands, snapshots, persistence |
+| `server.js` | Static file host, WebSocket sessions, account and character messages, world grid and A*, monster AI (slows, stuns, vanished heroes), elites, parties, trades, dungeon instances, admin commands, snapshots, saving |
+| `store.js` | Account and character storage: `PgStore` (PostgreSQL, `DATABASE_URL`, schema migrations) and `FileStore` (JSON files in `DATA_DIR`), with the one-time import of old character files |
+| `accounts.js` | Password and recovery code hashing (scrypt), reset codes, rate limiter, optional reset emails (nodemailer, `SMTP_URL`) |
+| `admin-cli.js` | Command-line account admin: `reset-code`, `admin on\|off`, `accounts` ([Accounts & passwords](../deployment/accounts.md#admin-command-line)) |
 | `content.js` | Monster stats, spawner table, dungeons (`DUNGEONS`), global `BALANCE`, dungeon `DIFFICULTIES`, town safe-zone rectangle, spawn point |
 | `dungeon.js` | Dungeon level generators: rooms and corridors (`generate`) and natural caverns (`generateCaves`), with start, stairs, boss, chests and packs |
 | `metrics.js` | Dependency-free Prometheus metrics (counters, histograms, scrape-time gauges, process metrics), served on `METRICS_PORT` |
-| `test/smoke.js` | End-to-end test with fake clients |
-| `Dockerfile`, `docker-compose.yml` | Container build and run, plus the monitoring stack |
+| `test/smoke.js` | End-to-end test with fake clients, against files or PostgreSQL (`PG_TEST_URL`) |
+| `Dockerfile`, `docker-compose.yml` | Container build and run, the PostgreSQL database, plus the monitoring stack |
 | `monitoring/` | Prometheus (scrape config, alert rules), Alertmanager, Loki, Alloy and Grafana provisioning and dashboards ([Monitoring](../deployment/monitoring.md)) |
 
 ## Tools (`tools/`)

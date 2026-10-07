@@ -11,14 +11,44 @@ services:
       - ./data:/data         # accounts, characters and the world map
       - ./public:/app/public:ro   # the Unity WebGL build
     environment:
-      # Comma-separated character names with admin rights (admin panel: F10 in game, or /a in chat).
+      # Comma-separated account names with admin rights (admin panel: F10 in game, or /a in chat).
       # Set it in server/.env, e.g.  ADMINS=Kissmypiss
       ADMINS: ${ADMINS:-}
       # Prometheus metrics on a private port (only reachable from the monitoring containers).
       METRICS_PORT: "9464"
+      # Accounts and characters (see docs/deployment/accounts.md). Characters in ./data from older versions are
+      # imported on the first start.
+      DATABASE_URL: postgres://shadowfall:${POSTGRES_PASSWORD:-shadowfall}@postgres:5432/shadowfall
+      # Optional: password reset emails, e.g. SMTP_URL=smtps://you%40gmail.com:app-password@smtp.gmail.com:465
+      SMTP_URL: ${SMTP_URL:-}
+      MAIL_FROM: ${MAIL_FROM:-}
+      PUBLIC_URL: ${PUBLIC_URL:-}       # the game's address, for the link in reset emails
+      TRUST_PROXY: ${TRUST_PROXY:-0}    # 1 behind a reverse proxy (client addresses for login rate limits)
     expose:
       - "9464"
+    depends_on:
+      postgres:
+        condition: service_healthy
     stop_grace_period: 10s
+
+  # The account database. Not published to the host; `task db:psql` opens a prompt, `task backup` dumps it.
+  postgres:
+    image: postgres:17
+    container_name: shadowfall-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: shadowfall
+      POSTGRES_USER: shadowfall
+      # Only used when the database is first created. Set it in server/.env (letters and digits).
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-shadowfall}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U shadowfall -d shadowfall"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    stop_grace_period: 30s
 
   # The documentation site on http://localhost:8000 (DOCS_PORT). Serves ../docs live: a git pull shows up
   # without restarting. Only the docs and mkdocs.yml are mounted, read-only.
@@ -100,6 +130,14 @@ services:
       - ./monitoring/alloy/config.alloy:/etc/alloy/config.alloy:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
 
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:v0.20.1
+    container_name: shadowfall-postgres-exporter
+    restart: unless-stopped
+    depends_on: [postgres]
+    environment:
+      DATA_SOURCE_NAME: postgresql://shadowfall:${POSTGRES_PASSWORD:-shadowfall}@postgres:5432/shadowfall?sslmode=disable
+
   node-exporter:
     image: prom/node-exporter:v1
     container_name: shadowfall-node-exporter
@@ -169,6 +207,8 @@ services:
 volumes:
   unity-library:
     name: shadowfall-unity-library
+  postgres-data:
+    name: shadowfall-postgres-data
   prometheus-data:
     name: shadowfall-prometheus-data
   alertmanager-data:

@@ -6,16 +6,23 @@ Admins can see and change everything that is normally hidden or random: the whol
 
 Either:
 
-- list character names in the `ADMINS` environment variable (comma-separated, case-insensitive). With Docker, put it in `server/.env` (git-ignored):
+- list **account** names in the `ADMINS` environment variable (comma-separated, case-insensitive); all of the account's heroes
+  are admins. Accounts imported from old character files are named like the old character, so an existing `ADMINS` setting
+  keeps working. With Docker, put it in `server/.env` (git-ignored):
 
     ```bash
     ADMINS=Kissmypiss,SomeFriend
     ```
 
     then `task up` (or `task update`). Or
-- add `"admin": true` to the character's file in `server/data/characters/<name>.json` while the server is stopped.
+- give the account admin rights in the database: `task account:admin -- <account> on` (`off` takes them away). It takes effect
+  at the player's next login. Accounts imported from old character files keep an `"admin": true` flag the file had.
 
-The server tells the client at login. The server checks every server-side command again, so a modified client can't use them.
+!!! note "Only account names count"
+    Character names never grant admin rights: account and character names are separate, so anyone could otherwise register an
+    account named like an admin's hero.
+
+The server tells the client when the hero enters the world. The server checks every server-side command again, so a modified client can't use them.
 
 ## In game
 
@@ -47,6 +54,7 @@ The same server-side commands work from chat with `/a` (or `/admin`):
 | `announce <text>` | `/a announce Server restart in 5 minutes` |
 | `kick <name>` | `/a kick Bob` |
 | `who` | `/a who` |
+| `resetpw <account or character>` | `/a resetpw Alice`: a one-time password reset code for that account, valid 24 hours (see [Accounts & passwords](accounts.md#resetting-a-password)) |
 
 `/a` on its own lists them. Admin commands are written to the server log.
 

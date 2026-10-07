@@ -13,18 +13,22 @@ flowchart TB
   end
   WS <-- "JSON over WebSocket /ws" --> SRV
   subgraph Server["server.js (Node 20)"]
-    SRV[Sessions & auth] --> MON[Monster AI<br/>A* on uploaded grid]
-    SRV --> PERSIST[(characters/*.json<br/>world.json)]
+    SRV[Sessions & accounts] --> MON[Monster AI<br/>A* on uploaded grid]
+    SRV --> STORE[store.js]
+    SRV --> WORLD[(data/world.json)]
     MON --> SNAP[10 Hz snapshots<br/>interest-managed]
   end
+  STORE --> PG[(PostgreSQL<br/>accounts, characters)]
+  STORE -. "no DATABASE_URL" .-> FILES[(data/accounts, data/characters<br/>JSON files)]
 ```
 
 ## Who owns what
 
 | Concern | Owner | Notes |
 | --- | --- | --- |
-| Accounts & passwords | Server | scrypt hashes; logging in again elsewhere kicks the old session |
-| Character data | Server stores it | Snapshot sent by the client every 20 s and at key moments |
+| Accounts & passwords | Server | scrypt hashes, recovery and reset codes, rate limits (`accounts.js`); logging in again elsewhere kicks the old session. See [Accounts & passwords](../deployment/accounts.md) |
+| Storage | Server | `store.js`: PostgreSQL when `DATABASE_URL` is set (Docker), JSON files in `DATA_DIR` otherwise; both import the old one-file-per-character format |
+| Character data | Server stores it | Snapshot sent by the client every 20 s and at key moments, plus every 60 s and on logout by the server |
 | Monster spawning, AI, movement, health, death | **Server** | 10 Hz tick; `content.js` defines stats and spawns |
 | Monster appearance | Client | `EnemyDef` in `Enemy.cs`, matched by name |
 | Damage to monsters | Client predicts, server applies | `hit` messages are capped and range-checked |

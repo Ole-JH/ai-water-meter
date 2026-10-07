@@ -53,11 +53,24 @@ tasks:
       - npm run dev
 
   server:test:
-    desc: Run the server end-to-end smoke test (spins up a throwaway server)
+    desc: Run the server end-to-end smoke test (spins up a throwaway server, accounts in files)
     dir: "{{.SERVER_DIR}}"
     deps: [server:install]
     cmds:
       - npm test
+
+  server:test:pg:
+    desc: The same smoke test against PostgreSQL (a throwaway postgres:17 container, or PG_TEST_URL)
+    dir: "{{.SERVER_DIR}}"
+    deps: [server:install]
+    cmds:
+      - |
+        if [ -n "$PG_TEST_URL" ]; then npm run test:pg; exit $?; fi
+        docker run -d --rm --name shadowfall-test-pg -e POSTGRES_PASSWORD=postgres -p 127.0.0.1:55432:5432 postgres:17 >/dev/null
+        trap 'docker stop shadowfall-test-pg >/dev/null' EXIT
+        until docker exec shadowfall-test-pg pg_isready -U postgres >/dev/null 2>&1; do sleep 1; done
+        sleep 1
+        PG_TEST_URL=postgres://postgres:postgres@127.0.0.1:55432/postgres npm run test:pg
 
   # ---------------------------------------------------------------- client (Unity)
 
@@ -201,14 +214,14 @@ tasks:
     env:
       GRAFANA_PORT: "{{.GRAFANA_PORT}}"
     cmds:
-      - docker compose up -d prometheus alertmanager grafana loki alloy node-exporter cadvisor
+      - docker compose up -d prometheus alertmanager grafana loki alloy node-exporter cadvisor postgres-exporter
       - echo "Grafana on http://localhost:{{.GRAFANA_PORT}} (first login admin / admin unless GRAFANA_ADMIN_PASSWORD is set)"
 
   monitoring:down:
     desc: Stop the monitoring stack (the game keeps running; collected data is kept)
     dir: "{{.SERVER_DIR}}"
     cmds:
-      - docker compose stop prometheus alertmanager grafana loki alloy node-exporter cadvisor
+      - docker compose stop prometheus alertmanager grafana loki alloy node-exporter cadvisor postgres-exporter
 
   monitoring:reload:
     desc: Reload Prometheus and Alertmanager after editing server/monitoring (no restart needed)
@@ -239,14 +252,58 @@ tasks:
       - echo "World map removed. Restart the server; the next client to log in uploads the new map."
 
   backup:
-    desc: Archive server/data (accounts, characters, world) into backups/
+    desc: Back up the account database (pg_dump) and server/data (world map, old character files) into backups/
     vars:
       STAMP:
         sh: date +%Y%m%d-%H%M%S
     cmds:
       - mkdir -p backups
       - tar -czf backups/shadowfall-data-{{.STAMP}}.tar.gz -C {{.SERVER_DIR}} data
+      - |
+        if (cd {{.SERVER_DIR}} && docker compose ps --status running --services 2>/dev/null | grep -qx postgres); then
+          (cd {{.SERVER_DIR}} && docker compose exec -T postgres pg_dump -U shadowfall --clean --if-exists shadowfall) | gzip > backups/shadowfall-db-{{.STAMP}}.sql.gz
+          echo "Wrote backups/shadowfall-db-{{.STAMP}}.sql.gz"
+        else
+          echo "The postgres container isn't running: only server/data was backed up."
+        fi
       - echo "Wrote backups/shadowfall-data-{{.STAMP}}.tar.gz"
+
+  db:restore:
+    desc: "Restore the account database from a backup: task db:restore -- backups/shadowfall-db-<stamp>.sql.gz"
+    dir: "{{.SERVER_DIR}}"
+    prompt: This replaces every account and character in the database with the backup. Continue?
+    cmds:
+      - docker compose stop shadowfall
+      - gunzip -c "{{.USER_WORKING_DIR}}/{{.CLI_ARGS}}" | docker compose exec -T postgres psql -q -U shadowfall shadowfall
+      - docker compose start shadowfall
+      - echo "Restored {{.CLI_ARGS}}."
+
+  db:psql:
+    desc: Open a SQL prompt on the account database
+    dir: "{{.SERVER_DIR}}"
+    interactive: true
+    cmds:
+      - docker compose exec postgres psql -U shadowfall shadowfall
+
+  # ---------------------------------------------------------------- accounts
+
+  account:reset:
+    desc: "One-time password reset code for a player: task account:reset -- <account or character name>"
+    dir: "{{.SERVER_DIR}}"
+    cmds:
+      - docker compose exec shadowfall node admin-cli.js reset-code {{.CLI_ARGS}}
+
+  account:admin:
+    desc: "Give or take admin rights: task account:admin -- <account> on|off"
+    dir: "{{.SERVER_DIR}}"
+    cmds:
+      - docker compose exec shadowfall node admin-cli.js admin {{.CLI_ARGS}}
+
+  accounts:
+    desc: "List accounts and their characters (optional filter: task accounts -- ali)"
+    dir: "{{.SERVER_DIR}}"
+    cmds:
+      - docker compose exec shadowfall node admin-cli.js accounts {{.CLI_ARGS}}
 
   # ---------------------------------------------------------------- docs
 

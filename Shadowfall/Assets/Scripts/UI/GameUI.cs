@@ -74,6 +74,7 @@ namespace Shadowfall
                 loginLook = PlayerPrefs.GetString("sf_look", "Knight");
             }
             catch (System.Exception) { }
+            ReadResetLink();
             cursorDefault = Resources.Load<Texture2D>("UI/Cursors/cursorGauntlet_bronze");
             cursorAttack = Resources.Load<Texture2D>("UI/Cursors/cursorSword_gold");
             cursorInteract = Resources.Load<Texture2D>("UI/Cursors/cursorHand_beige");
@@ -261,6 +262,7 @@ namespace Shadowfall
             if (p.IsDead) DrawDeath(p);
             if (menu != MenuPage.None) DrawGameMenu(p);
 
+            DrawRecoveryCode();
             DrawBanner();
             if (GameSettings.ShowFps && Event.current.type == EventType.Repaint)
             {

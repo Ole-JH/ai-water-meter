@@ -14,8 +14,9 @@ The world is generated from code and dressed with free, openly licensed low-poly
 flowchart LR
     B["Browser<br/>(Unity WebGL client)"] -- "HTTP: game files" --> S
     B <-- "WebSocket /ws: login, snapshots,<br/>combat, chat, saves" --> S
-    subgraph Docker container
-      S["Node.js server<br/>server.js"] --> D[("/data volume<br/>accounts · characters · world")]
+    subgraph Docker Compose
+      S["Node.js server<br/>server.js"] --> D[("/data volume<br/>world map")]
+      S --> P[("PostgreSQL<br/>accounts · characters")]
     end
 ```
 

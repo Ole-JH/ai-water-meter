@@ -12,13 +12,16 @@ const { WebSocketServer } = require("ws");
 const { MONSTERS, SPAWNERS, TOWN, SPAWN, DUNGEONS, BALANCE, DIFFICULTIES, EMOTES, map: designToWorld } = require("./content");
 const dungeonGen = require("./dungeon");
 const metrics = require("./metrics");
+const { createStore, Taken } = require("./store");
+const A = require("./accounts");
 
 const PORT = parseInt(process.env.PORT || "7341", 10);
+// Behind a reverse proxy, take the client's address from X-Forwarded-For (for login rate limits).
+const TRUST_PROXY = process.env.TRUST_PROXY === "1";
 const DATA_DIR = path.resolve(process.env.DATA_DIR || path.join(__dirname, "data"));
 const PUBLIC_DIR = path.resolve(process.env.PUBLIC_DIR || path.join(__dirname, "public"));
-const CHAR_DIR = path.join(DATA_DIR, "characters");
 const WORLD_FILE = path.join(DATA_DIR, "world.json");
-const PROTOCOL_VERSION = 4;
+const PROTOCOL_VERSION = 5;
 const TICK = 0.1; // seconds
 const HERO_MODELS = ["Knight", "Barbarian", "Mage", "Rogue"]; // must match CharacterLook.HeroModels
 const MONSTER_VIEW = 45;
@@ -28,7 +31,7 @@ const PLAYER_VIEW = 60;
 // folder (which Docker creates as root), then drops to an unprivileged user before serving.
 if (process.env.DROP_PRIVILEGES === "1" && process.getuid && process.getuid() === 0) {
   const uid = parseInt(process.env.APP_UID || "1000", 10), gid = parseInt(process.env.APP_GID || "1000", 10);
-  fs.mkdirSync(CHAR_DIR, { recursive: true });
+  fs.mkdirSync(DATA_DIR, { recursive: true });
   const chownTree = (p) => {
     fs.chownSync(p, uid, gid);
     if (fs.statSync(p).isDirectory()) for (const f of fs.readdirSync(p)) chownTree(path.join(p, f));
@@ -38,7 +41,7 @@ if (process.env.DROP_PRIVILEGES === "1" && process.getuid && process.getuid() ==
   process.setuid(uid);
 }
 
-fs.mkdirSync(CHAR_DIR, { recursive: true });
+fs.mkdirSync(DATA_DIR, { recursive: true });
 
 const log = (...a) => console.log(new Date().toISOString(), ...a);
 const rand = (a, b) => a + Math.random() * (b - a);
@@ -521,28 +524,27 @@ function updateSpawners(t) {
 // Accounts & characters
 // =====================================================================================
 
-const charFile = (name) => path.join(CHAR_DIR, name.toLowerCase() + ".json");
+// Accounts and characters live in PostgreSQL (DATABASE_URL) or, without one, in JSON files under DATA_DIR.
+const store = createStore({ databaseUrl: process.env.DATABASE_URL || "", dataDir: DATA_DIR, log });
+const mailer = A.createMailer({ smtpUrl: process.env.SMTP_URL || "", from: process.env.MAIL_FROM || "", publicUrl: process.env.PUBLIC_URL || "", log });
+const MAX_CHARACTERS = 10;
+const RESET_MINUTES = 30;
+const ADMIN_RESET_HOURS = 24;
+// Wrong passwords: 5 per account in 10 minutes locks it for 2 minutes; 25 failures from one address in 15 minutes
+// block that address for 15 minutes. Registrations: 10 per address per hour.
+const accountLimit = new A.Limiter({ max: 5, windowMs: 10 * 60000, lockMs: 2 * 60000 });
+const ipLimit = new A.Limiter({ max: 25, windowMs: 15 * 60000, lockMs: 15 * 60000 });
+const registerLimit = new A.Limiter({ max: 10, windowMs: 60 * 60000, lockMs: 60 * 60000 });
+const forgotLimit = new A.Limiter({ max: 5, windowMs: 60 * 60000, lockMs: 60 * 60000 });
+setInterval(() => { for (const l of [accountLimit, ipLimit, registerLimit, forgotLimit]) l.prune(); }, 5 * 60000);
 
-function loadAccount(name) {
-  try { return JSON.parse(fs.readFileSync(charFile(name), "utf8")); } catch { return null; }
-}
-
-function saveAccount(acc) {
-  const file = charFile(acc.name), tmp = file + ".tmp";
-  fs.writeFile(tmp, JSON.stringify(acc), (err) => {
-    if (err) { M.saves.inc({ result: "error" }); return log("save failed", acc.name, err.message); }
-    fs.rename(tmp, file, (e) => {
-      M.saves.inc({ result: e ? "error" : "ok" });
-      if (e) log("save rename failed", acc.name, e.message);
-    });
-  });
-}
-
-const hashPassword = (pass, salt) => crypto.scryptSync(pass, salt, 32).toString("hex");
-
-function checkPassword(acc, pass) {
-  const a = Buffer.from(hashPassword(pass, acc.salt), "hex"), b = Buffer.from(acc.hash, "hex");
-  return a.length === b.length && crypto.timingSafeEqual(a, b);
+/** Saves a character's progress (the client sends it; position comes from the server). */
+function saveCharacter(s) {
+  if (!s.char || !s.char.save) return Promise.resolve();
+  [s.char.save.x, s.char.save.z] = overworldPos(s);
+  return store.saveCharacter(s.char.id, s.char.save).then(
+    () => M.saves.inc({ result: "ok" }),
+    (e) => { M.saves.inc({ result: "error" }); log("save failed", s.char.name, e.message); });
 }
 
 // =====================================================================================
@@ -569,40 +571,36 @@ function fail(s, err) {
   setTimeout(() => s.ws.close(), 100);
 }
 
+/** The character is chosen and the world is in sync: put them in the world. */
 function completeLogin(s) {
-  const { name, pass } = s.pendingLogin;
-  s.pendingLogin = null;
-
-  let acc = loadAccount(name);
-  if (acc) {
-    if (!checkPassword(acc, pass)) { M.logins.inc({ result: "bad_password" }); return fail(s, "Wrong password for that character."); }
-    M.logins.inc({ result: "ok" });
-  } else {
-    const salt = crypto.randomBytes(16).toString("hex");
-    acc = { name, salt, hash: hashPassword(pass, salt), created: new Date().toISOString(), save: null };
-    saveAccount(acc);
-    M.logins.inc({ result: "new" });
-    log(`New character: ${name}`);
-  }
-
-  for (const other of sessions.values())
-    if (other !== s && other.account && other.account.name.toLowerCase() === name.toLowerCase()) {
-      fail(other, "You logged in from another location.");
-      other.inWorld = false;
-    }
-
-  s.account = acc;
-  s.admin = isAdmin(acc);
-  if (s.admin) log(`${acc.name} is an admin`);
-  s.name = acc.name;
+  const ch = s.char;
+  s.pendingPlay = false;
+  s.admin = isAdmin(s);
+  if (s.admin) log(`${ch.name} (${s.acc.username}) is an admin`);
+  s.name = ch.name;
   s.inWorld = true;
-  s.lvl = acc.save && acc.save.level ? acc.save.level : 1;
-  s.x = acc.save && acc.save.x ? acc.save.x : SPAWN.x;
-  s.z = acc.save && acc.save.z ? acc.save.z : SPAWN.z;
-  acc.lastLogin = new Date().toISOString();
-  safeSend(s, JSON.stringify({ t: "welcome", id: s.id, hasSave: !!acc.save, save: acc.save || undefined, now: worldClock(), admin: !!s.admin }));
-  broadcast({ t: "sys", msg: `${acc.name} has entered the world.` });
-  log(`${acc.name} logged in (${sessions.size} connected)`);
+  s.dead = false;
+  s.inst = 0;
+  s.lvl = ch.save && ch.save.level ? ch.save.level : 1;
+  s.x = ch.save && ch.save.x ? ch.save.x : SPAWN.x;
+  s.z = ch.save && ch.save.z ? ch.save.z : SPAWN.z;
+  safeSend(s, JSON.stringify({ t: "welcome", id: s.id, name: ch.name, look: ch.look, hasSave: !!ch.save, save: ch.save || undefined, now: worldClock(), admin: !!s.admin }));
+  broadcast({ t: "sys", msg: `${ch.name} has entered the world.` });
+  log(`${ch.name} entered the world (${sessions.size} connected)`);
+}
+
+/** Takes a hero out of the world (logging out, or back to character select). */
+function leaveWorld(s, why) {
+  if (!s.inWorld) return Promise.resolve();
+  if (partyOf(s)) leaveParty(s, why === "select" ? "has left the world." : "has gone offline.");
+  if (trades.has(s.id)) closeTrade(trades.get(s.id), `${s.name} has left.`);
+  const saved = saveCharacter(s);
+  s.inWorld = false;
+  s.inst = 0;
+  broadcast({ t: "sys", msg: `${s.name} has left the world.` });
+  broadcast({ t: "leave", id: s.id });
+  log(`${s.name} left the world (${sessions.size} connected)`);
+  return saved;
 }
 
 // =====================================================================================
@@ -632,7 +630,8 @@ const M = {
   msgOut: metrics.counter("shadowfall_messages_sent_total", "Messages sent to clients."),
   bytesOut: metrics.counter("shadowfall_sent_bytes_total", "Bytes sent to clients."),
   handlerErrors: metrics.counter("shadowfall_handler_errors_total", "Exceptions thrown while handling a client message, by type."),
-  logins: metrics.counter("shadowfall_logins_total", "Login attempts, by result (ok, new, bad_password, rejected)."),
+  logins: metrics.counter("shadowfall_logins_total", "Login attempts, by result (ok, new = account created, bad_password, locked)."),
+  resets: metrics.counter("shadowfall_password_resets_total", "Password resets by method: recovery (recovery code), code (an email or admin code used), admin (codes issued in game), change (changed in game)."),
   kills: metrics.counter("shadowfall_monsters_killed_total", "Monsters killed, by monster type and whether it was an elite."),
   bossKills: metrics.counter("shadowfall_bosses_killed_total", "Bosses killed, by boss."),
   deaths: metrics.counter("shadowfall_player_deaths_total", "Player deaths."),
@@ -649,7 +648,7 @@ M.bytesIn.inc(undefined, 0);
 M.bytesOut.inc(undefined, 0);
 M.msgOut.inc(undefined, 0);
 for (const result of ["ok", "error"]) M.saves.inc({ result }, 0);
-for (const result of ["ok", "new", "bad_password"]) M.logins.inc({ result }, 0);
+for (const result of ["ok", "new", "bad_password", "locked"]) M.logins.inc({ result }, 0);
 const inWorld = () => [...sessions.values()].filter((o) => o.inWorld);
 metrics.gauge("shadowfall_connections", "Open WebSocket connections (including the login screen).", () => sessions.size);
 metrics.gauge("shadowfall_players_online", "Players in the world.", () => inWorld().length);
@@ -678,14 +677,11 @@ metrics.gauge("shadowfall_dungeon_instances", "Open dungeon instances, by dungeo
 metrics.gauge("shadowfall_parties", "Active parties.", () => parties.size);
 metrics.gauge("shadowfall_trades_open", "Trades in progress.", () => trades.size / 2);
 metrics.gauge("shadowfall_world_loaded", "1 when a world map is loaded.", () => (world ? 1 : 0));
-let accountCount = 0, accountCountAt = 0;
-metrics.gauge("shadowfall_accounts", "Characters on disk.", () => {
-  if (Date.now() - accountCountAt > 60000) {
-    accountCountAt = Date.now();
-    try { accountCount = fs.readdirSync(CHAR_DIR).filter((f) => f.endsWith(".json")).length; } catch { accountCount = 0; }
-  }
-  return accountCount;
-});
+let counts = { accounts: 0, characters: 0 };
+const refreshCounts = () => store.counts().then((c) => { counts = c; }, () => {});
+metrics.gauge("shadowfall_accounts", "Player accounts.", () => counts.accounts);
+metrics.gauge("shadowfall_characters", "Characters (not deleted).", () => counts.characters);
+metrics.gauge("shadowfall_storage_info", "Where accounts are stored.", () => [[{ kind: store.kind }, 1]]);
 const TRADE_SLOTS = 12, TRADE_RANGE = 10;
 const canTrade = (s, o) => !s.dead && !o.dead && (s.inst || 0) === (o.inst || 0) && dist(s.x, s.z, o.x, o.z) <= TRADE_RANGE;
 
@@ -1037,7 +1033,9 @@ const dungeonHandlers = {
 // =====================================================================================
 
 const ADMINS = new Set(String(process.env.ADMINS || "").split(",").map((n) => n.trim().toLowerCase()).filter(Boolean));
-const isAdmin = (acc) => !!acc && (acc.admin === true || ADMINS.has(String(acc.name).toLowerCase()));
+// An admin account, or ADMINS naming the account. Only account names count: anyone could register an account
+// called like someone else's character, so character names must never grant rights.
+const isAdmin = (s) => !!(s.acc && (s.acc.admin || ADMINS.has(s.acc.username.toLowerCase())));
 
 const CYCLE_MS = 48 * 60000; // must match DayNight.CycleMinutes on the client
 let clockOffset = 0;
@@ -1056,7 +1054,24 @@ function teleport(s, x, z) {
 }
 
 /** Runs one admin command. Returns a short result line for the admin. */
-const ADMIN_COMMANDS = new Set(["tp", "tpto", "summon", "dungeon", "regen", "spawn", "killall", "time", "elites", "announce", "kick", "who"]);
+/** A one-time reset code for a locked-out player (by account or character name), valid for a day. */
+async function adminResetPassword(s, name) {
+  if (!name) return "Usage: resetpw <account or character name>";
+  let acc = await store.findAccount(name);
+  if (!acc) {
+    const ch = await store.findCharacter(name);
+    if (ch) acc = await store.findAccountById(ch.accountId);
+  }
+  if (!acc) return `No account or character called ${name}.`;
+  const code = A.randomCode(2);
+  await store.createResetToken(acc.id, A.tokenHash(code), "admin", new Date(Date.now() + ADMIN_RESET_HOURS * 3600000));
+  store.logEvent(acc.id, acc.username, `admin_reset_code:${s.name || "console"}`, s.ip);
+  M.resets.inc({ method: "admin" });
+  return `Reset code for account ${acc.username}: ${code}  (works once, for ${ADMIN_RESET_HOURS} hours). ` +
+    `They choose "Forgot password?" > "I have a code" and enter it with their account name.`;
+}
+
+const ADMIN_COMMANDS = new Set(["tp", "tpto", "summon", "dungeon", "regen", "spawn", "killall", "time", "elites", "announce", "kick", "who", "resetpw"]);
 
 function runAdmin(s, c, a) {
   a = a || {};
@@ -1158,6 +1173,7 @@ function runAdmin(s, c, a) {
       fail(o, `You were kicked by ${s.name}.`);
       return `Kicked ${o.name}.`;
     }
+    case "resetpw": return adminResetPassword(s, String(a.name || ""));
     case "who": {
       const list = [...sessions.values()].filter((o) => o.inWorld).map((o) => {
         const inst = o.inst && instances.get(o.inst);
@@ -1187,47 +1203,312 @@ function adminFromChat(s, line) {
     case "announce": return runAdmin(s, "announce", { text: rest });
     case "kick": return runAdmin(s, "kick", { name: w[0] });
     case "who": return runAdmin(s, "who");
-    default: return "Admin commands: tp x z, tpto name, summon name, dungeon <id|0-3> [depth], regen, spawn <type> [level] [count] [elite], killall [radius], time dawn|day|dusk|night, elites <0-1>, announce text, kick name, who";
+    case "resetpw": return runAdmin(s, "resetpw", { name: w[0] });
+    default: return "Admin commands: tp x z, tpto name, summon name, dungeon <id|0-3> [depth], regen, spawn <type> [level] [count] [elite], killall [radius], time dawn|day|dusk|night, elites <0-1>, announce text, kick name, who, resetpw <account or character>";
   }
 }
 
+// =====================================================================================
+// Accounts: register, log in, recover, characters. Errors are "autherr" (the socket stays open so the
+// player can try again); "error" is only used for things that end the connection.
+// =====================================================================================
+
+const authErr = (s, err) => safeSend(s, JSON.stringify({ t: "autherr", err }));
+const authOk = (s, msg) => safeSend(s, JSON.stringify({ t: "authok", msg }));
+
+async function sendAccount(s, extra) {
+  const chars = await store.listCharacters(s.acc.id);
+  safeSend(s, JSON.stringify({
+    t: "account", user: s.acc.username, email: s.acc.email || "", mail: !!mailer,
+    chars: chars.map((c) => ({ name: c.name, look: c.look, lvl: c.level })), ...extra,
+  }));
+}
+
+/** Logs out every other connection of this account (a new login, or a password change). */
+function kickOtherSessions(s, why) {
+  for (const o of sessions.values())
+    if (o !== s && o.acc && String(o.acc.id) === String(s.acc.id)) {
+      leaveWorld(o, "offline");
+      o.acc = null;
+      fail(o, why);
+    }
+}
+
+/** A successful login, registration or reset: the session now belongs to the account. */
+async function signedIn(s, acc, event, extra = {}) {
+  accountLimit.clear(acc.username.toLowerCase());
+  s.acc = acc;
+  kickOtherSessions(s, "You logged in from another location.");
+  store.updateAccount(acc.id, { lastLogin: new Date() }).catch(() => {});
+  store.logEvent(acc.id, acc.username, event, s.ip);
+  // Accounts from before recovery codes (imported characters) get one now.
+  if (!acc.recoveryHash && !extra.rc) {
+    const rc = A.randomCode(4);
+    const h = await A.hashRecovery(rc);
+    await store.updateAccount(acc.id, { recoverySalt: h.salt, recoveryHash: h.hash });
+    Object.assign(acc, { recoverySalt: h.salt, recoveryHash: h.hash });
+    extra = { ...extra, rc, rcWhy: "new" };
+  }
+  await sendAccount(s, extra);
+}
+
+/** Checks the limits before a password attempt; returns false (and tells the player) when blocked. */
+function allowAttempt(s, username) {
+  const ipWait = ipLimit.blocked(s.ip), accWait = accountLimit.blocked(username.toLowerCase());
+  if (!ipWait && !accWait) return true;
+  M.logins.inc({ result: "locked" });
+  const secs = Math.max(ipWait, accWait);
+  authErr(s, `Too many wrong attempts. Try again in ${secs >= 90 ? Math.ceil(secs / 60) + " minutes" : secs + " seconds"}.`);
+  return false;
+}
+
+function failedAttempt(s, username) {
+  ipLimit.fail(s.ip);
+  accountLimit.fail(username.toLowerCase());
+}
+
+/** Sets a new password and logs out everywhere else. */
+async function setPassword(s, acc, pass) {
+  const h = await A.hashPassword(pass);
+  const sessionVersion = (acc.sessionVersion | 0) + 1;
+  await store.updateAccount(acc.id, { salt: h.salt, hash: h.hash, sessionVersion });
+  Object.assign(acc, { salt: h.salt, hash: h.hash, sessionVersion });
+}
+
+const authHandlers = {
+  async login(s, m) {
+    if (!s.hello || s.acc) return;
+    const user = String(m.user || "").trim(), pass = String(m.pass || "");
+    if (!user || !pass) return authErr(s, "Enter your account name and password.");
+    if (!allowAttempt(s, user)) return;
+    const acc = await store.findAccount(user);
+    if (!acc || !(await A.checkPassword(acc, pass))) {
+      failedAttempt(s, user);
+      M.logins.inc({ result: "bad_password" });
+      store.logEvent(acc ? acc.id : null, user, "login_failed", s.ip);
+      if (!acc) {
+        const ch = await store.findCharacter(user);
+        if (ch) return authErr(s, `"${ch.name}" is a character name. Log in with the name of its account.`);
+        return authErr(s, "No account with that name. Check the spelling, or create a new account.");
+      }
+      return authErr(s, "Wrong password. Forgot it? Use \"Forgot password?\" below.");
+    }
+    M.logins.inc({ result: "ok" });
+    await signedIn(s, acc, "login");
+  },
+
+  async register(s, m) {
+    if (!s.hello || s.acc) return;
+    const user = String(m.user || "").trim(), pass = String(m.pass || ""), email = String(m.email || "").trim();
+    if (!A.USERNAME_RE.test(user)) return authErr(s, `Account names must be ${A.NAME_RULE}.`);
+    const bad = A.passwordProblem(pass);
+    if (bad) return authErr(s, bad);
+    if (email && !A.EMAIL_RE.test(email)) return authErr(s, "That email address doesn't look right.");
+    if (registerLimit.blocked(s.ip)) return authErr(s, "Too many new accounts from your address. Try again later.");
+    const rc = A.randomCode(4);
+    const [p, r] = await Promise.all([A.hashPassword(pass), A.hashRecovery(rc)]);
+    let acc;
+    try {
+      acc = await store.createAccount({ username: user, salt: p.salt, hash: p.hash, recoverySalt: r.salt, recoveryHash: r.hash, email: email || null });
+    } catch (e) {
+      if (e instanceof Taken) return authErr(s, e.what === "email" ? "That email address already belongs to an account." : "That account name is taken.");
+      throw e;
+    }
+    registerLimit.fail(s.ip);
+    M.logins.inc({ result: "new" });
+    log(`New account: ${user}`);
+    await signedIn(s, acc, "register", { rc, rcWhy: "register" });
+  },
+
+  async forgot(s, m) {
+    if (!s.hello || s.acc) return;
+    if (!mailer) return authErr(s, "This server can't send emails. Use your recovery code, or ask an admin for a reset code.");
+    if (forgotLimit.blocked(s.ip)) return authErr(s, "Too many reset emails requested. Try again later.");
+    forgotLimit.fail(s.ip);
+    const who = String(m.user || "").trim();
+    const acc = who.includes("@") ? await store.findAccountByEmail(who) : await store.findAccount(who);
+    // The same answer either way, so this can't be used to find out which accounts or emails exist.
+    authOk(s, "If that account has an email address, a reset code is on its way. Check your inbox (and spam folder).");
+    if (!acc || !acc.email) return;
+    const code = A.randomCode(2);
+    await store.createResetToken(acc.id, A.tokenHash(code), "email", new Date(Date.now() + RESET_MINUTES * 60000));
+    store.logEvent(acc.id, acc.username, "reset_email_sent", s.ip);
+    mailer.sendReset(acc.email, acc.username, code, RESET_MINUTES).catch((e) => log("reset email failed", acc.username, e.message));
+  },
+
+  /** A new password with the account's recovery code, or a one-time code from an email or an admin. */
+  async reset(s, m) {
+    if (!s.hello || s.acc) return;
+    const user = String(m.user || "").trim(), code = String(m.code || ""), pass = String(m.pass || "");
+    const bad = A.passwordProblem(pass);
+    if (bad) return authErr(s, bad);
+    if (!user || !code) return authErr(s, "Enter your account name and the code.");
+    if (!allowAttempt(s, user)) return;
+    const acc = await store.findAccount(user);
+    let method = null;
+    if (acc && await A.checkRecovery(acc, code)) method = "recovery";
+    else if (acc) {
+      const tokenOk = await store.useResetToken(A.tokenHash(code), acc.id);
+      if (tokenOk) method = "code";
+    }
+    if (!method) {
+      failedAttempt(s, user);
+      store.logEvent(acc ? acc.id : null, user, "reset_failed", s.ip);
+      return authErr(s, "That code doesn't match this account (or it was already used or has expired).");
+    }
+    await setPassword(s, acc, pass);
+    M.resets.inc({ method: method === "recovery" ? "recovery" : "code" });
+    log(`Password reset for ${acc.username} (${method})`);
+    let extra = { msg: "Your password has been changed." };
+    if (method === "recovery") {
+      // A recovery code works once: hand out a new one.
+      const rc = A.randomCode(4);
+      const h = await A.hashRecovery(rc);
+      await store.updateAccount(acc.id, { recoverySalt: h.salt, recoveryHash: h.hash });
+      Object.assign(acc, { recoverySalt: h.salt, recoveryHash: h.hash });
+      extra = { ...extra, rc, rcWhy: "used" };
+    }
+    await signedIn(s, acc, method === "recovery" ? "reset_recovery" : "reset_code", extra);
+  },
+
+  async chpass(s, m) {
+    if (!s.acc) return;
+    const bad = A.passwordProblem(String(m.pass || ""));
+    if (bad) return authErr(s, bad);
+    if (!allowAttempt(s, s.acc.username)) return;
+    if (!(await A.checkPassword(s.acc, String(m.old || "")))) { failedAttempt(s, s.acc.username); return authErr(s, "Your current password is wrong."); }
+    await setPassword(s, s.acc, String(m.pass));
+    kickOtherSessions(s, "Your password was changed. Log in again.");
+    M.resets.inc({ method: "change" });
+    store.logEvent(s.acc.id, s.acc.username, "password_changed", s.ip);
+    authOk(s, "Password changed. Any other place you were logged in has been logged out.");
+  },
+
+  async setemail(s, m) {
+    if (!s.acc) return;
+    const email = String(m.email || "").trim();
+    if (email && !A.EMAIL_RE.test(email)) return authErr(s, "That email address doesn't look right.");
+    if (!allowAttempt(s, s.acc.username)) return;
+    if (!(await A.checkPassword(s.acc, String(m.pass || "")))) { failedAttempt(s, s.acc.username); return authErr(s, "Wrong password."); }
+    try {
+      await store.updateAccount(s.acc.id, { email: email || null });
+    } catch (e) {
+      if (e instanceof Taken) return authErr(s, "That email address already belongs to another account.");
+      throw e;
+    }
+    s.acc.email = email || null;
+    store.logEvent(s.acc.id, s.acc.username, email ? "email_set" : "email_removed", s.ip);
+    authOk(s, email ? `Email set to ${email}.` + (mailer ? "" : " (This server can't send emails yet, so it's only kept for later.)") : "Email removed.");
+  },
+
+  async newcode(s, m) {
+    if (!s.acc) return;
+    if (!allowAttempt(s, s.acc.username)) return;
+    if (!(await A.checkPassword(s.acc, String(m.pass || "")))) { failedAttempt(s, s.acc.username); return authErr(s, "Wrong password."); }
+    const rc = A.randomCode(4);
+    const h = await A.hashRecovery(rc);
+    await store.updateAccount(s.acc.id, { recoverySalt: h.salt, recoveryHash: h.hash });
+    Object.assign(s.acc, { recoverySalt: h.salt, recoveryHash: h.hash });
+    store.logEvent(s.acc.id, s.acc.username, "recovery_code_changed", s.ip);
+    safeSend(s, JSON.stringify({ t: "rcode", rc }));
+  },
+
+  // ---- characters
+
+  async play(s, m) {
+    if (!s.acc || s.inWorld || s.pendingPlay) return;
+    const ch = await store.findCharacter(String(m.name || ""));
+    if (!ch || String(ch.accountId) !== String(s.acc.id)) return authErr(s, "That character isn't on your account.");
+    beginPlay(s, ch);
+  },
+
+  async create(s, m) {
+    if (!s.acc || s.inWorld || s.pendingPlay) return;
+    const name = String(m.name || "").trim(), look = String(m.look || "");
+    if (!A.USERNAME_RE.test(name)) return authErr(s, `Character names must be ${A.NAME_RULE}.`);
+    if (!HERO_MODELS.includes(look)) return authErr(s, "Choose a class.");
+    const existing = await store.listCharacters(s.acc.id);
+    if (existing.length >= MAX_CHARACTERS) return authErr(s, `An account can have at most ${MAX_CHARACTERS} characters.`);
+    let ch;
+    try {
+      ch = await store.createCharacter(s.acc.id, name, look);
+    } catch (e) {
+      if (e instanceof Taken) return authErr(s, "That character name is taken.");
+      throw e;
+    }
+    store.logEvent(s.acc.id, s.acc.username, `character_created:${name}`, s.ip);
+    log(`New character: ${name} (${look}) on ${s.acc.username}`);
+    beginPlay(s, ch);
+  },
+
+  async delchar(s, m) {
+    if (!s.acc || s.inWorld) return;
+    if (!allowAttempt(s, s.acc.username)) return;
+    if (!(await A.checkPassword(s.acc, String(m.pass || "")))) { failedAttempt(s, s.acc.username); return authErr(s, "Wrong password."); }
+    const ch = await store.findCharacter(String(m.name || ""));
+    if (!ch || String(ch.accountId) !== String(s.acc.id)) return authErr(s, "That character isn't on your account.");
+    await store.deleteCharacter(ch.id);
+    store.logEvent(s.acc.id, s.acc.username, `character_deleted:${ch.name}`, s.ip);
+    log(`Character deleted: ${ch.name} (${s.acc.username})`);
+    await sendAccount(s, { msg: `${ch.name} has been deleted.` });
+  },
+
+  /** Back to character select. */
+  async leave(s) {
+    if (!s.acc || !s.inWorld) return;
+    await leaveWorld(s, "select");
+    s.char = null;
+    await sendAccount(s);
+  },
+};
+
+/** Character chosen: sync the world map if needed, then enter. */
+function beginPlay(s, ch) {
+  for (const o of sessions.values())
+    if (o !== s && o.inWorld && o.char && String(o.char.id) === String(ch.id)) { leaveWorld(o, "offline"); fail(o, "You logged in from another location."); }
+  s.char = ch;
+  s.pendingPlay = true;
+  if (!world) return safeSend(s, JSON.stringify({ t: "needworld" }));
+  if (s.clientHash !== world.hash) {
+    // The game was updated and its world changed (a higher layout version). Nobody is playing on the old
+    // one, so take the new world from this client instead of locking everyone out. An older client
+    // (a stale browser cache) must never swap the world back.
+    s.pendingPlay = false;
+    if ((s.worldVersion | 0) <= world.version) return fail(s, "Your game client is older than this server's world. Refresh the page (Ctrl+F5).");
+    const others = [...sessions.values()].some((o) => o !== s && o.inWorld);
+    if (others) return authErr(s, "This server is still running the previous version of the world. Try again once everyone has logged out, or refresh the page.");
+    s.pendingPlay = true;
+    s.replacesWorld = true;
+    return safeSend(s, JSON.stringify({ t: "needworld" }));
+  }
+  completeLogin(s);
+}
+
 const handlers = {
+  ...authHandlers,
   ...partyHandlers,
   ...dungeonHandlers,
 
   adm(s, m) {
     if (!s.inWorld) return;
     if (!s.admin) return sys(s, "You are not an admin.");
-    const res = runAdmin(s, String(m.c || ""), m);
-    if (res) sys(s, `[admin] ${res}`);
+    Promise.resolve(runAdmin(s, String(m.c || ""), m)).then((res) => res && sys(s, `[admin] ${res}`));
     log(`admin ${s.name}: ${m.c}`);
   },
 
+  // ---- connecting: version check, then the account messages in authHandlers, then play/create
+
   hello(s, m) {
-    if (s.account || s.pendingLogin) return;
-    if (m.ver !== PROTOCOL_VERSION) return fail(s, "Your game client is out of date. Refresh the page.");
-    const name = String(m.name || "").trim(), pass = String(m.pass || "");
-    if (!/^[A-Za-z][A-Za-z0-9_]{2,15}$/.test(name)) return fail(s, "Names must be 3-16 letters, digits or _ and start with a letter.");
-    if (pass.length < 4 || pass.length > 64) return fail(s, "Password must be 4-64 characters.");
-    s.pendingLogin = { name, pass };
+    if (s.hello) return;
+    if (m.ver !== PROTOCOL_VERSION) return fail(s, "Your game client is out of date. Refresh the page (Ctrl+F5).");
+    s.hello = true;
+    s.clientHash = String(m.hash || "");
     s.worldVersion = m.wv | 0;
-    if (!world) { s.clientHash = String(m.hash || ""); return safeSend(s, JSON.stringify({ t: "needworld" })); }
-    if (m.hash !== world.hash) {
-      // The game was updated and its world changed (a higher layout version). Nobody is playing on the old
-      // one, so take the new world from this client instead of locking everyone out. An older client
-      // (a stale browser cache) must never swap the world back.
-      if ((m.wv | 0) <= world.version) return fail(s, "Your game client is older than this server's world. Refresh the page (Ctrl+F5).");
-      const others = [...sessions.values()].some((o) => o !== s && o.inWorld);
-      if (others) return fail(s, "This server is still running the previous version of the world. Try again once everyone has logged out, or refresh the page.");
-      s.clientHash = String(m.hash || "");
-      s.replacesWorld = true;
-      return safeSend(s, JSON.stringify({ t: "needworld" }));
-    }
-    completeLogin(s);
+    safeSend(s, JSON.stringify({ t: "hi", mail: !!mailer }));
   },
 
   world(s, m) {
-    if (!s.pendingLogin) return;
+    if (!s.pendingPlay) return;
     if (!world || s.replacesWorld) {
       const w = parseInt(m.w, 10), h = parseInt(m.h, 10);
       const decoded = w > 0 && h > 0 && w * h <= 1 << 20 ? decodeWorld(w, h, String(m.cells || "")) : null;
@@ -1242,7 +1523,7 @@ const handlers = {
       world = decoded;
       world.version = s.worldVersion | 0;
       fs.writeFileSync(WORLD_FILE, JSON.stringify({ w, h, cells: m.cells, hash: world.hash, version: world.version }));
-      log(`World received from ${s.pendingLogin.name}: ${world.hash}`);
+      log(`World received from ${s.char.name}: ${world.hash}`);
       initSpawners();
     } else if (m.hash !== world.hash) {
       return fail(s, "Your game client doesn't match this server's world.");
@@ -1317,8 +1598,7 @@ const handlers = {
     const arg = rest.join(" ").trim();
     if (cmd.toLowerCase() === "/a" || cmd.toLowerCase() === "/admin") {
       if (!s.admin) return sys(s, "You are not an admin.");
-      const res = adminFromChat(s, arg);
-      if (res) sys(s, `[admin] ${res}`);
+      Promise.resolve(adminFromChat(s, arg)).then((res) => res && sys(s, `[admin] ${res}`));
       log(`admin ${s.name}: ${arg}`);
       return;
     }
@@ -1375,31 +1655,19 @@ const handlers = {
   },
 
   save(s, m) {
-    if (!s.inWorld || !s.account || !m.save || typeof m.save !== "object") return;
+    if (!s.inWorld || !s.char || !m.save || typeof m.save !== "object") return;
     const size = JSON.stringify(m.save).length;
     if (size > 256 * 1024) return;
     const lvl = parseInt(m.save.level, 10);
     if (!(lvl >= 1 && lvl <= 100)) return;
-    s.account.save = m.save;
-    [s.account.save.x, s.account.save.z] = overworldPos(s);
-    saveAccount(s.account);
+    s.char.save = m.save;
+    saveCharacter(s);
   },
 };
 
 function onDisconnect(s) {
-  if (partyOf(s)) leaveParty(s, "has gone offline.");
-  if (trades.has(s.id)) closeTrade(trades.get(s.id), `${s.name} has gone offline.`);
   sessions.delete(s.id);
-  if (s.account && s.inWorld) {
-    if (s.account.save) {
-      // remember where they logged out
-      [s.account.save.x, s.account.save.z] = overworldPos(s);
-    }
-    saveAccount(s.account);
-    broadcast({ t: "sys", msg: `${s.name} has left the world.` });
-    broadcast({ t: "leave", id: s.id });
-    log(`${s.name} logged out (${sessions.size} connected)`);
-  }
+  leaveWorld(s, "offline");
 }
 
 // =====================================================================================
@@ -1461,7 +1729,10 @@ function tick() {
 const wss = new WebSocketServer({ server, path: "/ws", maxPayload: 512 * 1024 });
 
 wss.on("connection", (ws, req) => {
-  const s = { id: nextSessionId++, ws, inWorld: false, x: SPAWN.x, z: SPAWN.z, ry: 0, hp: 1, mhp: 1, lvl: 1, alive: true };
+  const s = { id: nextSessionId++, ws, inWorld: false, x: SPAWN.x, z: SPAWN.z, ry: 0, hp: 1, mhp: 1, lvl: 1, alive: true,
+    ip: String((TRUST_PROXY && req.headers["x-forwarded-for"]) || req.socket.remoteAddress || "").split(",")[0].trim() };
+  // Connections that never log in are closed after 15 minutes.
+  setTimeout(() => { if (!s.acc && sessions.has(s.id)) s.ws.close(); }, 15 * 60000);
   sessions.set(s.id, s);
   ws.on("pong", () => { s.alive = true; });
   ws.on("message", (data, isBinary) => {
@@ -1472,7 +1743,12 @@ wss.on("connection", (ws, req) => {
     if (!handler) return;
     M.msgIn.inc({ type: m.t });
     M.bytesIn.inc(undefined, data.length);
-    try { handler(s, m); } catch (e) { M.handlerErrors.inc({ type: m.t }); log("handler error", m.t, e.stack); }
+    const onError = (e) => {
+      M.handlerErrors.inc({ type: m.t });
+      log("handler error", m.t, e.stack);
+      if (authHandlers[m.t]) authErr(s, "Something went wrong on the server. Try again.");
+    };
+    try { Promise.resolve(handler(s, m)).catch(onError); } catch (e) { onError(e); }
   });
   ws.on("close", () => onDisconnect(s));
   ws.on("error", () => {});
@@ -1489,30 +1765,42 @@ setInterval(() => {
 
 // Periodically flush characters to disk (in addition to client save messages).
 setInterval(() => {
-  for (const s of sessions.values()) if (s.inWorld && s.account && s.account.save) {
-    [s.account.save.x, s.account.save.z] = overworldPos(s);
-    saveAccount(s.account);
-  }
+  for (const s of sessions.values()) if (s.inWorld) saveCharacter(s);
 }, 60000);
 
-loadWorld();
-if (world) initSpawners();
-else log("No world yet - it will be uploaded by the first client that connects.");
-
-setInterval(() => {
-  const t0 = process.hrtime.bigint();
-  tick();
-  M.tick.observe(Number(process.hrtime.bigint() - t0) / 1e9);
-}, TICK * 1000);
-metrics.serve(parseInt(process.env.METRICS_PORT || "0", 10), log);
-server.listen(PORT, () => log(`Shadowfall server listening on :${PORT}  (public: ${PUBLIC_DIR}, data: ${DATA_DIR})`));
-
-function shutdown() {
-  log("Shutting down, saving characters...");
-  for (const s of sessions.values()) if (s.account && s.inWorld) {
-    if (s.account.save) [s.account.save.x, s.account.save.z] = overworldPos(s);
-    try { fs.writeFileSync(charFile(s.account.name), JSON.stringify(s.account)); } catch { /* ignore */ }
+async function start() {
+  try {
+    await store.init();
+  } catch (e) {
+    log(`Could not open the ${store.kind === "postgres" ? "database" : "data folder"}: ${e.message}`);
+    process.exit(1);
   }
+  log(`Accounts are stored in ${store.kind === "postgres" ? "PostgreSQL" : DATA_DIR}${mailer ? ", password reset emails are on" : ""}`);
+  refreshCounts();
+  setInterval(refreshCounts, 60000);
+
+  loadWorld();
+  if (world) initSpawners();
+  else log("No world yet - it will be uploaded by the first client that connects.");
+
+  setInterval(() => {
+    const t0 = process.hrtime.bigint();
+    tick();
+    M.tick.observe(Number(process.hrtime.bigint() - t0) / 1e9);
+  }, TICK * 1000);
+  metrics.serve(parseInt(process.env.METRICS_PORT || "0", 10), log);
+  server.listen(PORT, () => log(`Shadowfall server listening on :${PORT}  (public: ${PUBLIC_DIR}, data: ${DATA_DIR})`));
+}
+start();
+
+let shuttingDown = false;
+async function shutdown() {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  log("Shutting down, saving characters...");
+  const saves = [...sessions.values()].filter((s) => s.inWorld).map(saveCharacter);
+  const timeout = new Promise((r) => setTimeout(r, 8000));
+  await Promise.race([Promise.all(saves).then(() => store.close()), timeout]);
   process.exit(0);
 }
 process.on("SIGTERM", shutdown);

@@ -77,6 +77,7 @@ nav:
       - HTTPS & reverse proxy: deployment/reverse-proxy.md
       - Operations: deployment/operations.md
       - Admin module: deployment/admin.md
+      - Accounts & passwords: deployment/accounts.md
       - Monitoring: deployment/monitoring.md
   - Architecture:
       - Overview: architecture/overview.md

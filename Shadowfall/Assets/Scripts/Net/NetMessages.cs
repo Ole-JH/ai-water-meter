@@ -39,6 +39,11 @@ namespace Shadowfall
         public int id, mid, tid, l, xp;
         public string name, msg, err, k;
         public string e;        // "emote": the emote id
+        // accounts: "account" (user, email, mail, chars, rc + rcWhy when a recovery code must be shown), "rcode" (rc),
+        // "welcome" (name, look of the character entering the world), "hi" (mail = the server can send reset emails)
+        public string user, email, look, rc, rcWhy;
+        public bool mail;
+        public NetCharacter[] chars;
         public float x, z, tx, tz, dmg;
         public bool hasSave;
         public string el;       // "kill": the elite's name when an elite died (better loot)
@@ -62,7 +67,10 @@ namespace Shadowfall
 
     // ---------------------------------------------------------------- client -> server
 
-    [Serializable] public class HelloMsg { public string t = "hello"; public string name, pass, hash; public int ver, wv; }
+    [Serializable] public class HelloMsg { public string t = "hello"; public string hash; public int ver, wv; }
+    /// <summary>Every account request (login, register, forgot, reset, chpass, setemail, newcode, play, create, delchar, leave).</summary>
+    [Serializable] public class AuthMsg { public string t, user, pass, email, code, old, name, look; }
+    [Serializable] public class NetCharacter { public string name, look; public int lvl; }
     [Serializable] public class WorldMsg { public string t = "world"; public string hash, cells; public int w, h; }
     [Serializable] public class HitMsg { public string t = "hit"; public int mid, dmg; public bool crit; }
     [Serializable] public class SlowMsg { public string t = "slow"; public int mid; public float dur; }

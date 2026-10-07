@@ -44,6 +44,7 @@ Browsers only allow secure WebSockets (`wss://`) from pages loaded over HTTPS. T
             proxy_set_header Upgrade $http_upgrade;
             proxy_set_header Connection "upgrade";
             proxy_set_header Host $host;
+            proxy_set_header X-Forwarded-For $remote_addr;
             proxy_read_timeout 3600s;
         }
 
@@ -68,3 +69,18 @@ Browsers only allow secure WebSockets (`wss://`) from pages loaded over HTTPS. T
 
 !!! warning "Don't double-compress"
     The WebGL files are already gzip-compressed, and the server sends them with `Content-Encoding: gzip`. If your proxy recompresses responses, exclude `/Build/*`.
+
+## Client addresses
+
+Login rate limits count wrong passwords per client address (see [Accounts → Rate limits](accounts.md#rate-limits)). Behind a
+proxy every connection comes from the proxy, so set `TRUST_PROXY=1` in `server/.env` and run `task up`. The server then uses the
+first address in the `X-Forwarded-For` header. The proxy must **overwrite** that header with the real client address rather than
+append to one sent by the client:
+
+| Proxy | Setting |
+| --- | --- |
+| Caddy | Nothing to do: it sets `X-Forwarded-For` and ignores the client's value unless `trusted_proxies` is configured |
+| nginx | `proxy_set_header X-Forwarded-For $remote_addr;` in `location /ws` (as above), not `$proxy_add_x_forwarded_for` |
+| Traefik | Sets it by default; it keeps a client-sent value only from addresses listed in `forwardedHeaders.trustedIPs` |
+
+Keep the game port private to the host when `TRUST_PROXY=1`, or players connecting to it directly could fake their address.

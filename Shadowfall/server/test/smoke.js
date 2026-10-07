@@ -2,6 +2,8 @@
 // End-to-end smoke test: starts the server on a temp data dir, connects two fake clients and
 // exercises login, world upload, monsters, kill credit, chat, fx, parties, saves and error paths.
 // Run with: npm test   (or: task server:test)
+// With PG_TEST_URL (e.g. postgres://user:pass@localhost:5432/postgres) the same tests run against PostgreSQL,
+// in a throwaway database: npm run test:pg   (or: task server:test:pg)
 
 const { spawn } = require("child_process");
 const fs = require("fs");
@@ -32,20 +34,51 @@ function worldHash(buf) {
   return `${W}x${H}-${x.toString(16).padStart(8, "0")}`;
 }
 
+/** Connects, logs in to the account `name` (creating it, with a character of the same name, if needed) and plays. */
 function connect(name, pass, hash = HASH, cells = bytes, wv = 1) {
   return new Promise((resolve, reject) => {
     const ws = new WebSocket(URL);
     const c = { ws, msgs: [], find: (t) => c.msgs.find((m) => m.t === t), all: (t) => c.msgs.filter((m) => m.t === t) };
-    ws.on("open", () => ws.send(JSON.stringify({ t: "hello", name, pass, hash, ver: 4, wv })));
+    ws.on("open", () => ws.send(JSON.stringify({ t: "hello", hash, ver: 5, wv })));
     ws.on("error", reject);
     ws.on("message", (d) => {
       const m = JSON.parse(d);
       c.msgs.push(m);
-      if (m.t === "needworld") ws.send(JSON.stringify({ t: "world", hash, w: W, h: H, cells: cells.toString("base64") }));
-      if (m.t === "welcome" || m.t === "error") resolve(c);
+      if (m.t === "hi") ws.send(JSON.stringify({ t: "login", user: name, pass }));
+      else if (m.t === "autherr" && /No account/.test(m.err)) ws.send(JSON.stringify({ t: "register", user: name, pass }));
+      else if (m.t === "account") {
+        const mine = m.chars.find((ch) => ch.name.toLowerCase() === name.toLowerCase());
+        ws.send(JSON.stringify(mine ? { t: "play", name: mine.name } : { t: "create", name, look: "Knight" }));
+      } else if (m.t === "needworld") ws.send(JSON.stringify({ t: "world", hash, w: W, h: H, cells: cells.toString("base64") }));
+      if (m.t === "welcome" || m.t === "error" || (m.t === "autherr" && !/No account/.test(m.err))) resolve(c);
     });
   });
 }
+
+/** A raw connection for the account tests: send() and wait for the next message of a type. */
+function rawClient() {
+  return new Promise((resolve, reject) => {
+    const ws = new WebSocket(URL);
+    const c = { ws, msgs: [], waiters: [] };
+    c.send = (m) => ws.send(JSON.stringify(m));
+    c.next = (...types) => new Promise((res, rej) => {
+      const i = c.msgs.findIndex((m) => types.includes(m.t));
+      if (i >= 0) return res(c.msgs.splice(i, 1)[0]);
+      const timer = setTimeout(() => rej(new Error(`timed out waiting for ${types.join("/")}`)), 4000);
+      c.waiters.push({ types, res: (m) => { clearTimeout(timer); res(m); } });
+    });
+    ws.on("message", (d) => {
+      const m = JSON.parse(d);
+      const w = c.waiters.findIndex((x) => x.types.includes(m.t));
+      if (w >= 0) c.waiters.splice(w, 1)[0].res(m);
+      else c.msgs.push(m);
+    });
+    ws.on("error", reject);
+    ws.on("open", async () => { c.send({ t: "hello", hash: HASH, ver: 5, wv: 1 }); await c.next("hi"); resolve(c); });
+  });
+}
+
+const errOf = (c) => (c.msgs.filter((m) => m.t === "error" || m.t === "autherr").at(-1) || {}).err;
 
 const state = (c, x, z, extra = {}) => c.ws.send(JSON.stringify({ t: "state", x, z, ry: 0, hp: 100, mhp: 100, lvl: 1, mv: false, atk: false, dead: false, ...extra }));
 
@@ -58,10 +91,137 @@ function checkDockerfile() {
     assert.ok(copiesAllJs || new RegExp(`COPY .*\\b${mod}\\.js\\b`).test(docker), `Dockerfile copies ${mod}.js`);
 }
 
+/** An old-format character file (before accounts): it has its own password. */
+function writeLegacyCharacter(name, pass, save) {
+  const crypto = require("crypto");
+  const salt = crypto.randomBytes(16).toString("hex");
+  const hash = crypto.scryptSync(pass, salt, 32).toString("hex");
+  fs.mkdirSync(path.join(DATA_DIR, "characters"), { recursive: true });
+  fs.writeFileSync(path.join(DATA_DIR, "characters", name.toLowerCase() + ".json"),
+    JSON.stringify({ name, salt, hash, created: "2026-10-01T00:00:00Z", save }));
+}
+
+async function accountTests(admin) {
+  const c = await rawClient();
+  c.send({ t: "register", user: "1x", pass: "fernpass1" });
+  assert.match((await c.next("autherr")).err, /Account names must be/, "account names are validated");
+  c.send({ t: "register", user: "Fern", pass: "abc" });
+  assert.match((await c.next("autherr")).err, /at least 6/, "short passwords are refused");
+  c.send({ t: "register", user: "Fern", pass: "fernpass1", email: "fern@example.com" });
+  const acc = await c.next("account");
+  assert.ok(acc.user === "Fern" && acc.chars.length === 0 && /^[A-Z2-9]{4}(-[A-Z2-9]{4}){3}$/.test(acc.rc), "a new account gets a recovery code");
+  const recovery = acc.rc;
+
+  c.send({ t: "create", name: "Fern", look: "Mage" });
+  const w1 = await c.next("welcome");
+  assert.ok(w1.name === "Fern" && w1.look === "Mage" && !w1.hasSave, "a new character enters the world");
+  c.send({ t: "save", save: { level: 4, gold: 12, look: "Mage", x: 144, z: 150 } });
+  await sleep(150);
+  c.send({ t: "leave" });
+  const back = await c.next("account");
+  assert.ok(back.chars.length === 1 && back.chars[0].lvl === 4, "back to character select, with the character's level");
+  c.send({ t: "create", name: "Fernling", look: "Rogue" });
+  await c.next("welcome");
+  c.send({ t: "leave" });
+  assert.strictEqual((await c.next("account")).chars.length, 2, "an account can have several characters");
+  c.send({ t: "create", name: "fernling", look: "Rogue" });
+  assert.match((await c.next("autherr")).err, /taken/, "character names are unique");
+
+  const other = await rawClient();
+  other.send({ t: "register", user: "fern", pass: "whatever1" });
+  assert.match((await other.next("autherr")).err, /taken/, "account names are unique (any case)");
+  other.send({ t: "login", user: "Fernling", pass: "fernpass1" });
+  assert.match((await other.next("autherr")).err, /character name/, "logging in with a character name explains what to do");
+  other.send({ t: "forgot", user: "Fern" });
+  assert.match((await other.next("autherr")).err, /can't send emails/, "without SMTP, email resets say so");
+
+  c.send({ t: "chpass", old: "nope", pass: "fernpass2" });
+  assert.match((await c.next("autherr")).err, /current password is wrong/, "changing the password needs the current one");
+  c.send({ t: "chpass", old: "fernpass1", pass: "fernpass2" });
+  assert.match((await c.next("authok")).msg, /Password changed/, "the password can be changed");
+
+  other.send({ t: "login", user: "Fern", pass: "fernpass1" });
+  assert.match((await other.next("autherr")).err, /Wrong password/, "the old password stops working");
+  other.send({ t: "login", user: "Fern", pass: "fernpass2" });
+  await other.next("account");
+  assert.match((await c.next("error")).err, /another location/, "logging in elsewhere logs the old session out");
+
+  // Recovery code: works once, then a new one is issued.
+  const r1 = await rawClient();
+  r1.send({ t: "reset", user: "Fern", code: recovery.toLowerCase().replace(/-/g, " "), pass: "fernpass3" });
+  const reset = await r1.next("account");
+  assert.ok(reset.rc && reset.rc !== recovery && reset.rcWhy === "used", "a recovery code resets the password and is replaced");
+  const r2 = await rawClient();
+  r2.send({ t: "reset", user: "Fern", code: recovery, pass: "fernpass4" });
+  assert.match((await r2.next("autherr")).err, /doesn't match/, "a used recovery code no longer works");
+
+  // Admin reset code
+  admin.ws.send(JSON.stringify({ t: "adm", c: "resetpw", name: "Fernling" }));
+  await sleep(300);
+  const line = admin.all("sys").map((m) => m.msg).find((m) => /Reset code for account Fern:/.test(m));
+  assert.ok(line, "admins get a reset code (by character name too)");
+  const code = line.match(/Fern: ([A-Z0-9-]+)/)[1];
+  r2.send({ t: "reset", user: "Fern", code, pass: "fernpass5" });
+  await r2.next("account");
+  const r3 = await rawClient();
+  r3.send({ t: "reset", user: "Fern", code, pass: "fernpass6" });
+  assert.match((await r3.next("autherr")).err, /already used/, "admin reset codes work once");
+
+  r2.send({ t: "delchar", name: "Fernling", pass: "wrong" });
+  assert.match((await r2.next("autherr")).err, /Wrong password/, "deleting a character needs the password");
+  r2.send({ t: "delchar", name: "Fernling", pass: "fernpass5" });
+  const afterDelete = await r2.next("account");
+  assert.deepStrictEqual(afterDelete.chars.map((x) => x.name), ["Fern"], "characters can be deleted");
+
+  // Five wrong passwords lock the account for a while.
+  for (let i = 0; i < 5; i++) { r3.send({ t: "login", user: "Fern", pass: "bad" + i }); await r3.next("autherr"); }
+  r3.send({ t: "login", user: "Fern", pass: "fernpass5" });
+  assert.match((await r3.next("autherr")).err, /Too many wrong attempts/, "repeated wrong passwords lock the account briefly");
+
+  // A character from before accounts became an account with the same name and password.
+  const legacy = await rawClient();
+  legacy.send({ t: "login", user: "oldtimer", pass: "oldpass" });
+  const old = await legacy.next("account");
+  assert.ok(old.chars.length === 1 && old.chars[0].name === "Oldtimer" && old.chars[0].lvl === 7 && old.chars[0].look === "Mage",
+    "old characters are imported as accounts");
+  assert.ok(old.rc && old.rcWhy === "new", "imported accounts get a recovery code at their first login");
+  legacy.send({ t: "play", name: "Oldtimer" });
+  const ow = await legacy.next("welcome");
+  assert.strictEqual(ow.save.gold, 99, "imported characters keep their progress");
+
+  for (const x of [c, other, r1, r2, r3, legacy]) x.ws.close();
+  await sleep(200);
+}
+
+/** With PG_TEST_URL: a fresh database for this run; returns its URL (or "" for the file store). */
+async function testDatabase() {
+  if (!process.env.PG_TEST_URL) return { url: "", drop: async () => {} };
+  const { Client } = require("pg");
+  const name = `shadowfall_test_${process.pid}_${Date.now()}`;
+  const admin = new Client({ connectionString: process.env.PG_TEST_URL });
+  await admin.connect();
+  await admin.query(`CREATE DATABASE ${name}`);
+  await admin.end();
+  const url = new globalThis.URL(process.env.PG_TEST_URL);
+  url.pathname = "/" + name;
+  return {
+    url: url.toString(),
+    drop: async () => {
+      const c = new Client({ connectionString: process.env.PG_TEST_URL });
+      await c.connect();
+      await c.query(`DROP DATABASE IF EXISTS ${name} WITH (FORCE)`);
+      await c.end();
+    },
+  };
+}
+
 async function main() {
   checkDockerfile();
+  const db = await testDatabase();
+  if (db.url) console.log("Testing against PostgreSQL");
+  writeLegacyCharacter("Oldtimer", "oldpass", { level: 7, gold: 99, look: "Mage", x: 144, z: 150 });
   const server = spawn(process.execPath, [path.join(__dirname, "..", "server.js")], {
-    env: { ...process.env, PORT: String(PORT), DATA_DIR, PUBLIC_DIR: path.join(__dirname, "..", "public"), ELITE_CHANCE: "0", ADMINS: "alice", METRICS_PORT: String(METRICS_PORT) },
+    env: { ...process.env, PORT: String(PORT), DATA_DIR, PUBLIC_DIR: path.join(__dirname, "..", "public"), ELITE_CHANCE: "0", ADMINS: "alice", METRICS_PORT: String(METRICS_PORT), DATABASE_URL: db.url },
     stdio: ["ignore", "pipe", "pipe"],
   });
   let serverLog = "";
@@ -271,15 +431,19 @@ async function main() {
     assert.ok(b.find("leave"), "others see a logout");
 
     const wrong = await connect("alice", "wrong");
-    assert.match(wrong.find("error").err, /Wrong password/, "wrong password rejected");
+    assert.match(errOf(wrong), /Wrong password/, "wrong password rejected");
+    wrong.ws.close();
 
     const again = await connect("Alice", "secret1");
     const w = again.find("welcome");
     assert.strictEqual(w.hasSave, true, "character was saved");
     assert.strictEqual(w.save.gold, 55, "save data round-trips");
 
-    const mismatch = await connect("Carl", "1234", "288x288-deadbeef", bytes, 2);
-    assert.match(mismatch.find("error").err, /previous version of the world/, "a changed world is refused while others play on the old one");
+    const mismatch = await connect("Carl", "secret3", "288x288-deadbeef", bytes, 2);
+    assert.match(errOf(mismatch), /previous version of the world/, "a changed world is refused while others play on the old one");
+    mismatch.ws.close();
+
+    await accountTests(again);
 
     again.ws.close();
     b.ws.close();
@@ -289,12 +453,12 @@ async function main() {
     const bytes2 = Buffer.from(bytes);
     bytes2[(80 * W + 90) >> 3] |= 1 << ((80 * W + 90) & 7); // one more blocked cell
     const hash2 = worldHash(bytes2);
-    const stale = await connect("Carl", "1234", hash2, bytes2, 1);
-    assert.match(stale.find("error").err, /older than this server's world/, "a client with an old layout version can't replace the world");
-    const updated = await connect("Carl", "1234", hash2, bytes2, 2);
+    const stale = await connect("Carl", "secret3", hash2, bytes2, 1);
+    assert.match(errOf(stale), /older than this server's world/, "a client with an old layout version can't replace the world");
+    const updated = await connect("Carl", "secret3", hash2, bytes2, 2);
     assert.ok(updated.find("needworld") && updated.find("welcome"), "the updated client uploads the new world and logs in");
     const old = await connect("Dana", "secret4");
-    assert.match(old.find("error").err, /older than this server's world/, "old clients are refused after the world changed");
+    assert.match(errOf(old), /older than this server's world/, "old clients are refused after the world changed");
     updated.ws.close();
     old.ws.close();
 
@@ -302,7 +466,7 @@ async function main() {
     server.kill("SIGTERM");
     await sleep(300);
     const elite = spawn(process.execPath, [path.join(__dirname, "..", "server.js")], {
-      env: { ...process.env, PORT: String(PORT), DATA_DIR, PUBLIC_DIR: path.join(__dirname, "..", "public"), ELITE_CHANCE: "1" },
+      env: { ...process.env, PORT: String(PORT), DATA_DIR, PUBLIC_DIR: path.join(__dirname, "..", "public"), ELITE_CHANCE: "1", DATABASE_URL: db.url },
       stdio: ["ignore", "pipe", "pipe"],
     });
     elite.stdout.on("data", (d) => (serverLog += d));
@@ -327,6 +491,7 @@ async function main() {
     }
     ok = true;
     console.log("All smoke tests passed.");
+    if (process.env.SHOW_LOG) console.log(serverLog);
   } catch (e) {
     console.error("TEST FAILED:", e.stack);
     console.error("--- server log ---\n" + serverLog);
@@ -334,6 +499,7 @@ async function main() {
     server.kill("SIGTERM");
     await sleep(200);
     fs.rmSync(DATA_DIR, { recursive: true, force: true });
+    await db.drop().catch((e) => console.error("could not drop the test database:", e.message));
     process.exit(ok ? 0 : 1);
   }
 }

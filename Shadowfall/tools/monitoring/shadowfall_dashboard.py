@@ -69,7 +69,7 @@ stat("Server", 'up{job="shadowfall"}', 0, color="green",
 stat("Players online", "shadowfall_players_online", 4, color="purple")
 stat("In dungeons", "shadowfall_players_in_dungeons", 8, color="dark-orange")
 stat("Monsters alive", "sum(shadowfall_monsters_alive)", 12, color="red")
-stat("Characters", "shadowfall_accounts", 16, color="blue", desc="Character files on disk.")
+stat("Accounts", "shadowfall_accounts", 16, color="blue", desc="Player accounts (each can have several characters).")
 stat("Uptime", 'time() - process_start_time_seconds{job="shadowfall"}', 20, unit="s", color="text")
 y += 4
 
@@ -81,7 +81,16 @@ ts("Players by class", [("shadowfall_players_by_class", "{{class}}")], 12, stack
 y += 8
 ts("Players by level", [("shadowfall_players_by_level", "{{band}}")], 0, stack=True)
 ts("Logins (per hour)", [("sum by (result) (increase(shadowfall_logins_total[1h]))", "{{result}}")], 12, bars=True,
-   desc="ok = returning player, new = character created, bad_password = failed login.")
+   desc="ok = logged in, new = account created, bad_password = wrong password, locked = refused after too many wrong tries.")
+y += 8
+
+# ---------------------------------------------------------------- accounts
+row("Accounts")
+ts("Accounts and characters", [("shadowfall_accounts", "accounts"), ("shadowfall_characters", "characters")], 0, w=8)
+ts("Failed and blocked logins (per 10 min)", [('sum by (result) (increase(shadowfall_logins_total{result=~"bad_password|locked"}[10m]))', "{{result}}")], 8, w=8, bars=True,
+   desc="Wrong passwords, and attempts refused because an account or address was locked out.")
+ts("Password resets (per hour)", [("sum by (method) (increase(shadowfall_password_resets_total[1h]))", "{{method}}")], 16, w=8, bars=True,
+   desc="recovery = with the recovery code, code = with an email or admin code, admin = codes issued by admins, change = changed in game.")
 y += 8
 
 # ---------------------------------------------------------------- combat
@@ -124,6 +133,19 @@ ts("Network", [("rate(shadowfall_sent_bytes_total[2m])", "sent"), ("rate(shadowf
 y += 8
 ts("Messages received per second", [("sum by (type) (rate(shadowfall_messages_received_total[2m]))", "{{type}}")], 0, w=12, stack=True)
 ts("Messages sent per second", [("rate(shadowfall_messages_sent_total[2m])", "sent")], 12, w=12)
+y += 8
+
+# ---------------------------------------------------------------- database
+row("Database")
+stat("PostgreSQL", "pg_up", 0, w=4, thresholds=[{"color": "red", "value": None}, {"color": "green", "value": 1}], desc="1 = the exporter can reach the database.")
+stat("Database size", 'pg_database_size_bytes{datname="shadowfall"}', 4, w=4, unit="bytes", color="blue")
+y += 4
+ts("Database connections", [('pg_stat_database_numbackends{datname="shadowfall"}', "connections")], 0, w=8)
+ts("Transactions per second", [('rate(pg_stat_database_xact_commit{datname="shadowfall"}[2m])', "commits"),
+                               ('rate(pg_stat_database_xact_rollback{datname="shadowfall"}[2m])', "rollbacks")], 8, w=8)
+ts("Rows written per second", [('rate(pg_stat_database_tup_inserted{datname="shadowfall"}[2m])', "inserted"),
+                               ('rate(pg_stat_database_tup_updated{datname="shadowfall"}[2m])', "updated"),
+                               ('rate(pg_stat_database_tup_deleted{datname="shadowfall"}[2m])', "deleted")], 16, w=8)
 y += 8
 
 # ---------------------------------------------------------------- logs
