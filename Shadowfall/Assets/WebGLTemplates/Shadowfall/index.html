@@ -263,7 +263,15 @@
           fail("The game failed to load: " + message);
         });
       };
-      script.onerror = function () { fail("The game files couldn't be downloaded. Check your connection and try again."); };
+      // Say why: the server answered without the file (the build is missing there), or didn't answer at all.
+      script.onerror = function () {
+        fetch(script.src, { method: "HEAD", cache: "no-store" }).then(function (r) {
+          fail(r.ok ? "The game files couldn't be loaded. Try again in a moment."
+                    : "The game files are missing on the server (" + r.status + "). The server needs a new client build.");
+        }).catch(function () {
+          fail("The game server isn't answering. It may be restarting: try again in a minute.");
+        });
+      };
       document.body.appendChild(script);
     }
     // Stop the browser's context menu so right-click can cast spells.
