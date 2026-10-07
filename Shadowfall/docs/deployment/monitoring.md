@@ -5,8 +5,8 @@
 | Service | What it does | Where |
 | --- | --- | --- |
 | **Grafana** | Dashboards, log search, alert overview | <http://localhost:3000> (`GRAFANA_PORT`) |
-| **Prometheus** | Collects and stores metrics (30 days) and evaluates the alert rules | <http://localhost:9090>, this machine only |
-| **Alertmanager** | Groups alerts and sends notifications to Discord and/or Pushover (see [Getting notified](#getting-notified)) | <http://localhost:9093>, this machine only |
+| **Prometheus** | Collects and stores metrics (30 days) and evaluates the alert rules | <http://localhost:19090>, this machine only |
+| **Alertmanager** | Groups alerts and sends notifications to Discord and/or Pushover (see [Getting notified](#getting-notified)) | <http://localhost:19093>, this machine only |
 | **Loki** + **Grafana Alloy** | Collects every container's log lines (14 days) | through Grafana |
 | **node-exporter** | Host metrics: CPU, memory, disks, network | through Grafana |
 | **cAdvisor** | Per-container CPU, memory, network and disk | through Grafana |
@@ -143,7 +143,7 @@ Set these in `server/.env` or the environment:
 | `GRAFANA_PORT` | `3000` | Host port for Grafana |
 | `GRAFANA_BIND` | `0.0.0.0` | Interface Grafana listens on (`127.0.0.1` = this machine only) |
 | `GRAFANA_ADMIN_USER` / `GRAFANA_ADMIN_PASSWORD` | `admin` / `admin` | Grafana's first admin account |
-| `PROMETHEUS_PORT` / `ALERTMANAGER_PORT` | `9090` / `9093` | Host ports, bound to `127.0.0.1`. If `task up` fails with *Bind for 0.0.0.0:9090 failed: port is already allocated*, something else (often Cockpit, the web console of many Linux servers) has the port: set e.g. `PROMETHEUS_PORT=9091` in `server/.env` |
+| `PROMETHEUS_PORT` / `ALERTMANAGER_PORT` | `19090` / `19093` | Host ports, bound to `127.0.0.1` (not the usual 9090 / 9093, which another Prometheus or Cockpit often already has). Only for looking at their web pages on the server itself; Grafana and the `monitoring:*` tasks reach them inside Docker. If `task up` says *port is already allocated*, pick other ports here in `server/.env` |
 | `PROMETHEUS_RETENTION` | `30d` | How long metrics are kept |
 | `DISCORD_WEBHOOK_URL` | (empty) | Send alerts to this Discord channel webhook |
 | `PUSHOVER_USER_KEY` / `PUSHOVER_TOKEN` | (empty) | Send alerts to Pushover (both needed) |
@@ -160,7 +160,7 @@ instead of your computer.
 ## Troubleshooting
 
 - **A panel says "No data"**: counters only appear after the first event (e.g. the first boss kill). Check
-  **Status → Targets** in Prometheus (<http://localhost:9090/targets>): every job should be `UP`.
+  **Status → Targets** in Prometheus (<http://localhost:19090/targets>): every job should be `UP`.
 - **`shadowfall` target is down**: the game server isn't running or is older than the metrics support. Run `task up`.
 - **`postgres` target is down** or `PostgresDown` fires: `docker compose logs postgres postgres-exporter` (in `server/`). If the
   log says *password authentication failed*, `POSTGRES_PASSWORD` was changed after the database was created; see

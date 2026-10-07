@@ -82,7 +82,7 @@ services:
       - ./monitoring/prometheus:/etc/prometheus:ro
       - prometheus-data:/prometheus
     ports:
-      - "127.0.0.1:${PROMETHEUS_PORT:-9090}:9090"
+      - "127.0.0.1:${PROMETHEUS_PORT:-19090}:9090"
 
   alertmanager:
     image: prom/alertmanager:v0.34.1
@@ -98,7 +98,7 @@ services:
       - ./monitoring/alertmanager:/etc/alertmanager:ro
       - alertmanager-data:/alertmanager
     ports:
-      - "127.0.0.1:${ALERTMANAGER_PORT:-9093}:9093"
+      - "127.0.0.1:${ALERTMANAGER_PORT:-19093}:9093"
 
   grafana:
     image: grafana/grafana:13.2.3
