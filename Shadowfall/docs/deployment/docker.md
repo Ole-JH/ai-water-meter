@@ -72,6 +72,11 @@ If 7341 is taken on your machine, change the **host** side without touching the 
 SHADOWFALL_PORT=9000 task up          # or: SHADOWFALL_PORT=9000 docker compose up -d
 ```
 
+`task up` starts by printing every port and where it came from, e.g.
+`Ports: game 7341 (default), dashboard 7342 (default), grafana 3000 (server/.env), docs 7344 (default)`. If Docker says
+*port is already allocated*, that line shows which setting to change. Remove old `GRAFANA_PORT=3000` / `DOCS_PORT=8000`
+lines from `server/.env` to use the current defaults (7343, 7344).
+
 ## The dashboard
 
 `task up` also starts **Homepage** on <http://your-host:7342>: one page with a card for the game (players online, heroes in

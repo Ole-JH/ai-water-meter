@@ -246,6 +246,9 @@ tasks:
       DEFAULT_PUBLIC_HOST:
         sh: hostname
     cmds:
+      # Which ports, and where each comes from (environment, server/.env or default): a clash is easy to trace.
+      - |
+        echo "Ports: game $({{.PORT_OF}} --why SHADOWFALL_PORT 7341), dashboard $({{.PORT_OF}} --why HOMEPAGE_PORT 7342), grafana $({{.PORT_OF}} --why GRAFANA_PORT 7343), docs $({{.PORT_OF}} --why DOCS_PORT 7344)"
       - docker compose up -d --build --remove-orphans
       - |
         h="$(hostname)"
