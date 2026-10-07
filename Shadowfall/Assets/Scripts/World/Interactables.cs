@@ -689,12 +689,50 @@ namespace Shadowfall
             Chatter(p, dist);
             if (dist < 6f)
                 Factory.Face(transform, p.transform.position, Time.deltaTime * 4f);
+            else if (Working()) { }
             else if ((idleTimer -= Time.deltaTime) < 0f)
             {
                 idleTimer = Random.Range(4f, 9f);
                 transform.rotation = Quaternion.Euler(0, Random.Range(0f, 360f), 0);
             }
         }
+
+        /// <summary>What the named villagers do at their posts during their working hours (they stop when you walk up).</summary>
+        static readonly Dictionary<string, (float from, float to, string clip, string sound, float every)> work = new Dictionary<string, (float, float, string, string, float)>
+        {
+            { "Smith Gorrin", (6.5f, 20f, "1H_Melee_Attack_Chop", "anvil", 2.2f) },
+            { "Innkeeper Rosie", (7f, 23.5f, null, null, 5f) },
+            { "Merchant Lysa", (7f, 19f, null, null, 6f) },
+            { "Thomas", (5.5f, 18.5f, null, "chop", 4f) },
+            { "Forester Wren", (6f, 19f, "1H_Melee_Attack_Chop", "chop", 4.5f) },
+            { "Sister Mae", (6f, 21f, "Spellcast_Raise", null, 9f) },
+            { "Weaponsmith Hilda", (7f, 19f, null, null, 6f) },
+            { "Armorer Brann", (7f, 19f, null, null, 6f) },
+        };
+        float workAt;
+
+        bool Working()
+        {
+            if (!work.TryGetValue(DisplayName, out var w) || DayNight.Hour < w.from || DayNight.Hour >= w.to) return false;
+            if (Time.time < workAt) return true;
+            workAt = Time.time + w.every * Random.Range(0.8f, 1.3f);
+            if (view != null)
+            {
+                if (w.clip != null) view.Action(w.clip, 1.4f);
+                else view.Interact();
+            }
+            var p = Player.I;
+            if (w.sound != null && p != null && Factory.FlatDistance(p.transform.position, transform.position) < 18f)
+            {
+                Sfx.Play(w.sound, transform.position + Vector3.up, 0.3f, 0.12f, 18f);
+                if (w.sound == "anvil" && SpellFx.Ready) SpellFx.Hit(transform.position + transform.forward * 0.8f + Vector3.up * 0.9f, new Color(1f, 0.6f, 0.2f), false, 10);
+            }
+            return true;
+        }
+
+        /// <summary>Late at night the shopkeepers are sleepy (but they'll still serve you).</summary>
+        public string NightGreeting =>
+            (DayNight.Hour >= 23f || DayNight.Hour < 5f) && Role != NpcRole.QuestGiver ? "*yawns* We're closed, really... but for you, I'll open up." : null;
 
         /// <summary>Greets heroes who walk up, and mutters to itself now and then.</summary>
         void Chatter(Player p, float dist)

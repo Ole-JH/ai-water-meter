@@ -113,6 +113,24 @@ Monsters live on the server, so every player sees the same ones. They:
 
 Everyone who damages a monster gets **full XP and quest credit**. Each player then rolls **their own loot**, which only they can see.
 
+## Daily life in Hollowmere
+
+The village keeps the same clock as everyone else:
+
+| Time | What happens |
+| --- | --- |
+| 6:00 | Villagers leave their houses for work: the farm plot, the market stalls, the well, the windmill, the church, the woodpile. The day watch relieves the night watch at the gates. |
+| 7:00 | Children come out to play tag on the square. Smith Gorrin starts hammering (sparks and all), Forester Wren chops, Sister Mae prays, the merchants tidy their stock. |
+| 12:00 | Lunch: villagers sit together outside the tavern. |
+| 13:00 | Back to work. |
+| 17:00 | Evening: friends meet on the square and around the fountain and chat (stand close to listen in). |
+| 19:00 | Children go home. |
+| 20:00 | The night watch takes over, with torches; the day watch walks back to the barracks. Villagers drift to the tavern. |
+| 21:30 | Everyone goes home, except a couple of night owls who stay at the tavern until after eleven. |
+
+The village dog tags along with whoever is about, and curls up by the tavern at night. Shopkeepers stay at their posts
+around the clock, though after eleven they'll yawn at you.
+
 ## Seasons and weather
 
 The year turns: **spring, summer, autumn and winter**, two hours each (so a whole year every eight hours; server

@@ -1612,7 +1612,7 @@ namespace Shadowfall
             Block(r);
 
             float y = r.y + 58;
-            GUI.Label(new Rect(r.x + 26, y, 420, 56), "<i>\"" + npc.Greeting + "\"</i>", UISkin.InkRich);
+            GUI.Label(new Rect(r.x + 26, y, 420, 56), "<i>\"" + (npc.NightGreeting ?? npc.Greeting) + "\"</i>", UISkin.InkRich);
             y += 64;
 
             switch (npc.Role)
