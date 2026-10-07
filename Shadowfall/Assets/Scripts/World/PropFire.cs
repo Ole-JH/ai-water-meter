@@ -22,11 +22,21 @@ namespace Shadowfall
         /// <param name="glowCore">An existing glowing mesh to wobble (optional).</param>
         public static PropFire Add(Transform parent, Vector3 pos, Color color, float size, bool smoke = true, Light light = null, Transform glowCore = null)
         {
+            // Fires are placed while the world is generated from a seeded UnityEngine.Random: leave its state untouched.
+            var rngState = Random.state;
+            try { return Build(parent, pos, color, size, smoke, light, glowCore); }
+            finally { Random.state = rngState; }
+        }
+
+        static PropFire Build(Transform parent, Vector3 pos, Color color, float size, bool smoke, Light light, Transform glowCore)
+        {
             var go = new GameObject("Fire");
             go.transform.SetParent(parent, false);
             go.transform.position = pos;
             var f = go.AddComponent<PropFire>();
-            f.seed = Random.value * 100f;
+            // From the position, not UnityEngine.Random: fires are placed while the world is generated, and drawing from
+            // the seeded layout RNG there would change the whole map (and lock clients out of the server's world).
+            f.seed = Mathf.Repeat(pos.x * 12.9898f + pos.z * 78.233f, 100f);
             f.fireLight = light;
             f.core = glowCore;
             if (glowCore != null) f.coreScale = glowCore.localScale;

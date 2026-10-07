@@ -454,7 +454,7 @@ async function main() {
     bytes2[(80 * W + 90) >> 3] |= 1 << ((80 * W + 90) & 7); // one more blocked cell
     const hash2 = worldHash(bytes2);
     const stale = await connect("Carl", "secret3", hash2, bytes2, 1);
-    assert.match(errOf(stale), /older than this server's world/, "a client with an old layout version can't replace the world");
+    assert.match(errOf(stale), /different world map than this server has, at the same version/, "a different world at the same layout version can't replace the stored one");
     const updated = await connect("Carl", "secret3", hash2, bytes2, 2);
     assert.ok(updated.find("needworld") && updated.find("welcome"), "the updated client uploads the new world and logs in");
     const old = await connect("Dana", "secret4");

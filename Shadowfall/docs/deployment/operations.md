@@ -30,7 +30,10 @@
 
     - **Higher layout version, nobody online:** the server asks it for the new map, replaces the old one and respawns the overworld's monsters on it.
     - **Higher layout version, others still playing on the old map:** refused until they log out (*"still running the previous version of the world"*).
-    - **Same or lower layout version** (usually a stale browser cache): refused with *"Your game client is older than this server's world. Refresh the page"*, so an old client can never swap the world back.
+    - **Lower layout version** (usually a stale browser cache): refused with *"Your game client is older than this server's world. Refresh the page"*, so an old client can never swap the world back.
+    - **Same layout version but a different map**: a bug (world generation changed without bumping `LayoutVersion`). Refused with
+      *"Your game builds a different world map than this server has, at the same version"*, and the server logs both hashes.
+      Fix it in the code by bumping `LayoutVersion`, or run `task world:reset` and restart the server.
 
     `task world:reset` still works if you want to force a fresh upload.
 

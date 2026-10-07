@@ -29,7 +29,7 @@ namespace Shadowfall
         public const int Seed = 20261006;
         public static readonly RectInt Town = new RectInt(116, 116, 57, 57); // cells 116..172
         /// <summary>Bumped whenever the walkable layout changes; lets an updated client hand the server the new world map.</summary>
-        public const int LayoutVersion = 3;
+        public const int LayoutVersion = 4; // 4: undoes a map shift from fires drawing on the layout RNG
         public static readonly RectInt Crypt = new RectInt(132, 9, 25, 19);  // cells 132..156, 9..27
 
         public Texture2D MapTexture { get; private set; }

@@ -1474,7 +1474,12 @@ function beginPlay(s, ch) {
     // one, so take the new world from this client instead of locking everyone out. An older client
     // (a stale browser cache) must never swap the world back.
     s.pendingPlay = false;
-    if ((s.worldVersion | 0) <= world.version) return fail(s, "Your game client is older than this server's world. Refresh the page (Ctrl+F5).");
+    if ((s.worldVersion | 0) < world.version) return fail(s, "Your game client is older than this server's world. Refresh the page (Ctrl+F5).");
+    if ((s.worldVersion | 0) === world.version) {
+      log(`World mismatch at layout version ${world.version}: client ${s.clientHash}, server ${world.hash}`);
+      return fail(s, "Your game builds a different world map than this server has, at the same version. Refresh the page (Ctrl+F5); " +
+        "if it keeps happening, the server admin can run 'task world:reset' and restart the server.");
+    }
     const others = [...sessions.values()].some((o) => o !== s && o.inWorld);
     if (others) return authErr(s, "This server is still running the previous version of the world. Try again once everyone has logged out, or refresh the page.");
     s.pendingPlay = true;
