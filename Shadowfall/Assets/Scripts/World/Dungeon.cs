@@ -76,6 +76,7 @@ namespace Shadowfall
 
         public static void Exit()
         {
+            Gore.Clear(); // stains belong to the level they were made on
             if (root != null) Object.Destroy(root);
             root = null;
             if (overworld != null) WorldGrid.Instance = overworld;

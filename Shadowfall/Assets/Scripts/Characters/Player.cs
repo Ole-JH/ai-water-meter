@@ -1645,6 +1645,7 @@ namespace Shadowfall
             CameraRig.Shake(Mathf.Clamp(amount / MaxHealth, 0.05f, 0.3f));
             Sfx.Play(amount > MaxHealth * 0.12f ? "hit_heavy" : "hit_armor", transform.position + Vector3.up, 0.55f, 0.1f);
             SpellFx.Hit(transform.position + Vector3.up * 1.2f, new Color(0.55f, 0.03f, 0.03f), true, 6);
+            Gore.PlayerHit(transform.position + Vector3.up * 1.2f, source != null ? transform.position - source.transform.position : Vector3.zero, amount / Mathf.Max(1f, MaxHealth));
             if (Health > 0f && amount > MaxHealth * 0.04f) view?.Hit();
         }
 

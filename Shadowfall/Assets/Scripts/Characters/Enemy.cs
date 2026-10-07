@@ -110,6 +110,9 @@ namespace Shadowfall
         Vector3 netPos;
         float armor, attackAnim = -1f, deathTime, curSpeed, walkPhase;
         bool dying;
+        Vector3 lastHitDir;
+        bool lastHitBig;
+        float nextDrip;
         HumanoidModel humanoid;
         CharacterView view;
         Transform model;
@@ -253,8 +256,9 @@ namespace Shadowfall
             float dt = Time.deltaTime;
             if (dying)
             {
-                if (Time.time - deathTime > 1.2f) transform.position += Vector3.down * dt * 1.2f;
-                if (Time.time - deathTime > 3f) Destroy(gameObject);
+                // corpses lie in their blood for a while before sinking away
+                if (Time.time - deathTime > 7f) transform.position += Vector3.down * dt * 0.8f;
+                if (Time.time - deathTime > 10f) Destroy(gameObject);
                 return;
             }
 
@@ -264,6 +268,13 @@ namespace Shadowfall
                 SpellFx.Ring(transform.position, new Color(0.45f, 0.85f, 1f), 1.6f, 0.45f);
             }
             if (eliteLight != null) eliteLight.intensity = Shielded ? 3f : 1.4f + Mathf.Sin(Time.time * 3f) * 0.3f;
+
+            // Badly wounded and on the move: a trail of drops.
+            if (Health < MaxHealth * 0.35f && Health > 0f && Time.time >= nextDrip && Factory.FlatDistance(netPos, transform.position) > 0.05f)
+            {
+                nextDrip = Time.time + Random.Range(0.35f, 0.9f);
+                Gore.Drip(transform.position, Gore.KindOf(Def.Name));
+            }
 
             // Smoothly chase the latest server position.
             Vector3 to = Factory.Flat(netPos - transform.position);
@@ -392,8 +403,13 @@ namespace Shadowfall
             LastDamagedTime = Time.time;
             GameUI.Float(transform.position + Vector3.up * (Height + 0.2f), crit ? dmg + "!" : dmg.ToString(),
                 crit ? new Color(1f, 0.85f, 0.2f) : Color.white, crit ? 1.5f : 1f);
-            bool bones = Def.Name.StartsWith("Skeleton") || Def.Name == "Lich King" || Def.Name == "Crypt Lord", stone = Def.Name == "Rock Golem" || Def.Name == "Stone Colossus";
+            var gore = Gore.KindOf(Def.Name);
+            bool bones = gore == Gore.Kind.Bone, stone = gore == Gore.Kind.Stone;
             SpellFx.Hit(Center, bones ? new Color(0.9f, 0.88f, 0.8f) : stone ? new Color(0.6f, 0.55f, 0.5f) : new Color(0.55f, 0.03f, 0.03f), !bones && !stone, crit ? 16 : 9);
+            // blood flies away from whoever struck the blow
+            lastHitDir = source != null ? transform.position - source.transform.position : transform.forward * -1f;
+            lastHitBig = crit || dmg > MaxHealth * 0.35f;
+            Gore.Hit(Center, lastHitDir, gore, crit ? 1f : Mathf.Clamp01(dmg / Mathf.Max(1f, MaxHealth) * 3f));
             Sfx.Play(crit ? "hit_heavy" : Voice(Def, "hit"), Center, crit ? 0.7f : 0.5f, 0.12f);
             view?.Hit();
             if (source is Player) NetClient.I?.SendHit(NetId, dmg, crit);
@@ -426,6 +442,9 @@ namespace Shadowfall
             if (Def.Boss) Sfx.Play2D("gong", 0.7f);
             if (SpellFx.Ready) SpellFx.Dust(transform.position, Def.Boss ? 2.5f : 1.2f);
             else FxPulse.Burst(Center, Factory.Shade(Def.Color, 0.6f), 0.8f, 0.3f);
+            // A big killing blow (a crit, a heavy hit) also throws chunks.
+            bool overkill = lastHitBig && Time.time - LastDamagedTime < 0.6f;
+            Gore.Death(Center, lastHitDir, Gore.KindOf(Def.Name), Height / 1.8f, overkill, Def.Boss);
         }
 
         protected override void Die(Combatant killer) { /* deaths are decided by the server */ }

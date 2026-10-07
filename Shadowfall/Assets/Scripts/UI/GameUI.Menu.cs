@@ -102,7 +102,7 @@ namespace Shadowfall
 
         void DrawMenuSettings()
         {
-            const float w = 560, h = 440;
+            const float w = 560, h = 500;
             var r = new Rect((VW - w) / 2, (VH - h) / 2, w, h);
             if (UISkin.Window(r, "Settings")) { menu = MenuPage.Main; return; }
             float x = r.x + 34, y = r.y + 66;
@@ -119,6 +119,19 @@ namespace Shadowfall
             }
             if (new Rect(x + 130, y, 346, 38).Contains(Event.current.mousePosition))
                 tooltip = "<b>Low</b>: no shadows or grass, fewer lights and particles, no color grade.\n<b>Medium</b>: hard shadows, fewer lights.\n<b>High</b>: everything.";
+            y += 58;
+
+            // Gore
+            UISkin.Shadowed(new Rect(x, y + 6, 120, 26), "Gore", label, UISkin.Cream);
+            for (int i = 0; i < GameSettings.GoreNames.Length; i++)
+            {
+                var br = new Rect(x + 130 + i * 118, y, 110, 38);
+                bool on = GameSettings.Gore == i;
+                if (UISkin.Btn(br, on ? "> " + GameSettings.GoreNames[i] + " <" : GameSettings.GoreNames[i], UISkin.Button) && !on)
+                    GameSettings.Gore = i;
+            }
+            if (new Rect(x + 130, y, 346, 38).Contains(Event.current.mousePosition))
+                tooltip = "<b>Off</b>: no blood.\n<b>Normal</b>: blood sprays and stains the ground for a few minutes.\n<b>Extra</b>: more of it, chunks on every kill, stains last twice as long.";
             y += 58;
 
             // Volume

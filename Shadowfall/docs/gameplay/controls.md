@@ -63,6 +63,7 @@ The settings are in the game menu (++esc++ → **Settings**):
 - **UI scale** makes the whole interface bigger or smaller (70–150%), applied when you let go of the slider.
 - **Show FPS** puts a frame counter at the top of the screen.
 - **Label common items**: when off, plain white gear on the ground has no label unless you hold ++alt++ or hover it.
+- **Gore**: *Off* (no blood), *Normal* (blood sprays and stains the ground for about three minutes), *Extra* (more of everything, chunks on every kill, stains last twice as long).
 - **Volume**.
 
 Settings are remembered in your browser.

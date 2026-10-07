@@ -61,6 +61,18 @@ python3 tools/art/emotes.py .art-cache/<...>/Knight.glb emotes.png   # stick fig
 
 then rebuild the heroes and add it to `EmoteDef.All` (`Characters/Emotes.cs`) and `EMOTES` in `server/content.js`.
 
+## Gore
+
+`Combat/Gore.cs` handles blood: `Gore.Hit` (a spray away from the attacker plus a few splats on the ground), `Gore.Death`
+(a burst, splatter, a pool spreading under the body, and chunks on crits, heavy blows and bosses), `Gore.Drip` (wounded monsters)
+and `Gore.PlayerHit`. What a monster sheds comes from `Gore.KindOf(name)`: red blood, green goblin ichor, zombie rot, bone
+chips and grave dust for skeletons, rubble for golems.
+
+Ground splats are quads in a single dynamic mesh drawn with `Resources/Shaders/ShadowfallDecal.shader` (a lit, alpha-blended
+surface shader with a little wet shine). Their texture is a 2x2 atlas generated at start-up from metaballs: a pool, droplets and
+two splashes whose spikes point along the spray direction. Splats dry darker over 45 s, last 3 minutes (6 on *Extra*), then fade;
+the oldest go first beyond a cap that depends on the graphics quality. Stains are cleared when you change level or leave the world.
+
 ## Spell effects
 
 `SpellFx` (`Assets/Scripts/Combat/SpellFx.cs`) builds effects from Unity particle systems and a few procedural meshes, all drawn with the soft `Shadowfall/Fx` shader (additive glow, or alpha for smoke):

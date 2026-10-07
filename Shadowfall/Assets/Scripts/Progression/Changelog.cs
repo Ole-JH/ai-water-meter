@@ -24,6 +24,18 @@ namespace Shadowfall
         {
             new Entry
             {
+                Id = 17, Date = "2026-10-07", Title = "Blood and guts",
+                Items = new[]
+                {
+                    "Hits spray blood away from the blow, and it stays on the ground, drying darker over a few minutes.",
+                    "Kills burst: splatter all around, a pool spreading under the body, and chunks flying on crits and heavy blows.",
+                    "Skeletons shatter into bone chips, golems into rubble, goblins bleed green. Badly wounded monsters leave a trail.",
+                    "Corpses lie a while longer before they sink away.",
+                    "Too much? Esc > Settings > Gore: Off, Normal or Extra.",
+                },
+            },
+            new Entry
+            {
                 Id = 16, Date = "2026-10-07", Title = "Accounts, heroes and password resets",
                 Items = new[]
                 {

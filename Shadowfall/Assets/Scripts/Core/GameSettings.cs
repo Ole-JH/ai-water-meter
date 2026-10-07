@@ -30,6 +30,16 @@ namespace Shadowfall
             set { quality = Mathf.Clamp(value, 0, 2); Store("sf_quality", quality); Apply(); }
         }
 
+        static int gore = -1;
+
+        /// <summary>0 = off (no blood), 1 = normal, 2 = extra (more of everything, chunks on every kill, longer-lasting stains).</summary>
+        public static int Gore
+        {
+            get { if (gore < 0) gore = Mathf.Clamp(Load("sf_gore", 1), 0, 2); return gore; }
+            set { gore = Mathf.Clamp(value, 0, 2); Store("sf_gore", gore); if (gore == 0) Shadowfall.Gore.Clear(); }
+        }
+        public static readonly string[] GoreNames = { "Off", "Normal", "Extra" };
+
         public static bool ShowFps
         {
             get { if (showFps < 0) showFps = Load("sf_fps", 0); return showFps == 1; }

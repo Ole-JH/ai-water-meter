@@ -113,6 +113,7 @@ namespace Shadowfall
         /// <summary>Tear down everything that belongs to a play session (on logout / disconnect).</summary>
         public void LeaveWorld()
         {
+            Gore.Clear();
             if (Player.I != null) { Destroy(Player.I.gameObject); Player.I = null; }
             foreach (var e in FindObjectsByType<Enemy>(FindObjectsSortMode.None)) Destroy(e.gameObject);
             foreach (var r in FindObjectsByType<RemotePlayer>(FindObjectsSortMode.None)) Destroy(r.gameObject);

@@ -21,6 +21,7 @@
 | `World/NpcChatter.cs` | What NPCs and villagers say in speech bubbles |
 | `World/WorldGrid.cs` | Tile walkability, A* pathfinding, line of sight, hashing and packing |
 | `World/Interactables.cs` | `LootDrop`, `ResourceNode` (gathering), `CraftingStation` + `Recipe` (anvil sparks, cooking flare and steam), `Npc` |
+| `Combat/Gore.cs` | Blood and gore: directional hit sprays, death bursts, gibs, and ground splats/pools drawn as one decal mesh (`Shadowfall/Decal` shader, procedurally generated splat atlas) that dry and fade; per-monster kinds (blood, goblin ichor, rot, bone, stone) and the Gore setting |
 | `World/PropFire.cs` | Animated fire on a prop (campfires, gate torches, braziers, dungeon torches): flames, embers, smoke, a wobbling glow core and a flickering light; pauses when the hero is far away |
 | `Characters/Player.cs` | Click-to-move, targeting, melee, abilities, stats, potions, recall, gathering (and its effects), save and load |
 | `Characters/Enemy.cs` | `EnemyDef` (looks) and the `Enemy` network proxy (interpolation, hit prediction, death, personal loot) |
