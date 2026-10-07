@@ -24,6 +24,16 @@ namespace Shadowfall
         {
             new Entry
             {
+                Id = 29, Date = "2026-10-08", Title = "Salvage & reforge",
+                Items = new[]
+                {
+                    "Weapon and armor merchants can now salvage your gear into materials (Scrap Iron, Arcane Dust, Veiled Crystals, Forgotten Souls); socketed gems come back to you. One button salvages all your common and magic gear.",
+                    "Reforge one property of a magic, rare, legendary or set item into a new one, for materials and gold. Once you have reforged a property, only that one can be reforged again.",
+                    "Three new achievements, one with the title \"the Perfectionist\".",
+                },
+            },
+            new Entry
+            {
                 Id = 28, Date = "2026-10-08", Title = "World bosses",
                 Items = new[]
                 {

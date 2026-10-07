@@ -505,6 +505,18 @@
    "name": "Nothing Left Standing",
    "title": "the Undefeated"
   },
+  "salvage_50": {
+   "name": "Scrapper",
+   "title": ""
+  },
+  "reforge_first": {
+   "name": "Second Opinion",
+   "title": ""
+  },
+  "reforge_25": {
+   "name": "Never Satisfied",
+   "title": "the Perfectionist"
+  },
   "worldboss_first": {
    "name": "Giant Slayer",
    "title": ""

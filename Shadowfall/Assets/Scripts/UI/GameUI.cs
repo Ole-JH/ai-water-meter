@@ -174,7 +174,7 @@ namespace Shadowfall
                 {
                     if (waystoneOpen != null) waystoneOpen = null;
                     else if (chooseDungeon >= 0) chooseDungeon = -1;
-                    else if (dialogNpc != null || craftStation != null) { dialogNpc = null; craftStation = null; }
+                    else if (dialogNpc != null || craftStation != null || forgeOpen) { dialogNpc = null; craftStation = null; forgeOpen = false; }
                     else if (tradeOpen) NetClient.I?.CancelTrade();
                     else if (menu != MenuPage.None) menu = menu == MenuPage.Main ? MenuPage.None : MenuPage.Main;
                     else if (showNews) CloseNews(Player.I);
@@ -259,6 +259,7 @@ namespace Shadowfall
             else tradeGoldFocused = false;
             if (dialogNpc != null) DrawDialog(p);
             if (craftStation != null) DrawCrafting(p);
+            if (forgeOpen) DrawForge(p);
             if (showHelp) DrawHelp();
             if (showNews) DrawNews(p);
             if (showEmotes) DrawEmotes(p);
@@ -1751,7 +1752,7 @@ namespace Shadowfall
         {
             var npc = dialogNpc;
             float height = npc.Role == NpcRole.Vendor && npc.Shop != null && npc.Shop.Kind == VendorKind.Companions ? 290 + CompanionDef.All.Length * 80 + MountDef.All.Length * 62
-                : npc.Role == NpcRole.Vendor && npc.Shop != null ? 330 + npc.Shop.Items.Count * 54 + (npc.Shop.Kind == VendorKind.Curios ? 54 : 0)
+                : npc.Role == NpcRole.Vendor && npc.Shop != null ? 330 + npc.Shop.Items.Count * 54 + (npc.Shop.Kind == VendorKind.Curios || npc.Shop.Kind == VendorKind.Weapons || npc.Shop.Kind == VendorKind.Armor ? 54 : 0)
                 : npc.Role == NpcRole.QuestGiver ? QuestDialogHeight(npc) : 520;
             var r = new Rect(14, 120, 470, Mathf.Min(height, VH - 140));
             if (UISkin.Window(r, npc.DisplayName, true, true)) { dialogNpc = null; return; }
@@ -1821,6 +1822,11 @@ namespace Shadowfall
                     y += 56;
                     if (UISkin.Btn(new Rect(r.x + (r.width - 340) / 2, y, 340, 46), "Sell Common Items & Materials", UISkin.Button))
                         NetClient.I?.Op("sellcommon");
+                    if (shop.Kind == VendorKind.Weapons || shop.Kind == VendorKind.Armor)
+                    {
+                        y += 54;
+                        if (UISkin.Btn(new Rect(r.x + (r.width - 340) / 2, y, 340, 46), "Salvage & Reforge Gear", UISkin.Button)) OpenForge();
+                    }
                     if (shop.Kind == VendorKind.Curios)
                     {
                         y += 54;

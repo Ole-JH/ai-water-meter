@@ -76,6 +76,18 @@ namespace Shadowfall
                     Sfx.Play2D("coins", 0.5f);
                     GameUI.Log("Bought " + m.name + (m.n > 1 ? " x" + m.n : "") + " for " + m.gold + " gold.", GoldColor);
                     break;
+                case "salvage":
+                case "salvagejunk":
+                    Sfx.Play2D("anvil", 0.6f, 0.9f);
+                    GameUI.Log((m.op == "salvage" ? "You salvage " + m.name : "You salvage " + m.n + " piece" + (m.n == 1 ? "" : "s") + " of gear") +
+                        (m.items != null && m.items.Length > 0 ? ": " + string.Join(", ", m.items) + "." : "."), new Color(0.75f, 0.85f, 1f));
+                    p.Achievements.Add("salvaged", m.op == "salvage" ? 1 : m.n);
+                    break;
+                case "reforge":
+                    Sfx.Play2D("anvil", 0.7f, 1.15f);
+                    GameUI.Log("Reforged " + m.name + ": " + Item.StatText((Stat)m.n, int.TryParse(m.k, out var rv) ? rv : 0) + " (" + m.gold + " gold).", new Color(0.75f, 0.85f, 1f));
+                    p.Achievements.Add("reforged");
+                    break;
                 case "fuse":
                     Sfx.Play2D("anvil", 0.6f);
                     GameUI.Log("Vex fuses three gems into a " + m.name + " (" + m.gold + " gold).", GoldColor);

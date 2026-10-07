@@ -110,6 +110,9 @@ exploration count from the day achievements arrived.
 
 | Achievement | How | Points | Title |
 | --- | --- | --- | --- |
+| **Scrapper** | Salvage 50 pieces of gear at a blacksmith. | 10 |  |
+| **Second Opinion** | Reforge a property of an item. | 5 |  |
+| **Never Satisfied** | Reforge 25 times. | 10 | the Perfectionist |
 | **Lumberjack** | Reach Woodcutting level 10. | 10 |  |
 | **Timberlord** | Reach Woodcutting level 25. | 25 |  |
 | **Prospector** | Reach Mining level 10. | 10 |  |

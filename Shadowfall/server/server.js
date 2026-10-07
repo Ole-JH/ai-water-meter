@@ -1715,6 +1715,18 @@ function give(s, items) {
   return dropFor(s, s.x, s.z, overflow, s.inst);
 }
 
+/** Salvages gear: materials and any socketed gems into the bags (or at the hero's feet). */
+function salvageInto(s, gear) {
+  const totals = new Map();
+  const items = [];
+  for (const it of gear) {
+    for (const [name, n] of I.salvageYield(it)) totals.set(name, (totals.get(name) || 0) + n);
+    for (const g of it.Gems || []) items.push(I.byName(g));
+  }
+  for (const [name, n] of totals) items.push({ ...I.material(name), Count: n });
+  return { drops: give(s, items), names: [...totals].map(([name, n]) => `${n} ${name}`) };
+}
+
 const VENDOR_RESTOCK = I.RESTOCK_MS / 1000;
 function vendorFor(s, kind) {
   let v = s.vendors[kind];
@@ -1799,6 +1811,44 @@ const itemOps = {
     target.Gems.push(g.Name);
     if (--g.Count <= 0) s.ledger.bag[m.i] = null;
     iok(s, "socket", { name: g.Name, target: target.Name });
+    return true;
+  },
+  /** Breaks a piece of gear in the bags into materials (and gives back its gems). At a blacksmith in town. */
+  salvage(s, m) {
+    const it = bagItem(s, m.i);
+    if (!it || it.Kind !== I.Kind.Equipment) return false;
+    if (!inTownNow(s)) return ierr(s, "salvage", "Find a blacksmith in town to salvage gear.");
+    s.ledger.bag[m.i] = null;
+    const got = salvageInto(s, [it]);
+    iok(s, "salvage", { name: it.Name, n: 1, items: got.names, drops: got.drops });
+    return true;
+  },
+  /** Salvages every common and magic piece of gear in the bags. */
+  salvagejunk(s) {
+    if (!inTownNow(s)) return ierr(s, "salvage", "Find a blacksmith in town to salvage gear.");
+    const junk = [];
+    s.ledger.bag.forEach((it, i) => {
+      if (it && it.Kind === I.Kind.Equipment && it.Rarity <= I.Rarity.Magic) { junk.push(it); s.ledger.bag[i] = null; }
+    });
+    if (!junk.length) return ierr(s, "salvagejunk", "You have no common or magic gear to salvage.");
+    const got = salvageInto(s, junk);
+    iok(s, "salvagejunk", { n: junk.length, items: got.names, drops: got.drops });
+    return true;
+  },
+  /** Rerolls one affix of a piece of gear in the bags for materials and gold (see I.reforge). */
+  reforge(s, m) {
+    const it = bagItem(s, m.i), idx = m.j | 0;
+    if (!it || it.Kind !== I.Kind.Equipment || !it.Mods || idx < 0 || idx >= it.Mods.length) return false;
+    if (!inTownNow(s)) return ierr(s, "reforge", "Find a blacksmith in town to reforge gear.");
+    const cost = I.reforgeCost(it);
+    if (!cost) return ierr(s, "reforge", "Only magic gear and better can be reforged.");
+    if (it.Reforged && it.Reforged !== idx + 1) return ierr(s, "reforge", "This item has been reforged before: only that same property can be reforged again.");
+    if (s.ledger.gold < cost.gold) return ierr(s, "reforge", `Reforging this costs ${cost.gold} gold.`);
+    for (const [name, n] of cost.mats) if (I.countOf(s.ledger.bag, name) < n) return ierr(s, "reforge", `Reforging this needs ${n} ${name}. Salvage gear for more.`);
+    for (const [name, n] of cost.mats) I.removeByName(s.ledger.bag, name, n);
+    s.ledger.gold -= cost.gold;
+    const mod = I.reforge(it, idx);
+    iok(s, "reforge", { name: it.Name, j: idx, n: mod.Stat, gold: cost.gold, k: String(mod.Value) });
     return true;
   },
   /** Vex fuses three gems of a kind into one of the next quality. */

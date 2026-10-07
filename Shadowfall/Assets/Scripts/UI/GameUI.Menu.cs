@@ -96,6 +96,7 @@ namespace Shadowfall
             showBags = showChar = showSkills = showQuests = showMap = showHelp = showTalents = showStash = showAdmin = showNews = showEmotes = showAchievements = false;
             dialogNpc = null;
             craftStation = null;
+            forgeOpen = false;
             menuPlayer = null;
             socketGem = -1;
             ChatOpen = false;

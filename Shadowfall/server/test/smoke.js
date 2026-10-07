@@ -366,6 +366,47 @@ async function economyTests(a, b) {
   assert.strictEqual(await seenMount(), "horse", "other players see the mount");
   state(b, 146, 187);
 
+  // The forge: salvage gear into materials (gems come back), reforge one property for materials and gold.
+  for (let i = 0; i < 3; i++) a.ws.send(JSON.stringify({ t: "adm", c: "give", what: "legendary" }));
+  a.ws.send(JSON.stringify({ t: "adm", c: "give", what: "gems" }));
+  a.ws.send(JSON.stringify({ t: "adm", c: "give", what: "gold", n: 5000 }));
+  await sleep(300);
+  const legs = () => inv().bag.map((x, i) => [x, i]).filter(([x]) => x.Kind === 0 && x.Rarity === 3);
+  assert.strictEqual(legs().length, 3, "three legendaries to work with");
+  const gemSlot = inv().bag.findIndex((x) => x.Kind === 3);
+  const gemName = inv().bag[gemSlot].Name, gemsBefore = inv().bag.filter((x) => x.Name === gemName).reduce((n, x) => n + x.Count, 0);
+  state(a, 300, 300);
+  await sleep(150);
+  await iop("salvage", { i: legs()[0][1] });
+  assert.match(lastErr()?.msg || "", /blacksmith in town/, "salvaging needs a blacksmith in town");
+  state(a, 464.5, 464.5);
+  await sleep(150);
+  const withSocket = legs().find(([x]) => x.Sockets > 0);
+  if (withSocket) await iop("socket", { i: gemSlot, j: withSocket[1] });
+  const toSalvage = withSocket ? [withSocket[1], legs().find(([, i]) => i !== withSocket[1])[1]] : [legs()[0][1], legs()[1][1]];
+  const keep = legs().find(([, i]) => !toSalvage.includes(i))[0].Name;
+  for (const i of toSalvage) await iop("salvage", { i });
+  const count = (name) => inv().bag.filter((x) => x.Name === name).reduce((n, x) => n + x.Count, 0);
+  assert.strictEqual(count("Forgotten Soul"), 2, "salvaging a legendary gives a Forgotten Soul");
+  assert.ok(count("Veiled Crystal") >= 2, "and Veiled Crystals");
+  assert.strictEqual(inv().bag.filter((x) => x.Name === gemName).reduce((n, x) => n + x.Count, 0), gemsBefore, "socketed gems come back when salvaging");
+  const slotKeep = inv().bag.findIndex((x) => x.Name === keep);
+  const item0 = inv().bag[slotKeep], gold0 = inv().gold;
+  await iop("reforge", { i: slotKeep, j: 0 });
+  const after = inv().bag[slotKeep];
+  assert.ok(after.Reforged === 1 && after.Mods.length === item0.Mods.length, "reforging marks which property was reforged");
+  assert.ok(!after.Mods.slice(1).some((m) => m.Stat === after.Mods[0].Stat), "the new property is not one the item already has");
+  assert.ok(inv().gold < gold0 && count("Forgotten Soul") === 1, "reforging costs gold and materials");
+  await iop("reforge", { i: slotKeep, j: 1 });
+  assert.match(lastErr()?.msg || "", /only that same property/, "after a reforge only the same property can be reforged again");
+  await iop("reforge", { i: slotKeep, j: 0 });
+  assert.strictEqual(count("Forgotten Soul"), 0, "the same one can be reforged again");
+  await iop("reforge", { i: slotKeep, j: 0 });
+  assert.match(lastErr()?.msg || "", /needs 1 Forgotten Soul/, "not without the materials");
+  await iop("salvagejunk", {});
+  assert.ok(a.all("iok").some((m) => m.op === "salvagejunk") || /no common or magic/.test(lastErr()?.msg || ""), "salvaging all junk at once");
+  assert.ok(!inv().bag.some((x) => x.Kind === 0 && x.Rarity <= 1), "leaves no common or magic gear in the bags");
+
   state(a, 144, 187);
   await sleep(150);
 }

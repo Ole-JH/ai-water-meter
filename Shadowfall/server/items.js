@@ -49,6 +49,9 @@ const manaPotion = () => item({ Name: "Mana Potion", Kind: Kind.Consumable, MaxS
 const MATERIALS = {
   "Oak Logs": [col(0.55, 0.38, 0.2), "Lg", 4], "Willow Logs": [col(0.6, 0.55, 0.3), "Lg", 9], "Yew Logs": [col(0.4, 0.22, 0.12), "Lg", 20],
   "Copper Ore": [col(0.85, 0.5, 0.25), "Or", 5], "Iron Ore": [col(0.55, 0.35, 0.3), "Or", 11], "Mithril Ore": [col(0.35, 0.5, 0.95), "Or", 24],
+  // From salvaging gear at a blacksmith (see salvageYield), spent on reforging
+  "Scrap Iron": [col(0.55, 0.55, 0.6), "Sc", 2], "Arcane Dust": [col(0.55, 0.75, 1), "Du", 6],
+  "Veiled Crystal": [col(1, 0.85, 0.3), "Cr", 18], "Forgotten Soul": [col(1, 0.5, 0.15), "So", 60],
   "Raw Trout": [col(0.6, 0.65, 0.7), "Fi", 3], "Raw Salmon": [col(0.95, 0.55, 0.45), "Fi", 8], "Burnt Fish": [col(0.15, 0.12, 0.1), "Fi", 1],
 };
 function material(name) {
@@ -193,6 +196,44 @@ function randomEquipment(itemLevel, rarityBonus = 0, forced = null, forcedSlot =
   it.Value = Math.max(1, (3 + itemLevel * 2) * rarityValue);
   it.IconColor = iconTint(slot, tier);
   return it;
+}
+
+// ------------------------------------------------------------------ salvage & reforge (the blacksmiths; Forge.cs mirrors the numbers)
+
+/** What salvaging a piece of gear gives: [[material, count]]. Socketed gems come back too (server.js). */
+function salvageYield(it) {
+  const r = it.Rarity, big = it.ItemLevel >= 12 ? 1 : 0;
+  if (r === Rarity.Common) return [["Scrap Iron", 1 + big + (rnd() < 0.5 ? 1 : 0)]];
+  if (r === Rarity.Magic) return [["Arcane Dust", 1 + (rnd() < 0.5 ? 1 : 0)], ["Scrap Iron", 1]];
+  if (r === Rarity.Rare) return [["Veiled Crystal", 1], ["Arcane Dust", 1 + big + (rnd() < 0.5 ? 1 : 0)]];
+  return [["Forgotten Soul", 1], ["Veiled Crystal", 1 + big]]; // legendary and set
+}
+
+/** What reforging one of an item's affixes costs: materials and gold. Null: it can't be reforged. */
+function reforgeCost(it) {
+  const r = it.Rarity;
+  if (!it.Mods || !it.Mods.length || r === Rarity.Common) return null;
+  const gold = Math.max(25, Math.round(it.Value * 1.5));
+  if (r === Rarity.Magic) return { mats: [["Arcane Dust", 3]], gold };
+  if (r === Rarity.Rare) return { mats: [["Veiled Crystal", 2], ["Arcane Dust", 4]], gold };
+  return { mats: [["Forgotten Soul", 1], ["Veiled Crystal", 2]], gold };
+}
+
+/**
+ * Rerolls affix `idx` of an item: a new stat (any the item doesn't have on its other affixes) with a fresh value for its
+ * level. Like Diablo's enchanting: once an item has been reforged, only that same affix can be reforged again
+ * (Reforged = index + 1). Magic items get the name that fits their new affixes.
+ */
+function reforge(it, idx) {
+  const others = new Set(it.Mods.filter((_, i) => i !== idx).map((m) => m.Stat));
+  const pool = STATS.map((_, i) => i).filter((st) => !others.has(st));
+  const stat = pick(pool);
+  const rarityMul = it.Rarity >= Rarity.Legendary ? 1.35 : it.Rarity === Rarity.Rare ? 1.15 : 1;
+  it.Mods[idx] = { Stat: stat, Value: Math.max(1, round(rollStat(stat, it.ItemLevel) * rarityMul)) };
+  it.Reforged = idx + 1;
+  if (it.Rarity === Rarity.Magic && it.BaseType)
+    it.Name = `${PREFIXES[it.Mods[0].Stat]} ${it.BaseType}${it.Mods.length > 1 ? " " + SUFFIXES[it.Mods[1].Stat] : ""}`;
+  return it.Mods[idx];
 }
 
 // ------------------------------------------------------------------ legendary powers, sets, gems (ItemPowers.cs)
@@ -458,6 +499,7 @@ function sortSlots(slots) {
 
 module.exports = {
   Rarity, Kind, Slot, Stat, BAG_SIZE, STASH_SIZE, GAMEDATA, VENDOR_KINDS, RESTOCK_MS, RECIPES, GATHER, GEM_TIERS, GEM_TYPES,
+  salvageYield, reforgeCost, reforge,
   item, healthPotion, manaPotion, material, food, provision, byName, starterWeapon, starterChest, randomEquipment, gem, parseGem, randomGem,
   rollLoot, rollChest, vendorStock, price, isStackable, skillLevel,
   emptyLedger, ledgerFromSave, ledgerToSave, addItem, fits, freeSlots, countOf, removeByName, sortSlots,

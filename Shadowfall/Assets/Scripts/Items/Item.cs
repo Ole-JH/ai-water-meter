@@ -53,6 +53,7 @@ namespace Shadowfall
         public string Set;                 // set id for set pieces
         public int Sockets;
         public List<string> Gems = new List<string>(); // gem names socketed into this item
+        public int Reforged;               // which affix was reforged at a blacksmith (index + 1; 0 = none), see Forge
 
         public bool Stackable => MaxStack > 1;
 
@@ -172,8 +173,8 @@ namespace Shadowfall
                     sb.Append("<size=16><b>").Append(Armor).Append("</b></size> Armor\n");
                     if (compareTo != null) sb.Append(Delta(Armor - compareTo.Armor, "Armor")).Append('\n');
                 }
-                foreach (var m in Mods)
-                    sb.Append("<color=#7f9fff>").Append(StatText(m.Stat, m.Value)).Append("</color>\n");
+                for (int i = 0; i < Mods.Count; i++)
+                    sb.Append("<color=#7f9fff>").Append(StatText(Mods[i].Stat, Mods[i].Value)).Append(Reforged == i + 1 ? "  <color=#c8a060>(reforged)</color>" : "").Append("</color>\n");
                 var power = ItemPowers.Power(Power);
                 if (power != null)
                     sb.Append("<color=#ff9933>").Append(power.Text).Append(power.Class != null ? " (" + power.Class + ")" : "").Append("</color>\n");

@@ -104,6 +104,33 @@ Weapons, helms, chests and legs can roll **0–2 sockets** (shown as small diamo
 
 Click a gem in your bags, then click an item (in the bags or worn) with an empty socket. Vex fuses three gems of the same kind and quality into the next quality (50 gold for Flawless, 250 for Perfect).
 
+### Salvage & reforge
+
+Weapon and armor merchants in every walled town (Gorrin in Hollowmere) have a **Salvage & Reforge Gear** button.
+
+**Salvaging** breaks a piece of gear in your bags into materials; any gems socketed in it come back to your bags.
+**Salvage All Common & Magic Gear** does every common and magic piece at once.
+
+| Gear | Gives |
+| --- | --- |
+| Common | Scrap Iron (more from item level 12 up) |
+| Magic | Arcane Dust and Scrap Iron |
+| Rare | a Veiled Crystal and Arcane Dust |
+| Legendary and set | a Forgotten Soul and Veiled Crystals |
+
+**Reforging** rerolls one property of a magic, rare, legendary or set piece: a new property (one the item doesn't
+already have) with a fresh value for its item level. Its legendary power or set bonus stays. Like Diablo's enchanting,
+once you have reforged one property of an item, only that same property can be reforged again; the tooltip marks it
+*(reforged)*. A magic item's name changes with its properties.
+
+| Gear | Each reforge costs |
+| --- | --- |
+| Magic | 3 Arcane Dust |
+| Rare | 2 Veiled Crystals and 4 Arcane Dust |
+| Legendary and set | 1 Forgotten Soul and 2 Veiled Crystals |
+
+Plus one and a half times the item's value in gold (at least 25).
+
 ## Companions
 
 Beastmaster Orla, by Hollowmere's east road, hires out companions. You pay once; after that you can summon any companion you own from her for free. One follows you at a time, and the active one is saved with your character.
