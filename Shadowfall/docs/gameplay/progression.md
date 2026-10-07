@@ -113,7 +113,9 @@ The stash chest by the village square holds 40 items and is saved with your char
 
 ## Trading
 
-Click another player's name and choose **Trade** (you must be within 10 m). Right-click items in your bags to offer them, set an amount of gold, then press **Accept**. Any change to either offer resets both acceptances; the trade completes when both players accept the same offers. Moving apart, entering a dungeon or logging out cancels it, and offered items go back to your bags.
+Click another player's name and choose **Trade** (you must be within 10 m). Right-click items in your bags to offer them (they stay in your bags, marked **TRADE**, until the trade completes), set an amount of gold, then press **Accept**. Any change to either offer resets both acceptances; the trade completes when both players accept the same offers. Moving apart, entering a dungeon or logging out cancels it.
+
+Gold and items are kept by the server: loot is rolled for you alone (nobody else sees your drops, so there's no fighting over them), and selling, buying, crafting, quest rewards and trades are all carried out there. Dying costs a tenth of your gold.
 
 ## Professions
 

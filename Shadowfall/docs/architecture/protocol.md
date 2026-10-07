@@ -91,10 +91,11 @@ Server → client:
 | `vanish` | `dur` | Smoke Bomb: monsters drop and ignore you for up to 6 s |
 | `treq` | `id` | Ask player `id` to trade (within 10 m, same instance) |
 | `tacc` / `tdecl` | — | Answer a trade request |
-| `toffer` | `items[]`, `gold` | Your current offer: up to 12 items as JSON strings (`Item`) plus gold. Resets both acceptances |
+| `toffer` | `slots[]`, `gold` | Your current offer: up to 12 bag slots plus gold (items stay in your bags until the trade completes). Resets both acceptances |
 | `tok` | — | Accept the current offers |
 | `tcancel` | — | Cancel the trade |
-| `adm` | `c` + arguments | Admin command (`tp`, `tpto`, `summon`, `dungeon`, `regen`, `spawn`, `killall`, `time`, `elites`, `announce`, `kick`, `who`, `resetpw`); refused unless the account is an admin. See [Admin module](../deployment/admin.md) |
+| `iop` | `op` + `i`, `j`, `slot`, `n`, `id`, `k`, `name`, `to` | An item or gold action, carried out by the server: `equip i`, `unequip slot`, `use i`, `drop i`, `pickup id`, `sort`, `stash i`, `unstash i`, `socket i` (into `to` = `eq` `slot` or `bag` `j`), `fuse`, `sell i`, `sellcommon`, `vendor k`, `buy k i n name`, `craft name`, `gather name`, `quest k`, `hire k`, `respec`, `chest i`. Answered by `iok` or `ierr`, then `inv` |
+| `adm` | `c` + arguments | Admin command (`tp`, `tpto`, `summon`, `dungeon`, `regen`, `spawn`, `killall`, `time`, `elites`, `announce`, `kick`, `who`, `resetpw`, `give`); refused unless the account is an admin. See [Admin module](../deployment/admin.md) |
 | `chat` | `msg` | Chat to everyone. Commands handled by the server: `/who`, `/p` (party), `/w name` (whisper), `/invite name`, `/leave`, `/a` (admin). `/r` is turned into `/w` by the client |
 | `pinvite` | `name` | Invite a player to your party (leader only once in a party) |
 | `paccept` / `pdecline` | — | Answer a pending invitation (they expire after 60 s) |
@@ -106,7 +107,7 @@ Server → client:
 | `dleave` | `town` | Leave the dungeon: to the entrance, or to Hollowmere (`town`, after dying) |
 | `fx` | `k`, `x`, `z`, `tx`, `tz` | Cosmetic spell effect (drawn by `NetClient.HandleFx`, class abilities by `AbilityFx.Remote`): `fireball`, `nova`, `heal`, `meteor`, `cleave`, `levelup`, `bash`, `holybolt`, `consecrate`, `dshield`, `judgement`, `axe`, `whirl`, `leap`, `warcry`, `chain`, `teleport`, `twin`, `multi`, `knives`, `smoke`, `rain` |
 | `emote` | `e` | Play emote `e` (`wave`, `dance`, `bow`, `cheer`, `clap`, `point`, `flex`, `sit`, `sleep`, `jump`, `kick`, `shadowbox`, `guard`) for players nearby |
-| `save` | `save` | Full character snapshot (`SaveData`) |
+| `save` | `save` | Character snapshot (`SaveData`). Gold, items and companions in it are ignored: the server saves its own |
 
 ## Server → client
 
@@ -115,11 +116,16 @@ Server → client:
 | `needworld` | — | Ask this client to upload the world map |
 | `grid` | `w`, `h`, `cells`, `hash` | Use the server's map (this client built a different one within the same build); reply with `world {hash}` |
 | `error` | `err`, `reload` | Fatal error; the socket is closed afterwards. With `reload` (a build stamp), a newer game is out and the page reloads into it |
-| `welcome` | `id`, `name`, `look`, `hasSave`, `save`, `now`, `admin` | Entered the world: your session id, the character's name, class and save, and the server clock (ms, drives the day/night cycle) |
+| `welcome` | `id`, `name`, `look`, `hasSave`, `save`, `now`, `admin` | Entered the world: your session id, the character's name, class and save, and the server clock (ms, drives the day/night cycle). An `inv` follows |
+| `inv` | `gold`, `bag[]`, `stash[]`, `eq[]`, `comp[]` | Your whole inventory, after login and every change: 40 bag and 40 stash slots (`Item`, `{}` = empty), worn items, hired companion ids |
+| `drops` | `drops[]`, `chest` | Loot on the ground for you only: `{id, x, z, gold, item}` (dropped items, overflow, chest contents) |
+| `stock` | `k`, `stock[]`, `restock` | What vendor `k` sells you now, and seconds until it restocks |
+| `iok` | `op` + what happened | An `iop` went through: `name`, `n`, `gold`, `k`, `item`, `rarity`, `burnt`, `target`, `drops` (what didn't fit in your bags). `op` `death`: the gold you lost by dying |
+| `ierr` | `op`, `msg`, `id`, `k`, `n` | An `iop` was refused; `msg` says why (empty = say nothing). For `pickup`: `id`, and `n` left on the ground when your bags filled up |
 | `snap` | `l` (online count), `m[]`, `p[]` | Nearby monsters `{id,n,l,x,z,ry,hp,mhp,ar,sl,st}` (`sl` slowed, `st` stunned) (elites also `el` name, `af` comma-separated affixes, `sh` shield up) and players `{id,name,x,z,ry,hp,mhp,lvl,mv,atk,dead,body,legs,weapon,helm,mdl,wk,cp}` |
 | `matk` | `mid`, `tid`, `dmg`, `k`, `x`, `z` | Monster attack: `k` = `melee`, `shot`, `nova`, `summon`, `blink` (elite teleports to `x`,`z` from `tx`,`tz`) or `explode` (Fire Enchanted death, area damage at `x`,`z`); `tid` = target session (−1 for area effects) |
 | `mdie` | `mid` | Monster died (play the death animation) |
-| `kill` | `mid`, `name`, `l`, `xp`, `x`, `z`, `el`, `lb` | You get credit for a kill (you damaged it, or a party member did within 60 m): award XP, update quests, roll loot |
+| `kill` | `mid`, `name`, `l`, `xp`, `x`, `z`, `el`, `lb`, `drops[]` | You get credit for a kill (you damaged it, or a party member did within 60 m): award XP, update quests, show your loot (`drops`, as in `drops`) |
 | `fx` | `id`, `k`, `x`, `z`, `tx`, `tz` | Another player's spell effect |
 | `emote` | `id`, `name`, `e` | Another player's emote (play it and print "Alice waves.") |
 | `chat` | `id`, `name`, `msg`, `ch` | Chat line. `ch`: empty = everyone, `p` = party, `w` = whisper to you, `wto` = echo of your whisper (`name` = recipient) |
@@ -129,9 +135,10 @@ Server → client:
 | `dungeon` | `id`, `l`, `k`, `d`, `n`, `df`, `seed`, `w`, `h`, `cells`, `rooms`, `start`, `exit`, `stairs`, `boss`, `chests` | You entered dungeon instance `id` at depth `l`: the generated layout (walkability bitmap like the world map, rooms as `x,y,w,h` quadruples, positions as `x,z` pairs). `id` 0 = you are back in the overworld at `x`, `z` |
 | `tinv` | `id`, `name` | Someone wants to trade with you |
 | `topen` | `id`, `name` | The trade window opens with player `id` |
-| `tupd` | `items[]`, `gold` | The other player's offer changed (acceptances reset) |
+| `tupd` | `items[]`, `gold` | The other player's offer changed (items as JSON strings, acceptances reset) |
+| `tmine` | `slots[]`, `gold` | Your own offer as the server took it (slots you don't have and gold you can't pay are dropped) |
 | `tok` | `id` | The other player accepted |
-| `tdone` | `items[]`, `gold`, `name` | Trade complete: what you receive. Your own offered items are gone |
+| `tdone` | `items[]`, `gold`, `name` | Trade complete: what you received (an `inv` follows) |
 | `tclose` | `msg` | Trade cancelled (by either player, distance, dungeon, logout) |
 | `tp` | `x`, `z` | Admin teleport: move there (in the current space) |
 | `clock` | `now` | The server clock changed (an admin set the time of day) |
@@ -153,6 +160,7 @@ Each dungeon level is an instance with its own grid, monsters and id. Positions 
 - `chat`: limited to 2 per second, 200 characters, with `<` and `>` stripped so it can't inject IMGUI rich-text tags.
 - `fx`: limited to 10 per second, and only whitelisted kinds are relayed.
 - `emote`: at most one every 0.8 s, only the ids in `EMOTES` (`content.js`), not while dead.
-- `save`: at most 256 KB, and `level` must be between 1 and 100.
-- Trades: both players must be within 10 m in the same instance when accepting, at most 12 items per offer, and an offer change resets both acceptances so nobody can swap items after the other accepted.
+- `save`: at most 256 KB, and `level` must be between 1 and 100. Its gold, items and companions are replaced by the server's.
+- `iop`: every action is checked against the server's ledger: you must have the item, merchants, the stash, Vex and Orla only work in Hollowmere, purchases check the name and price of the current stock, crafting and gathering check the skill level (gathering at most once every 1.2 s), quests pay once per character, loot can only be picked up within 7 m by the player it dropped for (and expires after 5 minutes), and nothing but potions while a trade is open or while dead.
+- Trades: both players must be within 10 m in the same instance when accepting, at most 12 items per offer, and an offer change resets both acceptances so nobody can swap items after the other accepted. When both accept, the server checks that the offered items and gold are still there and fit, then swaps everything at once.
 - Connections that stop answering pings for 20 seconds are dropped.

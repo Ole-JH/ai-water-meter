@@ -111,7 +111,7 @@ namespace Shadowfall
             {
                 showBags = true;
                 if (npc.Shop == null) npc.SellsAs(VendorKind.General);
-                if (Player.I != null) npc.Shop.Refresh(Player.I.Level);
+                npc.Shop.Refresh(true);
             }
         }
 
@@ -1089,8 +1089,17 @@ namespace Shadowfall
                     GUI.color = Color.white;
                 }
                 if (item.Kind == ItemKind.Equipment && item.Sockets > 0) DrawSocketPips(cr, item);
+                bool offered = NetClient.I != null && NetClient.I.IsOffered(i);
+                if (offered)
+                {
+                    // In the trade window: stays in the bags until the trade completes.
+                    GUI.color = new Color(0.1f, 0.25f, 0.1f, 0.6f);
+                    GUI.DrawTexture(new Rect(cr.x + 2, cr.y + 2, cr.width - 4, cr.height - 4), UISkin.White);
+                    GUI.color = Color.white;
+                    UISkin.Shadowed(new Rect(cr.x, cr.y + 2, cr.width, 16), "TRADE", UISkin.SmallCenter, new Color(0.6f, 1f, 0.6f));
+                }
                 if (cr.Contains(Event.current.mousePosition))
-                    ItemTooltip(item, p, BagHint(item, vendor));
+                    ItemTooltip(item, p, offered ? "In the trade window" : BagHint(item, vendor));
                 int click = ClickedIn(cr);
                 if (click == 0)
                 {
@@ -1105,7 +1114,7 @@ namespace Shadowfall
                 else if (click == 1)
                 {
                     if (socketGem >= 0) socketGem = -1;
-                    else if (tradeOpen) NetClient.I.OfferItem(i);
+                    else if (tradeOpen) { if (!offered) NetClient.I.OfferItem(i); }
                     else if (showStash) StashItem(p, i);
                     else if (vendor) Sell(p, i);
                     else if (Event.current.shift) p.DropItem(i);
@@ -1119,20 +1128,14 @@ namespace Shadowfall
             if (UISkin.Btn(new Rect(r.xMax - 20 - 76, fy - 4, 76, 32), "Sort", UISkin.Button))
             {
                 socketGem = -1;
-                p.Inventory.Sort();
+                NetClient.I?.Op("sort");
                 Sfx.Play2D("ui_click", 0.4f);
             }
         }
 
         void Sell(Player p, int index)
         {
-            var item = p.Inventory.Slots[index];
-            if (item == null) return;
-            int value = item.Value * Mathf.Max(1, item.Count);
-            p.Inventory.TakeAll(index);
-            p.AddGold(value);
-            Sfx.Play2D("coins", 0.5f);
-            Log("Sold " + item.Name + (item.Count > 1 ? " x" + item.Count : "") + " for " + value + " gold.", new Color(1f, 0.85f, 0.2f));
+            if (p.Inventory.Slots[index] != null) NetClient.I?.Op("sell", i: index);
         }
 
         void DrawItemSlot(Rect r, Item item, Player p, string emptyIcon = null)
@@ -1504,12 +1507,13 @@ namespace Shadowfall
                 {
                     var shop = npc.Shop;
                     if (shop.Kind == VendorKind.Companions) { DrawCompanionShop(p, r, y); break; }
-                    shop.Refresh(p.Level);
+                    shop.Refresh();
                     UISkin.Shadowed(new Rect(r.x + 26, y, 420, 28), "For Sale", UISkin.Heading, UISkin.Gold);
                     if (shop.Rotates)
                         GUI.Label(new Rect(r.x + 200, y + 4, 244, 24), "New stock in " + Mathf.CeilToInt(shop.SecondsUntilRestock / 60f) + " min",
                             UISkin.V(UISkin.Ink14, alignment: TextAnchor.UpperRight));
                     y += 36;
+                    if (!shop.Loaded) { GUI.Label(new Rect(r.x + 26, y, 420, 24), "<i>Unpacking the wares...</i>", UISkin.InkRich); y += 54; }
                     for (int i = 0; i < shop.Items.Count; i++)
                         y = ShopRow(p, r, y, shop, i);
                     y += 14;
@@ -1517,15 +1521,7 @@ namespace Shadowfall
                         "Right-click items in your bags to sell them. You have <color=#f0c45a><b>" + p.Gold + " gold</b></color>.", UISkin.Ink14);
                     y += 56;
                     if (UISkin.Btn(new Rect(r.x + (r.width - 340) / 2, y, 340, 46), "Sell Common Items & Materials", UISkin.Button))
-                    {
-                        for (int i = 0; i < p.Inventory.Slots.Length; i++)
-                        {
-                            var it = p.Inventory.Slots[i];
-                            if (it == null || it.Kind == ItemKind.Consumable || it.Kind == ItemKind.Gem) continue;
-                            if (it.Kind == ItemKind.Equipment && it.Rarity != Rarity.Common) continue;
-                            Sell(p, i);
-                        }
-                    }
+                        NetClient.I?.Op("sellcommon");
                     if (shop.Kind == VendorKind.Curios)
                     {
                         y += 54;
@@ -1568,13 +1564,8 @@ namespace Shadowfall
                 var b = item.Stackable ? new Rect(r.x + (n == 1 ? 280 : 366), y + 2, 80, 40) : new Rect(r.x + 336, y + 2, 110, 40);
                 if (!UISkin.Btn(b, item.Stackable ? "Buy " + n : "Buy", UISkin.Button)) continue;
                 if (p.Gold < price * n) { Log("You don't have enough gold.", new Color(1f, 0.4f, 0.4f)); continue; }
-                var bought = item.Stackable ? ItemDatabase.ByName(item.Name) : item;
-                bought.Count = n;
-                if (!p.Inventory.Add(bought)) { Log("Your bags are full.", new Color(1f, 0.4f, 0.4f)); continue; }
-                p.Gold -= price * n;
-                Sfx.Play2D("coins", 0.5f);
-                Log("Bought " + item.Name + (n > 1 ? " x" + n : "") + " for " + price * n + " gold.", new Color(1f, 0.85f, 0.2f));
-                if (!item.Stackable) { shop.Items.RemoveAt(index); NetClient.I?.SaveNow(); break; }
+                NetClient.I?.Op("buy", k: shop.Kind.ToString(), i: index, n: n, name: item.Name); // the server sends the new stock
+                break;
             }
             return y + 54;
         }
@@ -1601,7 +1592,7 @@ namespace Shadowfall
                 GUI.enabled = canLevel && have >= rec.InputCount;
                 if (UISkin.Btn(new Rect(r.xMax - 168, y + 6, 70, 42), "Make", UISkin.Button)) rec.Craft(p);
                 if (UISkin.Btn(new Rect(r.xMax - 92, y + 6, 66, 42), "All", UISkin.Button))
-                    for (int i = 0; i < 50 && p.Inventory.CountOf(rec.Input) >= rec.InputCount; i++)
+                    for (int i = 0, n = Mathf.Min(50, have / rec.InputCount); i < n; i++)
                         if (!rec.Craft(p)) break;
                 GUI.enabled = true;
                 y += 78;

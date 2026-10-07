@@ -44,15 +44,16 @@
 | `UI/GameUI.Menu.cs` | Esc game menu: settings (graphics, UI scale, FPS, loot labels, volume), What's New, account, admin, character select, log out |
 | `UI/GameUI.News.cs` | *What's New* window; unread entries are marked NEW |
 | `UI/GameUI.Emotes.cs` | Emote menu (++g++) and the `/e` list |
-| `Items/VendorStock.cs` | What each vendor sells, prices and restocking |
+| `Items/VendorStock.cs` | The vendor stock the server sent, and prices |
 | `Items/Item.cs` | `Item` model, rarity colors and tier, type line and tooltips |
-| `Items/ItemDatabase.cs` | Random gear generator: base types, affixes, legendary names, materials |
+| `Items/ItemDatabase.cs` | Item names, icons and look-ups (base types, affixes, legendary names, materials); the server's `items.js` rolls the real items |
 | `Items/Inventory.cs` | Bags, equipment slots, stacking and sorting |
 | `Progression/SkillSet.cs` | RuneScape-style professions and XP curve |
 | `Progression/Quests.cs` | Quest definitions (chains per NPC) and quest log |
 | `Progression/Changelog.cs` | The in-game *What's New* entries (newest first) |
 | `Net/NetClient.cs` | Connection and account flow (log in, register, password resets, character select), message dispatch, state and save sending |
-| `Net/NetClient.Trade.cs` | Player trading: escrow, offers, accept/cancel |
+| `Net/NetClient.Trade.cs` | Player trading: offers (bag slots and gold), accept/cancel |
+| `Net/NetClient.Items.cs` | Item and gold actions sent to the server (`Op`), the server's inventory, loot drops, vendor stock and answers |
 | `Net/NetMessages.cs` | All wire message and save-data classes (`AuthMsg` for every account request) |
 | `Net/WebSocketConnection.cs` | Polling WebSocket (`.jslib` in WebGL, `ClientWebSocket` elsewhere) |
 | `Net/RemotePlayer.cs` | Other players: interpolation, appearance, animation |
@@ -69,7 +70,9 @@
 
 | File | Responsibility |
 | --- | --- |
-| `server.js` | Static file host, WebSocket sessions, account and character messages, world grid and A*, monster AI (slows, stuns, vanished heroes), elites, parties, trades, dungeon instances, admin commands, snapshots, saving |
+| `server.js` | Static file host, WebSocket sessions, account and character messages, world grid and A*, monster AI (slows, stuns, vanished heroes), elites, parties, the item and gold ledger (`itemOps`), trades, dungeon instances, admin commands, snapshots, saving |
+| `items.js` | Items on the server: the gear generator (a port of `ItemDatabase`/`ItemPowers`), loot tables, chests, vendor stock, prices, recipes, gathering levels, and the bag helpers |
+| `gamedata.json` | Quest rewards and companion prices, extracted from the C# sources (`task gamedata`) |
 | `store.js` | Account and character storage: `PgStore` (PostgreSQL, `DATABASE_URL`, schema migrations) and `FileStore` (JSON files in `DATA_DIR`), with the one-time import of old character files |
 | `accounts.js` | Password and recovery code hashing (scrypt), reset codes, rate limiter, optional reset emails (nodemailer, `SMTP_URL`) |
 | `admin-cli.js` | Command-line account admin: `reset-code`, `admin on\|off`, `accounts` ([Accounts & passwords](../deployment/accounts.md#admin-command-line)) |
@@ -85,6 +88,7 @@
 | Path | Responsibility |
 | --- | --- |
 | `compile-check/` | .NET project that compiles `Assets/Scripts` without Unity (`task client:check`) |
+| `gamedata/extract.js` | Writes `server/gamedata.json` from `Quests.cs` and `Companion.cs` (`task gamedata`; the smoke test fails if it is stale) |
 | `docker-build-client.sh` | Entry point of the Docker WebGL build (`task client:build`) |
 | `license-helper/` | Unity Hub in a container for `task license:activate` |
 | `art/emotes.py` | Authors the Wave, Dance, Bow, Point, Clap and Flex animations for the hero rig (and previews them as stick figures) |

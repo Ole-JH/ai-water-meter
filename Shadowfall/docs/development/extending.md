@@ -36,6 +36,8 @@ new QuestDef
 },
 ```
 
+Then run `task gamedata`: the server pays the gold and item reward from `server/gamedata.json`, extracted from this file (the smoke test fails while it is out of date). Companion prices and levels come from `Companion.cs` the same way.
+
 !!! warning "Quest ids are saved"
     Completed and active quests are stored by `Id`, so don't rename ids that players may already have.
 
@@ -54,7 +56,9 @@ Pass `blocksTile: false` (all of Hollowmere's NPCs do), so adding or moving an N
 
 ## Add items or affixes
 
-- Base types per tier: `weaponBases` and `armorBases` in `Items/ItemDatabase.cs`.
+Items are rolled by the server (`server/items.js`, a port of `ItemDatabase` and `ItemPowers`), so change both sides.
+
+- Base types per tier: `weaponBases` and `armorBases` in `Items/ItemDatabase.cs` and `server/items.js`.
 - New stat: add it to the `Stat` enum, `RollStat`, the `prefixes`/`suffixes` dictionaries and `Item.StatText`. Then apply it in `Player.RecalculateStats`.
 - Legendary names: `legendaryNames`.
 

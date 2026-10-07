@@ -89,9 +89,7 @@ namespace Shadowfall
             GUI.enabled = inTown && p.TalentPointsSpent > 0 && p.Gold >= cost;
             if (UISkin.Btn(new Rect(r.x + (r.width - 260) / 2, y, 260, 40), "Reset Talents (" + cost + " gold)", UISkin.Button))
             {
-                p.Gold -= cost;
-                p.ResetTalents();
-                Log("Your talents have been reset.", new Color(0.8f, 0.6f, 1f));
+                NetClient.I?.Op("respec"); // the talents reset when the server has taken the gold
             }
             GUI.enabled = true;
             if (new Rect(r.x + (r.width - 260) / 2, y, 260, 40).Contains(Event.current.mousePosition))
@@ -134,16 +132,9 @@ namespace Shadowfall
 
         void StashItem(Player p, int bagIndex)
         {
-            var item = p.Inventory.Slots[bagIndex];
-            if (item == null) return;
-            for (int i = 0; i < p.Stash.Slots.Length; i++)
-                if (p.Stash.Slots[i] == null)
-                {
-                    p.Stash.Slots[i] = p.Inventory.TakeAll(bagIndex);
-                    Sfx.Play2D("drop", 0.4f);
-                    return;
-                }
-            Log("Your stash is full.", new Color(1f, 0.4f, 0.4f));
+            if (p.Inventory.Slots[bagIndex] == null) return;
+            NetClient.I?.Op("stash", i: bagIndex);
+            Sfx.Play2D("drop", 0.4f);
         }
 
         void DrawStash(Player p)
@@ -167,8 +158,8 @@ namespace Shadowfall
                 if (cr.Contains(Event.current.mousePosition)) ItemTooltip(item, p, "Click to take it out");
                 if (ClickedIn(cr) >= 0)
                 {
-                    if (p.Inventory.Add(item)) { p.Stash.Slots[i] = null; Sfx.Play2D("ui_click", 0.4f); }
-                    else Log("Your bags are full.", new Color(1f, 0.4f, 0.4f));
+                    NetClient.I?.Op("unstash", i: i);
+                    Sfx.Play2D("ui_click", 0.4f);
                 }
             }
             int used = 0;
@@ -199,7 +190,7 @@ namespace Shadowfall
             for (int i = 0; i < NetClient.TradeSlots; i++)
             {
                 var a = new Rect(lx + (i % cols) * (cell + gap), y + (i / cols) * (cell + gap), cell, cell);
-                var mine = i < net.MyOffer.Count ? net.MyOffer[i] : null;
+                var mine = net.MyOfferItem(i);
                 DrawItemSlot(a, mine, p);
                 if (mine != null)
                 {

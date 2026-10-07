@@ -161,11 +161,7 @@ namespace Shadowfall
             torch.intensity = 1.6f;
             torch.color = new Color(1f, 0.8f, 0.55f);
 
-            Inventory.Changed += RecalculateStats;
-            Inventory.Equipped[EquipSlot.Weapon] = ItemDatabase.StarterWeapon();
-            Inventory.Equipped[EquipSlot.Chest] = ItemDatabase.StarterChest();
-            var hp = ItemDatabase.HealthPotion(); hp.Count = 5; Inventory.Add(hp);
-            var mp = ItemDatabase.ManaPotion(); mp.Count = 3; Inventory.Add(mp);
+            Inventory.Changed += RecalculateStats; // the starter kit arrives with the server's first "inv"
             RecalculateStats();
             Health = MaxHealth;
             Mana = MaxMana;
@@ -297,11 +293,33 @@ namespace Shadowfall
             }
         }
 
-        public void AddGold(int amount)
+        bool ledgerLoaded;
+
+        /// <summary>
+        /// The server's word on our gold, bags, stash, worn gear and companions (sent at login and after every change).
+        /// Empty slots arrive as items without a name.
+        /// </summary>
+        public void ApplyLedger(int gold, Item[] bag, Item[] stash, Item[] worn, string[] companions)
         {
-            if (amount == 0) return;
-            Gold += amount;
-            if (amount > 0) GameUI.Float(transform.position + Vector3.up * 2.4f, "+" + amount + " gold", new Color(1f, 0.85f, 0.2f), 0.8f);
+            static Item Real(Item it) => it != null && !string.IsNullOrEmpty(it.Name) ? it : null;
+            bool fullHealth = Health >= MaxHealth - 0.5f, fullMana = Mana >= MaxMana - 0.5f;
+            if (ledgerLoaded && gold > Gold) GameUI.Float(transform.position + Vector3.up * 2.4f, "+" + (gold - Gold) + " gold", new Color(1f, 0.85f, 0.2f), 0.8f);
+            Gold = gold;
+            for (int i = 0; i < Inventory.Slots.Length; i++) Inventory.Slots[i] = bag != null && i < bag.Length ? Real(bag[i]) : null;
+            for (int i = 0; i < Stash.Slots.Length; i++) Stash.Slots[i] = stash != null && i < stash.Length ? Real(stash[i]) : null;
+            Inventory.Equipped.Clear();
+            if (worn != null)
+                foreach (var it in worn)
+                    if (Real(it) != null && it.Slot != EquipSlot.None) Inventory.Equipped[it.Slot] = it;
+            OwnedCompanions.Clear();
+            if (companions != null)
+                foreach (var c in companions) if (CompanionDef.Get(c) != null && !OwnedCompanions.Contains(c)) OwnedCompanions.Add(c);
+            Inventory.NotifyChanged(); // recalculates stats
+            Stash.NotifyChanged();
+            // At full health (a new hero too), stay full with whatever the gear now gives.
+            if (fullHealth) Health = MaxHealth;
+            if (fullMana) Mana = MaxMana;
+            ledgerLoaded = true;
         }
 
         // =====================================================================================
@@ -1179,7 +1197,8 @@ namespace Shadowfall
                 GameUI.Float(transform.position + Vector3.up * 2.5f, "Already at full mana", Color.gray, 0.8f);
                 return;
             }
-            var used = Inventory.TakeOne(index);
+            var used = Inventory.TakeOne(index); // the server takes it too
+            NetClient.I?.Op("use", i: index);
             potionReadyAt = Time.time + PotionCooldown;
             Sfx.Play2D("potion", 0.6f, Random.Range(0.92f, 1.08f));
             if (used.HealAmount > 0)
@@ -1283,18 +1302,13 @@ namespace Shadowfall
 
         public bool OwnsCompanion(string id) => OwnedCompanions.Contains(id);
 
-        /// <summary>Buys a companion from Beastmaster Orla; it starts following right away.</summary>
+        /// <summary>Buys a companion from Beastmaster Orla; it starts following once the server says so.</summary>
         public bool HireCompanion(CompanionDef def)
         {
             if (OwnsCompanion(def.Id)) return false;
             if (Level < def.RequiredLevel) { GameUI.Log(def.Name + " won't follow anyone below level " + def.RequiredLevel + ".", new Color(1f, 0.4f, 0.4f)); return false; }
             if (Gold < def.Price) { GameUI.Log("You need " + def.Price + " gold to hire " + def.Name + ".", new Color(1f, 0.4f, 0.4f)); return false; }
-            Gold -= def.Price;
-            OwnedCompanions.Add(def.Id);
-            Sfx.Play2D("coins", 0.6f);
-            GameUI.Log(def.Name + " joins you!", def.Color);
-            SummonCompanion(def.Id);
-            NetClient.I?.SaveNow();
+            NetClient.I?.Op("hire", k: def.Id); // they join when the server takes the gold
             return true;
         }
 
@@ -1321,45 +1335,28 @@ namespace Shadowfall
             if (CompanionInstance != null) Destroy(CompanionInstance.gameObject);
         }
 
-        /// <summary>Puts the gem at bag index <paramref name="gemIndex"/> into the first empty socket of <paramref name="target"/>.</summary>
+        /// <summary>Puts the gem at bag index <paramref name="gemIndex"/> into the first empty socket of <paramref name="target"/> (worn or in the bags).</summary>
         public bool SocketGem(int gemIndex, Item target)
         {
             var gem = gemIndex >= 0 && gemIndex < Inventory.Slots.Length ? Inventory.Slots[gemIndex] : null;
             if (gem == null || gem.Kind != ItemKind.Gem || target == null || target.Kind != ItemKind.Equipment) return false;
-            if (target.Gems == null) target.Gems = new List<string>();
-            if (target.Gems.Count >= target.Sockets)
+            if ((target.Gems != null ? target.Gems.Count : 0) >= target.Sockets)
             {
                 GameUI.Log(target.Sockets == 0 ? target.Name + " has no sockets." : target.Name + " has no empty sockets.", new Color(1f, 0.4f, 0.4f));
                 return false;
             }
-            Inventory.TakeOne(gemIndex);
-            target.Gems.Add(gem.Name);
-            Sfx.Play2D("anvil", 0.5f, 1.3f);
-            GameUI.Log("You socket the " + gem.Name + " into " + target.Name + ".", gem.IconColor);
-            Inventory.NotifyChanged();
+            if (Inventory.GetEquipped(target.Slot) == target) NetClient.I?.Op("socket", i: gemIndex, to: "eq", slot: (int)target.Slot);
+            else
+            {
+                int j = System.Array.IndexOf(Inventory.Slots, target);
+                if (j < 0) return false;
+                NetClient.I?.Op("socket", i: gemIndex, to: "bag", j: j);
+            }
             return true;
         }
 
-        /// <summary>Vex the curio dealer fuses three gems of a kind into one of the next quality.</summary>
-        public void CombineGems()
-        {
-            for (int tier = 0; tier < 2; tier++)
-                foreach (var type in ItemPowers.GemTypes)
-                {
-                    string name = ItemPowers.GemTiers[tier] + " " + type;
-                    if (Inventory.CountOf(name) < 3) continue;
-                    int cost = tier == 0 ? 50 : 250;
-                    if (Gold < cost) { GameUI.Log("Vex wants " + cost + " gold to fuse " + name + "s.", new Color(1f, 0.4f, 0.4f)); return; }
-                    Inventory.Remove(name, 3);
-                    Gold -= cost;
-                    var better = ItemPowers.Gem(type, tier + 1);
-                    if (!Inventory.Add(better)) LootDrop.Spawn(transform.position, better, 0);
-                    Sfx.Play2D("anvil", 0.6f);
-                    GameUI.Log("Vex fuses three " + name + "s into a " + better.Name + " (" + cost + " gold).", better.IconColor);
-                    return;
-                }
-            GameUI.Log("You need three gems of the same kind and quality (Chipped or Flawless).", Color.gray);
-        }
+        /// <summary>Vex the curio dealer fuses three gems of a kind into one of the next quality (the server picks which).</summary>
+        public void CombineGems() => NetClient.I?.Op("fuse");
 
         /// <summary>Potions and food share a short cooldown, so fights can't be won by drinking alone.</summary>
         public const float PotionCooldown = 3f;
@@ -1375,10 +1372,7 @@ namespace Shadowfall
                 GameUI.Log("You must be level " + item.RequiredLevel + " to equip " + item.Name + ".", new Color(1f, 0.4f, 0.4f));
                 return;
             }
-            var old = Inventory.GetEquipped(item.Slot);
-            Inventory.Slots[index] = old;
-            Inventory.Equipped[item.Slot] = item;
-            Inventory.NotifyChanged();
+            NetClient.I?.Op("equip", i: index);
             Sfx.Play2D("equip", 0.6f);
         }
 
@@ -1387,15 +1381,14 @@ namespace Shadowfall
             var item = Inventory.GetEquipped(slot);
             if (item == null) return;
             if (Inventory.FreeSlots == 0) { GameUI.Log("Your inventory is full.", new Color(1f, 0.4f, 0.4f)); return; }
-            Inventory.Equipped.Remove(slot);
-            Inventory.Add(item);
+            NetClient.I?.Op("unequip", slot: (int)slot);
         }
 
         public void DropItem(int index)
         {
-            var item = Inventory.TakeAll(index);
+            var item = Inventory.Slots[index];
             if (item == null) return;
-            LootDrop.Spawn(transform.position + transform.forward, item, 0);
+            NetClient.I?.Op("drop", i: index); // it lands at our feet, for us only
             Sfx.Play2D("drop", 0.6f);
             GameUI.Log("You drop " + item.Name + ".", Color.gray);
         }
@@ -1493,18 +1486,26 @@ namespace Shadowfall
             float chance = Mathf.Clamp(0.4f + (lvl - GatherNode.LevelRequired) * 0.05f, 0.4f, 0.95f);
             if (Random.value > chance) return;
 
-            var item = ItemDatabase.Material(GatherNode.ItemName);
-            if (!Inventory.Add(item))
+            if (!HasRoomFor(GatherNode.ItemName))
             {
                 GameUI.Log("Your inventory is too full to hold any more.", new Color(1f, 0.4f, 0.4f));
                 StopGathering();
                 return;
             }
+            NetClient.I?.Op("gather", name: GatherNode.ItemName);
             GameUI.Log("You get some " + GatherNode.ItemName + ".", Color.white);
             Skills.AddXp(GatherNode.Skill, GatherNode.Xp);
             FxPulse.Sparks(GatherNode.Position + Vector3.up, SkillSet.SkillColor(GatherNode.Skill), 5);
             GatherNode.Harvested();
             if (GatherNode == null || GatherNode.Depleted) StopGathering();
+        }
+
+        /// <summary>A free slot, or a stack of it with room.</summary>
+        bool HasRoomFor(string name)
+        {
+            if (Inventory.FreeSlots > 0) return true;
+            foreach (var it in Inventory.Slots) if (it != null && it.Name == name && it.Count < it.MaxStack) return true;
+            return false;
         }
 
         // =====================================================================================
@@ -1516,28 +1517,15 @@ namespace Shadowfall
 
         public SaveData ToSave()
         {
-            var slots = new List<SlotSave>();
-            for (int i = 0; i < Inventory.Slots.Length; i++)
-                if (Inventory.Slots[i] != null) slots.Add(new SlotSave { index = i, item = Inventory.Slots[i] });
-            // Items sitting in an open trade window are still ours: save them in free bag slots.
-            var escrow = NetClient.I != null ? NetClient.I.EscrowItems : null;
-            if (escrow != null)
-                for (int e = 0, i = 0; e < escrow.Count && i < Inventory.Slots.Length; i++)
-                    if (Inventory.Slots[i] == null) slots.Add(new SlotSave { index = i, item = escrow[e++] });
-            var stash = new List<SlotSave>();
-            for (int i = 0; i < Stash.Slots.Length; i++)
-                if (Stash.Slots[i] != null) stash.Add(new SlotSave { index = i, item = Stash.Slots[i] });
-            var equipped = new List<Item>();
-            foreach (var kv in Inventory.Equipped) if (kv.Value != null) equipped.Add(kv.Value);
+            // Gold, items and companions are the server's (it ignores them here and saves its own).
             var active = new List<QuestSave>();
             foreach (var q in Quests.Active) active.Add(new QuestSave { id = q.Def.Id, kills = q.Kills });
 
             return new SaveData
             {
-                level = Level, xp = Xp, gold = Gold + (NetClient.I != null ? NetClient.I.EscrowGold : 0), look = Look,
-                stash = stash.ToArray(),
+                level = Level, xp = Xp, look = Look,
                 talents = SaveTalents(),
-                companions = OwnedCompanions.ToArray(), companion = ActiveCompanion ?? "", wv = WorldGenerator.LayoutVersion,
+                companion = ActiveCompanion ?? "", wv = WorldGenerator.LayoutVersion,
                 fog = Exploration.Save(),
                 news = NewsSeen,
                 str = Strength, dex = Dexterity, intel = Intelligence, vit = Vitality, statPoints = StatPoints,
@@ -1546,8 +1534,6 @@ namespace Shadowfall
                 skillXp = Skills.SaveXp(),
                 completedQuests = new List<string>(Quests.Completed).ToArray(),
                 activeQuests = active.ToArray(),
-                inventory = slots.ToArray(),
-                equipped = equipped.ToArray(),
             };
         }
 
@@ -1663,9 +1649,7 @@ namespace Shadowfall
         public void Respawn()
         {
             NetClient.I?.LeaveDungeon(true); // dying in the Catacombs sends you home
-            int lost = Gold / 10;
-            Gold -= lost;
-            IsDead = false;
+            IsDead = false; // the server took its tenth of our gold when we died
             Health = MaxHealth;
             Mana = MaxMana;
             Buffs.Clear();
@@ -1676,7 +1660,7 @@ namespace Shadowfall
             if (model != null) model.Root.localRotation = Quaternion.identity;
             view?.Revive();
             path.Clear();
-            GameUI.Log("You awaken in Hollowmere. You lost " + lost + " gold.", new Color(1f, 0.6f, 0.3f));
+            GameUI.Log("You awaken in Hollowmere.", new Color(1f, 0.6f, 0.3f));
             NetClient.I?.SaveNow();
             SpellFx.HolyLight(transform.position);
             Sfx.Play2D("holy_cast", 0.6f);

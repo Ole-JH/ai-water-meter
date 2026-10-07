@@ -59,25 +59,33 @@ namespace Shadowfall
             }
         }
 
+        /// <summary>Asks the server to pay the reward (it takes collected items and pays each quest once).</summary>
         public void TurnIn(QuestState q, Player p)
         {
             if (!q.IsReady(p)) return;
-            if (q.Def.Type == QuestType.Collect) p.Inventory.Remove(q.Def.Target, q.Def.Count);
-            Active.Remove(q);
-            Completed.Add(q.Def.Id);
-            p.AddGold(q.Def.RewardGold);
+            NetClient.I?.Op("quest", k: q.Def.Id);
+        }
+
+        /// <summary>The server paid the gold (and the item, named here); experience is ours to give.</summary>
+        public void TurnedIn(string id, Player p, string item, Rarity rarity)
+        {
+            var q = Get(id);
+            if (q == null) return;
+            MarkDone(id);
             p.AddXp(q.Def.RewardXp);
-            if (q.Def.RewardItemLevel > 0)
-            {
-                var item = ItemDatabase.RandomEquipment(q.Def.RewardItemLevel, 0f, q.Def.RewardRarity);
-                if (!p.Inventory.Add(item)) LootDrop.Spawn(p.transform.position, item, 0);
-                GameUI.Log("You receive: " + item.Name, item.NameColor);
-            }
+            if (!string.IsNullOrEmpty(item)) GameUI.Log("You receive: " + item, Item.RarityColor(rarity));
             NetClient.I?.SaveNow();
             Sfx.Play2D("quest_done", 0.8f);
             GameUI.Banner("Quest Complete: " + q.Def.Title, new Color(1f, 0.85f, 0.3f));
             GameUI.Log("Quest complete: " + q.Def.Title + " (+" + q.Def.RewardXp + " xp, +" + q.Def.RewardGold + " gold)",
                 new Color(1f, 0.85f, 0.3f));
+        }
+
+        /// <summary>Finished (the server says so): off the active list for good.</summary>
+        public void MarkDone(string id)
+        {
+            Active.RemoveAll(q => q.Def.Id == id);
+            Completed.Add(id);
         }
     }
 

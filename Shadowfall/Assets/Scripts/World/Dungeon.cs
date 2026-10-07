@@ -71,7 +71,7 @@ namespace Shadowfall
             if (m.exit != null && m.exit.Length == 2) DungeonPortal.Create(root.transform, ToWorld(m.exit[0], m.exit[1]), false, Depth);
             if (m.stairs != null && m.stairs.Length == 2) DungeonPortal.Create(root.transform, ToWorld(m.stairs[0], m.stairs[1]), true, Depth + 1);
             if (m.chests != null)
-                for (int i = 0; i + 1 < m.chests.Length; i += 2) DungeonChest.Create(root.transform, ToWorld(m.chests[i], m.chests[i + 1]), Depth);
+                for (int i = 0; i + 1 < m.chests.Length; i += 2) DungeonChest.Create(root.transform, ToWorld(m.chests[i], m.chests[i + 1]), i / 2);
         }
 
         public static void Exit()
@@ -376,20 +376,20 @@ namespace Shadowfall
     public class DungeonChest : Interactable
     {
         bool opened;
-        int depth;
+        int index;  // which chest of the level (the server knows where each one is)
 
         public override bool CanInteract => !opened;
         public override Color LabelColor => opened ? Color.gray : new Color(1f, 0.85f, 0.3f);
         public override string HoverText => opened ? "Empty Chest" : "Treasure Chest";
         public override float LabelHeight => 1.4f;
 
-        public static DungeonChest Create(Transform parent, Vector3 pos, int depth)
+        public static DungeonChest Create(Transform parent, Vector3 pos, int index)
         {
             var go = new GameObject("Chest");
             go.transform.SetParent(parent, false);
             go.transform.position = pos;
             var c = go.AddComponent<DungeonChest>();
-            c.depth = depth;
+            c.index = index;
             c.DisplayName = "Treasure Chest";
             c.InteractRange = 1.8f;
             c.AddClickCollider(0.6f, 1f);
@@ -405,10 +405,7 @@ namespace Shadowfall
             Sfx.Play("loot", transform.position, 0.8f);
             Sfx.Play2D("coins", 0.6f);
             SpellFx.Hit(transform.position + Vector3.up * 0.8f, new Color(1f, 0.85f, 0.3f), false, 16);
-            int level = p.Level + depth;
-            LootDrop.Spawn(transform.position + Vector3.forward * 0.8f, null, Mathf.Max(10, Mathf.RoundToInt(level * Random.Range(8f, 16f))));
-            LootDrop.Spawn(transform.position + Vector3.right * 0.8f, ItemDatabase.RandomEquipment(level, 0.4f, Random.value < 0.25f ? Rarity.Rare : Rarity.Magic), 0);
-            if (Random.value < 0.4f) LootDrop.Spawn(transform.position + Vector3.left * 0.8f, ItemDatabase.RandomEquipment(level, 0.4f), 0);
+            NetClient.I?.Op("chest", i: index); // the server rolls what's inside, for us only
         }
     }
 

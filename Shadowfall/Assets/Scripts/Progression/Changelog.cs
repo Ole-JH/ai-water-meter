@@ -24,6 +24,17 @@ namespace Shadowfall
         {
             new Entry
             {
+                Id = 19, Date = "2026-10-07", Title = "Your loot, kept safe",
+                Items = new[]
+                {
+                    "Gold and items are now kept by the server, so nobody can cheat them in, and they're never lost to a crashed browser.",
+                    "Loot is personal: what drops is rolled for you alone, and only you see it.",
+                    "Trading: offered items stay in your bags, marked TRADE, until the trade completes.",
+                    "Merchants keep the same stock for you until they restock, and won't sell you something that just sold out.",
+                },
+            },
+            new Entry
+            {
                 Id = 18, Date = "2026-10-07", Title = "A greener, wilder world",
                 Items = new[]
                 {

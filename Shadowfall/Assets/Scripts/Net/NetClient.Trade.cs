@@ -4,8 +4,8 @@ using UnityEngine;
 namespace Shadowfall
 {
     /// <summary>
-    /// Player-to-player trading. Offered items leave the bags into an escrow while the window is open
-    /// (they come back on cancel); the server relays both offers and finishes the trade when both accept.
+    /// Player-to-player trading. An offer is bag slots plus gold: the items stay in the bags (marked) until both
+    /// accept, then the server checks everything is still there and swaps it all at once.
     /// </summary>
     public partial class NetClient
     {
@@ -14,7 +14,8 @@ namespace Shadowfall
         public Offer TradeInvite { get; private set; }
         public bool Trading { get; private set; }
         public string TradePartner { get; private set; }
-        public readonly List<Item> MyOffer = new List<Item>();
+        /// <summary>The bag slots we offer (as the server confirmed them).</summary>
+        public readonly List<int> MySlots = new List<int>();
         public readonly List<Item> TheirOffer = new List<Item>();
         public int MyGold { get; private set; }
         public int TheirGold { get; private set; }
@@ -34,43 +35,43 @@ namespace Shadowfall
             TradeInvite = null;
         }
 
-        void SendOffer()
+        void SendOffer(List<int> slots, int gold)
         {
             MyOk = TheirOk = false;
-            var items = new string[MyOffer.Count];
-            for (int i = 0; i < items.Length; i++) items[i] = JsonUtility.ToJson(MyOffer[i]);
-            if (State == ConnState.InWorld) Send(new TradeCmd { t = "toffer", items = items, gold = MyGold });
+            if (State == ConnState.InWorld) Send(new TradeCmd { t = "toffer", slots = slots.ToArray(), gold = gold });
         }
 
-        /// <summary>Moves a stack from the bags into the trade.</summary>
+        public bool IsOffered(int bagIndex) => Trading && MySlots.Contains(bagIndex);
+
+        /// <summary>What we offer in trade slot <paramref name="i"/> (null = empty).</summary>
+        public Item MyOfferItem(int i)
+        {
+            var p = Player.I;
+            return p != null && i < MySlots.Count ? p.Inventory.Slots[MySlots[i]] : null;
+        }
+
+        /// <summary>Offers a stack from the bags.</summary>
         public void OfferItem(int bagIndex)
         {
             var p = Player.I;
-            if (!Trading || p == null || MyOffer.Count >= TradeSlots) return;
-            var item = p.Inventory.TakeAll(bagIndex);
-            if (item == null) return;
-            MyOffer.Add(item);
+            if (!Trading || p == null || MySlots.Count >= TradeSlots || MySlots.Contains(bagIndex) || p.Inventory.Slots[bagIndex] == null) return;
             Sfx.Play2D("ui_click", 0.4f);
-            SendOffer();
+            SendOffer(new List<int>(MySlots) { bagIndex }, MyGold);
         }
 
         public void RetractItem(int offerIndex)
         {
-            var p = Player.I;
-            if (!Trading || p == null || offerIndex < 0 || offerIndex >= MyOffer.Count) return;
-            if (!p.Inventory.Add(MyOffer[offerIndex])) { GameUI.Log("Your bags are full.", new Color(1f, 0.4f, 0.4f)); return; }
-            MyOffer.RemoveAt(offerIndex);
-            SendOffer();
+            if (!Trading || offerIndex < 0 || offerIndex >= MySlots.Count) return;
+            var slots = new List<int>(MySlots);
+            slots.RemoveAt(offerIndex);
+            SendOffer(slots, MyGold);
         }
 
         public void SetTradeGold(int amount)
         {
             var p = Player.I;
             if (!Trading || p == null) return;
-            amount = Mathf.Clamp(amount, 0, p.Gold + MyGold);
-            p.Gold += MyGold - amount;
-            MyGold = amount;
-            SendOffer();
+            SendOffer(MySlots, Mathf.Clamp(amount, 0, p.Gold));
         }
 
         public void AcceptTrade()
@@ -79,7 +80,7 @@ namespace Shadowfall
             if (!Trading || p == null || MyOk) return;
             int need = 0;
             foreach (var it in TheirOffer) if (p.Inventory.IndexOf(it.Name) < 0 || !it.Stackable) need++;
-            if (p.Inventory.FreeSlots < need) { GameUI.Log("You need " + need + " free bag slots for this trade.", new Color(1f, 0.4f, 0.4f)); return; }
+            if (p.Inventory.FreeSlots + MySlots.Count < need) { GameUI.Log("You need " + need + " free bag slots for this trade.", new Color(1f, 0.4f, 0.4f)); return; }
             MyOk = true;
             TradeSend("tok");
             Sfx.Play2D("ui_confirm", 0.5f);
@@ -89,16 +90,12 @@ namespace Shadowfall
         {
             if (!Trading) return;
             TradeSend("tcancel");
-            CloseTrade(null);
+            DropTrade();
         }
-
-        /// <summary>Items and gold sitting in the trade window (still ours, counted in saves).</summary>
-        public int EscrowGold => Trading ? MyGold : 0;
-        public IList<Item> EscrowItems => MyOffer;
 
         void DropTrade()
         {
-            MyOffer.Clear();
+            MySlots.Clear();
             TheirOffer.Clear();
             MyGold = TheirGold = 0;
             MyOk = TheirOk = false;
@@ -107,18 +104,7 @@ namespace Shadowfall
 
         void CloseTrade(string msg)
         {
-            var p = Player.I;
-            if (p != null)
-            {
-                foreach (var it in MyOffer)
-                    if (!p.Inventory.Add(it)) LootDrop.Spawn(p.transform.position, it, 0); // bags filled up meanwhile
-                p.Gold += MyGold;
-            }
-            MyOffer.Clear();
-            TheirOffer.Clear();
-            MyGold = TheirGold = 0;
-            MyOk = TheirOk = false;
-            Trading = false;
+            DropTrade();
             if (msg != null) GameUI.Log(msg, Color.gray);
         }
 
@@ -153,31 +139,20 @@ namespace Shadowfall
                     TheirGold = Mathf.Max(0, m.gold);
                     MyOk = TheirOk = false;
                     break;
+                case "tmine": // our offer, as the server took it
+                    MySlots.Clear();
+                    if (m.slots != null) MySlots.AddRange(m.slots);
+                    MyGold = Mathf.Max(0, m.gold);
+                    MyOk = TheirOk = false;
+                    break;
                 case "tok":
                     TheirOk = true;
                     break;
-                case "tdone":
-                {
-                    var p = Player.I;
-                    MyOffer.Clear(); // given away
-                    MyGold = 0;
-                    if (p != null)
-                    {
-                        if (m.items != null)
-                            foreach (var json in m.items)
-                            {
-                                Item it = null;
-                                try { it = JsonUtility.FromJson<Item>(json); } catch (System.Exception) { }
-                                if (it == null || string.IsNullOrEmpty(it.Name)) continue;
-                                if (!p.Inventory.Add(it)) LootDrop.Spawn(p.transform.position, it, 0);
-                            }
-                        p.Gold += Mathf.Max(0, m.gold);
-                    }
+                case "tdone": // the server already moved everything (an "inv" follows)
                     CloseTrade("Trade with " + m.name + " complete.");
                     Sfx.Play2D("coins", 0.6f);
                     SaveNow();
                     break;
-                }
                 case "tclose":
                     CloseTrade(m.msg ?? "The trade was cancelled.");
                     break;

@@ -512,7 +512,10 @@ namespace Shadowfall
                     PartyLeader = m.id;
                     if (!wasInParty && InParty) GameUI.Log("You joined a party. Type /p to talk to your party.", PartyColor);
                     break;
-                case "tinv": case "topen": case "tupd": case "tok": case "tdone": case "tclose":
+                case "inv": case "drops": case "stock": case "iok": case "ierr":
+                    HandleItems(m);
+                    break;
+                case "tinv": case "topen": case "tupd": case "tmine": case "tok": case "tdone": case "tclose":
                     HandleTrade(m);
                     break;
                 case "pinv":
@@ -546,6 +549,10 @@ namespace Shadowfall
                     break;
                 case "kill":
                     m.x += ox; m.z += oz;
+                    if (m.drops != null) foreach (var d in m.drops) { d.x += ox; d.z += oz; }
+                    break;
+                case "drops":
+                    if (m.drops != null) foreach (var d in m.drops) { d.x += ox; d.z += oz; }
                     break;
                 case "party":
                     if (m.pm != null) foreach (var pm in m.pm) if (pm.di == DungeonId) { pm.x += ox; pm.z += oz; }
@@ -633,12 +640,11 @@ namespace Shadowfall
                 p.Quests.OnKill(def.Name);
                 if (!string.IsNullOrEmpty(m.el))
                 {
-                    Enemy.RollEliteLoot(def, m.l, pos, m.lb);
                     Sfx.Play2D("quest_done", 0.5f, 0.9f);
                     GameUI.Banner(m.el + " slain!", Enemy.ChampionColor);
                 }
-                else Enemy.RollLoot(def, m.l, pos, m.lb);
             }
+            SpawnDrops(m.drops); // our own loot, rolled by the server
             if (def.Boss) GameUI.Banner(def.Name + " has been slain!", new Color(1f, 0.55f, 0.1f));
         }
 

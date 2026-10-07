@@ -6,63 +6,49 @@ namespace Shadowfall
     public enum VendorKind { General, Armor, Weapons, Food, Curios, Companions }
 
     /// <summary>
-    /// What a vendor sells. Equipment stock is rolled for the hero's level and restocked every
-    /// <see cref="RestockMinutes"/> minutes (or when the hero has outgrown it).
+    /// What a vendor sells, as the server has it for this hero (vendor stock in server/items.js): equipment is rolled
+    /// for the hero's level and restocked every 10 minutes. Every vendor of a kind shares one stock.
     /// </summary>
     public class VendorStock
     {
-        public const float RestockMinutes = 10f;
+        static readonly Dictionary<VendorKind, VendorStock> byKind = new Dictionary<VendorKind, VendorStock>();
+
         public readonly VendorKind Kind;
         public readonly List<Item> Items = new List<Item>();
-        float restockAt = -1f;
-        int stockedForLevel;
+        float restockAt = -1f, askedAt = -99f;
 
-        static readonly EquipSlot[] armorSlots = { EquipSlot.Helm, EquipSlot.Chest, EquipSlot.Gloves, EquipSlot.Legs, EquipSlot.Boots };
+        VendorStock(VendorKind kind) { Kind = kind; }
 
-        public VendorStock(VendorKind kind) { Kind = kind; }
+        public static VendorStock For(VendorKind kind)
+        {
+            if (!byKind.TryGetValue(kind, out var s)) byKind[kind] = s = new VendorStock(kind);
+            return s;
+        }
 
         public float SecondsUntilRestock => Mathf.Max(0f, restockAt - Time.time);
         public bool Rotates => Kind == VendorKind.Armor || Kind == VendorKind.Weapons || Kind == VendorKind.Curios;
+        public bool Loaded => restockAt > 0f;
 
-        public void Refresh(int playerLevel)
+        /// <summary>Asks the server for the current stock (when opening the shop, or when it's time to restock).</summary>
+        public void Refresh(bool force = false)
         {
-            if (restockAt > 0f && Time.time < restockAt && Mathf.Abs(playerLevel - stockedForLevel) < 2) return;
-            restockAt = Time.time + RestockMinutes * 60f;
-            stockedForLevel = playerLevel;
-            Items.Clear();
-            switch (Kind)
-            {
-                case VendorKind.General:
-                    Items.Add(ItemDatabase.HealthPotion());
-                    Items.Add(ItemDatabase.ManaPotion());
-                    break;
-                case VendorKind.Food:
-                    Items.Add(ItemDatabase.Provision("Bread"));
-                    Items.Add(ItemDatabase.Food("Cooked Trout"));
-                    Items.Add(ItemDatabase.Food("Cooked Salmon"));
-                    Items.Add(ItemDatabase.Provision("Hearty Stew"));
-                    Items.Add(ItemDatabase.Provision("Mulled Wine"));
-                    break;
-                case VendorKind.Armor:
-                    for (int i = 0; i < 6; i++)
-                        Items.Add(ItemDatabase.RandomEquipment(playerLevel + Random.Range(-1, 2), 0f,
-                            Random.value < 0.35f ? Rarity.Magic : Rarity.Common, armorSlots[Random.Range(0, armorSlots.Length)]));
-                    break;
-                case VendorKind.Weapons:
-                    for (int i = 0; i < 6; i++)
-                        Items.Add(ItemDatabase.RandomEquipment(playerLevel + Random.Range(-1, 2), 0f,
-                            Random.value < 0.35f ? Rarity.Magic : Rarity.Common, EquipSlot.Weapon));
-                    break;
-                case VendorKind.Curios:
-                    for (int i = 0; i < 5; i++)
-                        Items.Add(ItemDatabase.RandomEquipment(playerLevel + Random.Range(0, 2), 0f,
-                            Random.value < 0.25f ? Rarity.Rare : Rarity.Magic, Random.value < 0.5f ? EquipSlot.Ring : EquipSlot.Amulet));
-                    for (int i = 0; i < 2; i++) Items.Add(ItemPowers.Gem(ItemPowers.GemTypes[Random.Range(0, ItemPowers.GemTypes.Length)], 0));
-                    break;
-            }
+            if (Kind == VendorKind.Companions || Time.time - askedAt < 2f) return;
+            if (!force && Loaded && Time.time < restockAt) return;
+            askedAt = Time.time;
+            NetClient.I?.Op("vendor", k: Kind.ToString());
         }
 
-        /// <summary>Buying costs more than the item sells for.</summary>
+        /// <summary>The server's answer to "vendor" (and after every purchase).</summary>
+        public static void OnStock(string kind, Item[] items, int restockSeconds)
+        {
+            if (!System.Enum.TryParse(kind, out VendorKind k)) return;
+            var s = For(k);
+            s.Items.Clear();
+            if (items != null) foreach (var it in items) if (it != null && !string.IsNullOrEmpty(it.Name)) s.Items.Add(it);
+            s.restockAt = Time.time + Mathf.Max(5, restockSeconds);
+        }
+
+        /// <summary>Buying costs more than the item sells for (the server charges the same: price() in server/items.js).</summary>
         public static int Price(Item it)
         {
             if (it.Kind != ItemKind.Equipment) return it.Name.Contains("Potion") ? 25 : Mathf.Max(3, it.Value * 3);

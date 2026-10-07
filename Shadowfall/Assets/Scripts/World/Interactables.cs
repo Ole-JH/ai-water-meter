@@ -34,23 +34,30 @@ namespace Shadowfall
     // Loot
     // =====================================================================================
 
+    /// <summary>
+    /// Loot the server dropped for this player only. Picking it up asks the server (pickup id), which puts it in
+    /// the bags and answers; until then the drop waits, greyed out.
+    /// </summary>
     public class LootDrop : Interactable
     {
+        static readonly Dictionary<int, LootDrop> byId = new Dictionary<int, LootDrop>();
+
         public Item Item;
         public int Gold;
-        bool taken;
-        float spawnTime;
+        public int NetId;
+        float spawnTime, pendingUntil;
         Transform visual;
         Vector3 fallFrom;
 
-        public override bool CanInteract => !taken;
+        public override bool CanInteract => Time.time >= pendingUntil;
         public override string HoverText => Gold > 0 ? Gold + " Gold" : Item.Count > 1 ? Item.Name + " (" + Item.Count + ")" :
             Item.Kind == ItemKind.Equipment && Item.Rarity >= Rarity.Rare ? Item.Name + "  [" + Item.RarityName(Item.Rarity) + "]" : Item.Name;
         public override Color LabelColor => Gold > 0 ? new Color(1f, 0.85f, 0.2f) : Item.NameColor;
         public override float LabelHeight => 0.6f;
 
-        public static LootDrop Spawn(Vector3 around, Item item, int gold)
+        public static LootDrop Spawn(Vector3 around, Item item, int gold, int netId)
         {
+            if (byId.ContainsKey(netId)) return byId[netId];
             Vector3 pos = around;
             for (int i = 0; i < 8; i++)
             {
@@ -64,6 +71,8 @@ namespace Shadowfall
             var d = go.AddComponent<LootDrop>();
             d.Item = item;
             d.Gold = gold;
+            d.NetId = netId;
+            byId[netId] = d;
             d.DisplayName = d.HoverText;
             d.InteractRange = 1.4f;
             d.spawnTime = Time.time;
@@ -113,29 +122,41 @@ namespace Shadowfall
             else visual.localPosition = Vector3.zero;
         }
 
+        protected override void OnDisable()
+        {
+            base.OnDisable();
+            if (byId.TryGetValue(NetId, out var d) && d == this) byId.Remove(NetId);
+        }
+
         public override void Interact(Player p)
         {
-            if (taken) return;
-            if (Gold > 0)
-            {
-                taken = true;
-                p.AddGold(Gold);
-                Sfx.Play2D("coins", 0.5f, Random.Range(0.95f, 1.05f));
-                Destroy(gameObject);
-                return;
-            }
-            int before = Item.Count;
-            if (p.Inventory.Add(Item))
-            {
-                taken = true;
-                Sfx.Play2D("loot", 0.6f);
-                GameUI.Log("You pick up " + (before > 1 ? before + "x " : "") + Item.Name + ".", Item.NameColor);
-                Destroy(gameObject);
-            }
+            if (!CanInteract) return;
+            pendingUntil = Time.time + 2f; // until the server answers
+            NetClient.I?.Op("pickup", id: NetId);
+        }
+
+        /// <summary>The server put it in our bags (or our purse).</summary>
+        public static void PickedUp(int id)
+        {
+            if (!byId.TryGetValue(id, out var d) || d == null) return;
+            if (d.Gold > 0) Sfx.Play2D("coins", 0.5f, Random.Range(0.95f, 1.05f));
             else
             {
-                GameUI.Float(p.transform.position + Vector3.up * 2.5f, "Inventory full", new Color(1f, 0.4f, 0.4f), 0.9f);
+                Sfx.Play2D("loot", 0.6f);
+                GameUI.Log("You pick up " + (d.Item.Count > 1 ? d.Item.Count + "x " : "") + d.Item.Name + ".", d.Item.NameColor);
             }
+            byId.Remove(id);
+            Destroy(d.gameObject);
+        }
+
+        /// <summary>The server refused: gone (no message), too far, or the bags are full (left = what stayed behind).</summary>
+        public static void Refused(int id, string why, int left)
+        {
+            if (!byId.TryGetValue(id, out var d) || d == null) return;
+            if (string.IsNullOrEmpty(why)) { byId.Remove(id); Destroy(d.gameObject); return; }
+            d.pendingUntil = 0f;
+            if (left > 0 && d.Item != null) { d.Item.Count = left; d.DisplayName = d.HoverText; }
+            if (Player.I != null) GameUI.Float(Player.I.transform.position + Vector3.up * 2.5f, why, new Color(1f, 0.4f, 0.4f), 0.9f);
         }
     }
 
@@ -383,33 +404,34 @@ namespace Shadowfall
     // Crafting stations (anvil = Smithing, campfire = Cooking)
     // =====================================================================================
 
+    /// <summary>A crafting recipe. What it makes is rolled by the server (RECIPES in server/items.js, same names).</summary>
     public class Recipe
     {
         public string Name, Input;
         public int InputCount = 1, LevelRequired = 1, Xp;
         public SkillType Skill;
-        public System.Func<Player, Item> Make;
         public string FailItem;
 
         public static readonly Recipe[] Smithing =
         {
-            new Recipe { Name = "Forge Copper Gear", Input = "Copper Ore", InputCount = 3, LevelRequired = 1, Xp = 45, Skill = SkillType.Smithing,
-                Make = p => ItemDatabase.RandomEquipment(3 + p.Skills.Level(SkillType.Smithing) / 3, p.Skills.Level(SkillType.Smithing) * 0.01f) },
-            new Recipe { Name = "Forge Iron Gear", Input = "Iron Ore", InputCount = 3, LevelRequired = 8, Xp = 90, Skill = SkillType.Smithing,
-                Make = p => ItemDatabase.RandomEquipment(10 + p.Skills.Level(SkillType.Smithing) / 3, 0.1f + p.Skills.Level(SkillType.Smithing) * 0.01f) },
-            new Recipe { Name = "Forge Mithril Gear", Input = "Mithril Ore", InputCount = 3, LevelRequired = 15, Xp = 170, Skill = SkillType.Smithing,
-                Make = p => ItemDatabase.RandomEquipment(18 + p.Skills.Level(SkillType.Smithing) / 3, 0.25f + p.Skills.Level(SkillType.Smithing) * 0.01f) },
+            new Recipe { Name = "Forge Copper Gear", Input = "Copper Ore", InputCount = 3, LevelRequired = 1, Xp = 45, Skill = SkillType.Smithing },
+            new Recipe { Name = "Forge Iron Gear", Input = "Iron Ore", InputCount = 3, LevelRequired = 8, Xp = 90, Skill = SkillType.Smithing },
+            new Recipe { Name = "Forge Mithril Gear", Input = "Mithril Ore", InputCount = 3, LevelRequired = 15, Xp = 170, Skill = SkillType.Smithing },
         };
 
         public static readonly Recipe[] Cooking =
         {
-            new Recipe { Name = "Cook Trout", Input = "Raw Trout", LevelRequired = 1, Xp = 30, Skill = SkillType.Cooking,
-                Make = p => ItemDatabase.Food("Cooked Trout"), FailItem = "Burnt Fish" },
-            new Recipe { Name = "Cook Salmon", Input = "Raw Salmon", LevelRequired = 8, Xp = 60, Skill = SkillType.Cooking,
-                Make = p => ItemDatabase.Food("Cooked Salmon"), FailItem = "Burnt Fish" },
+            new Recipe { Name = "Cook Trout", Input = "Raw Trout", LevelRequired = 1, Xp = 30, Skill = SkillType.Cooking },
+            new Recipe { Name = "Cook Salmon", Input = "Raw Salmon", LevelRequired = 8, Xp = 60, Skill = SkillType.Cooking },
         };
 
-        /// <summary>Attempts one craft. Returns false if the player lacks the level or materials.</summary>
+        public static Recipe Find(string name)
+        {
+            foreach (var r in Smithing) if (r.Name == name) return r;
+            foreach (var r in Cooking) if (r.Name == name) return r;
+            return null;
+        }
+
         /// <summary>Sparks off the anvil, or a flare and steam from the cooking fire.</summary>
         void CraftFx(Player p)
         {
@@ -429,6 +451,7 @@ namespace Shadowfall
             }
         }
 
+        /// <summary>Asks the server for one craft (it takes the materials and rolls the result). False if we can't.</summary>
         public bool Craft(Player p)
         {
             if (p.Skills.Level(Skill) < LevelRequired)
@@ -441,27 +464,23 @@ namespace Shadowfall
                 GameUI.Log("You need " + InputCount + " " + Input + ".", new Color(1f, 0.4f, 0.4f));
                 return false;
             }
-            p.Inventory.Remove(Input, InputCount);
+            NetClient.I?.Op("craft", name: Name);
+            return true;
+        }
 
-            if (FailItem != null)
+        /// <summary>The server made it (or burnt the fish).</summary>
+        public void Crafted(Player p, string made, Rarity rarity, bool burnt)
+        {
+            if (burnt)
             {
-                float burn = Mathf.Clamp(0.45f - (p.Skills.Level(Skill) - LevelRequired) * 0.04f, 0.03f, 0.45f);
-                if (Random.value < burn)
-                {
-                    p.Inventory.Add(ItemDatabase.Material(FailItem));
-                    GameUI.Log("You accidentally burn the fish.", new Color(0.8f, 0.5f, 0.3f));
-                    SpellFx.Dust(p.transform.position + p.transform.forward * 1.2f + Vector3.up * 0.4f, 0.5f, new Color(0.12f, 0.11f, 0.1f));
-                    return true;
-                }
+                GameUI.Log("You accidentally burn the fish.", new Color(0.8f, 0.5f, 0.3f));
+                SpellFx.Dust(p.transform.position + p.transform.forward * 1.2f + Vector3.up * 0.4f, 0.5f, new Color(0.12f, 0.11f, 0.1f));
+                return;
             }
-
-            var result = Make(p);
-            if (!p.Inventory.Add(result)) LootDrop.Spawn(p.transform.position, result, 0);
             Sfx.Play(Skill == SkillType.Smithing ? "anvil" : "sizzle", p.transform.position, 0.6f);
             CraftFx(p);
             p.Skills.AddXp(Skill, Xp);
-            GameUI.Log("You make: " + result.Name, result.NameColor);
-            return true;
+            GameUI.Log("You make: " + made, Skill == SkillType.Smithing ? Item.RarityColor(rarity) : Color.white);
         }
     }
 
@@ -589,7 +608,7 @@ namespace Shadowfall
 
         public Npc SellsAs(VendorKind kind)
         {
-            Shop = new VendorStock(kind);
+            Shop = VendorStock.For(kind);
             return this;
         }
 

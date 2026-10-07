@@ -448,42 +448,5 @@ namespace Shadowfall
         }
 
         protected override void Die(Combatant killer) { /* deaths are decided by the server */ }
-
-        /// <summary>Personal loot, rolled locally when the server credits us with a kill.</summary>
-        /// <summary>Elites always drop a pile: plenty of gold, two or three magic-or-better items, sometimes rare or legendary.</summary>
-        /// <param name="bonus">Extra loot from the dungeon difficulty (0 Normal .. 0.8 Hell).</param>
-        public static void RollEliteLoot(EnemyDef def, int level, Vector3 pos, float bonus = 0f)
-        {
-            LootDrop.Spawn(pos, null, Mathf.Max(5, Mathf.RoundToInt(level * Random.Range(10f, 20f) * (1f + bonus))));
-            int items = Random.Range(2, 4) + (Random.value < bonus ? 1 : 0);
-            for (int i = 0; i < items; i++)
-            {
-                float r = Random.value / (1f + bonus); // harder difficulty: shifts the roll toward the better tiers
-                var rarity = r < 0.04f ? Rarity.Legendary : r < 0.08f ? Rarity.Set : r < 0.36f ? Rarity.Rare : Rarity.Magic;
-                LootDrop.Spawn(pos, ItemDatabase.RandomEquipment(level, 0.5f + bonus, rarity), 0);
-            }
-            if (Random.value < 0.5f) { var hp = ItemDatabase.HealthPotion(); hp.Count = 2; LootDrop.Spawn(pos, hp, 0); }
-            if (Random.value < 0.4f) LootDrop.Spawn(pos, ItemPowers.RandomGem(level), 0);
-        }
-
-        public static void RollLoot(EnemyDef def, int level, Vector3 pos, float bonus = 0f)
-        {
-            if (Random.value < (def.Boss ? 1f : 0.55f))
-                LootDrop.Spawn(pos, null, Mathf.Max(1, Mathf.RoundToInt(level * Random.Range(2f, 6f) * (def.Boss ? 8f : 1f))));
-            if (def.Boss)
-            {
-                int n = def.Name == "Lich King" ? 4 : 2;
-                if (bonus > 0f) n++;
-                for (int i = 0; i < n; i++) LootDrop.Spawn(pos, ItemDatabase.RandomEquipment(level + 1, 1f + bonus, i == 0 ? Rarity.Rare : (Rarity?)null), 0);
-                if (Random.value < bonus * 0.5f) LootDrop.Spawn(pos, ItemDatabase.RandomEquipment(level + 2, 1f, Rarity.Legendary), 0);
-                if (def.Name == "Lich King" && Random.value < 0.5f)
-                    LootDrop.Spawn(pos, ItemDatabase.RandomEquipment(level + 2, 1f, Rarity.Legendary), 0);
-                if (Random.value < 0.35f) LootDrop.Spawn(pos, ItemDatabase.RandomEquipment(level + 1, 1f, Rarity.Set), 0);
-                LootDrop.Spawn(pos, ItemPowers.RandomGem(level + 6), 0);
-            }
-            else if (Random.value < 0.22f * (1f + bonus)) LootDrop.Spawn(pos, ItemDatabase.RandomEquipment(level, bonus), 0);
-            if (Random.value < 0.12f) LootDrop.Spawn(pos, Random.value < 0.6f ? ItemDatabase.HealthPotion() : ItemDatabase.ManaPotion(), 0);
-            if (Random.value < 0.035f) LootDrop.Spawn(pos, ItemPowers.RandomGem(level), 0);
-        }
     }
 }

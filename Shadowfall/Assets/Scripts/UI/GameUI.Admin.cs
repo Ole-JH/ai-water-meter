@@ -75,7 +75,7 @@ namespace Shadowfall
             if (Toggle(new Rect(x + w / 2, y, w / 2, 28), AdminTools.Fast, "Run fast")) AdminTools.Fast = !AdminTools.Fast;
             y += 38;
             float bw = (w - 12) / 3f;
-            if (AdminButton(new Rect(x, y, bw, 34), "+1000 gold")) p.AddGold(1000);
+            if (AdminButton(new Rect(x, y, bw, 34), "+1000 gold")) Give("gold");
             if (AdminButton(new Rect(x + bw + 6, y, bw, 34), "+1 level")) p.AddXp(p.XpToNext - p.Xp);
             if (AdminButton(new Rect(x + 2 * (bw + 6), y, bw, 34), "Full heal"))
             {
@@ -84,25 +84,17 @@ namespace Shadowfall
                 for (int i = 0; i < p.CooldownEnd.Length; i++) p.CooldownEnd[i] = 0f;
             }
             y += 40;
-            if (AdminButton(new Rect(x, y, bw, 34), "Legendary")) GiveItem(p, ItemDatabase.RandomEquipment(p.Level + 2, 1f, Rarity.Legendary));
-            if (AdminButton(new Rect(x + bw + 6, y, bw, 34), "Set piece")) GiveItem(p, ItemDatabase.RandomEquipment(p.Level + 2, 1f, Rarity.Set));
-            if (AdminButton(new Rect(x + 2 * (bw + 6), y, bw, 34), "5 gems"))
-                for (int i = 0; i < 5; i++) GiveItem(p, ItemPowers.RandomGem(20));
+            if (AdminButton(new Rect(x, y, bw, 34), "Legendary")) Give("legendary");
+            if (AdminButton(new Rect(x + bw + 6, y, bw, 34), "Set piece")) Give("set");
+            if (AdminButton(new Rect(x + 2 * (bw + 6), y, bw, 34), "5 gems")) Give("gems");
             y += 40;
-            if (AdminButton(new Rect(x, y, bw, 34), "10 potions"))
-            {
-                var hp = ItemDatabase.HealthPotion(); hp.Count = 10; GiveItem(p, hp);
-                var mp = ItemDatabase.ManaPotion(); mp.Count = 10; GiveItem(p, mp);
-            }
+            if (AdminButton(new Rect(x, y, bw, 34), "10 potions")) Give("potions");
             if (AdminButton(new Rect(x + bw + 6, y, bw, 34), "Recall ready")) p.ResetRecallCooldown();
             if (AdminButton(new Rect(x + 2 * (bw + 6), y, bw, 34), "Save now")) NetClient.I?.SaveNow();
         }
 
-        static void GiveItem(Player p, Item it)
-        {
-            if (!p.Inventory.Add(it)) LootDrop.Spawn(p.transform.position, it, 0);
-            Log("[admin] " + it.Name, it.NameColor);
-        }
+        /// <summary>Items and gold come from the server (admin command "give").</summary>
+        static void Give(string what) => AdminTools.Send(new AdminCmd { c = "give", what = what, n = 1000 });
 
         void AdminDungeons(float x, float y, float w)
         {

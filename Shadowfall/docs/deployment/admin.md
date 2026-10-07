@@ -54,9 +54,10 @@ The same server-side commands work from chat with `/a` (or `/admin`):
 | `announce <text>` | `/a announce Server restart in 5 minutes` |
 | `kick <name>` | `/a kick Bob` |
 | `who` | `/a who` |
+| `give gold [n]\|legendary\|set\|gems\|potions` | `/a give gold 5000`: gold (1000 by default), a legendary or set item for your level, 5 gems or 10 of each potion |
 | `resetpw <account or character>` | `/a resetpw Alice`: a one-time password reset code for that account, valid 24 hours (see [Accounts & passwords](accounts.md#resetting-a-password)) |
 
 `/a` on its own lists them. Admin commands are written to the server log.
 
 !!! note "Client-side helpers"
-    Map reveal, enemy markers, god mode, fast running and handing yourself gold or items run in the admin's own client. Character saves are trusted from the client in this game anyway; the admin flag only decides who gets the panel.
+    Map reveal, enemy markers, god mode and fast running run in the admin's own client; the admin flag only decides who gets the panel. Gold and items are the server's, so the panel's gold and item buttons send the `give` command.

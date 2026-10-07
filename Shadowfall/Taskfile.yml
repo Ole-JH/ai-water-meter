@@ -59,6 +59,11 @@ tasks:
     cmds:
       - npm test
 
+  gamedata:
+    desc: Extract quest rewards and companion prices from the C# sources into server/gamedata.json
+    cmds:
+      - node tools/gamedata/extract.js
+
   server:test:pg:
     desc: The same smoke test against PostgreSQL (a throwaway postgres:17 container, or PG_TEST_URL)
     dir: "{{.SERVER_DIR}}"

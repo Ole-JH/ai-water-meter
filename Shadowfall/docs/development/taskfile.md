@@ -8,6 +8,7 @@ Common commands are defined in `Taskfile.yml` and run with [Task](https://taskfi
 | `task server:dev` | Run the server locally with auto-reload on <http://localhost:7341> (accounts as JSON files in `server/data`, no database needed) |
 | `task server:test` | End-to-end smoke test against a throwaway server (accounts in files) |
 | `task server:test:pg` | The same test against PostgreSQL: a throwaway `postgres:17` container, or the server in `PG_TEST_URL` |
+| `task gamedata` | Extract quest rewards and companion prices from the C# sources into `server/gamedata.json` (after changing `Quests.cs` or `Companion.cs`) |
 | `task client:check` | Compile the C# scripts with the .NET SDK (no Unity) |
 | `task client:build` | Build the WebGL client **in Docker** into `server/public` (needs a Unity license) |
 | `task client:build:local` | Same, with a locally installed Unity editor (needs `UNITY_PATH`) |

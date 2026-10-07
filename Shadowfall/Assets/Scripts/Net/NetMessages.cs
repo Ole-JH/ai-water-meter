@@ -63,6 +63,15 @@ namespace Shadowfall
         public SaveData save;
         public string[] items;         // trade offers: items as JSON
         public int gold;
+        // items and gold live on the server: "inv" (gold, bag, stash, eq, comp), "drops" (loot only we see),
+        // "stock" (k = vendor, stock, restock seconds), "iok"/"ierr" (op answered: msg = why not, plus what happened)
+        public Item[] bag, stash, eq, stock;
+        public string[] comp;
+        public NetDrop[] drops;
+        public string op, item, target;
+        public int rarity, restock;
+        public bool burnt;
+        public int[] slots;            // "tmine": the bag slots of our trade offer
         public NetMonster[] m;
         public NetPlayer[] p;
     }
@@ -107,11 +116,19 @@ namespace Shadowfall
     /// <summary>Dungeon commands: denter, dstairs, dleave (town = after dying).</summary>
     [Serializable] public class DungeonCmd { public string t; public bool town; public int d, df; }
     /// <summary>Admin command (the server checks the sender is an admin). Unused fields are ignored.</summary>
-    [Serializable] public class AdminCmd { public string t = "adm"; public string c, name, type, text, phase; public float x, z, r, chance; public int d, l, n, df; public bool elite, fresh; }
+    [Serializable] public class AdminCmd { public string t = "adm"; public string c, name, type, text, phase, what; public float x, z, r, chance; public int d, l, n, df; public bool elite, fresh; }
 
     /// <summary>Party commands: pinvite (name), paccept, pdecline, pleave, pkick (id), pshare (q).</summary>
     [Serializable] public class PartyCmd { public string t, name, q; public int id; }
-    [Serializable] public class TradeCmd { public string t; public int id, gold; public string[] items; }
+    [Serializable] public class TradeCmd { public string t; public int id, gold; public int[] slots; }
+    /// <summary>Loot on the ground that only we can see (gold or an item; id = what to send to pick it up).</summary>
+    [Serializable] public class NetDrop { public int id, gold; public float x, z; public Item item; }
+    /// <summary>
+    /// An item action, checked and carried out by the server (see itemOps in server.js): equip i, unequip slot, use i,
+    /// drop i, pickup id, sort, stash i, unstash i, socket i (to "eq" slot or "bag" j), fuse, sell i, sellcommon, vendor k,
+    /// buy k i n, craft name, gather name, quest k, hire k, respec, chest i.
+    /// </summary>
+    [Serializable] public class IopMsg { public string t = "iop"; public string op, k, name, to; public int i, j, slot, n, id; }
 
     // ---------------------------------------------------------------- character save (stored by the server)
 

@@ -13,6 +13,8 @@ RUN npm ci --omit=dev && npm cache clean --force
 
 # Every server module (server.js, content.js, dungeon.js, ...). Tests are excluded by .dockerignore.
 COPY *.js ./
+# Quest rewards and companion prices, extracted from the C# sources (task gamedata).
+COPY gamedata.json ./
 # The Unity WebGL build (Shadowfall > Build WebGL in the editor writes it to server/public).
 # docker-compose also mounts this folder, so you can rebuild the client without rebuilding the image.
 COPY public/ ./public/

@@ -105,6 +105,15 @@ function checkDockerfile() {
   const src = fs.readFileSync(path.join(__dirname, "..", "server.js"), "utf8");
   for (const [, mod] of src.matchAll(/require\("\.\/([\w-]+)"\)/g))
     assert.ok(copiesAllJs || new RegExp(`COPY .*\\b${mod}\\.js\\b`).test(docker), `Dockerfile copies ${mod}.js`);
+  assert.match(docker, /^COPY gamedata\.json /m, "Dockerfile copies gamedata.json");
+}
+
+/** server/gamedata.json must match the C# sources it is extracted from (quest rewards, companion prices). */
+function checkGamedata() {
+  const tool = path.join(__dirname, "..", "..", "tools", "gamedata", "extract.js");
+  if (!fs.existsSync(tool)) return;
+  const r = require("child_process").spawnSync(process.execPath, [tool, "--check"], { encoding: "utf8" });
+  assert.strictEqual(r.status, 0, `server/gamedata.json is out of date: run task gamedata\n${r.stdout}${r.stderr}`);
 }
 
 /** An old-format character file (before accounts): it has its own password. */
@@ -231,8 +240,90 @@ async function testDatabase() {
   };
 }
 
+/** Items and gold live on the server: the client asks, the server answers with the new inventory. */
+async function economyTests(a, b) {
+  const inv = () => a.all("inv").at(-1);
+  const iop = async (op, extra, wait = 200) => { a.ws.send(JSON.stringify({ t: "iop", op, ...extra })); await sleep(wait); };
+  const lastErr = () => a.all("ierr").at(-1);
+  const slotOf = (name) => inv().bag.findIndex((x) => x.Name === name);
+
+  const start = a.find("inv");
+  assert.ok(start, "the inventory is sent at login");
+  assert.strictEqual(start.gold, 0, "new heroes start without gold");
+  assert.strictEqual(start.bag.length, 40, "the bags have 40 slots");
+  assert.strictEqual(start.bag.find((x) => x.Name === "Health Potion")?.Count, 5, "new heroes get five health potions");
+  assert.ok(start.eq.filter((x) => x && x.Name).length >= 2, "and a weapon and armour to wear");
+  assert.ok(Array.isArray(a.find("kill")?.drops), "kills carry the killer's own loot");
+
+  // The client's save can't touch gold or items.
+  a.ws.send(JSON.stringify({ t: "save", save: { level: 3, gold: 99999, inventory: [{ index: 0, item: { Name: "Godslayer", Kind: 0, Slot: 1 } }] } }));
+  await sleep(200);
+  assert.strictEqual(inv().gold, 0, "a client save does not mint gold");
+
+  // Equipment: off and back on.
+  const weapon = inv().eq.find((x) => x && x.Kind === 0 && x.Slot === 1);
+  await iop("unequip", { slot: 1 });
+  assert.ok(inv().bag.some((x) => x.Name === weapon.Name), "unequipping moves the weapon to the bags");
+  await iop("equip", { i: slotOf(weapon.Name) });
+  assert.ok(inv().eq.some((x) => x && x.Name === weapon.Name), "equipping wears it again");
+
+  // Dropping and picking up.
+  const mana = slotOf("Mana Potion");
+  await iop("drop", { i: mana });
+  const dropped = a.all("drops").at(-1)?.drops[0];
+  assert.ok(dropped && dropped.item.Name === "Mana Potion" && slotOf("Mana Potion") < 0, "dropping puts it on the ground");
+  await iop("pickup", { id: dropped.id });
+  assert.strictEqual(inv().bag.find((x) => x.Name === "Mana Potion")?.Count, 3, "and it can be picked up again");
+  await iop("pickup", { id: dropped.id });
+  assert.strictEqual(inv().bag.find((x) => x.Name === "Mana Potion")?.Count, 3, "but only once");
+  await iop("use", { i: slotOf("Mana Potion") });
+  assert.strictEqual(inv().bag.find((x) => x.Name === "Mana Potion")?.Count, 2, "drinking uses one up");
+
+  // Trading with merchants only works in town.
+  await iop("buy", { k: "General", i: 0 });
+  assert.match(lastErr()?.msg || "", /Hollowmere/, "merchants only trade in town");
+  a.ws.send(JSON.stringify({ t: "adm", c: "give", what: "gold", n: 500 }));
+  b.ws.send(JSON.stringify({ t: "adm", c: "give", what: "gold", n: 500 }));
+  await sleep(200);
+  assert.strictEqual(inv().gold, 500, "admins can give themselves gold");
+  assert.strictEqual(b.all("inv").at(-1).gold, 0, "nobody else can");
+  state(a, 144.5, 141.5);
+  await sleep(150);
+  await iop("vendor", { k: "General" });
+  const stock = a.find("stock");
+  assert.ok(stock && stock.k === "General" && stock.stock.length > 0, "vendors send their stock");
+  const hp = stock.stock.findIndex((x) => x.Name === "Health Potion");
+  await iop("buy", { k: "General", i: hp, n: 4 });
+  assert.strictEqual(inv().bag.find((x) => x.Name === "Health Potion")?.Count, 9, "buying stacks potions");
+  await iop("buy", { k: "General", i: hp, n: 1, name: "Excalibur" });
+  assert.match(lastErr()?.msg || "", /no longer for sale/, "buying checks the item is still the one shown");
+  const spent = 500 - inv().gold;
+  assert.ok(spent > 0, "buying costs gold");
+  await iop("sell", { i: slotOf("Mana Potion") });
+  assert.ok(a.find("iok") && inv().gold > 500 - spent && slotOf("Mana Potion") < 0, "selling pays gold");
+  a.ws.send(JSON.stringify({ t: "adm", c: "give", what: "potions" }));
+  a.ws.send(JSON.stringify({ t: "adm", c: "give", what: "potions" }));
+  await sleep(250);
+  const stacks = inv().bag.filter((x) => x.Name === "Health Potion").map((x) => x.Count).sort((p, q) => q - p);
+  assert.deepStrictEqual(stacks, [20, 9], "potions stack to 20");
+
+  // Quests pay once, and collect quests need the goods.
+  await iop("quest", { k: "timber" });
+  assert.match(lastErr()?.msg || "", /Oak Logs/, "collect quests need their items");
+  const before = inv().gold;
+  await iop("quest", { k: "wolves" });
+  assert.strictEqual(inv().gold, before + 40, "quests pay their gold");
+  assert.ok(a.all("iok").some((m) => m.op === "quest" && m.k === "wolves" && m.item), "and an item");
+  await iop("quest", { k: "wolves" });
+  assert.strictEqual(inv().gold, before + 40, "but only once");
+
+  state(a, 144, 187);
+  await sleep(150);
+}
+
 async function main() {
   checkDockerfile();
+  checkGamedata();
   const db = await testDatabase();
   if (db.url) console.log("Testing against PostgreSQL");
   writeLegacyCharacter("Oldtimer", "oldpass", { level: 7, gold: 99, look: "Mage", x: 144, z: 150 });
@@ -294,6 +385,8 @@ async function main() {
     assert.strictEqual(b.all("emote").length, 1, "unknown emotes are ignored");
     assert.ok(b.find("welcome").now > 0, "welcome carries the server clock");
 
+    await economyTests(a, b);
+
     // ---- parties
     const d = await connect("Dana", "secret4");
     state(d, 146, 187);
@@ -345,19 +438,29 @@ async function main() {
     await sleep(200);
     assert.strictEqual(a.find("topen")?.id, bobId, "the trade window opens for Alice");
     assert.strictEqual(b.find("topen")?.id, aliceId, "the trade window opens for Bob");
-    a.ws.send(JSON.stringify({ t: "toffer", items: ['{"Name":"Sword"}'], gold: 0 }));
-    b.ws.send(JSON.stringify({ t: "toffer", items: [], gold: 25 }));
+    const bobPotion = b.all("inv").at(-1).bag.findIndex((x) => x.Name === "Health Potion");
+    a.ws.send(JSON.stringify({ t: "toffer", slots: [], gold: 0 }));
+    b.ws.send(JSON.stringify({ t: "toffer", slots: [bobPotion], gold: 0 }));
     await sleep(200);
-    assert.strictEqual(b.find("tupd")?.items[0], '{"Name":"Sword"}', "offers are relayed");
-    a.ws.send(JSON.stringify({ t: "tok" }));
+    assert.strictEqual(JSON.parse(a.find("tupd")?.items[0] || "{}").Name, "Health Potion", "offers are relayed");
+    assert.deepStrictEqual(b.find("tmine")?.slots, [bobPotion], "the offer is confirmed to its owner");
+    a.ws.send(JSON.stringify({ t: "toffer", slots: [], gold: 1e9 }));
+    await sleep(150);
+    assert.ok(!b.all("tupd").some((u) => u.gold > 1e6), "you can't offer gold you don't have");
+    b.ws.send(JSON.stringify({ t: "tok" }));
     await sleep(100);
-    b.ws.send(JSON.stringify({ t: "toffer", items: [], gold: 30 })); // a change resets acceptance
+    a.ws.send(JSON.stringify({ t: "toffer", slots: [], gold: 30 })); // a change resets acceptance
     a.ws.send(JSON.stringify({ t: "tok" }));
     await sleep(100);
     assert.ok(!a.find("tdone"), "the trade does not finish until both accept");
+    const aliceGold = a.all("inv").at(-1).gold, bobGold = b.all("inv").at(-1).gold;
     b.ws.send(JSON.stringify({ t: "tok" }));
     await sleep(200);
-    assert.strictEqual(a.find("tdone")?.gold, 30, "Alice receives Bob's gold");
+    assert.strictEqual(b.find("tdone")?.gold, 30, "Bob receives Alice's gold");
+    assert.strictEqual(b.all("inv").at(-1).gold, bobGold + 30, "the gold lands in Bob's ledger");
+    assert.strictEqual(a.all("inv").at(-1).gold, aliceGold - 30, "and leaves Alice's");
+    assert.ok(a.all("inv").at(-1).bag.some((x) => x.Name === "Health Potion" && x.Count >= 5), "Alice receives Bob's potions");
+    assert.ok(!b.all("inv").at(-1).bag[bobPotion].Name, "Bob's potions are gone from his bags");
 
     // Prometheus metrics: on their own port, not on the public game port.
     assert.strictEqual((await fetch(`http://localhost:${PORT}/metrics`)).status, 404, "metrics are not on the game port");
@@ -370,7 +473,7 @@ async function main() {
     assert.match(prom, /^shadowfall_tick_duration_seconds_count \d+$/m, "metrics time the simulation tick");
     assert.match(prom, /^# TYPE shadowfall_tick_duration_seconds histogram$/m, "tick duration is a histogram");
     assert.ok(metric("process_resident_memory_bytes") > 0, "process metrics are exported");
-    assert.strictEqual(b.find("tdone")?.items[0], '{"Name":"Sword"}', "Bob receives Alice's item");
+    assert.strictEqual(JSON.parse(a.find("tdone")?.items[0] || "{}").Name, "Health Potion", "the trade names what was received");
 
     // ---- admin module: Alice is an admin (ADMINS=alice), Bob is not
     assert.strictEqual(a.find("welcome").admin, true, "admins are told so at login");
@@ -442,6 +545,7 @@ async function main() {
     a.ws.send(JSON.stringify({ t: "dleave" }));
     await sleep(200);
 
+    const goldAtLogout = a.all("inv").at(-1).gold;
     a.ws.close();
     await sleep(300);
     assert.ok(b.find("leave"), "others see a logout");
@@ -453,7 +557,10 @@ async function main() {
     const again = await connect("Alice", "secret1");
     const w = again.find("welcome");
     assert.strictEqual(w.hasSave, true, "character was saved");
-    assert.strictEqual(w.save.gold, 55, "save data round-trips");
+    assert.strictEqual(w.save.level, 3, "save data round-trips");
+    assert.strictEqual(w.save.gold, goldAtLogout, "gold is saved from the server's ledger, not the client's save");
+    await sleep(100);
+    assert.strictEqual(again.find("inv")?.gold, goldAtLogout, "the ledger is sent at login");
 
     // Same build, different map (a determinism bug): the player isn't locked out but plays on the server's map.
     const mismatch = await connect("Carl", "secret3", "288x288-deadbeef", bytes, BUILD_A);

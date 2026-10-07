@@ -9,7 +9,7 @@ task server:test:pg # the same against PostgreSQL
 
 `server/test/smoke.js` starts a real server on a random port with a temporary data directory, storing accounts in files. It then connects fake clients and checks:
 
-- that the Dockerfile copies every server module;
+- that the Dockerfile copies every server module and `gamedata.json`, and that `gamedata.json` matches the C# sources;
 - the health endpoint and static page;
 - the world upload handshake, account registration and character creation;
 - snapshots containing monsters and the other player;
@@ -18,7 +18,8 @@ task server:test:pg # the same against PostgreSQL
 - chat relay and sanitising, spell-effect relay and the server clock;
 - parties: invitations, party chat, quest sharing, shared kill credit, leaving;
 - stuns, vanishing (Smoke Bomb) and companions in snapshots;
-- trades: requests, offers and completion only after both accept;
+- items and gold: the starter kit, loot in kill messages, client saves that can't change gold, equipping, dropping and picking up (once), drinking, merchants only in town, buying (stacks, the current stock only) and selling, admin `give`, quest rewards paid once and collect quests;
+- trades: requests, offers by bag slot, gold you don't have, completion only after both accept, and both inventories afterwards;
 - the admin module: admin flag at login, refusal for non-admins, spawning elites, `killall`, time of day, player list;
 - dungeons: layouts, separate instances, difficulty, returning to the right entrance, admin depth and regeneration;
 - logout notifications;

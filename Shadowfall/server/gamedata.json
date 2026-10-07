@@ -1,0 +1,271 @@
+{
+ "generatedFrom": "Assets/Scripts (tools/gamedata/extract.js)",
+ "quests": {
+  "wolves": {
+   "type": "Kill",
+   "target": "Dire Wolf",
+   "count": 6,
+   "minLevel": 1,
+   "gold": 40,
+   "xp": 150,
+   "itemLevel": 3,
+   "rarity": 1
+  },
+  "goblins": {
+   "type": "Kill",
+   "target": "Goblin",
+   "count": 10,
+   "minLevel": 3,
+   "gold": 90,
+   "xp": 400,
+   "itemLevel": 7,
+   "rarity": 1
+  },
+  "bones": {
+   "type": "Kill",
+   "target": "Skeleton",
+   "count": 10,
+   "minLevel": 6,
+   "gold": 160,
+   "xp": 900,
+   "itemLevel": 11,
+   "rarity": 2
+  },
+  "lich": {
+   "type": "Kill",
+   "target": "Lich King",
+   "count": 1,
+   "minLevel": 12,
+   "gold": 750,
+   "xp": 4000,
+   "itemLevel": 20,
+   "rarity": 3
+  },
+  "timber": {
+   "type": "Collect",
+   "target": "Oak Logs",
+   "count": 5,
+   "minLevel": 1,
+   "gold": 30,
+   "xp": 120,
+   "itemLevel": 0,
+   "rarity": 0
+  },
+  "fish": {
+   "type": "Collect",
+   "target": "Cooked Trout",
+   "count": 4,
+   "minLevel": 1,
+   "gold": 45,
+   "xp": 220,
+   "itemLevel": 5,
+   "rarity": 1
+  },
+  "willow": {
+   "type": "Collect",
+   "target": "Willow Logs",
+   "count": 6,
+   "minLevel": 4,
+   "gold": 120,
+   "xp": 600,
+   "itemLevel": 10,
+   "rarity": 2
+  },
+  "thomas_harvest": {
+   "type": "Kill",
+   "target": "Bandit",
+   "count": 6,
+   "minLevel": 2,
+   "gold": 60,
+   "xp": 300,
+   "itemLevel": 5,
+   "rarity": 1
+  },
+  "jenkins_logs": {
+   "type": "Collect",
+   "target": "Oak Logs",
+   "count": 5,
+   "minLevel": 1,
+   "gold": 25,
+   "xp": 120,
+   "itemLevel": 0,
+   "rarity": 0
+  },
+  "jenkins_scaling": {
+   "type": "Kill",
+   "target": "Dire Wolf",
+   "count": 8,
+   "minLevel": 2,
+   "gold": 45,
+   "xp": 220,
+   "itemLevel": 0,
+   "rarity": 0
+  },
+  "jenkins_containers": {
+   "type": "Collect",
+   "target": "Raw Trout",
+   "count": 5,
+   "minLevel": 2,
+   "gold": 50,
+   "xp": 260,
+   "itemLevel": 0,
+   "rarity": 0
+  },
+  "jenkins_hotfix": {
+   "type": "Collect",
+   "target": "Cooked Trout",
+   "count": 3,
+   "minLevel": 3,
+   "gold": 60,
+   "xp": 300,
+   "itemLevel": 4,
+   "rarity": 1
+  },
+  "jenkins_pipeline": {
+   "type": "Kill",
+   "target": "Goblin Shaman",
+   "count": 4,
+   "minLevel": 4,
+   "gold": 110,
+   "xp": 520,
+   "itemLevel": 8,
+   "rarity": 2
+  },
+  "jenkins_bluegreen": {
+   "type": "Collect",
+   "target": "Mana Potion",
+   "count": 3,
+   "minLevel": 4,
+   "gold": 80,
+   "xp": 360,
+   "itemLevel": 0,
+   "rarity": 0
+  },
+  "jenkins_cache": {
+   "type": "Kill",
+   "target": "Bandit",
+   "count": 6,
+   "minLevel": 5,
+   "gold": 100,
+   "xp": 480,
+   "itemLevel": 0,
+   "rarity": 0
+  },
+  "jenkins_build": {
+   "type": "Collect",
+   "target": "Copper Ore",
+   "count": 6,
+   "minLevel": 5,
+   "gold": 90,
+   "xp": 420,
+   "itemLevel": 0,
+   "rarity": 0
+  },
+  "jenkins_kill9": {
+   "type": "Kill",
+   "target": "Zombie",
+   "count": 9,
+   "minLevel": 6,
+   "gold": 140,
+   "xp": 700,
+   "itemLevel": 9,
+   "rarity": 2
+  },
+  "jenkins_rotation": {
+   "type": "Collect",
+   "target": "Willow Logs",
+   "count": 6,
+   "minLevel": 7,
+   "gold": 150,
+   "xp": 760,
+   "itemLevel": 0,
+   "rarity": 0
+  },
+  "jenkins_postmortem": {
+   "type": "Kill",
+   "target": "Skeleton",
+   "count": 8,
+   "minLevel": 7,
+   "gold": 170,
+   "xp": 900,
+   "itemLevel": 0,
+   "rarity": 0
+  },
+  "jenkins_monolith": {
+   "type": "Kill",
+   "target": "Rock Golem",
+   "count": 5,
+   "minLevel": 9,
+   "gold": 240,
+   "xp": 1300,
+   "itemLevel": 12,
+   "rarity": 2
+  },
+  "jenkins_leastprivilege": {
+   "type": "Kill",
+   "target": "Goblin Warchief",
+   "count": 1,
+   "minLevel": 10,
+   "gold": 320,
+   "xp": 1800,
+   "itemLevel": 13,
+   "rarity": 2
+  },
+  "jenkins_chaos": {
+   "type": "Kill",
+   "target": "Crypt Lord",
+   "count": 1,
+   "minLevel": 12,
+   "gold": 600,
+   "xp": 3200,
+   "itemLevel": 16,
+   "rarity": 3
+  },
+  "copper": {
+   "type": "Collect",
+   "target": "Copper Ore",
+   "count": 6,
+   "minLevel": 1,
+   "gold": 40,
+   "xp": 150,
+   "itemLevel": 4,
+   "rarity": 1
+  },
+  "iron": {
+   "type": "Collect",
+   "target": "Iron Ore",
+   "count": 6,
+   "minLevel": 5,
+   "gold": 150,
+   "xp": 700,
+   "itemLevel": 12,
+   "rarity": 2
+  }
+ },
+ "companions": {
+  "hound": {
+   "price": 300,
+   "level": 1
+  },
+  "squire": {
+   "price": 800,
+   "level": 4
+  },
+  "witch": {
+   "price": 1400,
+   "level": 7
+  },
+  "ranger": {
+   "price": 2000,
+   "level": 10
+  },
+  "acolyte": {
+   "price": 2800,
+   "level": 12
+  },
+  "golem": {
+   "price": 5000,
+   "level": 15
+  }
+ }
+}

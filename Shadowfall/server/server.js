@@ -13,6 +13,7 @@ const { MONSTERS, SPAWNERS, TOWN, SPAWN, DUNGEONS, BALANCE, DIFFICULTIES, EMOTES
 const dungeonGen = require("./dungeon");
 const metrics = require("./metrics");
 const { createStore, Taken } = require("./store");
+const I = require("./items");
 const A = require("./accounts");
 
 const PORT = parseInt(process.env.PORT || "7341", 10);
@@ -527,7 +528,9 @@ function killMonster(m) {
     const mul = diff < -6 ? 0.1 : diff < -3 ? 0.5 : diff > 3 ? 1.3 : 1;
     const eliteMul = m.elite ? 3 + m.elite.affixes.length * 0.5 : 1;
     const xp = Math.max(1, Math.round(m.def.xp * (1 + 0.12 * (m.level - 1)) * mul * eliteMul * (m.xpMul || 1)));
-    safeSend(s, JSON.stringify({ t: "kill", mid: m.id, name: m.type, l: m.level, xp, x: r2(m.x), z: r2(m.z), ...(m.elite ? { el: m.elite.name } : {}), ...(m.lootBonus ? { lb: m.lootBonus } : {}) }));
+    const loot = s.ledger ? I.rollLoot({ name: m.type, boss: !!m.def.boss }, m.level, m.lootBonus || 0, heroClass(s), !!m.elite) : [];
+    const drops = s.ledger ? dropFor(s, m.x, m.z, loot, m.inst) : [];
+    safeSend(s, JSON.stringify({ t: "kill", mid: m.id, name: m.type, l: m.level, xp, x: r2(m.x), z: r2(m.z), drops, ...(m.elite ? { el: m.elite.name } : {}), ...(m.lootBonus ? { lb: m.lootBonus } : {}) }));
   }
   if (m.def.boss && m.inst) {
     const inst = instances.get(m.inst);
@@ -572,6 +575,10 @@ setInterval(() => { for (const l of [accountLimit, ipLimit, registerLimit, forgo
 /** Saves a character's progress (the client sends it; position comes from the server). */
 function saveCharacter(s) {
   if (!s.char || !s.char.save) return Promise.resolve();
+  if (s.ledger) {
+    I.ledgerToSave(s.ledger, s.char.save);
+    s.char.save.questsDone = [...s.ledger.questsDone];
+  }
   [s.char.save.x, s.char.save.z] = overworldPos(s);
   return store.saveCharacter(s.char.id, s.char.save).then(
     () => M.saves.inc({ result: "ok" }),
@@ -612,10 +619,13 @@ function completeLogin(s) {
   s.inWorld = true;
   s.dead = false;
   s.inst = 0;
+  const isNew = !ch.save;
+  openLedger(s);
   s.lvl = ch.save && ch.save.level ? ch.save.level : 1;
   s.x = ch.save && ch.save.x ? ch.save.x : SPAWN.x;
   s.z = ch.save && ch.save.z ? ch.save.z : SPAWN.z;
-  safeSend(s, JSON.stringify({ t: "welcome", id: s.id, name: ch.name, look: ch.look, hasSave: !!ch.save, save: ch.save || undefined, now: worldClock(), admin: !!s.admin }));
+  safeSend(s, JSON.stringify({ t: "welcome", id: s.id, name: ch.name, look: ch.look, hasSave: !isNew, save: isNew ? undefined : ch.save, now: worldClock(), admin: !!s.admin }));
+  sendInv(s);
   broadcast({ t: "sys", msg: `${ch.name} has entered the world.` });
   log(`${ch.name} entered the world (${sessions.size} connected)`);
 }
@@ -668,6 +678,7 @@ const M = {
   bossKills: metrics.counter("shadowfall_bosses_killed_total", "Bosses killed, by boss."),
   deaths: metrics.counter("shadowfall_player_deaths_total", "Player deaths."),
   trades: metrics.counter("shadowfall_trades_completed_total", "Completed player trades."),
+  itemOps: metrics.counter("shadowfall_item_actions_total", "Item and gold actions players asked for, by action (equip, sell, buy, pickup...)."),
   dungeonEntries: metrics.counter("shadowfall_dungeon_entries_total", "Players entering a dungeon level, by dungeon and difficulty."),
   admin: metrics.counter("shadowfall_admin_commands_total", "Admin commands run, by command."),
   saves: metrics.counter("shadowfall_character_saves_total", "Character files written, by result."),
@@ -806,7 +817,7 @@ const partyHandlers = {
     if (now() - inv.at > INVITE_TIMEOUT || !o || !o.inWorld) return sys(s, "That trade request has expired.");
     if (!canTrade(s, o)) return sys(s, `You are too far away from ${o.name} to trade.`);
     if (trades.has(s.id) || trades.has(o.id)) return sys(s, `${o.name} is busy.`);
-    const tr = { a: o.id, b: s.id, offers: new Map([[o.id, { items: [], gold: 0 }], [s.id, { items: [], gold: 0 }]]), ok: new Set() };
+    const tr = { a: o.id, b: s.id, offers: new Map([[o.id, { slots: [], items: [], gold: 0 }], [s.id, { slots: [], items: [], gold: 0 }]]), ok: new Set() };
     trades.set(o.id, tr);
     trades.set(s.id, tr);
     safeSend(o, JSON.stringify({ t: "topen", id: s.id, name: s.name }));
@@ -820,15 +831,20 @@ const partyHandlers = {
     if (o && o.inWorld) sys(o, `${s.name} declines to trade.`);
   },
 
+  /** An offer is bag slots and gold; the items stay in the bags until the trade completes. */
   toffer(s, m) {
     const tr = trades.get(s.id);
-    if (!tr) return;
-    const items = Array.isArray(m.items) ? m.items.filter((x) => typeof x === "string" && x.length <= 6000).slice(0, TRADE_SLOTS) : [];
-    const gold = Math.max(0, Math.min(1e9, parseInt(m.gold, 10) || 0));
-    tr.offers.set(s.id, { items, gold });
+    if (!tr || !s.ledger) return;
+    const slots = [...new Set((Array.isArray(m.slots) ? m.slots : []).map((x) => x | 0))]
+      .filter((i) => i >= 0 && i < I.BAG_SIZE && s.ledger.bag[i]).slice(0, TRADE_SLOTS);
+    const gold = Math.max(0, Math.min(s.ledger.gold, parseInt(m.gold, 10) || 0));
+    // Remember exactly what was offered: if the bags change before both accept, the trade is called off.
+    const items = slots.map((i) => JSON.stringify(s.ledger.bag[i]));
+    tr.offers.set(s.id, { slots, items, gold });
     tr.ok.clear(); // any change resets both acceptances
     const other = sessions.get(tr.a === s.id ? tr.b : tr.a);
     if (other) safeSend(other, JSON.stringify({ t: "tupd", items, gold }));
+    safeSend(s, JSON.stringify({ t: "tmine", slots, gold }));
   },
 
   tok(s) {
@@ -839,11 +855,32 @@ const partyHandlers = {
     tr.ok.add(s.id);
     safeSend(other, JSON.stringify({ t: "tok", id: s.id }));
     if (tr.ok.size < 2) return;
+    // Both accepted: check that everything offered is still there and fits, then swap it all at once.
+    const offerOf = (o) => tr.offers.get(o.id);
+    for (const o of [s, other]) {
+      const off = offerOf(o);
+      if (!o.ledger || off.gold > o.ledger.gold || off.slots.some((i, k) => JSON.stringify(o.ledger.bag[i]) !== off.items[k]))
+        return closeTrade(tr, "The trade was called off: something offered is no longer there.");
+    }
+    for (const [me, them] of [[s, other], [other, s]]) {
+      const bag = me.ledger.bag.slice();
+      for (const i of offerOf(me).slots) bag[i] = null;
+      if (!I.fits(bag, offerOf(them).slots.map((i) => them.ledger.bag[i])))
+        return closeTrade(tr, `The trade was called off: ${me.name} has no room for it.`);
+    }
     trades.delete(tr.a);
     trades.delete(tr.b);
+    const moving = new Map([[s.id, offerOf(s).slots.map((i) => s.ledger.bag[i])], [other.id, offerOf(other).slots.map((i) => other.ledger.bag[i])]]);
+    for (const o of [s, other]) {
+      for (const i of offerOf(o).slots) o.ledger.bag[i] = null;
+      o.ledger.gold -= offerOf(o).gold;
+    }
     for (const [me, them] of [[s, other], [other, s]]) {
-      const got = tr.offers.get(them.id);
-      safeSend(me, JSON.stringify({ t: "tdone", items: got.items, gold: got.gold, name: them.name }));
+      for (const it of moving.get(them.id)) I.addItem(me.ledger.bag, it);
+      me.ledger.gold += offerOf(them).gold;
+      safeSend(me, JSON.stringify({ t: "tdone", items: offerOf(them).items, gold: offerOf(them).gold, name: them.name }));
+      ledgerChanged(me);
+      saveCharacter(me);
     }
     M.trades.inc();
     log(`trade: ${s.name} <-> ${other.name}`);
@@ -1104,7 +1141,7 @@ async function adminResetPassword(s, name) {
     `They choose "Forgot password?" > "I have a code" and enter it with their account name.`;
 }
 
-const ADMIN_COMMANDS = new Set(["tp", "tpto", "summon", "dungeon", "regen", "spawn", "killall", "time", "elites", "announce", "kick", "who", "resetpw"]);
+const ADMIN_COMMANDS = new Set(["tp", "tpto", "summon", "dungeon", "regen", "spawn", "killall", "time", "elites", "announce", "kick", "who", "resetpw", "give"]);
 
 function runAdmin(s, c, a) {
   a = a || {};
@@ -1207,6 +1244,21 @@ function runAdmin(s, c, a) {
       return `Kicked ${o.name}.`;
     }
     case "resetpw": return adminResetPassword(s, String(a.name || ""));
+    case "give": {
+      if (!s.ledger) return "Not in the world.";
+      const what = String(a.what || ""), lvl = s.lvl + 2;
+      const items = what === "legendary" ? [I.randomEquipment(lvl, 1, I.Rarity.Legendary, null, heroClass(s))]
+        : what === "set" ? [I.randomEquipment(lvl, 1, I.Rarity.Set, null, heroClass(s))]
+        : what === "gems" ? Array.from({ length: 5 }, () => I.randomGem(20))
+        : what === "potions" ? [{ ...I.healthPotion(), Count: 10 }, { ...I.manaPotion(), Count: 10 }]
+        : what === "gold" ? [] : null;
+      if (!items) return "Usage: give gold|legendary|set|gems|potions";
+      if (what === "gold") s.ledger.gold += Math.max(1, Math.min(1e6, parseInt(a.n, 10) || 1000));
+      const drops = give(s, items);
+      if (drops.length) safeSend(s, JSON.stringify({ t: "drops", drops }));
+      ledgerChanged(s);
+      return what === "gold" ? `Gold: ${s.ledger.gold}.` : `Gave ${items.map((x) => x.Name).join(", ")}.`;
+    }
     case "who": {
       const list = [...sessions.values()].filter((o) => o.inWorld).map((o) => {
         const inst = o.inst && instances.get(o.inst);
@@ -1237,7 +1289,8 @@ function adminFromChat(s, line) {
     case "kick": return runAdmin(s, "kick", { name: w[0] });
     case "who": return runAdmin(s, "who");
     case "resetpw": return runAdmin(s, "resetpw", { name: w[0] });
-    default: return "Admin commands: tp x z, tpto name, summon name, dungeon <id|0-3> [depth], regen, spawn <type> [level] [count] [elite], killall [radius], time dawn|day|dusk|night, elites <0-1>, announce text, kick name, who, resetpw <account or character>";
+    case "give": return runAdmin(s, "give", { what: w[0], n: w[1] });
+    default: return "Admin commands: tp x z, tpto name, summon name, dungeon <id|0-3> [depth], regen, spawn <type> [level] [count] [elite], killall [radius], time dawn|day|dusk|night, elites <0-1>, announce text, kick name, who, resetpw <account or character>, give gold [n]|legendary|set|gems|potions";
   }
 }
 
@@ -1495,6 +1548,333 @@ const authHandlers = {
   },
 };
 
+// =====================================================================================
+// Items and gold (server-owned). Every character's bags, equipment, stash, gold and hired companions live in
+// s.ledger; the client asks for changes ("iop") and gets the whole ledger back ("inv"). See items.js.
+// =====================================================================================
+
+const DROP_RANGE = 7;         // how close you must be to pick something up (latency slack included)
+const DROP_LIFETIME = 5 * 60; // seconds before unclaimed loot disappears
+let nextDropId = 1;
+
+/** Loads the ledger when a character enters the world; new characters get the starter kit. */
+function openLedger(s) {
+  const save = s.char.save;
+  const L = I.ledgerFromSave(save);
+  if (!save) {
+    L.eq[I.Slot.Weapon] = I.starterWeapon();
+    L.eq[I.Slot.Chest] = I.starterChest();
+    const hp = I.healthPotion(); hp.Count = 5; I.addItem(L.bag, hp);
+    const mp = I.manaPotion(); mp.Count = 3; I.addItem(L.bag, mp);
+    s.char.save = I.ledgerToSave(L, { level: 1, look: s.char.look });
+  }
+  // Quests whose rewards were paid (from older saves: the client's own list, once).
+  L.questsDone = new Set(Array.isArray(save && save.questsDone) ? save.questsDone : (save && save.completedQuests) || []);
+  s.ledger = L;
+  s.drops = new Map();
+  s.vendors = {};
+  s.openedChests = new Set();
+  s.lastGather = 0;
+}
+
+function sendInv(s) {
+  const L = s.ledger;
+  if (!L) return;
+  safeSend(s, JSON.stringify({
+    t: "inv", gold: L.gold, bag: L.bag.map((it) => it || {}), stash: L.stash.map((it) => it || {}),
+    eq: Object.values(L.eq).filter(Boolean), comp: L.companions,
+  }));
+}
+
+/** Changes went through: persist soon (the periodic save and saves on logout also write it) and tell the client. */
+function ledgerChanged(s) {
+  sendInv(s);
+  if (!s.ledgerSaveTimer) s.ledgerSaveTimer = setTimeout(() => { s.ledgerSaveTimer = null; if (s.inWorld) saveCharacter(s); }, 2000);
+}
+
+/** An item action was refused (msg = why, shown to the player; empty = say nothing). Returns false: nothing changed. */
+const ierr = (s, op, msg, extra = {}) => { safeSend(s, JSON.stringify({ t: "ierr", op, msg, ...extra })); return false; };
+const iok = (s, op, extra = {}) => safeSend(s, JSON.stringify({ t: "iok", op, ...extra }));
+
+/** Puts loot on the ground for one player (only they see and can take it). */
+function dropFor(s, x, z, loot, inst) {
+  const out = [];
+  for (const l of loot) {
+    const id = nextDropId++;
+    const d = { id, x: r2(x), z: r2(z), inst: inst || 0, at: now(), gold: l.gold || 0, item: l.item || null };
+    s.drops.set(id, d);
+    out.push({ id, x: d.x, z: d.z, gold: d.gold, item: d.item || {} });
+  }
+  return out;
+}
+
+setInterval(() => {
+  const t = now();
+  for (const s of sessions.values()) if (s.drops) for (const [id, d] of s.drops) if (t - d.at > DROP_LIFETIME) s.drops.delete(id);
+}, 30000);
+
+const heroClass = (s) => (s.char && s.char.look) || "Knight";
+const inTownNow = (s) => !s.inst && inTown(s.x, s.z);
+const bagItem = (s, i) => (Number.isInteger(i) && i >= 0 && i < I.BAG_SIZE ? s.ledger.bag[i] : null);
+
+/** Gives items (to the bags, or the ground at the player's feet when full). Returns drops for the client to show. */
+function give(s, items) {
+  const overflow = [];
+  for (const it of items) {
+    const left = I.addItem(s.ledger.bag, it);
+    if (left > 0) overflow.push({ item: { ...it, Count: left } });
+  }
+  if (!overflow.length) return [];
+  sys(s, "Your bags are full: the rest is on the ground.");
+  return dropFor(s, s.x, s.z, overflow, s.inst);
+}
+
+const VENDOR_RESTOCK = I.RESTOCK_MS / 1000;
+function vendorFor(s, kind) {
+  let v = s.vendors[kind];
+  const t = now();
+  if (!v || t >= v.restockAt || Math.abs(s.lvl - v.level) >= 2) {
+    v = s.vendors[kind] = { items: I.vendorStock(kind, s.lvl, heroClass(s)), restockAt: t + VENDOR_RESTOCK, level: s.lvl };
+  }
+  return v;
+}
+
+const itemOps = {
+  equip(s, m) {
+    const it = bagItem(s, m.i);
+    if (!it || it.Kind !== I.Kind.Equipment || !(it.Slot > 0)) return ierr(s, "equip", "That can't be worn.");
+    if (it.RequiredLevel > s.lvl) return ierr(s, "equip", `You must be level ${it.RequiredLevel} to equip ${it.Name}.`);
+    const old = s.ledger.eq[it.Slot] || null;
+    s.ledger.eq[it.Slot] = it;
+    s.ledger.bag[m.i] = old;
+    return true;
+  },
+  unequip(s, m) {
+    const slot = m.slot | 0, it = s.ledger.eq[slot];
+    if (!it) return false;
+    if (I.freeSlots(s.ledger.bag) === 0) return ierr(s, "unequip", "Your inventory is full.");
+    delete s.ledger.eq[slot];
+    I.addItem(s.ledger.bag, it);
+    return true;
+  },
+  /** Drinks or eats one (the client applies the effect). */
+  use(s, m) {
+    const it = bagItem(s, m.i);
+    if (!it || it.Kind !== I.Kind.Consumable) return false;
+    if (--it.Count <= 0) s.ledger.bag[m.i] = null;
+    return true;
+  },
+  drop(s, m) {
+    const it = bagItem(s, m.i);
+    if (!it) return false;
+    s.ledger.bag[m.i] = null;
+    safeSend(s, JSON.stringify({ t: "drops", drops: dropFor(s, s.x, s.z, [{ item: it }], s.inst) }));
+    return true;
+  },
+  pickup(s, m) {
+    const d = s.drops.get(m.id | 0);
+    if (!d) return ierr(s, "pickup", "", { id: m.id | 0 });
+    if ((d.inst || 0) !== (s.inst || 0) || dist(d.x, d.z, s.x, s.z) > DROP_RANGE) return ierr(s, "pickup", "Too far away.", { id: d.id });
+    if (d.item) {
+      const left = I.addItem(s.ledger.bag, d.item);
+      if (left === d.item.Count) return ierr(s, "pickup", "Your bags are full.", { id: d.id });
+      if (left > 0) { d.item.Count = left; ierr(s, "pickup", "Your bags are full.", { id: d.id, n: left }); return true; }
+    }
+    s.ledger.gold += d.gold;
+    s.drops.delete(d.id);
+    iok(s, "pickup", { id: d.id });
+    return true;
+  },
+  sort(s) { I.sortSlots(s.ledger.bag); return true; },
+  stash(s, m) {
+    const it = bagItem(s, m.i);
+    if (!it) return false;
+    if (!inTownNow(s)) return ierr(s, "stash", "Your stash is in Hollowmere.");
+    if (I.addItem(s.ledger.stash, it) > 0) return ierr(s, "stash", "Your stash is full.");
+    s.ledger.bag[m.i] = null;
+    return true;
+  },
+  unstash(s, m) {
+    const i = m.i | 0, it = s.ledger.stash[i];
+    if (!it) return false;
+    if (!inTownNow(s)) return ierr(s, "unstash", "Your stash is in Hollowmere.");
+    if (I.addItem(s.ledger.bag, it) > 0) return ierr(s, "unstash", "Your bags are full.");
+    s.ledger.stash[i] = null;
+    return true;
+  },
+  /** A gem from the bags into an item in the bags (to = "bag", j) or worn (to = "eq", slot). */
+  socket(s, m) {
+    const g = bagItem(s, m.i);
+    if (!g || g.Kind !== I.Kind.Gem) return false;
+    const target = m.to === "eq" ? s.ledger.eq[m.slot | 0] : bagItem(s, m.j);
+    if (!target || target.Kind !== I.Kind.Equipment) return false;
+    target.Gems = target.Gems || [];
+    if (target.Gems.length >= (target.Sockets | 0)) return ierr(s, "socket", target.Sockets ? `${target.Name} has no empty sockets.` : `${target.Name} has no sockets.`);
+    target.Gems.push(g.Name);
+    if (--g.Count <= 0) s.ledger.bag[m.i] = null;
+    iok(s, "socket", { name: g.Name, target: target.Name });
+    return true;
+  },
+  /** Vex fuses three gems of a kind into one of the next quality. */
+  fuse(s) {
+    if (!inTownNow(s)) return ierr(s, "fuse", "Vex is in Hollowmere.");
+    for (let tier = 0; tier < 2; tier++)
+      for (const type of I.GEM_TYPES) {
+        const name = `${I.GEM_TIERS[tier]} ${type}`;
+        if (I.countOf(s.ledger.bag, name) < 3) continue;
+        const cost = tier === 0 ? 50 : 250;
+        if (s.ledger.gold < cost) return ierr(s, "fuse", `Vex wants ${cost} gold to fuse ${name}s.`);
+        I.removeByName(s.ledger.bag, name, 3);
+        s.ledger.gold -= cost;
+        const better = I.gem(type, tier + 1);
+        const drops = give(s, [better]);
+        iok(s, "fuse", { name: better.Name, gold: cost, drops });
+        return true;
+      }
+    return ierr(s, "fuse", "You need three gems of the same kind and quality (Chipped or Flawless).");
+  },
+  sell(s, m) {
+    const it = bagItem(s, m.i);
+    if (!it) return false;
+    if (!inTownNow(s)) return ierr(s, "sell", "Find a merchant in Hollowmere to sell.");
+    const value = it.Value * Math.max(1, it.Count);
+    s.ledger.bag[m.i] = null;
+    s.ledger.gold += value;
+    iok(s, "sell", { name: it.Name, n: it.Count, gold: value });
+    return true;
+  },
+  /** Sells every common item and material in the bags. */
+  sellcommon(s) {
+    if (!inTownNow(s)) return ierr(s, "sell", "Find a merchant in Hollowmere to sell.");
+    let gold = 0, n = 0;
+    s.ledger.bag.forEach((it, i) => {
+      if (!it || it.Kind === I.Kind.Consumable || it.Kind === I.Kind.Gem) return;
+      if (it.Kind === I.Kind.Equipment && it.Rarity !== I.Rarity.Common) return;
+      gold += it.Value * Math.max(1, it.Count);
+      n++;
+      s.ledger.bag[i] = null;
+    });
+    s.ledger.gold += gold;
+    iok(s, "sellcommon", { n, gold });
+    return true;
+  },
+  /** The vendor's current stock (rotating equipment is rolled per player). */
+  vendor(s, m) {
+    const kind = String(m.k || "");
+    if (!I.VENDOR_KINDS.includes(kind)) return false;
+    const v = vendorFor(s, kind);
+    safeSend(s, JSON.stringify({ t: "stock", k: kind, stock: v.items, restock: Math.max(0, Math.round(v.restockAt - now())) }));
+    return false;
+  },
+  buy(s, m) {
+    const kind = String(m.k || "");
+    if (!I.VENDOR_KINDS.includes(kind)) return false;
+    if (!inTownNow(s)) return ierr(s, "buy", "The merchants are in Hollowmere.");
+    const v = vendorFor(s, kind), it = v.items[m.i | 0];
+    if (!it || (m.name && it.Name !== m.name)) {
+      safeSend(s, JSON.stringify({ t: "stock", k: kind, stock: v.items, restock: Math.max(0, Math.round(v.restockAt - now())) }));
+      return ierr(s, "buy", "That's no longer for sale.");
+    }
+    const n = I.isStackable(it) ? Math.max(1, Math.min(20, m.n | 0 || 1)) : 1;
+    const cost = I.price(it) * n;
+    if (s.ledger.gold < cost) return ierr(s, "buy", "You don't have enough gold.");
+    const bought = I.isStackable(it) ? { ...I.byName(it.Name), Count: n } : it;
+    if (!I.fits(s.ledger.bag, [bought])) return ierr(s, "buy", "Your bags are full.");
+    I.addItem(s.ledger.bag, bought);
+    s.ledger.gold -= cost;
+    if (!I.isStackable(it)) v.items.splice(m.i | 0, 1);
+    iok(s, "buy", { name: it.Name, n, gold: cost });
+    safeSend(s, JSON.stringify({ t: "stock", k: kind, stock: v.items, restock: Math.max(0, Math.round(v.restockAt - now())) }));
+    return true;
+  },
+  craft(s, m) {
+    const r = I.RECIPES[String(m.name || "")];
+    if (!r) return false;
+    const lvl = I.skillLevel(s.char.save, r.skill);
+    if (lvl < r.level) return ierr(s, "craft", `You need ${r.skill} level ${r.level} to do that.`);
+    if (!I.removeByName(s.ledger.bag, r.input, r.count)) return ierr(s, "craft", `You need ${r.count} ${r.input}.`);
+    if (r.fail && Math.random() < Math.max(0.03, Math.min(0.45, 0.45 - (lvl - r.level) * 0.04))) {
+      give(s, [I.material(r.fail)]);
+      iok(s, "craft", { k: m.name, name: r.fail, burnt: true });
+      return true;
+    }
+    const made = r.make(lvl, heroClass(s));
+    const drops = give(s, [made]);
+    iok(s, "craft", { k: m.name, name: made.Name, rarity: made.Rarity, drops });
+    return true;
+  },
+  /** A log, ore or fish from a resource node (the node and the success roll are the client's; the rate and level are checked here). */
+  gather(s, m) {
+    const name = String(m.name || ""), g = I.GATHER[name];
+    if (!g) return false;
+    const t = now();
+    if (t - s.lastGather < 1.2) return ierr(s, "gather", "");
+    s.lastGather = t;
+    if (I.skillLevel(s.char.save, g[0]) < g[1]) return ierr(s, "gather", `You need ${g[0]} level ${g[1]}.`);
+    if (!I.fits(s.ledger.bag, [I.material(name)])) return ierr(s, "gather", "Your inventory is full.");
+    I.addItem(s.ledger.bag, I.material(name));
+    return true;
+  },
+  /** Turning in a quest: collect items are taken, the gold and item reward paid, once per character. */
+  quest(s, m) {
+    const id = String(m.k || ""), q = I.GAMEDATA.quests[id];
+    if (!q) return false;
+    if (s.ledger.questsDone.has(id)) return ierr(s, "quest", "You already finished that quest.", { k: id });
+    if (q.type === "Collect" && !I.removeByName(s.ledger.bag, q.target, q.count)) return ierr(s, "quest", `You need ${q.count} ${q.target}.`);
+    s.ledger.questsDone.add(id);
+    s.ledger.gold += q.gold;
+    const reward = q.itemLevel > 0 ? I.randomEquipment(q.itemLevel, 0, q.rarity, null, heroClass(s)) : null;
+    const drops = reward ? give(s, [reward]) : [];
+    iok(s, "quest", { k: id, gold: q.gold, item: reward ? reward.Name : "", rarity: reward ? reward.Rarity : 0, drops });
+    return true;
+  },
+  hire(s, m) {
+    const id = String(m.k || ""), c = I.GAMEDATA.companions[id];
+    if (!c || s.ledger.companions.includes(id)) return false;
+    if (!inTownNow(s)) return ierr(s, "hire", "Beastmaster Orla is in Hollowmere.");
+    if (s.lvl < c.level) return ierr(s, "hire", `They won't follow anyone below level ${c.level}.`);
+    if (s.ledger.gold < c.price) return ierr(s, "hire", `You need ${c.price} gold.`);
+    s.ledger.gold -= c.price;
+    s.ledger.companions.push(id);
+    iok(s, "hire", { k: id });
+    return true;
+  },
+  /** Resetting talents costs 25 gold per level (the talents themselves are the client's). */
+  respec(s) {
+    if (!inTownNow(s)) return ierr(s, "respec", "You can only reset your talents in Hollowmere.");
+    const cost = 25 * s.lvl;
+    if (s.ledger.gold < cost) return ierr(s, "respec", `Resetting your talents costs ${cost} gold.`);
+    s.ledger.gold -= cost;
+    iok(s, "respec", { gold: cost });
+    return true;
+  },
+  /** A treasure chest in a dungeon level: once per player. */
+  chest(s, m) {
+    const inst = s.inst && instances.get(s.inst);
+    const i = m.i | 0, c = inst && inst.layout.chests[i];
+    if (!c) return false;
+    if (dist(c[0], c[1], s.x, s.z) > DROP_RANGE) return ierr(s, "chest", "Too far away.");
+    const key = `${inst.id}:${i}`;
+    if (s.openedChests.has(key)) return ierr(s, "chest", "");
+    s.openedChests.add(key);
+    const level = Math.max(1, inst.depth * 3 + DUNGEONS[inst.dIdx].minLevel);
+    safeSend(s, JSON.stringify({ t: "drops", chest: i, drops: dropFor(s, c[0], c[1], I.rollChest(level, heroClass(s)), s.inst) }));
+    return false;
+  },
+};
+
+const ECONOMY_OPS = new Set(Object.keys(itemOps));
+
+/** Gold lost on death (10%), taken by the server when the client reports dying. */
+function deathPenalty(s) {
+  if (!s.ledger) return;
+  const lost = Math.floor(s.ledger.gold / 10);
+  if (lost <= 0) return;
+  s.ledger.gold -= lost;
+  iok(s, "death", { gold: lost });
+  ledgerChanged(s);
+}
+
 /** Character chosen: sync the world map if needed, then enter. */
 function beginPlay(s, ch) {
   for (const o of sessions.values())
@@ -1521,6 +1901,18 @@ function beginPlay(s, ch) {
 
 const handlers = {
   ...authHandlers,
+
+  iop(s, m) {
+    if (!s.inWorld || !s.ledger) return;
+    const op = String(m.op || "");
+    if (!ECONOMY_OPS.has(op)) return;
+    // Drinking a potion is fine mid-trade (if it was offered, the trade is called off when accepted).
+    if (trades.has(s.id) && op !== "vendor" && op !== "use") return ierr(s, op, "Finish or cancel your trade first.");
+    M.itemOps.inc({ op });
+    if (s.dead && op !== "vendor") { ierr(s, op, ""); if (op === "use") sendInv(s); return; }
+    if (itemOps[op](s, m) === true) ledgerChanged(s);
+    else if (op === "use") sendInv(s); // the client already took one out of the stack: put it right
+  },
   ...partyHandlers,
   ...dungeonHandlers,
 
@@ -1585,7 +1977,7 @@ const handlers = {
     s.hp = Number(m.hp) || 0;
     s.mhp = Number(m.mhp) || 1;
     s.lvl = Math.max(1, Math.min(100, parseInt(m.lvl, 10) || 1));
-    if (m.dead && !s.dead) M.deaths.inc();
+    if (m.dead && !s.dead) { M.deaths.inc(); deathPenalty(s); }
     s.mv = !!m.mv; s.atk = !!m.atk; s.dead = !!m.dead;
     s.look = { body: String(m.body || "").slice(0, 6), legs: String(m.legs || "").slice(0, 6), weapon: String(m.weapon || "").slice(0, 6), helm: String(m.helm || "").slice(0, 6),
       mdl: HERO_MODELS.includes(m.mdl) ? m.mdl : "Knight",
@@ -1702,7 +2094,7 @@ const handlers = {
     if (size > 256 * 1024) return;
     const lvl = parseInt(m.save.level, 10);
     if (!(lvl >= 1 && lvl <= 100)) return;
-    s.char.save = m.save;
+    s.char.save = m.save;   // items, gold and companions are the server's: saveCharacter writes the ledger over them
     saveCharacter(s);
   },
 };
