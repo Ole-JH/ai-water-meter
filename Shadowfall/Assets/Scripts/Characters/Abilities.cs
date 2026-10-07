@@ -252,12 +252,14 @@ namespace Shadowfall
             {
                 SpellFx.Explosion(target + Vector3.up * 0.5f, color, radius, false);
                 SpellFx.Column(target, color, radius * 0.6f, 9f, 0.9f);
+                SpellFx.Shockwave(target, color, radius);
                 Sfx.Play("boom", target, 0.8f, 0.08f, 60f);
                 Sfx.Play("holy_bolt", target, 0.8f, 0.05f, 50f);
             }
             else if (SpellFx.Ready)
             {
                 SpellFx.Explosion(target + Vector3.up * 0.5f, new Color(1f, 0.4f, 0.05f), radius, true);
+                SpellFx.Shockwave(target, new Color(1f, 0.45f, 0.1f), radius);
                 SpellFx.GroundFire(target, radius * 0.55f, 1.5f);
                 SpellFx.Dust(target, radius * 0.75f, new Color(0.3f, 0.25f, 0.2f));
                 for (int i = 0; i < 10; i++) // flying rocks
@@ -325,7 +327,16 @@ namespace Shadowfall
             bool holy = kind == Kind.Consecration;
             nextTick = Time.time + (holy ? 0.5f : 0.25f);
             var c = holy ? new Color(1f, 0.85f, 0.4f) : new Color(0.85f, 0.85f, 0.75f);
-            if (holy) SpellFx.Ring(transform.position, c, radius, 0.5f);
+            if (holy)
+            {
+                SpellFx.CastCircle(transform.position, c, radius, 0.55f);
+                SpellFx.Emit(new SpellFx.P
+                {
+                    Burst = 12, Duration = 0.1f, Life = new Vector2(0.5f, 0.9f), Speed = new Vector2(0f, 0.2f), Size = new Vector2(0.08f, 0.16f),
+                    Start = Color.white, Mid = c, End = new Color(c.r, c.g, c.b, 0f), Shape = ParticleSystemShapeType.Circle, Radius = radius * 0.8f,
+                    Velocity = new Vector3(0f, 2.5f, 0f),
+                }, transform.position + Vector3.up * 0.05f);
+            }
             else
                 for (int i = 0; i < 4; i++) // arrows streaking down
                 {
@@ -335,7 +346,8 @@ namespace Shadowfall
                         Burst = 1, Duration = 0.1f, Life = new Vector2(0.25f, 0.25f), Speed = new Vector2(0f, 0f), Size = new Vector2(0.08f, 0.08f),
                         Start = new Color(1f, 1f, 0.9f), End = new Color(1f, 0.9f, 0.6f, 0f), Velocity = new Vector3(0f, -36f, 0f), Stretch = true,
                     }, p + Vector3.up * 8f);
-                    SpellFx.Hit(p, new Color(0.8f, 0.75f, 0.6f), false, 3);
+                    SpellFx.Hit(p, new Color(0.8f, 0.75f, 0.6f), false, 4);
+                    if (Random.value < 0.4f) SpellFx.Dust(p, 0.4f);
                 }
             if (owner == null) return;
             Combatant.Overlap(transform.position, radius, owner.Faction, buffer);

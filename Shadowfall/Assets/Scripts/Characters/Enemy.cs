@@ -154,6 +154,7 @@ namespace Shadowfall
             Slowed = m.sl;
             if (m.st && !Stunned && !IsDead) GameUI.Float(transform.position + Vector3.up * (Height + 0.6f), "Stunned", new Color(1f, 0.9f, 0.4f), 0.8f);
             Stunned = m.st;
+            if (Stunned && !IsDead) StunStars.Show(this);
             if (Elite && m.sh && !Shielded) Sfx.Play("frost_cast", transform.position, 0.5f, 0.1f);
             Shielded = m.sh;
             netPos = new Vector3(m.x, 0, m.z);

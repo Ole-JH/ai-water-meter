@@ -65,6 +65,7 @@ namespace Shadowfall
             public ParticleSystemShapeType Shape = ParticleSystemShapeType.Sphere;
             public bool Grow, Stretch, Smoke, Follow;
             public Vector3 Velocity;
+            public float Orbital;      // degrees-ish per second around the emitter's Y axis (swirls)
             public int Max = 200;
         }
 
@@ -125,6 +126,13 @@ namespace Shadowfall
                 lim.enabled = true;
                 lim.drag = p.Drag;
                 lim.multiplyDragByParticleSize = false;
+            }
+            if (p.Orbital != 0f)
+            {
+                var orb = ps.velocityOverLifetime;
+                orb.enabled = true;
+                orb.space = ParticleSystemSimulationSpace.Local;
+                orb.orbitalY = p.Orbital;
             }
             if (p.Velocity != Vector3.zero)
             {
@@ -329,6 +337,56 @@ namespace Shadowfall
             Ring(pos, gold, 4f, 0.8f);
             Emit(new P { Burst = 80, Duration = 0.1f, Life = new Vector2(1f, 1.8f), Speed = new Vector2(0.5f, 1.5f), Size = new Vector2(0.08f, 0.16f), Start = Color.white, Mid = gold, End = new Color(1f, 0.5f, 0.1f, 0f), Shape = ParticleSystemShapeType.Circle, Radius = 1.5f, Velocity = new Vector3(0f, 3.5f, 0f) }, pos);
             Flash(pos + Vector3.up * 2f, gold, 10f, 3.5f, 1.2f);
+        }
+
+        // =====================================================================================
+        // Building blocks for the class abilities
+        // =====================================================================================
+
+        /// <summary>
+        /// A glowing rune circle that spins up under a caster while a spell is cast: an outer ring turning one way,
+        /// an inner one the other, and motes rising from it.
+        /// </summary>
+        public static void CastCircle(Vector3 pos, Color color, float radius = 1.3f, float duration = 0.6f)
+        {
+            if (!Ready) { FxPulse.Ring(pos, color, radius, duration); return; }
+            var p = new Vector3(pos.x, 0.05f, pos.z);
+            Shape(ringMesh, band, p, Quaternion.identity, color, new Vector3(radius * 0.6f, 1f, radius * 0.6f), new Vector3(radius, 1f, radius), duration, 220f);
+            Shape(ringMesh, band, p, Quaternion.Euler(0f, 45f, 0f), Color.Lerp(color, Color.white, 0.3f), new Vector3(radius * 0.9f, 1f, radius * 0.9f), new Vector3(radius * 0.55f, 1f, radius * 0.55f), duration, -300f);
+            Emit(new P { Rate = 70, Duration = duration * 0.8f, Life = new Vector2(0.4f, 0.8f), Speed = new Vector2(0.05f, 0.2f), Size = new Vector2(0.05f, 0.11f),
+                Start = Color.white, Mid = color, End = new Color(color.r, color.g, color.b, 0f), Shape = ParticleSystemShapeType.Circle, Radius = radius * 0.85f,
+                Velocity = new Vector3(0f, 2.2f, 0f), Orbital = 2.5f, Max = 120 }, p);
+        }
+
+        /// <summary>A ground shockwave: two expanding rings, a ring of dust thrown outward, sparks and a flash.</summary>
+        public static void Shockwave(Vector3 pos, Color color, float radius)
+        {
+            if (!Ready) { FxPulse.Ring(pos, color, radius, 0.5f); return; }
+            Ring(pos, color, radius, 0.4f);
+            Ring(pos, Color.Lerp(color, Color.white, 0.4f), radius * 1.35f, 0.65f);
+            Emit(new P { Burst = 36, Duration = 0.1f, Life = new Vector2(0.5f, 0.9f), Speed = new Vector2(radius * 1.6f, radius * 2.4f), Size = new Vector2(0.5f, 0.9f),
+                Start = new Color(0.45f, 0.4f, 0.34f, 0.5f), End = new Color(0.35f, 0.3f, 0.25f, 0f), Shape = ParticleSystemShapeType.Circle, Radius = 0.4f,
+                Grow = true, Smoke = true, Drag = 3f }, pos + Vector3.up * 0.25f);
+            Emit(new P { Burst = 40, Duration = 0.1f, Life = new Vector2(0.25f, 0.5f), Speed = new Vector2(radius * 2.5f, radius * 4f), Size = new Vector2(0.04f, 0.09f),
+                Start = Color.white, Mid = color, End = new Color(color.r, color.g, color.b, 0f), Shape = ParticleSystemShapeType.Circle, Radius = 0.3f, Stretch = true, Drag = 2f, Gravity = 0.6f },
+                pos + Vector3.up * 0.4f);
+            Flash(pos + Vector3.up * 1.2f, color, radius * 2.5f + 3f, 3f, 0.4f);
+        }
+
+        /// <summary>Two crossed slashes (Twin Strike, Shield Bash's sweep).</summary>
+        public static void CrossSlash(Vector3 pos, Quaternion facing, float radius, Color color)
+        {
+            Cleave(pos, facing * Quaternion.Euler(0f, -25f, 0f), radius, color);
+            Cleave(pos + Vector3.up * 0.3f, facing * Quaternion.Euler(0f, 25f, 0f), radius * 0.9f, Color.Lerp(color, Color.white, 0.3f));
+        }
+
+        /// <summary>A swirl of particles spinning around a point (whirlwind, smoke, auras).</summary>
+        public static ParticleSystem Swirl(Vector3 pos, Transform follow, Color color, float radius, float duration, float rate, bool smoky)
+        {
+            return Emit(new P { Rate = rate, Duration = duration, Life = new Vector2(0.35f, 0.7f), Speed = new Vector2(0f, 0.1f),
+                Size = smoky ? new Vector2(0.5f, 0.9f) : new Vector2(0.06f, 0.14f), Start = smoky ? new Color(color.r, color.g, color.b, 0.4f) : Color.white, Mid = color,
+                End = new Color(color.r, color.g, color.b, 0f), Shape = ParticleSystemShapeType.Circle, Radius = radius, Orbital = 7f,
+                Velocity = new Vector3(0f, smoky ? 0.4f : 1.2f, 0f), Smoke = smoky, Grow = smoky, Max = 300 }, pos, follow);
         }
 
         /// <summary>A sweeping arc in front of the attacker (Cleave).</summary>

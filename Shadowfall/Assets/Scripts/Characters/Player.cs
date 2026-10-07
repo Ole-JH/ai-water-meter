@@ -30,6 +30,7 @@ namespace Shadowfall
         public string ActiveCompanion { get; private set; }
         public Companion CompanionInstance { get; private set; }
         float whirlUntil, nextWhirlTick, leapT = -1f;
+        ParticleSystem leapTrail;
         Vector3 leapFrom, leapTo;
 
         // ---- Derived stats
@@ -133,6 +134,7 @@ namespace Shadowfall
             castAnim = 0f;
             view?.Cast();
             if (glow.HasValue && view != null) SpellFx.CastGlow(view.Hand, glow.Value, 0.35f);
+            if (glow.HasValue) SpellFx.CastCircle(transform.position, glow.Value, 1.2f, 0.5f);
         }
 
         void Awake()
@@ -628,6 +630,7 @@ namespace Shadowfall
         {
             Buffs.RemoveAll(x => x.Name == b.Name);
             Buffs.Add(b);
+            BuffAura.Attach(transform, b.Name, b.Until - Time.time);
             RecalculateStats();
         }
 
@@ -779,6 +782,9 @@ namespace Shadowfall
                 case AbilityId.Whirlwind:
                 {
                     whirlUntil = Time.time + 2.5f + 0.7f * Tal("cyclone") + (HasPower("set_ancients") ? 1f : 0f);
+                    // a red vortex and a ring of dust spin around the hero for the whole channel
+                    SpellFx.Swirl(pos + Vector3.up * 0.9f, transform, AbilityFx.Blood, 1.6f, whirlUntil - Time.time, 90f, false);
+                    SpellFx.Swirl(pos + Vector3.up * 0.15f, transform, new Color(0.45f, 0.38f, 0.3f), 1.8f, whirlUntil - Time.time, 16f, true);
                     nextWhirlTick = 0f;
                     Sfx.Play("swing_heavy", pos + Vector3.up, 0.8f);
                     break;
@@ -788,6 +794,12 @@ namespace Shadowfall
                     leapFrom = pos;
                     leapTo = dest;
                     leapT = 0f;
+                    SpellFx.Dust(pos, 1.2f);
+                    leapTrail = SpellFx.Emit(new SpellFx.P
+                    {
+                        Rate = 80, Duration = 0.6f, Life = new Vector2(0.3f, 0.6f), Speed = new Vector2(0.1f, 0.5f), Size = new Vector2(0.1f, 0.25f),
+                        Start = new Color(1f, 0.75f, 0.5f), Mid = AbilityFx.Blood, End = new Color(0.4f, 0.1f, 0.05f, 0f), Radius = 0.4f,
+                    }, pos + Vector3.up, transform);
                     path.Clear();
                     view?.Action("2H_Melee_Attack_Spin", 0.6f);
                     Sfx.Play("swing_heavy", pos + Vector3.up, 0.6f, 0.1f);
@@ -1037,7 +1049,13 @@ namespace Shadowfall
         {
             castAnim = 0f;
             view?.Action("Spellcast_Raise", 0.7f);
+            var c = Kit.Length > 0 ? ClassColor : Color.white;
+            if (view != null) SpellFx.CastGlow(view.Hand, c, 0.5f);
+            SpellFx.CastCircle(transform.position, c, 1.5f, 0.7f);
         }
+
+        /// <summary>The class's spell colour (gold, blood red, arcane blue, shadow green) for cast effects.</summary>
+        Color ClassColor => Look == "Barbarian" ? AbilityFx.Blood : Look == "Mage" ? AbilityFx.Storm : Look == "Rogue" ? new Color(0.6f, 0.9f, 0.6f) : AbilityFx.Gold;
 
         /// <summary>Whirlwind ticks and the Leap arc, run every frame.</summary>
         void UpdateChannels(float dt)
@@ -1072,6 +1090,8 @@ namespace Shadowfall
                 {
                     leapT = -1f;
                     transform.position = leapTo;
+                    if (leapTrail != null) SpellFx.Detach(leapTrail);
+                    leapTrail = null;
                     int r = Tal("earthshaker");
                     float radius = 3f + 0.6f * r;
                     Overlap(leapTo, radius, Faction, buffer);

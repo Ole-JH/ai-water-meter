@@ -89,8 +89,24 @@ namespace Shadowfall
             {
                 foreach (var t in trails) SpellFx.Detach(t);
                 trails = null;
-                if (trailKind == SpellFx.Trail.Arrow) SpellFx.Hit(transform.position, color, false, 6);
-                else SpellFx.Explosion(transform.position, color, Mathf.Max(0.6f, radius), trailKind == SpellFx.Trail.Fire);
+                if (trailKind == SpellFx.Trail.Arrow) SpellFx.Hit(transform.position, color, false, 10);
+                else
+                {
+                    SpellFx.Explosion(transform.position, color, Mathf.Max(0.6f, radius), trailKind == SpellFx.Trail.Fire);
+                    var ground = new Vector3(transform.position.x, 0f, transform.position.z);
+                    if (trailKind == SpellFx.Trail.Fire)
+                    {
+                        // embers that keep burning where it hit, and a ring of flame
+                        SpellFx.GroundFire(ground, Mathf.Max(0.6f, radius * 0.45f), 0.9f);
+                        SpellFx.Ring(ground, color, Mathf.Max(1f, radius * 1.2f), 0.4f);
+                    }
+                    else
+                    {
+                        // a short pillar of light and a sparkle burst (Holy Bolt and other magic)
+                        SpellFx.Column(ground, color, 0.5f, 2.5f, 0.35f);
+                        SpellFx.Hit(transform.position, color, false, 14);
+                    }
+                }
                 return;
             }
             FxPulse.Burst(transform.position, color, Mathf.Max(0.5f, radius), 0.3f);
