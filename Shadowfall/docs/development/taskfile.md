@@ -16,7 +16,7 @@ Common commands are defined in `Taskfile.yml` and run with [Task](https://taskfi
 | `task client:build:local` | Same, with a locally installed Unity editor (needs `UNITY_PATH`) |
 | `task client:clean-cache` | Delete the Docker build's Unity import cache |
 | `task license:activate` | Get a free Unity Personal license through Unity Hub in your browser (port 6080) |
-| `task up` / `task down` / `task restart` | Start the game server, the docs site (:8000), the monitoring stack and the dashboard (:7342), stop everything, or restart the game server |
+| `task up` / `task down` / `task restart` | Start the game server, the dashboard (:7342), Grafana and the monitoring stack (:7343) and the docs site (:7344), stop everything, or restart the game server |
 | `task logs` / `task ps` | Follow the game server's logs; show status and health |
 | `task monitoring:up` / `task monitoring:down` | Start or stop only the [monitoring stack](../deployment/monitoring.md) |
 | `task monitoring:reload` | Reload Prometheus and Alertmanager after editing `server/monitoring` |
@@ -36,7 +36,7 @@ Common commands are defined in `Taskfile.yml` and run with [Task](https://taskfi
 | `task account:reset -- <name>` | One-time password reset code (24 h) for an account, or for the account owning that character |
 | `task account:admin -- <account> on\|off` | Give or take admin rights |
 | `task accounts` / `task accounts -- <filter>` | List accounts with their email, characters and last login |
-| `task docs:serve` / `task docs:build` | Preview or build this documentation (local mkdocs, or Docker as a fallback). `task up` already serves it on :8000, so use `DOCS_PORT=8001 task docs:serve` alongside it |
+| `task docs:serve` / `task docs:build` | Preview or build this documentation (local mkdocs, or Docker as a fallback). `task up` serves it too, on :7344 |
 | `task docs:install` | Install mkdocs-material locally with pip (optional) |
 | `task art:fetch` / `task art:build` | Download the CC0 art packs into `.art-cache`; repack the models into `Assets/Resources/Art` |
 | `task art:ground` | Regenerate the ground textures (needs numpy and Pillow) |
@@ -53,7 +53,7 @@ Common commands are defined in `Taskfile.yml` and run with [Task](https://taskfi
 | `PORT` | `7341` | `server:dev` |
 | `SHADOWFALL_PORT` | `7341` | Host port for `up` and `ps` |
 | `LICENSE_HELPER_PORT`, `LICENSE_HELPER_BIND`, `VNC_PASSWORD` | `6080`, `0.0.0.0`, random | `license:activate` |
-| `DOCS_PORT` | `8000` | `docs:serve`, and the docs container started by `up` |
+| `DOCS_PORT` | `8000` | `docs:serve` (the docs container started by `up` uses `DOCS_PORT` from `server/.env`, default 7344) |
 | `PG_TEST_URL` | — | `server:test:pg`: use this PostgreSQL server (it creates and drops a throwaway database) instead of starting a container |
 
 ```bash

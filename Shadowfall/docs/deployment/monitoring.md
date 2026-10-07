@@ -5,7 +5,7 @@
 | Service | What it does | Where |
 | --- | --- | --- |
 | **Homepage** | The [dashboard](#the-dashboard): links to everything below, container status, live numbers | <http://localhost:7342> (`HOMEPAGE_PORT`) |
-| **Grafana** | Dashboards, log search, alert overview | <http://localhost:3000> (`GRAFANA_PORT`) |
+| **Grafana** | Dashboards, log search, alert overview | <http://localhost:7343> (`GRAFANA_PORT`) |
 | **Prometheus** | Collects and stores metrics (30 days) and evaluates the alert rules | <http://localhost:19090>, this machine only |
 | **Alertmanager** | Groups alerts and sends notifications to Discord and/or Pushover (see [Getting notified](#getting-notified)) | <http://localhost:19093>, this machine only |
 | **Loki** + **Grafana Alloy** | Collects every container's log lines (14 days) | through Grafana |
@@ -48,7 +48,7 @@ widget); Homepage reads them through the Docker socket, mounted read-only. Its l
 
 ## First login
 
-Open <http://localhost:3000> and log in as `admin` / `admin`; Grafana asks you to choose a new password. To set it up front,
+Open <http://localhost:7343> and log in as `admin` / `admin`; Grafana asks you to choose a new password. To set it up front,
 put it in `server/.env` (which is not committed):
 
 ```bash
@@ -171,7 +171,7 @@ Set these in `server/.env` or the environment:
 
 | Variable | Default | Meaning |
 | --- | --- | --- |
-| `GRAFANA_PORT` | `3000` | Host port for Grafana |
+| `GRAFANA_PORT` | `7343` | Host port for Grafana |
 | `GRAFANA_BIND` | `0.0.0.0` | Interface Grafana listens on (`127.0.0.1` = this machine only) |
 | `GRAFANA_ADMIN_USER` / `GRAFANA_ADMIN_PASSWORD` | `admin` / `admin` | Grafana's first admin account |
 | `PROMETHEUS_PORT` / `ALERTMANAGER_PORT` | `19090` / `19093` | Host ports, bound to `127.0.0.1` (not the usual 9090 / 9093, which another Prometheus or Cockpit often already has). Only for looking at their web pages on the server itself; Grafana and the `monitoring:*` tasks reach them inside Docker. If `task up` says *port is already allocated*, pick other ports here in `server/.env` |

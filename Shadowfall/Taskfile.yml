@@ -13,11 +13,13 @@ vars:
   #   Linux:   ~/Unity/Hub/Editor/6000.0.23f1/Editor/Unity
   UNITY: '{{.UNITY_PATH | default "unity"}}'
   MKDOCS_IMAGE: squidfunk/mkdocs-material:9
+  # Port for the local docs preview (task docs:serve). The docs container started by `task up` is on 7344.
   DOCS_PORT: '{{.DOCS_PORT | default "8000"}}'
-  # Host port for the game (Docker). Override: SHADOWFALL_PORT=9000 task up
-  GAME_PORT: '{{.SHADOWFALL_PORT | default "7341"}}'
-  # Host port for Grafana (monitoring). Override: GRAFANA_PORT=3005 task up
-  GRAFANA_PORT: '{{.GRAFANA_PORT | default "3000"}}'
+  # The Docker stack's host ports (game 7341, dashboard 7342, Grafana 7343, docs 7344) are set in server/.env
+  # (SHADOWFALL_PORT, HOMEPAGE_PORT, GRAFANA_PORT, DOCS_PORT) or the environment; compose reads them, and this
+  # prints a port the way compose sees it (tools/port-of.sh): the environment, then server/.env, then the default.
+  #   usage (in server/):  {{.PORT_OF}} GRAFANA_PORT 7343
+  PORT_OF: sh ../tools/port-of.sh
   # Remote deploys (task release / deploy:remote / remote): the SSH host running the server, and the Shadowfall folder
   # of its git checkout there. Override per run (DEPLOY_HOST=myhost task release) or in .deploy.env.
   DEPLOY_HOST: '{{.DEPLOY_HOST | default "docker2"}}'
@@ -237,22 +239,18 @@ tasks:
   # ---------------------------------------------------------------- docker
 
   up:
-    desc: Build and start the server, the docs, the monitoring stack and the dashboard (game :7341, docs :8000, Grafana :3000, dashboard :7342)
+    desc: Build and start the server, the docs, the monitoring stack and the dashboard (game :7341, dashboard :7342, Grafana :7343, docs :7344)
     dir: "{{.SERVER_DIR}}"
     env:
-      SHADOWFALL_PORT: "{{.GAME_PORT}}"
-      GRAFANA_PORT: "{{.GRAFANA_PORT}}"
-      DOCS_PORT: "{{.DOCS_PORT}}"
       # The dashboard's links use this machine's name unless PUBLIC_HOST is set (in server/.env).
       DEFAULT_PUBLIC_HOST:
         sh: hostname
     cmds:
       - docker compose up -d --build --remove-orphans
-      - echo "Shadowfall is running on http://localhost:{{.GAME_PORT}}  -  docs on http://localhost:{{.DOCS_PORT}}  -  monitoring (Grafana) on http://localhost:{{.GRAFANA_PORT}}"
-      # The port as compose sees it: the environment, then server/.env, then the default.
       - |
-        port="${HOMEPAGE_PORT:-$(sed -n 's/^HOMEPAGE_PORT=//p' .env 2>/dev/null | tail -n 1 | tr -d '"\r')}"
-        echo "Everything in one place - the dashboard on http://$(hostname):${port:-7342}"
+        h="$(hostname)"
+        echo "Shadowfall is running on http://$h:$({{.PORT_OF}} SHADOWFALL_PORT 7341)  -  Grafana on http://$h:$({{.PORT_OF}} GRAFANA_PORT 7343)  -  docs on http://$h:$({{.PORT_OF}} DOCS_PORT 7344)"
+        echo "Everything in one place - the dashboard on http://$h:$({{.PORT_OF}} HOMEPAGE_PORT 7342)"
 
   down:
     desc: Stop the server container
@@ -277,7 +275,7 @@ tasks:
     dir: "{{.SERVER_DIR}}"
     cmds:
       - docker compose ps
-      - curl -fsS http://localhost:{{.GAME_PORT}}/healthz && echo
+      - curl -fsS "http://localhost:$({{.PORT_OF}} SHADOWFALL_PORT 7341)/healthz" && echo
 
   docker:build:
     desc: Build the server image only (tag shadowfall-server:latest)
@@ -296,11 +294,9 @@ tasks:
   monitoring:up:
     desc: Start (or update) only the monitoring stack - Prometheus, Grafana, Loki, Alloy, node-exporter, cAdvisor, Alertmanager
     dir: "{{.SERVER_DIR}}"
-    env:
-      GRAFANA_PORT: "{{.GRAFANA_PORT}}"
     cmds:
       - docker compose up -d prometheus alertmanager grafana loki alloy node-exporter cadvisor postgres-exporter
-      - echo "Grafana on http://localhost:{{.GRAFANA_PORT}} (first login admin / admin unless GRAFANA_ADMIN_PASSWORD is set)"
+      - echo "Grafana on http://$(hostname):$({{.PORT_OF}} GRAFANA_PORT 7343) (first login admin / admin unless GRAFANA_ADMIN_PASSWORD is set)"
 
   monitoring:down:
     desc: Stop the monitoring stack (the game keeps running; collected data is kept)

@@ -8,8 +8,8 @@
 | Stop | `task down` |
 | Logs | `task logs` |
 | Status and health | `task ps` |
-| Documentation | <http://localhost:8000> (the `docs` container) |
-| Dashboards, metrics, logs, alerts | Grafana on <http://localhost:3000>, see [Monitoring](monitoring.md) |
+| Documentation | <http://localhost:7344> (the `docs` container) |
+| Dashboards, metrics, logs, alerts | Grafana on <http://localhost:7343>, see [Monitoring](monitoring.md) |
 | Back up accounts, characters and the world map | `task backup` → `backups/shadowfall-db-<timestamp>.sql.gz` + `backups/shadowfall-data-<timestamp>.tar.gz` |
 | Reset a player's password | `task account:reset -- <account or character>`, or `/a resetpw <name>` in game |
 | List accounts | `task accounts` (or `task accounts -- <filter>`) |

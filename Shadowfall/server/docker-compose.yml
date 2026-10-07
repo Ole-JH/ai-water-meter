@@ -79,7 +79,7 @@ services:
       homepage.icon: postgres.png
       homepage.description: Accounts and characters (task db:psql)
 
-  # The documentation site on http://localhost:8000 (DOCS_PORT). Serves ../docs live: a git pull shows up
+  # The documentation site on http://localhost:7344 (DOCS_PORT). Serves ../docs live: a git pull shows up
   # without restarting. Only the docs and mkdocs.yml are mounted, read-only.
   docs:
     image: squidfunk/mkdocs-material:9
@@ -90,17 +90,17 @@ services:
       - ../mkdocs.yml:/docs/mkdocs.yml:ro
       - ../docs:/docs/docs:ro
     ports:
-      - "${DOCS_BIND:-0.0.0.0}:${DOCS_PORT:-8000}:8000"
+      - "${DOCS_BIND:-0.0.0.0}:${DOCS_PORT:-7344}:8000"
     labels:
       homepage.group: Shadowfall
       homepage.name: Documentation
       homepage.icon: mdi-book-open-page-variant
-      homepage.href: http://${PUBLIC_HOST:-${DEFAULT_PUBLIC_HOST:-localhost}}:${DOCS_PORT:-8000}
+      homepage.href: http://${PUBLIC_HOST:-${DEFAULT_PUBLIC_HOST:-localhost}}:${DOCS_PORT:-7344}
       homepage.description: How to play, run and extend it
       homepage.weight: "1"
 
   # ---------------------------------------------------------------- monitoring
-  # Grafana on http://localhost:3000 (GRAFANA_PORT), dashboards: Shadowfall, Node Exporter Full, cAdvisor.
+  # Grafana on http://localhost:7343 (GRAFANA_PORT), dashboards: Shadowfall, Node Exporter Full, cAdvisor.
   # See docs/deployment/monitoring.md. Leave it out with:  docker compose up -d shadowfall
 
   prometheus:
@@ -168,12 +168,12 @@ services:
       - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
       - grafana-data:/var/lib/grafana
     ports:
-      - "${GRAFANA_BIND:-0.0.0.0}:${GRAFANA_PORT:-3000}:3000"
+      - "${GRAFANA_BIND:-0.0.0.0}:${GRAFANA_PORT:-7343}:3000"
     labels:
       homepage.group: Monitoring
       homepage.name: Grafana
       homepage.icon: grafana.png
-      homepage.href: http://${PUBLIC_HOST:-${DEFAULT_PUBLIC_HOST:-localhost}}:${GRAFANA_PORT:-3000}
+      homepage.href: http://${PUBLIC_HOST:-${DEFAULT_PUBLIC_HOST:-localhost}}:${GRAFANA_PORT:-7343}
       homepage.description: Dashboards, logs and alerts
       homepage.weight: "0"
       homepage.widget.type: grafana

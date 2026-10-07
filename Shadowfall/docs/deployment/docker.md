@@ -2,11 +2,12 @@
 
 The game server is a single container. It serves the WebGL build over HTTP and runs the game on the WebSocket path `/ws`, both on the same port. Accounts and characters are kept in a **PostgreSQL** container next to it. `docker compose up` also starts this documentation site and the [monitoring stack](monitoring.md).
 
-| Service | URL | Port variable |
+| Service | URL | Port variable (set in `server/.env`) |
 | --- | --- | --- |
 | Game | <http://localhost:7341> | `SHADOWFALL_PORT` |
-| Documentation | <http://localhost:8000> | `DOCS_PORT` (and `DOCS_BIND`, e.g. `127.0.0.1`) |
-| Grafana | <http://localhost:3000> | `GRAFANA_PORT` |
+| Dashboard | <http://localhost:7342> | `HOMEPAGE_PORT` |
+| Grafana | <http://localhost:7343> | `GRAFANA_PORT` |
+| Documentation | <http://localhost:7344> | `DOCS_PORT` (and `DOCS_BIND`, e.g. `127.0.0.1`) |
 | PostgreSQL (`postgres`) | Not published; `task db:psql` opens a SQL prompt | — |
 
 ## Run it
