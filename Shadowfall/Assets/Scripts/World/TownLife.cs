@@ -47,7 +47,7 @@ namespace Shadowfall
             new Job { Name = "farm", Spot = new Vector3(129.5f, 0, 123.5f), FaceTo = new Vector3(129.5f, 0, 122f), Sound = "chop" },
             new Job { Name = "market", Spot = new Vector3(131.5f, 0, 137.4f), FaceTo = new Vector3(131.5f, 0, 138.5f) },
             new Job { Name = "market", Spot = new Vector3(133.5f, 0, 137.4f), FaceTo = new Vector3(133.5f, 0, 138.5f) },
-            new Job { Name = "well", Spot = new Vector3(149.5f, 0, 147.8f), FaceTo = new Vector3(149.5f, 0, 149.5f), Sound = "splash" },
+            new Job { Name = "well", Spot = new Vector3(144.5f, 0, 142.4f), FaceTo = new Vector3(144.5f, 0, 144.5f), Sound = "splash" },
             new Job { Name = "windmill", Spot = new Vector3(129.2f, 0, 166.5f), FaceTo = new Vector3(126f, 0, 166.5f) },
             new Job { Name = "church", Spot = new Vector3(161.5f, 0, 157.6f), FaceTo = new Vector3(161.5f, 0, 162f), Clip = "Spellcast_Raise" },
             new Job { Name = "woodpile", Spot = new Vector3(138.5f, 0, 166.5f), FaceTo = new Vector3(138.5f, 0, 168f), Sound = "chop", Clip = "1H_Melee_Attack_Chop" },

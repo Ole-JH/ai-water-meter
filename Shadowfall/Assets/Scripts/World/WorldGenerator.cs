@@ -447,18 +447,14 @@ namespace Shadowfall
             House(new RectInt(120, 131, 7, 7), new Color(0.74f, 0.66f, 0.52f), new Color(0.55f, 0.25f, 0.2f), "Buildings/building_market_blue", 90f);
             House(new RectInt(157, 130, 7, 6), new Color(0.6f, 0.55f, 0.5f), new Color(0.35f, 0.25f, 0.18f), "Buildings/building_blacksmith_blue", -90f);
 
-            // The fountain in the middle of the plaza (it used to stand in the north street, in the way to the gate)
+            // The well, winch and all, in the middle of the plaza (a fountain stood here for a while, with the well off
+            // to one side; one centrepiece reads better)
             grid.BlockRect(143, 143, 145, 145);
-            if (Art("Town/fountain-round", new Vector3(144.5f, 0, 144.5f), 3.2f, ArtLibrary.Fit.Width) == null)
-                Factory.Prim(PrimitiveType.Cylinder, deco, new Vector3(144.5f, 0.4f, 144.5f), new Vector3(3f, 0.4f, 3f), new Color(0.55f, 0.53f, 0.5f));
-
-            // The old well in the plaza, north-east of the fountain
-            if (Art("Buildings/building_well_blue", new Vector3(149.5f, 0, 149.5f), 2.3f, ArtLibrary.Fit.Width) == null)
+            if (Art("Buildings/building_well_blue", new Vector3(144.5f, 0, 144.5f), 2.8f, ArtLibrary.Fit.Width) == null)
             {
-                Factory.Prim(PrimitiveType.Cylinder, deco, new Vector3(149.5f, 0.5f, 149.5f), new Vector3(1.8f, 0.5f, 1.8f), new Color(0.5f, 0.48f, 0.45f));
-                Factory.Prim(PrimitiveType.Cylinder, deco, new Vector3(149.5f, 1.01f, 149.5f), new Vector3(1.4f, 0.01f, 1.4f), waterC);
+                Factory.Prim(PrimitiveType.Cylinder, deco, new Vector3(144.5f, 0.5f, 144.5f), new Vector3(2.2f, 0.5f, 2.2f), new Color(0.5f, 0.48f, 0.45f));
+                Factory.Prim(PrimitiveType.Cylinder, deco, new Vector3(144.5f, 1.01f, 144.5f), new Vector3(1.7f, 0.01f, 1.7f), waterC);
             }
-            grid.BlockRect(149, 149, 149, 149);
 
             // Market stalls west of the plaza
             for (int i = 0; i < 3; i++)

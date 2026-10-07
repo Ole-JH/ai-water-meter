@@ -31,6 +31,7 @@ namespace Shadowfall
                     "On Retina and other high-resolution screens the game no longer draws at twice the page's resolution by default (four times the pixels); choose 150% or Native if your machine can take it.",
                     "Fixed slowdowns from the bigger world: hundreds of mithril rocks each had a light, and the map and labels walked through every tree and rock several times a frame.",
                     "Grass is only drawn near you, and the snow and lantern updates are spread out instead of landing on one frame.",
+                    "Hollowmere's well, winch and bucket, now stands in the middle of the square instead of off in a corner of it.",
                 },
             },
             new Entry
@@ -42,7 +43,7 @@ namespace Shadowfall
                     "Mounts: Beastmaster Orla sells a Riding Horse, a White Charger and a Frostpeak Stag (60-90% faster). Press V to ride; attacking, casting or taking a hit throws you off.",
                     "Death and Recall now take you to the nearest town whose waystone you know, not always back to Hollowmere.",
                     "A new loading screen, with tips while the world loads.",
-                    "Hollowmere's fountain now stands in the middle of the square instead of in the north street, out of the way to the north gate; the old well sits beside it.",
+                    "Hollowmere's fountain no longer stands in the north street, in the way to the north gate.",
                     "Harder: monsters have more life and hit harder, notice you from further away and bring friends, and one in six is an elite. Potions are a big emergency heal on a 15-second cooldown instead of a drip every 3 seconds, life regenerates more slowly, and dying costs 15% of your gold.",
                 },
             },

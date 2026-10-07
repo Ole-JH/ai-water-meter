@@ -1,6 +1,6 @@
 # The world
 
-The map is 576 × 576 tiles. The original lands fill its south-west quarter, with the walled village of **Hollowmere** (57 × 57 tiles) at their centre; the [outer lands](#the-outer-lands) lie north and east of them. Cobbled cross streets lead from the four gates to the central plaza with its fountain (and the old well beside it). Each quarter is its own district:
+The map is 576 × 576 tiles. The original lands fill its south-west quarter, with the walled village of **Hollowmere** (57 × 57 tiles) at their centre; the [outer lands](#the-outer-lands) lie north and east of them. Cobbled cross streets lead from the four gates to the central plaza with the old well in the middle. Each quarter is its own district:
 
 - **North-west:** the Prancing Boar tavern (Innkeeper Rosie), the windmill, and Forester Wren by the north gate.
 - **North-east:** the church with Sister Mae, Jenkins, and Captain Aldric at the north gate.
@@ -151,7 +151,7 @@ The village keeps the same clock as everyone else:
 | 7:00 | Children come out to play tag on the square. Smith Gorrin starts hammering (sparks and all), Forester Wren chops, Sister Mae prays, the merchants tidy their stock. |
 | 12:00 | Lunch: villagers sit together outside the tavern. |
 | 13:00 | Back to work. |
-| 17:00 | Evening: friends meet on the square and around the fountain and chat (stand close to listen in). |
+| 17:00 | Evening: friends meet on the square and around the well and chat (stand close to listen in). |
 | 19:00 | Children go home. |
 | 20:00 | The night watch takes over, with torches; the day watch walks back to the barracks. Villagers drift to the tavern. |
 | 21:30 | Everyone goes home, except a couple of night owls who stay at the tavern until after eleven. |
