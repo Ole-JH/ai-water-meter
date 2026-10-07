@@ -245,40 +245,65 @@ const randomGem = (monsterLevel) => gem(pick(GEM_TYPES), monsterLevel >= 14 && r
 // ------------------------------------------------------------------ loot (Enemy.cs RollLoot / RollEliteLoot, Dungeon.cs chests)
 
 /** Personal loot for one player: [{ item } | { gold }]. */
-function rollLoot(monster, level, bonus, heroClass, elite) {
+/**
+ * Where loot comes from decides how good it can be. Ordinary monsters on the surface drop little, and nothing better
+ * than magic; the better tiers live in dungeons and the Crypt of the Lich, with elites, in treasure chests and above all
+ * with bosses. Harder dungeon difficulties (bonus 0.25 Veteran .. 0.8 Hell) push every roll up.
+ *   source: "surface" | "deep" (a dungeon or the Crypt)
+ */
+const LOOT = {
+  // chance of an item from an ordinary monster, and the best rarity it can be
+  surface: { item: 0.07, gold: 0.35, cap: Rarity.Magic, potion: 0.08, gem: 0.012 },
+  deep: { item: 0.13, gold: 0.5, cap: Rarity.Legendary, potion: 0.1, gem: 0.025 },
+};
+
+/** Rarity for a drop: each better tier much rarer than the last; `cap` is the best it may be. */
+function lootRarity(bonus, cap, floor = Rarity.Common) {
+  const r = rnd() / (1 + bonus);
+  let rarity = r < 0.003 ? Rarity.Legendary : r < 0.008 ? Rarity.Set : r < 0.05 ? Rarity.Rare : r < 0.28 ? Rarity.Magic : Rarity.Common;
+  if (rarity > cap) rarity = cap;
+  return rarity < floor ? floor : rarity;
+}
+
+function rollLoot(monster, level, bonus, heroClass, elite, source = "surface") {
   const out = [];
+  const t = LOOT[source] || LOOT.surface;
   const eq = (lvl, b, r = null) => out.push({ item: randomEquipment(lvl, b, r, null, heroClass) });
-  if (elite) {
-    out.push({ gold: Math.max(5, round(level * rangeF(10, 20) * (1 + bonus))) });
-    const n = rangeI(2, 4) + (rnd() < bonus ? 1 : 0);
-    for (let i = 0; i < n; i++) {
-      const r = rnd() / (1 + bonus);
-      eq(level, 0.5 + bonus, r < 0.04 ? Rarity.Legendary : r < 0.08 ? Rarity.Set : r < 0.36 ? Rarity.Rare : Rarity.Magic);
-    }
-    if (rnd() < 0.5) { const hp = healthPotion(); hp.Count = 2; out.push({ item: hp }); }
-    if (rnd() < 0.4) out.push({ item: randomGem(level) });
+  const boss = !!monster.boss;
+  if (boss) {
+    // Bosses: plenty of gold, a guaranteed rare, more gear, and the best chance at legendaries and set pieces.
+    out.push({ gold: Math.max(1, round(level * rangeF(2, 6) * 8 * (1 + bonus))) });
+    let n = monster.name === "Lich King" ? 3 : 2;
+    if (bonus > 0) n++;
+    eq(level + 1, 1 + bonus, Rarity.Rare);
+    for (let i = 1; i < n; i++) eq(level + 1, 1 + bonus, lootRarity(bonus * 2 + 1, Rarity.Legendary, Rarity.Magic));
+    if (rnd() < 0.12 + bonus * 0.3) eq(level + 2, 1, Rarity.Legendary);
+    if (rnd() < 0.18 + bonus * 0.3) eq(level + 1, 1, Rarity.Set);
+    out.push({ item: randomGem(level + 6) });
     return out;
   }
-  const boss = !!monster.boss;
-  if (rnd() < (boss ? 1 : 0.55)) out.push({ gold: Math.max(1, round(level * rangeF(2, 6) * (boss ? 8 : 1))) });
-  if (boss) {
-    let n = monster.name === "Lich King" ? 4 : 2;
-    if (bonus > 0) n++;
-    for (let i = 0; i < n; i++) eq(level + 1, 1 + bonus, i === 0 ? Rarity.Rare : null);
-    if (rnd() < bonus * 0.5) eq(level + 2, 1, Rarity.Legendary);
-    if (monster.name === "Lich King" && rnd() < 0.5) eq(level + 2, 1, Rarity.Legendary);
-    if (rnd() < 0.35) eq(level + 1, 1, Rarity.Set);
-    out.push({ item: randomGem(level + 6) });
-  } else if (rnd() < 0.22 * (1 + bonus)) eq(level, bonus);
-  if (rnd() < 0.12) out.push({ item: rnd() < 0.6 ? healthPotion() : manaPotion() });
-  if (rnd() < 0.035) out.push({ item: randomGem(level) });
+  if (elite) {
+    // Elites: gold and one or two pieces; only deep down can they be set or legendary.
+    out.push({ gold: Math.max(5, round(level * rangeF(6, 12) * (1 + bonus))) });
+    const n = 1 + (rnd() < 0.35 + bonus * 0.5 ? 1 : 0);
+    const cap = source === "deep" ? Rarity.Legendary : Rarity.Rare;
+    for (let i = 0; i < n; i++) eq(level, 0.5 + bonus, lootRarity(bonus + (source === "deep" ? 1.5 : 0.6), cap, Rarity.Magic));
+    if (rnd() < 0.3) { const hp = healthPotion(); hp.Count = 2; out.push({ item: hp }); }
+    if (rnd() < 0.2) out.push({ item: randomGem(level) });
+    return out;
+  }
+  if (rnd() < t.gold) out.push({ gold: Math.max(1, round(level * rangeF(1.5, 4.5))) });
+  if (rnd() < t.item * (1 + bonus)) eq(level, bonus, lootRarity(bonus, t.cap));
+  if (rnd() < t.potion) out.push({ item: rnd() < 0.6 ? healthPotion() : manaPotion() });
+  if (rnd() < t.gem) out.push({ item: randomGem(level) });
   return out;
 }
 
-function rollChest(level, heroClass) {
-  const out = [{ gold: Math.max(10, round(level * rangeF(8, 16))) }];
-  out.push({ item: randomEquipment(level, 0.4, rnd() < 0.25 ? Rarity.Rare : null, null, heroClass) });
-  if (rnd() < 0.4) out.push({ item: randomEquipment(level, 0.4, null, null, heroClass) });
+/** A dungeon treasure chest: gold and a piece of gear that is at least magic, often rare, now and then better. */
+function rollChest(level, heroClass, bonus = 0) {
+  const out = [{ gold: Math.max(10, round(level * rangeF(6, 12) * (1 + bonus))) }];
+  out.push({ item: randomEquipment(level, 0.4 + bonus, lootRarity(bonus + 2.5, Rarity.Legendary, Rarity.Magic), null, heroClass) });
+  if (rnd() < 0.25 + bonus * 0.3) out.push({ item: randomEquipment(level, 0.4, lootRarity(bonus + 1, Rarity.Rare, Rarity.Magic), null, heroClass) });
   return out;
 }
 

@@ -48,7 +48,21 @@ Equipment drops in eight slots: weapon, helm, chest, gloves, legs, boots, ring a
 
 Possible affixes: Strength, Dexterity, Intelligence, Vitality, Life, Mana, Armor, Critical Chance, Attack Speed, Life per Hit, Movement Speed, Life Regeneration and Mana Regeneration.
 
-Item level equals the monster's level. Higher item levels roll bigger numbers and better base types, and you need roughly the item's level to equip it. Bosses always drop Rare or better, and sometimes a set piece. Elites drop 2–3 magic-or-better items.
+Item level equals the monster's level. Higher item levels roll bigger numbers and better base types, and you need roughly the item's level to equip it. Bosses always drop Rare or better, and sometimes a set piece. Elites drop 1–2 magic-or-better items.
+
+### Where the good loot is
+
+Loot is scarce, and where it comes from matters more than how much you kill:
+
+| Source | Gear | Best it can be |
+| --- | --- | --- |
+| Ordinary monsters in the open world | about 1 kill in 14 | Magic |
+| Ordinary monsters in dungeons and the Crypt of the Lich | about 1 kill in 8 (more on harder difficulties) | anything, but legendaries are very rare |
+| Elites | 1–2 pieces, magic or better | Rare in the open world; anything in dungeons and the Crypt |
+| Dungeon treasure chests | 1–2 pieces, magic or better, often rare | anything |
+| Bosses | 2–4 pieces, at least one rare | the best chance at legendaries and set pieces |
+
+Harder dungeon difficulties (Veteran, Nightmare, Hell) raise every roll.
 
 ### Legendary powers
 

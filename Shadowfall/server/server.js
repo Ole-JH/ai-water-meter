@@ -50,6 +50,9 @@ const rand = (a, b) => a + Math.random() * (b - a);
 const randInt = (a, b) => Math.floor(rand(a, b + 1));
 const dist = (ax, az, bx, bz) => Math.hypot(ax - bx, az - bz);
 const r2 = (v) => Math.round(v * 100) / 100;
+// The Crypt of the Lich (world cells, as WorldGenerator.Crypt): its monsters drop like a dungeon's.
+const CRYPT = { x0: 132, z0: 9, x1: 157, z1: 28 };
+const lootSource = (m) => (m.inst || (m.x >= CRYPT.x0 && m.x < CRYPT.x1 && m.z >= CRYPT.z0 && m.z < CRYPT.z1) ? "deep" : "surface");
 const inTown = (x, z) => x >= TOWN.x0 && x < TOWN.x1 && z >= TOWN.z0 && z < TOWN.z1;
 const now = () => Date.now() / 1000;
 
@@ -529,7 +532,7 @@ function killMonster(m) {
     const mul = diff < -6 ? 0.1 : diff < -3 ? 0.5 : diff > 3 ? 1.3 : 1;
     const eliteMul = m.elite ? 3 + m.elite.affixes.length * 0.5 : 1;
     const xp = Math.max(1, Math.round(m.def.xp * (1 + 0.12 * (m.level - 1)) * mul * eliteMul * (m.xpMul || 1)));
-    const loot = s.ledger ? I.rollLoot({ name: m.type, boss: !!m.def.boss }, m.level, m.lootBonus || 0, heroClass(s), !!m.elite) : [];
+    const loot = s.ledger ? I.rollLoot({ name: m.type, boss: !!m.def.boss }, m.level, m.lootBonus || 0, heroClass(s), !!m.elite, lootSource(m)) : [];
     const drops = s.ledger ? dropFor(s, m.x, m.z, loot, m.inst) : [];
     safeSend(s, JSON.stringify({ t: "kill", mid: m.id, name: m.type, l: m.level, xp, x: r2(m.x), z: r2(m.z), drops, ...(m.elite ? { el: m.elite.name } : {}), ...(m.lootBonus ? { lb: m.lootBonus } : {}) }));
   }
@@ -1886,7 +1889,7 @@ const itemOps = {
     if (s.openedChests.has(key)) return ierr(s, "chest", "");
     s.openedChests.add(key);
     const level = Math.max(1, inst.depth * 3 + DUNGEONS[inst.dIdx].minLevel);
-    safeSend(s, JSON.stringify({ t: "drops", chest: i, drops: dropFor(s, c[0], c[1], I.rollChest(level, heroClass(s)), s.inst) }));
+    safeSend(s, JSON.stringify({ t: "drops", chest: i, drops: dropFor(s, c[0], c[1], I.rollChest(level, heroClass(s), DIFFICULTIES[inst.df || 0].loot), s.inst) }));
     return false;
   },
 };
