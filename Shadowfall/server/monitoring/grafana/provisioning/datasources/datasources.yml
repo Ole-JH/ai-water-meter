@@ -20,3 +20,5 @@ datasources:
     url: http://alertmanager:9093
     jsonData:
       implementation: prometheus
+      # Alerts you create in Grafana go here too (and on to Discord / Pushover, like the built-in ones).
+      handleGrafanaManagedAlerts: true

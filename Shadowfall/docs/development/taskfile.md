@@ -10,6 +10,7 @@ Common commands are defined in `Taskfile.yml` and run with [Task](https://taskfi
 | `task server:test:pg` | The same test against PostgreSQL: a throwaway `postgres:17` container, or the server in `PG_TEST_URL` |
 | `task music:build` | Download the CC0 music and rebuild `Assets/Resources/Music` and its playlist (needs ffmpeg) |
 | `task gamedata` | Extract quest rewards, companion prices and achievements from the C# sources into `server/gamedata.json` (after changing `Quests.cs` or `Companion.cs`) |
+| `task monitoring:test-alert` | Send a test alert through Alertmanager to Discord / Pushover |
 | `task client:check` | Compile the C# scripts with the .NET SDK (no Unity) |
 | `task client:build` | Build the WebGL client **in Docker** into `server/public` (needs a Unity license) |
 | `task client:build:local` | Same, with a locally installed Unity editor (needs `UNITY_PATH`) |

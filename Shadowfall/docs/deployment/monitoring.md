@@ -6,7 +6,7 @@
 | --- | --- | --- |
 | **Grafana** | Dashboards, log search, alert overview | <http://localhost:3000> (`GRAFANA_PORT`) |
 | **Prometheus** | Collects and stores metrics (30 days) and evaluates the alert rules | <http://localhost:9090>, this machine only |
-| **Alertmanager** | Groups alerts and sends notifications (none until you configure a receiver) | <http://localhost:9093>, this machine only |
+| **Alertmanager** | Groups alerts and sends notifications to Discord and/or Pushover (see [Getting notified](#getting-notified)) | <http://localhost:9093>, this machine only |
 | **Loki** + **Grafana Alloy** | Collects every container's log lines (14 days) | through Grafana |
 | **node-exporter** | Host metrics: CPU, memory, disks, network | through Grafana |
 | **cAdvisor** | Per-container CPU, memory, network and disk | through Grafana |
@@ -103,8 +103,36 @@ read at scrape time), then add a panel in the dashboard generator.
 | `PostgresTooManyConnections` | The database uses more than 80% of its connections for 10 minutes |
 | `HostDiskAlmostFull`, `HostHighCpu`, `HostLowMemory` | The machine is running out of disk, CPU or memory |
 
-Firing alerts show up in Grafana under **Alerting** and in Prometheus. To be notified, add a receiver (Discord, Slack, email,
-any webhook) to `server/monitoring/alertmanager/alertmanager.yml`; the file has an example. Then run `task monitoring:reload`.
+Firing alerts show up in Grafana under **Alerting** and in Prometheus. Alerts you create yourself in Grafana are forwarded to
+the same Alertmanager.
+
+### Getting notified
+
+Alertmanager sends alerts to **Discord**, **Pushover**, or both. Put the keys in `server/.env` (never in git), then
+recreate the container and send a test:
+
+```bash
+# server/.env
+DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/1234/abcd...   # Discord: channel settings > Integrations > Webhooks > New Webhook > Copy URL
+PUSHOVER_USER_KEY=u...      # Pushover: your user key, at the top of pushover.net
+PUSHOVER_TOKEN=a...         # Pushover: Create an Application/API Token on pushover.net
+```
+
+```bash
+cd server && docker compose up -d alertmanager    # (or task monitoring:up)
+task monitoring:test-alert                        # a test alert, within seconds
+docker logs shadowfall-alertmanager 2>&1 | head   # "alerts go to: Discord Pushover"
+```
+
+- **Critical** alerts (the game or the database down, saves failing) go out within seconds and repeat every hour while
+  they last; on Pushover they are high priority (they get through quiet hours). **Warnings** are grouped for 30 seconds
+  and repeat every 4 hours.
+- When an alert clears you get a "resolved" message.
+- Discord messages show :rotating_light: for critical, :warning: for warnings and :white_check_mark: when resolved.
+
+`server/monitoring/alertmanager/start.sh` builds the configuration from these when the container starts (the route and
+grouping are in `alertmanager.yml` next to it), so changing them needs `docker compose up -d alertmanager`, not just a
+reload. With neither set, alerts only show in Grafana.
 
 ## Settings
 
@@ -117,6 +145,8 @@ Set these in `server/.env` or the environment:
 | `GRAFANA_ADMIN_USER` / `GRAFANA_ADMIN_PASSWORD` | `admin` / `admin` | Grafana's first admin account |
 | `PROMETHEUS_PORT` / `ALERTMANAGER_PORT` | `9090` / `9093` | Host ports, bound to `127.0.0.1` |
 | `PROMETHEUS_RETENTION` | `30d` | How long metrics are kept |
+| `DISCORD_WEBHOOK_URL` | (empty) | Send alerts to this Discord channel webhook |
+| `PUSHOVER_USER_KEY` / `PUSHOVER_TOKEN` | (empty) | Send alerts to Pushover (both needed) |
 
 ## Running without it
 

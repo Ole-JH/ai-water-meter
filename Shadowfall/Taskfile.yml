@@ -233,6 +233,15 @@ tasks:
     cmds:
       - docker compose stop prometheus alertmanager grafana loki alloy node-exporter cadvisor postgres-exporter
 
+  monitoring:test-alert:
+    desc: Send a test alert through Alertmanager (to Discord / Pushover, if configured in server/.env)
+    dir: "{{.SERVER_DIR}}"
+    cmds:
+      - |
+        curl -fsS -X POST -H 'Content-Type: application/json' http://localhost:{{.ALERTMANAGER_PORT | default "9093"}}/api/v2/alerts \
+          -d '[{"labels":{"alertname":"ShadowfallTestAlert","severity":"critical"},"annotations":{"summary":"Test alert from task monitoring:test-alert","description":"If you can read this, alerts reach you."}}]'
+      - echo "Sent. It should arrive within a few seconds (and a resolved message about 5 minutes later)."
+
   monitoring:reload:
     desc: Reload Prometheus and Alertmanager after editing server/monitoring (no restart needed)
     dir: "{{.SERVER_DIR}}"

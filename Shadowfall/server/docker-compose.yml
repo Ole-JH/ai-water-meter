@@ -88,7 +88,12 @@ services:
     image: prom/alertmanager:v0.34.1
     container_name: shadowfall-alertmanager
     restart: unless-stopped
-    command: ["--config.file=/etc/alertmanager/alertmanager.yml", "--storage.path=/alertmanager"]
+    # start.sh builds the config from the template and these (set them in server/.env); see docs/deployment/monitoring.md.
+    entrypoint: ["/bin/sh", "/etc/alertmanager/start.sh"]
+    environment:
+      DISCORD_WEBHOOK_URL: ${DISCORD_WEBHOOK_URL:-}
+      PUSHOVER_USER_KEY: ${PUSHOVER_USER_KEY:-}
+      PUSHOVER_TOKEN: ${PUSHOVER_TOKEN:-}
     volumes:
       - ./monitoring/alertmanager:/etc/alertmanager:ro
       - alertmanager-data:/alertmanager
