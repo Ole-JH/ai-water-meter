@@ -1663,7 +1663,7 @@ namespace Shadowfall
             Block(new Rect(0, 0, VW, VH));
             UISkin.Shadowed(new Rect(0, VH * 0.28f, VW, 90), "You Have Died", UISkin.TitleHuge, new Color(0.9f, 0.2f, 0.15f), 2);
             if (UISkin.Btn(new Rect((VW - 320) / 2, VH * 0.28f + 110, 320, 52), "Release Spirit", UISkin.Button)) p.Respawn();
-            UISkin.Shadowed(new Rect(0, VH * 0.28f + 168, VW, 24), "You will wake in the nearest town whose waystone you know, and lose 10% of your gold.", UISkin.SmallCenter, UISkin.Cream);
+            UISkin.Shadowed(new Rect(0, VH * 0.28f + 168, VW, 24), "You will wake in the nearest town whose waystone you know, and lose 15% of your gold.", UISkin.SmallCenter, UISkin.Cream);
         }
 
         // =====================================================================================

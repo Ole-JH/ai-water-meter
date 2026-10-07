@@ -141,8 +141,9 @@ const DUNGEONS = [
     types: [["Ash Ghoul", "Ember Skeleton"], ["Ember Skeleton", "Ash Wraith", "Ash Ghoul"], ["Cinder Golem", "Ember Skeleton", "Ash Wraith"]] },
 ];
 
-// Global balance: every monster's base health and damage are multiplied by these (the game was too easy).
-const BALANCE = { hp: 1.5, dmg: 1.6, hpPerLevel: 0.32, dmgPerLevel: 0.2 };
+// Global balance: every monster's base health and damage are multiplied by these (the game was too easy, twice).
+// aggro scales how far monsters notice you; pull is how far a monster's call for help carries.
+const BALANCE = { hp: 1.8, dmg: 1.9, hpPerLevel: 0.32, dmgPerLevel: 0.23, aggro: 1.25, pull: 9 };
 
 // Dungeon difficulty, picked by whoever opens the dungeon for the party. Monsters get tougher and more often
 // elite; they give more XP and better loot (loot = extra rarity bonus for the client's loot rolls).

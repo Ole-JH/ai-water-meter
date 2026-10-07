@@ -42,6 +42,12 @@ namespace Shadowfall
         public Color IconColor = Color.gray;
         public string Icon = "?";
         public float HealAmount, ManaAmount;
+
+        /// <summary>What a potion or food restores for a hero with this much life / mana: potions half their flat amount plus
+        /// 30% of life or 35% of mana; food its flat amount plus 10%.</summary>
+        public bool IsPotion => Name != null && Name.EndsWith("Potion");
+        public float HealFor(float maxHealth) => HealAmount <= 0 ? 0 : IsPotion ? HealAmount * 0.5f + maxHealth * 0.3f : HealAmount + maxHealth * 0.1f;
+        public float ManaFor(float maxMana) => ManaAmount <= 0 ? 0 : IsPotion ? ManaAmount * 0.5f + maxMana * 0.35f : ManaAmount + maxMana * 0.1f;
         public string Flavor;
         public string Power;               // legendary power id (see ItemPowers)
         public string Set;                 // set id for set pieces
@@ -200,8 +206,9 @@ namespace Shadowfall
             }
             else if (Kind == ItemKind.Consumable)
             {
-                if (HealAmount > 0) sb.Append("<color=#66ff66>Use: Restores ").Append(Mathf.RoundToInt(HealAmount)).Append(" Life</color>\n");
-                if (ManaAmount > 0) sb.Append("<color=#66aaff>Use: Restores ").Append(Mathf.RoundToInt(ManaAmount)).Append(" Mana</color>\n");
+                if (HealAmount > 0) sb.Append("<color=#66ff66>Use: Restores ").Append(Mathf.RoundToInt(player != null ? HealFor(player.MaxHealth) : HealAmount)).Append(" Life</color>\n");
+                if (ManaAmount > 0) sb.Append("<color=#66aaff>Use: Restores ").Append(Mathf.RoundToInt(player != null ? ManaFor(player.MaxMana) : ManaAmount)).Append(" Mana</color>\n");
+                sb.Append("<color=#999999>").Append(Mathf.RoundToInt(Player.PotionCooldown)).Append(" s cooldown, shared by potions and food</color>\n");
             }
             else if (Kind == ItemKind.Gem)
             {

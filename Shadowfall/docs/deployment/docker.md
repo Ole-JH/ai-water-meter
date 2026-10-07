@@ -81,7 +81,7 @@ SHADOWFALL_PORT=9000 task up          # or: SHADOWFALL_PORT=9000 docker compose 
 | `PUBLIC_DIR` | `/app/public` | Folder with the WebGL build |
 | `ADMINS` | empty | Comma-separated account names with admin rights (see [Admin module](admin.md)); passed through by `docker-compose.yml` from `server/.env` |
 | `SEASON_MINUTES` | `120` | Real minutes per season; the year (spring, summer, autumn, winter) comes round every 4 × this |
-| `ELITE_CHANCE` | `0.12` | Chance that a new open-world monster spawns as an elite (admins can change it at runtime) |
+| `ELITE_CHANCE` | `0.18` | Chance that a new open-world monster spawns as an elite (admins can change it at runtime) |
 | `DROP_PRIVILEGES` | `1` | Start as root only to `chown` the data volume, then run as the `node` user (uid/gid from `APP_UID`/`APP_GID`, default 1000) |
 | `SMTP_URL`, `MAIL_FROM`, `PUBLIC_URL` | empty | Optional password reset emails (see [Accounts & passwords](accounts.md#reset-emails-optional)) |
 | `TRUST_PROXY` | `0` | `1` behind a reverse proxy: take client addresses (for login rate limits) from `X-Forwarded-For` |

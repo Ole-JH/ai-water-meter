@@ -290,7 +290,7 @@ function spawnFrom(sp) {
 // Elite monsters: champions with a name and random affixes (Diablo style).
 // =====================================================================================
 
-let ELITE_CHANCE = Number(process.env.ELITE_CHANCE ?? 0.12); // admins can change it at runtime
+let ELITE_CHANCE = Number(process.env.ELITE_CHANCE ?? 0.18); // admins can change it at runtime
 const AFFIXES = ["Fast", "Vampiric", "Fire Enchanted", "Teleporter", "Shielding", "Mighty", "Extra Health"];
 const NAME_A = ["Grim", "Blood", "Rot", "Skull", "Ash", "Gore", "Bone", "Black", "Iron", "Venom", "Dread", "Hollow", "Grave", "Thorn"];
 const NAME_B = ["maw", "fang", "hide", "claw", "bane", "heart", "eye", "tooth", "grin", "spine", "shade", "gut", "jaw", "skull"];
@@ -360,7 +360,7 @@ function aggro(m, sessionId) {
 
 function alertNearby(m, sessionId) {
   for (const o of monsters.values())
-    if (o !== m && o.inst === m.inst && o.state === "idle" && dist(o.x, o.z, m.x, m.z) < 6) aggro(o, sessionId);
+    if (o !== m && o.inst === m.inst && o.state === "idle" && dist(o.x, o.z, m.x, m.z) < BALANCE.pull) aggro(o, sessionId);
 }
 
 /** Smoke Bomb: monsters can't see a vanished hero. */
@@ -403,7 +403,7 @@ function updateMonster(m, t) {
   const slowed = t < m.slowUntil;
   switch (m.state) {
     case "idle": {
-      let best = null, bestD = m.def.aggro;
+      let best = null, bestD = m.def.aggro * BALANCE.aggro;
       for (const s of sessions.values()) {
         if (!s.inWorld || s.dead || hidden(s) || (s.inst || 0) !== m.inst || (m.inst === 0 && inTown(s.x, s.z))) continue;
         const d = dist(m.x, m.z, s.x, s.z);
@@ -1898,10 +1898,10 @@ const itemOps = {
 
 const ECONOMY_OPS = new Set(Object.keys(itemOps));
 
-/** Gold lost on death (10%), taken by the server when the client reports dying. */
+/** Gold lost on death (15%), taken by the server when the client reports dying. */
 function deathPenalty(s) {
   if (!s.ledger) return;
-  const lost = Math.floor(s.ledger.gold / 10);
+  const lost = Math.floor(s.ledger.gold * 0.15);
   if (lost <= 0) return;
   s.ledger.gold -= lost;
   iok(s, "death", { gold: lost });

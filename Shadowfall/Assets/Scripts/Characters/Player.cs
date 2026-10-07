@@ -418,7 +418,7 @@ namespace Shadowfall
             float dt = Time.deltaTime;
             // Regeneration is slow in a fight and quick out of it (6 s without being hit).
             bool inCombat = Time.time - LastDamagedTime < 6f;
-            Health = Mathf.Min(MaxHealth, Health + HealthRegen * (inCombat ? 0.3f : 2.5f) * dt);
+            Health = Mathf.Min(MaxHealth, Health + HealthRegen * (inCombat ? 0.15f : 1.5f) * dt);
             Mana = Mathf.Min(MaxMana, Mana + ManaRegen * dt);
 
             UpdateHover();
@@ -1298,13 +1298,13 @@ namespace Shadowfall
             Sfx.Play2D("potion", 0.6f, Random.Range(0.92f, 1.08f));
             if (used.HealAmount > 0)
             {
-                Heal(used.HealAmount + MaxHealth * 0.1f);
+                Heal(used.HealFor(MaxHealth));
                 FxPulse.Ring(transform.position, new Color(0.9f, 0.2f, 0.2f), 1.5f, 0.35f);
                 SpellFx.Swirl(transform.position + Vector3.up * 0.2f, transform, new Color(1f, 0.3f, 0.3f), 0.8f, 0.6f, 50f, false);
             }
             if (used.ManaAmount > 0)
             {
-                RestoreMana(used.ManaAmount + MaxMana * 0.1f);
+                RestoreMana(used.ManaFor(MaxMana));
                 FxPulse.Ring(transform.position, new Color(0.2f, 0.4f, 1f), 1.5f, 0.35f);
                 SpellFx.Swirl(transform.position + Vector3.up * 0.2f, transform, new Color(0.35f, 0.55f, 1f), 0.8f, 0.6f, 50f, false);
             }
@@ -1505,7 +1505,8 @@ namespace Shadowfall
         public void CombineGems() => NetClient.I?.Op("fuse");
 
         /// <summary>Potions and food share a short cooldown, so fights can't be won by drinking alone.</summary>
-        public const float PotionCooldown = 3f;
+        /// <summary>Potions and food are an emergency heal, not a drip: a long shared cooldown, a big heal.</summary>
+        public const float PotionCooldown = 15f;
         float potionReadyAt;
         public float PotionCooldownLeft => Mathf.Max(0f, potionReadyAt - Time.time);
 

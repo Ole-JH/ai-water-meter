@@ -98,7 +98,7 @@ Seven dungeons lie hidden in the wilds, three of them in the [outer lands](#the-
 
 ## Death
 
-When you die you lose 10% of your gold and choose **Release Spirit** to wake up in the **nearest town whose waystone you
+When you die you lose 15% of your gold and choose **Release Spirit** to wake up in the **nearest town whose waystone you
 have attuned to** (Hollowmere until you have found another), measured from where you fell; dying in a dungeon counts as
 falling at its entrance. Recall (++r++) takes you to the same town.
 
@@ -110,7 +110,9 @@ Enemies are **not shown** on the minimap or the world map, and neither are dunge
 
 ## Balance
 
-Monsters hit hard: every monster has 50% more base life and 60% more base damage than at launch, and grows faster with level (+32% life and +20% damage per level). About one in eight is an elite. Life regenerates slowly while you're fighting (until 6 seconds after you were last hit) and quickly afterwards, and potions and food share a 3-second cooldown.
+Monsters hit hard: every monster has 80% more base life and 90% more base damage than at launch, and grows faster with level (+32% life and +23% damage per level). They notice you from further away than they used to and call friends from up to 9 tiles around. About one in six is an elite (`ELITE_CHANCE`). Life barely regenerates while you're fighting (until 6 seconds after you were last hit) and only moderately afterwards. Potions and food are an emergency heal, not a drip: a health potion restores 30% of your life plus 40, a mana potion 35% of your mana plus 30, food its own amount plus 10%, and they all share a **15-second** cooldown. Dying costs 15% of your gold.
+
+The numbers live in `BALANCE` in `server/content.js` (monsters) and `Player.RecalculateStats` / `Player.PotionCooldown` (heroes).
 
 ## Elite monsters
 
