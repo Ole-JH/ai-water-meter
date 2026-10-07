@@ -845,9 +845,9 @@ namespace Shadowfall
                 if (!home && p.RecallReadyIn > 0f)
                     UISkin.Shadowed(new Rect(r.x, r.y + 16, r.width, 26), Mathf.CeilToInt(p.RecallReadyIn).ToString(), UISkin.LabelCenter, Color.white, 2);
                 if (r.Contains(Event.current.mousePosition))
-                    tooltip = home ? (p.HasReturnPoint ? "<b>Return</b>  [R]\nStep back to where you recalled from." : "<b>Recall</b>  [R]\nYou are already in Hollowmere.")
-                                   : "<b>Recall to Hollowmere</b>  [R]\nChannel for " + Player.RecallTime + " seconds (moving or taking damage interrupts). " +
-                                     "Press R in town afterwards to return to the same spot (not into the Catacombs).";
+                    tooltip = home ? (p.HasReturnPoint ? "<b>Return</b>  [R]\nStep back to where you recalled from." : "<b>Recall</b>  [R]\nYou are already in town.")
+                                   : "<b>Recall to town</b>  [R]\nTo the nearest town whose waystone you know. Channel for " + Player.RecallTime + " seconds (moving or taking damage interrupts). " +
+                                     "Press R in town afterwards to return to the same spot (not into a dungeon).";
                 if (ClickedIn(r) == 0) p.Recall();
             }
 
@@ -1663,7 +1663,7 @@ namespace Shadowfall
             Block(new Rect(0, 0, VW, VH));
             UISkin.Shadowed(new Rect(0, VH * 0.28f, VW, 90), "You Have Died", UISkin.TitleHuge, new Color(0.9f, 0.2f, 0.15f), 2);
             if (UISkin.Btn(new Rect((VW - 320) / 2, VH * 0.28f + 110, 320, 52), "Release Spirit", UISkin.Button)) p.Respawn();
-            UISkin.Shadowed(new Rect(0, VH * 0.28f + 168, VW, 24), "You will return to Hollowmere and lose 10% of your gold.", UISkin.SmallCenter, UISkin.Cream);
+            UISkin.Shadowed(new Rect(0, VH * 0.28f + 168, VW, 24), "You will wake in the nearest town whose waystone you know, and lose 10% of your gold.", UISkin.SmallCenter, UISkin.Cream);
         }
 
         // =====================================================================================

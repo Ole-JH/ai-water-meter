@@ -87,6 +87,22 @@ namespace Shadowfall
             }
         }
 
+        /// <summary>
+        /// Home for a hero at <paramref name="from"/> (a dungeon counts as its entrance): the nearest town whose waystone
+        /// they have attuned, Hollowmere if none is closer. Where they wake after dying and where Recall takes them.
+        /// </summary>
+        public static Vector3 HomeNear(Vector3 from, out string town)
+        {
+            if (Dungeon.Contains(from)) from = DungeonDef.Get(Dungeon.Index).Entrance;
+            var best = WorldGenerator.Towns[0];
+            foreach (var t in WorldGenerator.Towns)
+                if (Known(t) && Factory.FlatDistance(t.Center, from) < Factory.FlatDistance(best.Center, from)) best = t;
+            town = best == WorldGenerator.Towns[0] ? "Hollowmere" : best.Name;
+            if (best == WorldGenerator.Towns[0]) return GameManager.I.SpawnPoint;
+            foreach (var w in Stones) if (w.Town == best) return w.Arrival;
+            return best.Waystone;
+        }
+
         /// <summary>Takes the hero to another waystone (if attuned, and not in the middle of a fight).</summary>
         public static void Travel(Player p, Waystone to)
         {

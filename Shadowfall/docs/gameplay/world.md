@@ -7,7 +7,7 @@ The map is 576 × 576 tiles. The original lands fill its south-west quarter, wit
 - **South-west:** the market hall with Merchant Lysa and Curio Dealer Vex's stalls, and Thomas's fenced farm.
 - **South-east:** the smithy (Smith Gorrin, Weaponsmith Hilda, Armorer Brann), the training yard and Beastmaster Orla's animal pen.
 
-The stash chest stands by the plaza. A long road leaves each gate. Monsters never follow you inside the walls. Press ++r++ to recall to the village from anywhere.
+The stash chest stands by the plaza. A long road leaves each gate. Monsters never follow you inside the walls. Press ++r++ to recall to town from anywhere.
 
 The four zones start a short walk outside the walls and stretch about 115 tiles, to mountains in the south and west and to a broken ridge in the north and east, getting tougher the farther out you go. Five lakes have fishing spots.
 
@@ -94,7 +94,13 @@ Seven dungeons lie hidden in the wilds, three of them in the [outer lands](#the-
 - **Treasure:** chests in side rooms hold gold and a magic-or-better item, often rare (each hero opens their own; harder difficulties, better chests).
 - **Getting around:** a blue portal by the start of every level returns you to the surface; the orange stairs in the farthest room lead one level deeper. The boss waits in the farthest room of the last level.
 - **Fog of war:** each level starts dark on your map and is revealed as you explore it.
-- Dying in a dungeon sends you back to Hollowmere. Logging out inside puts you back at that dungeon's entrance next time.
+- Dying in a dungeon sends you back to town (see [Death](#death)). Logging out inside puts you back at that dungeon's entrance next time.
+
+## Death
+
+When you die you lose 10% of your gold and choose **Release Spirit** to wake up in the **nearest town whose waystone you
+have attuned to** (Hollowmere until you have found another), measured from where you fell; dying in a dungeon counts as
+falling at its entrance. Recall (++r++) takes you to the same town.
 
 ## Fog of war
 

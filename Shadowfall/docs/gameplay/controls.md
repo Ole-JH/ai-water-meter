@@ -13,7 +13,7 @@
 | ++"Right click"++ on another player | Their menu: invite to party, whisper, trade (anywhere on their character, not just the name) |
 | ++1++ – ++5++ | Your class's five abilities (see [Items & progression](progression.md#classes-and-abilities)) |
 | ++q++ / ++e++ | Drink a health / mana potion (potions and food share a 3 s cooldown) |
-| ++r++ | Recall to Hollowmere: a 3 s channel (moving, casting or taking damage interrupts it; 20 s cooldown). Press ++r++ again in town to step back to where you left (not into a dungeon) |
+| ++r++ | Recall to the nearest town whose waystone you know (Hollowmere at first): a 3 s channel (moving, casting or taking damage interrupts it; 20 s cooldown). Press ++r++ again in town to step back to where you left (not into a dungeon) |
 | ++alt++ (hold) | Show labels for every item on the ground, including plain white gear when the loot filter hides it |
 
 ## Camera

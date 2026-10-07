@@ -1314,7 +1314,7 @@ namespace Shadowfall
             if (IsDead || recallStart >= 0f) return;
             if (WorldGenerator.InTown(transform.position) && !Dungeon.Active)
             {
-                if (!returnPoint.HasValue) { GameUI.Float(transform.position + Vector3.up * 2.5f, "You are already home", Color.gray, 0.8f); return; }
+                if (!returnPoint.HasValue) { GameUI.Float(transform.position + Vector3.up * 2.5f, "You are already in town", Color.gray, 0.8f); return; }
                 var back = returnPoint.Value;
                 returnPoint = null;
                 SpellFx.Column(transform.position, new Color(0.5f, 0.7f, 1f), 1f, 5f, 0.6f);
@@ -1367,10 +1367,11 @@ namespace Shadowfall
             bool fromDungeon = Dungeon.Active;
             returnPoint = fromDungeon ? (Vector3?)null : transform.position;
             SpellFx.Column(transform.position, new Color(0.5f, 0.7f, 1f), 1f, 6f, 0.6f);
+            var home = Waystone.HomeNear(transform.position, out string town); // before leaving the dungeon
             if (fromDungeon) NetClient.I?.LeaveDungeon(true);
-            TeleportTo(GameManager.I.SpawnPoint);
+            TeleportTo(home);
             Sfx.Play2D("holy_cast", 0.6f);
-            GameUI.Log(fromDungeon ? "You recall to Hollowmere." : "You recall to Hollowmere. Press R in town to return.", new Color(0.6f, 0.75f, 1f));
+            GameUI.Log(fromDungeon ? "You recall to " + town + "." : "You recall to " + town + ". Press R in town to return.", new Color(0.6f, 0.75f, 1f));
         }
 
         // =====================================================================================
@@ -1737,7 +1738,8 @@ namespace Shadowfall
 
         public void Respawn()
         {
-            NetClient.I?.LeaveDungeon(true); // dying in the Catacombs sends you home
+            var home = Waystone.HomeNear(transform.position, out string town); // the nearest attuned town (before leaving a dungeon)
+            NetClient.I?.LeaveDungeon(true); // dying in a dungeon sends you home
             IsDead = false; // the server took its tenth of our gold when we died
             Health = MaxHealth;
             Mana = MaxMana;
@@ -1745,11 +1747,12 @@ namespace Shadowfall
             whirlUntil = 0f;
             leapT = -1f;
             RecalculateStats();
-            transform.position = GameManager.I.SpawnPoint;
+            transform.position = home;
+            CameraRig.I?.SnapToTarget();
             if (model != null) model.Root.localRotation = Quaternion.identity;
             view?.Revive();
             path.Clear();
-            GameUI.Log("You awaken in Hollowmere.", new Color(1f, 0.6f, 0.3f));
+            GameUI.Log("You awaken in " + town + ".", new Color(1f, 0.6f, 0.3f));
             NetClient.I?.SaveNow();
             SpellFx.HolyLight(transform.position);
             Sfx.Play2D("holy_cast", 0.6f);

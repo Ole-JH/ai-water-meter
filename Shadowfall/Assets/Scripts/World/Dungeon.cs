@@ -316,7 +316,7 @@ namespace Shadowfall
         }
     }
 
-    /// <summary>The way out (back to Hollowmere) or the stairs down to the next depth.</summary>
+    /// <summary>The way out (back to the entrance) or the stairs down to the next depth.</summary>
     public class DungeonPortal : Interactable
     {
         bool down;
@@ -324,7 +324,7 @@ namespace Shadowfall
 
         public override Color LabelColor => down ? new Color(1f, 0.55f, 0.3f) : new Color(0.55f, 0.8f, 1f);
         public override float LabelHeight => 3.2f;
-        public override string HoverText => down ? "Descend to Depth " + targetDepth : "Return to Hollowmere";
+        public override string HoverText => down ? "Descend to Depth " + targetDepth : "Return to the surface";
 
         public static DungeonPortal Create(Transform parent, Vector3 pos, bool down, int targetDepth)
         {
