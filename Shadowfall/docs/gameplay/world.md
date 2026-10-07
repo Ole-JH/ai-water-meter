@@ -47,7 +47,7 @@ A full day takes **48 minutes** (2 real minutes per in-game hour) and follows th
 
 ## Parties
 
-Click another player's name above their head and choose **Invite to Party**, or type `/invite name`. Up to 5 players per party.
+Right-click another player (anywhere on their character, or click the name above their head) and choose **Invite to Party**, or type `/invite name`. Up to 5 players per party.
 
 - **Shared kills:** party members within 60 m of a monster when it dies get the kill: XP, quest progress and their own loot.
 - **Shared quests:** open the quest log (++l++) and click **Share** to offer a quest to your party. A shared quest can be turned in to its giver even if it's later in their quest chain.

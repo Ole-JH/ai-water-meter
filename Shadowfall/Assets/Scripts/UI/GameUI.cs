@@ -191,7 +191,7 @@ namespace Shadowfall
             if (p != null && !MouseOverUI)
             {
                 if (p.HoveredEnemy != null) want = CursorKind.Attack;
-                else if (p.HoveredInteractable != null) want = CursorKind.Interact;
+                else if (p.HoveredInteractable != null || RemotePlayerUnderMouse() != null) want = CursorKind.Interact;
             }
             if (want == cursor) return;
             cursor = want;
@@ -492,7 +492,43 @@ namespace Shadowfall
             if (UISkin.Btn(new Rect(r.x + 16, y, r.width - 32, 38), "Trade", UISkin.Button)) { net.RequestTrade(rp.Id); menuPlayer = null; }
             y += 44;
             if (UISkin.Btn(new Rect(r.x + 16, y, r.width - 32, 38), "Close", UISkin.Button)) menuPlayer = null;
-            if (Event.current.type == EventType.MouseDown && !r.Contains(Event.current.mousePosition)) menuPlayer = null;
+            if (Event.current.type == EventType.MouseDown && !r.Contains(Event.current.mousePosition) && Time.frameCount > menuOpenedFrame + 1) menuPlayer = null;
+        }
+
+        int menuOpenedFrame;
+
+        /// <summary>Opens the invite / whisper / trade menu for a player, at the mouse.</summary>
+        public void OpenPlayerMenu(RemotePlayer rp)
+        {
+            var mp = GameInput.MousePosition;
+            menuPlayer = rp;
+            menuPos = new Vector2(mp.x / scale, (Screen.height - mp.y) / scale);
+            menuOpenedFrame = Time.frameCount;
+            Sfx.Play2D("ui_click", 0.4f);
+        }
+
+        /// <summary>
+        /// The other player whose character (not just the name) is under the mouse: their body, from the feet to above
+        /// the head, as it appears on screen. The nearest one to the camera wins.
+        /// </summary>
+        public RemotePlayer RemotePlayerUnderMouse()
+        {
+            var cam = GameManager.I != null ? GameManager.I.Cam : Camera.main;
+            if (cam == null) return null;
+            Vector2 m = GameInput.MousePosition;
+            RemotePlayer best = null;
+            float bestDepth = float.MaxValue;
+            foreach (var rp in RemotePlayer.ById.Values)
+            {
+                if (rp == null) continue;
+                var feet = cam.WorldToScreenPoint(rp.transform.position);
+                var head = cam.WorldToScreenPoint(rp.transform.position + Vector3.up * 2.2f);
+                if (feet.z <= 0f) continue;
+                float h = Mathf.Abs(head.y - feet.y), w = Mathf.Max(24f, h * 0.55f);
+                var r = new Rect(feet.x - w / 2f, Mathf.Min(feet.y, head.y) - h * 0.05f, w, h * 1.1f);
+                if (r.Contains(m) && feet.z < bestDepth) { best = rp; bestDepth = feet.z; }
+            }
+            return best;
         }
 
         /// <summary>Party invitations and shared quests waiting for an answer.</summary>
@@ -1560,7 +1596,7 @@ namespace Shadowfall
                 "<b>Emotes:</b> <b>G</b> opens the emote menu, or type /wave, /dance, /bow, /sit, /sleep... (/e lists them all)\n\n" +
                 "<b>Chat & parties</b>\n" +
                 "<b>/p</b> party chat,  <b>/w name</b> whisper,  <b>/r</b> reply,  <b>/invite name</b>,  <b>/leave</b>,  <b>/who</b>. " +
-                "Click a player's name to invite them or trade. Party members nearby share kills; share quests from the quest log.\n\n" +
+                "Right-click a player (or click their name) to invite them, whisper or trade. Party members nearby share kills; share quests from the quest log.\n\n" +
                 "<b>Loot</b>\n" +
                 "Legendaries (orange) carry unique powers; set pieces (green) grant bonuses at 2 and 4 pieces. Click a gem, then an item with a socket. " +
                 "Vex fuses three gems into a better one. Keep spare loot in the stash chest in the square. " +

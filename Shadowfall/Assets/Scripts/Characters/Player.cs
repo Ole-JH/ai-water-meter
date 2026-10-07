@@ -152,6 +152,7 @@ namespace Shadowfall
         public float SnowSlow { get; private set; } = 1f;
         /// <summary>How fast the hero is moving right now.</summary>
         public float CurrentSpeed => currentSpeed;
+        bool rightOnPlayer;
         float nextTrample;
         static bool snowHintShown;
 
@@ -513,7 +514,14 @@ namespace Shadowfall
                     }
                 }
 
-                if (GameInput.RightHeld) CastAbility(1, MouseGround, true);
+                // Right-clicking another player's character opens their menu (invite, whisper, trade) instead of casting.
+                if (GameInput.RightDown && GameUI.I != null)
+                {
+                    var other = GameUI.I.RemotePlayerUnderMouse();
+                    if (other != null) { GameUI.I.OpenPlayerMenu(other); rightOnPlayer = true; }
+                }
+                if (!GameInput.RightHeld) rightOnPlayer = false;
+                if (GameInput.RightHeld && !rightOnPlayer) CastAbility(1, MouseGround, true);
             }
 
             if (!GameInput.LeftHeld) standAttack = false;

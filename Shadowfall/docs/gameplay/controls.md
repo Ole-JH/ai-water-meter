@@ -10,6 +10,7 @@
 | ++"Left click"++ on an NPC, tree, rock, fishing spot, anvil or campfire | Walk over and interact |
 | ++"Left click"++ on a loot label | Pick it up. Gold is picked up automatically when you walk over it |
 | ++"Right click"++ (hold) | Your class's second ability toward the cursor (Holy Bolt, Throwing Axe, Fireball or Multishot) |
+| ++"Right click"++ on another player | Their menu: invite to party, whisper, trade (anywhere on their character, not just the name) |
 | ++1++ – ++5++ | Your class's five abilities (see [Items & progression](progression.md#classes-and-abilities)) |
 | ++q++ / ++e++ | Drink a health / mana potion (potions and food share a 3 s cooldown) |
 | ++r++ | Recall to Hollowmere: a 3 s channel (moving, casting or taking damage interrupts it; 20 s cooldown). Press ++r++ again in town to step back to where you left (not into a dungeon) |
