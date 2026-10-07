@@ -249,7 +249,10 @@ tasks:
     cmds:
       - docker compose up -d --build --remove-orphans
       - echo "Shadowfall is running on http://localhost:{{.GAME_PORT}}  -  docs on http://localhost:{{.DOCS_PORT}}  -  monitoring (Grafana) on http://localhost:{{.GRAFANA_PORT}}"
-      - echo "Everything in one place - the dashboard on http://$(hostname):${HOMEPAGE_PORT:-7342}"
+      # The port as compose sees it: the environment, then server/.env, then the default.
+      - |
+        port="${HOMEPAGE_PORT:-$(sed -n 's/^HOMEPAGE_PORT=//p' .env 2>/dev/null | tail -n 1 | tr -d '"\r')}"
+        echo "Everything in one place - the dashboard on http://$(hostname):${port:-7342}"
 
   down:
     desc: Stop the server container
