@@ -47,6 +47,17 @@ To use another model, add a line to `MODELS` in `tools/art/build_art.py`, listin
 
 `python3 tools/art/build_art.py .art-cache Characters/` rebuilds only the outputs starting with that path.
 
+### Trees, rocks and plants
+
+Trees (`Trees/Oak_*`, `Willow_*`, `Yew_*` for woodcutting; `Pine_*`, `Broadleaf_*`, `Dead_*` for forests and the graveyard),
+boulders, pebbles and plants come from Quaternius' **Stylized Nature MegaKit** (free edition, CC0). Its foliage textures are
+white masks meant to be tinted in a shader, so `tools/art/nature.py` bakes a colour into them per model (oak green, willow
+yellow-green, yew blue-green, darker forest greens; the `TINTS` table) with soft light and shade, scales every texture down to
+512 px (normal maps 256 px) and turns opaque ones into JPEGs. Mining rocks are a boulder studded with ore nuggets from KayKit's
+**Resource Bits** (`Ores/Copper`, `Ores/Iron`, `Ores/Mithril`, the last tinted blue with a faint light).
+
+The packs come from itch.io: `task art:fetch` downloads them along with the others.
+
 ### Emote animations
 
 The KayKit hero rig has sitting, lying, jumping and unarmed clips but nothing social, so `tools/art/emotes.py` authors
@@ -154,7 +165,9 @@ To add a sound, add an entry to `PICKS` (a clip from a pack) or to `synth()` (ge
 | Pack | Creator | License | Used for |
 | --- | --- | --- | --- |
 | KayKit Adventurers, Skeletons, Medieval Hexagon, Dungeon Remastered | Kay Lousberg | CC0 | Heroes, villagers, skeletons, buildings, props |
-| Nature Kit, Fantasy Town Kit, Graveyard Kit, UI Pack RPG Expansion | Kenney | CC0 | Trees, rocks, town props, graveyard, zombie, UI skin, cursors |
+| Stylized Nature MegaKit (free edition) | Quaternius | CC0 | Trees, boulders, pebbles, bushes, ferns, flowers, mushrooms |
+| Resource Bits | Kay Lousberg | CC0 | Ore nuggets on mining rocks |
+| Nature Kit, Fantasy Town Kit, Graveyard Kit, UI Pack RPG Expansion | Kenney | CC0 | Stumps, tents, campfires, town props, graveyard, zombie, UI skin, cursors |
 | Ultimate Monsters, Ultimate Animated Animals | Quaternius | CC0 | Goblins, warchief, golem, wolves |
 | game-icons.net | Lorc, Delapouite, DarkZaitzev, Faithtoken, Sbed | CC BY 3.0 | All UI icons (recolored) |
 | Cinzel, Alegreya Sans | Natanael Gama; Huerta Tipográfica | SIL OFL 1.1 | Fonts |

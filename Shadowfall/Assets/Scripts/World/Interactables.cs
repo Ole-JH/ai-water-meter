@@ -232,15 +232,15 @@ namespace Shadowfall
             float s = Random.Range(0.85f, 1.2f);
             float leafShade = tier == 0 ? Random.Range(0.9f, 1.1f) : 1f;
 
-            string model = tier == 0 ? PickVisual("Nature/tree_oak", "Nature/tree_default", "Nature/tree_detailed")
-                : tier == 1 ? PickVisual("Nature/tree_fat", "Nature/tree_plateau")
-                : PickVisual("Nature/tree_pineTallA_detailed", "Nature/tree_pineTallD_detailed");
-            float height = (tier == 0 ? 4.4f : tier == 1 ? 4.8f : 6f) * s;
+            // Quaternius trees with their leaves coloured per tier at build time (tools/art/nature.py):
+            // oak green, willow yellow-green and broad, yew a tall dark blue-green conifer.
+            string model = tier == 0 ? PickVisual("Trees/Oak_1", "Trees/Oak_2", "Trees/Oak_3")
+                : tier == 1 ? PickVisual("Trees/Willow_1", "Trees/Willow_2")
+                : PickVisual("Trees/Yew_1", "Trees/Yew_2");
+            float height = (tier == 0 ? 5.4f : tier == 1 ? 5.2f : 7.2f) * s;
             var tree = ArtLibrary.Spawn(model, t, Vector3.zero, height, ArtLibrary.Fit.Height, (float)visualRandom.NextDouble() * 360f, true, true, true);
             if (tree != null)
             {
-                if (tier == 1) ArtLibrary.Tint(tree, new Color(1.05f, 1.15f, 0.75f)); // willow: yellow-green
-                if (tier == 2) ArtLibrary.Tint(tree, new Color(0.7f, 0.85f, 0.75f));  // yew: dark
                 depletedVisual = ArtLibrary.Spawn(PickVisual("Nature/stump_roundDetailed", "Nature/stump_old"), transform, Vector3.zero, 0.9f,
                     ArtLibrary.Fit.Width, (float)visualRandom.NextDouble() * 360f, true, true, true);
                 if (depletedVisual != null) { depletedVisual.SetActive(false); return; }
@@ -290,10 +290,37 @@ namespace Shadowfall
             depletedVisual = new GameObject("Empty");
             depletedVisual.transform.SetParent(transform, false);
 
-            // A real rock model stays visible; only the ore crystals disappear when it's mined out.
-            var rock = ArtLibrary.SpawnBox(PickVisual("Nature/rock_largeA", "Nature/rock_largeB", "Nature/rock_largeC", "Nature/rock_largeD"),
-                transform, Vector3.zero, new Vector3(1.5f, 1.05f, 1.4f), (float)visualRandom.NextDouble() * 360f);
-            if (rock != null && tier > 0) ArtLibrary.Tint(rock, tier == 1 ? new Color(0.85f, 0.75f, 0.72f) : new Color(0.75f, 0.8f, 0.95f));
+            // A mossy boulder stays put; the ore nuggets studding it vanish when it's mined out (and come back).
+            float yaw = (float)visualRandom.NextDouble() * 360f;
+            var rock = ArtLibrary.SpawnBox(PickVisual("Rocks/Boulder_1", "Rocks/Boulder_2", "Rocks/Boulder_3"),
+                transform, Vector3.zero, new Vector3(1.9f, 1.3f, 1.8f), yaw);
+            if (rock != null)
+            {
+                string orePath = tier == 0 ? "Ores/Copper" : tier == 1 ? "Ores/Iron" : "Ores/Mithril";
+                var spots = new[] { new Vector3(0f, 1.02f, 0f), new Vector3(0.6f, 0.45f, 0.15f), new Vector3(-0.42f, 0.55f, -0.48f) };
+                float[] sizes = { 0.85f, 0.6f, 0.5f };
+                for (int i = 0; i < spots.Length; i++)
+                {
+                    var p = Quaternion.Euler(0f, yaw, 0f) * spots[i];
+                    var chunk = ArtLibrary.Spawn(orePath, activeVisual.transform, p, sizes[i], ArtLibrary.Fit.Width, (float)visualRandom.NextDouble() * 360f, true, false, true);
+                    if (chunk == null) continue;
+                    if (i > 0) chunk.transform.localRotation *= Quaternion.Euler((float)visualRandom.NextDouble() * 50f - 25f, 0f, 35f * Mathf.Sign(p.x));
+                    if (tier == 2) ArtLibrary.Tint(chunk, new Color(0.75f, 0.9f, 1.35f)); // mithril: a cold blue sheen
+                }
+                if (tier == 2)
+                {
+                    var glow = new GameObject("MithrilGlow").AddComponent<Light>();
+                    glow.transform.SetParent(activeVisual.transform, false);
+                    glow.transform.localPosition = new Vector3(0f, 1.4f, 0f);
+                    glow.type = LightType.Point;
+                    glow.color = new Color(0.45f, 0.65f, 1f);
+                    glow.range = 3.5f;
+                    glow.intensity = 0.9f;
+                    glow.shadows = LightShadows.None;
+                }
+                depletedVisual.SetActive(false);
+                return;
+            }
 
             if (rock == null)
             foreach (var parent in new[] { activeVisual.transform, depletedVisual.transform })

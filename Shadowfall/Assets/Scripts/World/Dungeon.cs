@@ -247,7 +247,7 @@ namespace Shadowfall
                             cl.intensity = 1.4f;
                             cl.gameObject.AddComponent<Flicker>();
                         }
-                        Art(prop, at, prop.Contains("rock_large") || prop.Contains("tent") ? 1.8f : prop.Contains("rock") ? 0.8f : 1.1f, R(0, 360));
+                        Art(prop, at, prop.Contains("Boulder") || prop.Contains("tent") ? 1.8f : prop.Contains("Pebble") ? 0.8f : 1.1f, R(0, 360));
                     }
                     if (def.Id == "mine" && rng.NextDouble() < 0.6)
                     {
@@ -282,7 +282,7 @@ namespace Shadowfall
                 {
                     var p = b + off;
                     if (!WorldGrid.Instance.IsWalkable(p)) continue;
-                    Art(def.Id == "mine" ? "Nature/rock_tallC" : "Graveyard/fire-basket", p, 1.2f);
+                    Art(def.Id == "mine" ? "Rocks/Boulder_3" : "Graveyard/fire-basket", p, 1.2f);
                     var l = new GameObject("Brazier").AddComponent<Light>();
                     l.transform.SetParent(root.transform, false);
                     l.transform.position = p + Vector3.up * 1.6f;

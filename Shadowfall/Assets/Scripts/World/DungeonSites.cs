@@ -42,7 +42,7 @@ namespace Shadowfall
                 Design = new Vector2(138f, 74f), Depths = 3, MinLevel = 4, Caves = true,
                 FloorTex = "Ground/dirt", WallTex = "Ground/dry", FloorTint = new Color(0.58f, 0.46f, 0.34f), WallTint = new Color(0.5f, 0.38f, 0.26f),
                 TorchColor = new Color(1f, 0.55f, 0.2f), BossFire = new Color(0.9f, 0.6f, 0.1f),
-                RoomProps = new[] { "Nature/tent_smallClosed", "Nature/campfire_stones", "Props/barrel_small_stack", "Nature/mushroom_tanGroup", "Nature/log_large" },
+                RoomProps = new[] { "Nature/tent_smallClosed", "Nature/campfire_stones", "Props/barrel_small_stack", "Plants/Mushrooms", "Nature/log_large" },
             },
             new DungeonDef
             {
@@ -50,7 +50,7 @@ namespace Shadowfall
                 Design = new Vector2(26f, 96f), Depths = 3, MinLevel = 10, Caves = true,
                 FloorTex = "Ground/gravel", WallTex = "Ground/gravel", FloorTint = new Color(0.5f, 0.52f, 0.56f), WallTint = new Color(0.38f, 0.4f, 0.46f),
                 TorchColor = new Color(0.7f, 0.85f, 1f), BossFire = new Color(0.4f, 0.75f, 1f),
-                RoomProps = new[] { "Nature/rock_largeA", "Nature/rock_tallC", "Town/cart", "Nature/rock_smallC", "Props/crates_stacked" },
+                RoomProps = new[] { "Rocks/Boulder_1", "Rocks/Boulder_3", "Town/cart", "Rocks/Pebble_2", "Props/crates_stacked" },
             },
         };
 
@@ -130,16 +130,16 @@ namespace Shadowfall
                     break;
                 case "warrens":
                     // A cave mouth ringed with boulders and a goblin banner.
-                    ArtLibrary.Spawn("Nature/rock_largeA", t, new Vector3(-2.2f, 0f, 1.6f), 3.2f, ArtLibrary.Fit.Width, 0f);
-                    ArtLibrary.Spawn("Nature/rock_largeD", t, new Vector3(2.2f, 0f, 1.6f), 3.2f, ArtLibrary.Fit.Width, 90f);
-                    ArtLibrary.Spawn("Nature/rock_tallA", t, new Vector3(0f, 0f, 2.8f), 3.6f, ArtLibrary.Fit.Height, 0f);
+                    ArtLibrary.Spawn("Rocks/Boulder_1", t, new Vector3(-2.2f, 0f, 1.6f), 3.2f, ArtLibrary.Fit.Width, 0f);
+                    ArtLibrary.Spawn("Rocks/Boulder_2", t, new Vector3(2.2f, 0f, 1.6f), 3.2f, ArtLibrary.Fit.Width, 90f);
+                    ArtLibrary.Spawn("Rocks/Boulder_3", t, new Vector3(0f, 0f, 2.8f), 3.2f, ArtLibrary.Fit.Height, 0f);
                     ArtLibrary.Spawn("Town/banner-red", t, new Vector3(-1.6f, 0f, -0.4f), 2.6f, ArtLibrary.Fit.Height, 0f);
                     Factory.Prim(PrimitiveType.Cylinder, t, new Vector3(0f, 0.02f, 0.6f), new Vector3(2.2f, 0.02f, 1.6f), new Color(0.03f, 0.02f, 0.02f));
                     break;
                 default:
                     // A timbered mine adit with a cart.
-                    ArtLibrary.Spawn("Nature/rock_largeC", t, new Vector3(-2.3f, 0f, 1.8f), 3.4f, ArtLibrary.Fit.Width, 0f);
-                    ArtLibrary.Spawn("Nature/rock_largeB", t, new Vector3(2.3f, 0f, 1.8f), 3.4f, ArtLibrary.Fit.Width, 0f);
+                    ArtLibrary.Spawn("Rocks/Boulder_3", t, new Vector3(-2.3f, 0f, 1.8f), 3.4f, ArtLibrary.Fit.Width, 0f);
+                    ArtLibrary.Spawn("Rocks/Boulder_2", t, new Vector3(2.3f, 0f, 1.8f), 3.4f, ArtLibrary.Fit.Width, 0f);
                     ArtLibrary.Spawn("Town/pillar-wood", t, new Vector3(-1.1f, 0f, 1.2f), 2.6f, ArtLibrary.Fit.Height, 0f);
                     ArtLibrary.Spawn("Town/pillar-wood", t, new Vector3(1.1f, 0f, 1.2f), 2.6f, ArtLibrary.Fit.Height, 0f);
                     Factory.Prim(PrimitiveType.Cube, t, new Vector3(0f, 2.55f, 1.2f), new Vector3(2.8f, 0.3f, 0.35f), new Color(0.35f, 0.24f, 0.14f));

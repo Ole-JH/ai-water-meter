@@ -351,9 +351,9 @@ namespace Shadowfall
         {
             float h = LR(3f, 7f);
             float sx = LR(3.5f, 5f), sz = LR(3.5f, 5f), shade = LR(0.85f, 1.1f), rot = LR(0, 90f);
-            if (Art(Pick("Nature/rock_tallA", "Nature/rock_tallC", "Nature/rock_tallF"), p, h, ArtLibrary.Fit.Height, VR(0, 360)) != null)
+            if (Art(Pick("Rocks/Boulder_1", "Rocks/Boulder_2", "Rocks/Boulder_3"), p, h * 0.75f, ArtLibrary.Fit.Height, VR(0, 360)) != null)
             {
-                Art(Pick("Nature/rock_largeA", "Nature/rock_largeB", "Nature/rock_largeC", "Nature/rock_largeD"), p, Mathf.Max(sx, sz) * 1.2f,
+                Art(Pick("Rocks/Boulder_1", "Rocks/Boulder_2", "Rocks/Boulder_3"), p + new Vector3(VR(-0.8f, 0.8f), 0f, VR(-0.8f, 0.8f)), Mathf.Max(sx, sz) * 0.9f,
                     ArtLibrary.Fit.Width, VR(0, 360));
                 return;
             }
@@ -536,7 +536,7 @@ namespace Shadowfall
                             Factory.Prim(PrimitiveType.Cube, deco, new Vector3(x + 0.5f, 0.5f, y + 0.5f), alongX ? new Vector3(1f, 1f, 0.2f) : new Vector3(0.2f, 1f, 1f), wood);
                     }
                     else if (crops && art && (y - r.yMin) % 2 == 1)
-                        Art(Pick("Nature/plant_bush", "Nature/grass_large"), new Vector3(x + 0.5f, 0, y + 0.5f), VR(0.5f, 0.75f), ArtLibrary.Fit.Height, VR(0, 360), false);
+                        Art(Pick("Plants/Plant", "Plants/Plant"), new Vector3(x + 0.5f, 0, y + 0.5f), VR(0.5f, 0.75f), ArtLibrary.Fit.Height, VR(0, 360), false);
                     else if (!crops && art && vr.NextDouble() < 0.25)
                         Art("Nature/grass_large", new Vector3(x + 0.5f, 0, y + 0.5f), VR(0.4f, 0.6f), ArtLibrary.Fit.Height, VR(0, 360), false);
                 }
@@ -622,8 +622,8 @@ namespace Shadowfall
             if (art)
             {
                 LR(0f, dead ? 180f : 1f); // keep the layout RNG in step with the primitive version
-                if (dead) Art(Pick("Graveyard/pine-crooked", "Graveyard/pine-fall-crooked"), p, VR(3.2f, 4.6f), ArtLibrary.Fit.Height, VR(0, 360));
-                else Art(Pick("Nature/tree_pineRoundC", "Nature/tree_pineTallB", "Nature/tree_cone_dark", "Nature/tree_tall"), p, VR(4f, 6f), ArtLibrary.Fit.Height, VR(0, 360));
+                if (dead) Art(Pick("Trees/Dead_1", "Trees/Dead_2", "Trees/Dead_3"), p, VR(4f, 6f), ArtLibrary.Fit.Height, VR(0, 360));
+                else Art(Pick("Trees/Pine_1", "Trees/Pine_2", "Trees/Pine_3", "Trees/Pine_1", "Trees/Broadleaf_1", "Trees/Broadleaf_2"), p, VR(5.5f, 8f), ArtLibrary.Fit.Height, VR(0, 360));
                 return;
             }
             var trunk = new Color(0.3f, 0.22f, 0.15f);
@@ -795,7 +795,7 @@ namespace Shadowfall
                 float shade = LR(0.85f, 1.1f);
                 var rot = Quaternion.Euler(LR(0f, 360f), LR(0f, 360f), LR(0f, 360f));
                 grid.BlockRect(x - 1, y - 1, x + 1, y + 1);
-                if (Art(Pick("Nature/rock_largeC", "Nature/rock_largeD", "Nature/rock_tallF", "Nature/rock_largeA"), new Vector3(x + 0.5f, 0, y + 0.5f), s * 1.5f, ArtLibrary.Fit.Width, VR(0, 360)) != null)
+                if (Art(Pick("Rocks/Boulder_1", "Rocks/Boulder_2", "Rocks/Boulder_3"), new Vector3(x + 0.5f, 0, y + 0.5f), s * 1.5f, ArtLibrary.Fit.Width, VR(0, 360)) != null)
                     continue;
                 Factory.Prim(PrimitiveType.Cube, deco, new Vector3(x + 0.5f, s * 0.4f, y + 0.5f), Vector3.one * s, new Color(0.42f, 0.4f, 0.37f) * shade)
                     .transform.rotation = rot;
@@ -860,7 +860,7 @@ namespace Shadowfall
                     if (road > 0.05f && road < 0.6f)
                     {
                         // Stones and weeds along the edges of the roads
-                        if (r < 0.07) Art(Pick("Nature/rock_smallA", "Nature/rock_smallC", "Nature/rock_smallFlatA", "Nature/rock_smallE"), p, VR(0.25f, 0.5f), ArtLibrary.Fit.Width, VR(0, 360), false);
+                        if (r < 0.07) Art(Pick("Rocks/Pebble_1", "Rocks/Pebble_2", "Rocks/Pebble_3"), p, VR(0.25f, 0.5f), ArtLibrary.Fit.Width, VR(0, 360), false);
                         continue;
                     }
                     if (fancyGround && r < 0.10 && IsGrassModelRoll(zone, r)) continue; // blade grass replaces the 3D tufts
@@ -868,21 +868,21 @@ namespace Shadowfall
                     {
                         case "Whisperwood":
                             if (r < 0.10) Art(Pick("Nature/grass", "Nature/grass_large", "Nature/grass_leafsLarge"), p, VR(0.4f, 0.8f), ArtLibrary.Fit.Height, VR(0, 360), false);
-                            else if (r < 0.13) Art(Pick("Nature/flower_redA", "Nature/flower_yellowA", "Nature/flower_purpleA"), p, VR(0.35f, 0.55f), ArtLibrary.Fit.Height, VR(0, 360), false);
-                            else if (r < 0.145) Art(Pick("Nature/plant_bush", "Nature/plant_bushLarge"), p, VR(0.7f, 1.2f), ArtLibrary.Fit.Height, VR(0, 360));
-                            else if (r < 0.155) Art(Pick("Nature/mushroom_redGroup", "Nature/mushroom_tanGroup"), p, VR(0.3f, 0.5f), ArtLibrary.Fit.Height, VR(0, 360), false);
+                            else if (r < 0.13) Art(Pick("Plants/Flowers_Yellow", "Plants/Flowers_Purple", "Plants/Fern"), p, VR(0.45f, 0.8f), ArtLibrary.Fit.Width, VR(0, 360), false);
+                            else if (r < 0.145) Art(Pick("Plants/Bush", "Plants/Bush_Flowers"), p, VR(0.7f, 1.2f), ArtLibrary.Fit.Height, VR(0, 360));
+                            else if (r < 0.155) Art("Plants/Mushrooms", p, VR(0.3f, 0.5f), ArtLibrary.Fit.Height, VR(0, 360), false);
                             break;
                         case "Goblin Encampment":
                             if (r < 0.05) Art(Pick("Nature/grass", "Nature/grass_large"), p, VR(0.4f, 0.7f), ArtLibrary.Fit.Height, VR(0, 360), false);
-                            else if (r < 0.06) Art(Pick("Nature/plant_bush", "Nature/rock_smallA"), p, VR(0.5f, 0.9f), ArtLibrary.Fit.Height, VR(0, 360));
+                            else if (r < 0.06) Art(Pick("Plants/Bush", "Rocks/Pebble_2"), p, VR(0.5f, 0.9f), ArtLibrary.Fit.Height, VR(0, 360));
                             break;
                         case "Ironvein Quarry":
-                            if (r < 0.04) Art(Pick("Nature/rock_smallA", "Nature/rock_smallC", "Nature/rock_smallE", "Nature/rock_smallFlatA"), p, VR(0.5f, 0.9f), ArtLibrary.Fit.Width, VR(0, 360), false);
+                            if (r < 0.04) Art(Pick("Rocks/Pebble_1", "Rocks/Pebble_2", "Rocks/Pebble_3"), p, VR(0.5f, 0.9f), ArtLibrary.Fit.Width, VR(0, 360), false);
                             else if (r < 0.06) Art("Nature/grass", p, VR(0.3f, 0.5f), ArtLibrary.Fit.Height, VR(0, 360), false);
                             break;
                         case "Forsaken Graveyard":
                             if (r < 0.04) Art(Pick("Nature/grass_leafsLarge", "Nature/grass"), p, VR(0.4f, 0.7f), ArtLibrary.Fit.Height, VR(0, 360), false);
-                            else if (r < 0.048) Art("Nature/mushroom_tanGroup", p, VR(0.3f, 0.45f), ArtLibrary.Fit.Height, VR(0, 360), false);
+                            else if (r < 0.048) Art("Plants/Mushrooms", p, VR(0.3f, 0.45f), ArtLibrary.Fit.Height, VR(0, 360), false);
                             break;
                     }
                 }

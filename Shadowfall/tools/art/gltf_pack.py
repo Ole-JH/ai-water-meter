@@ -45,13 +45,21 @@ def load(path):
     return js, [_read_uri(b["uri"], base_dir) for b in js.get("buffers", [])], base_dir
 
 
-def repack(path, out_path, keep_animations=None, rename_animations=None, synthesize=None):
+def repack(path, out_path, keep_animations=None, rename_animations=None, synthesize=None, image_transform=None):
     """keep_animations: iterable of names to keep (None = keep all).
     synthesize: optional callable(js, buffers) that adds animations before filtering (see emotes.py).
+    image_transform: optional callable(image_name, raw_bytes, used_as) -> (bytes, mime_type) applied to every
+    external image before it is embedded (resize, recolor, re-encode); used_as is "normal" or "color".
     Returns dict of stats."""
     js, buffers, base_dir = load(path)
     if synthesize:
         synthesize(js, buffers)
+    # Remember which images are normal maps (so a transform can treat them differently).
+    textures = js.get("textures", [])
+    for m in js.get("materials", []):
+        n = m.get("normalTexture")
+        if n is not None and n.get("index") is not None and textures[n["index"]].get("source") is not None:
+            js["images"][textures[n["index"]]["source"]]["_used_as"] = "normal"
     anims = js.get("animations", [])
     if keep_animations is not None:
         keep = list(keep_animations)
@@ -126,9 +134,12 @@ def repack(path, out_path, keep_animations=None, rename_animations=None, synthes
         elif "uri" in img:
             uri = img.pop("uri")
             raw = _read_uri(uri, base_dir)
+            if image_transform:
+                raw, img["mimeType"] = image_transform(os.path.basename(uri.replace("%20", " ")), raw, img.get("_used_as", "color"))
             if "mimeType" not in img:
                 img["mimeType"] = "image/jpeg" if uri.lower().endswith((".jpg", ".jpeg")) or raw[:3] == b"\xff\xd8\xff" else "image/png"
             img["bufferView"] = add_bytes(raw, {})
+        img.pop("_used_as", None)
 
     new_accessors = []
     for old in sorted(used_acc):

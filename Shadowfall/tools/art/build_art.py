@@ -13,6 +13,7 @@ import sys
 sys.path.insert(0, os.path.dirname(__file__))
 import emotes  # noqa: E402
 import gltf_pack  # noqa: E402
+import nature  # noqa: E402
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 OUT = os.path.join(ROOT, "Assets", "Resources", "Art")
@@ -31,8 +32,31 @@ BIG = ["Idle", "Walk", "Run", "Punch", "Weapon", "HitReact", "Death"]
 WOLF = ["Idle", "Walk", "Gallop", "Attack", "Death", "Idle_HitReact1"]
 KENNEY_CHAR = ["idle", "walk", "sprint", "attack-melee-right", "die", "interact-right", "emote-yes"]
 
-# (output path under Art/, source file name, path hint, animations to keep or None = none/all static)
+QN = "quaternius-nature"   # Quaternius Stylized Nature MegaKit (CC0), textures processed by nature.py
+RB = "ResourceBits"        # KayKit Resource Bits (CC0)
+
+# (output path under Art/, source file name, path hint, animations to keep or None = none/all static[, foliage tint])
 MODELS = [
+    # --- Trees: woodcutting tiers (oak, willow, yew) and forest filler
+    *[(f"Trees/Oak_{i + 1}", f"CommonTree_{n}.gltf", QN, None, "oak") for i, n in enumerate([1, 2, 3])],
+    *[(f"Trees/Willow_{i + 1}", f"TwistedTree_{n}.gltf", QN, None, "willow") for i, n in enumerate([1, 3])],
+    *[(f"Trees/Yew_{i + 1}", f"Pine_{n}.gltf", QN, None, "yew") for i, n in enumerate([3, 1])],
+    *[(f"Trees/Pine_{i + 1}", f"Pine_{n}.gltf", QN, None, "pine") for i, n in enumerate([2, 4, 5])],
+    *[(f"Trees/Broadleaf_{i + 1}", f"CommonTree_{n}.gltf", QN, None, "forest") for i, n in enumerate([4, 5])],
+    *[(f"Trees/Dead_{i + 1}", f"DeadTree_{n}.gltf", QN, None, None) for i, n in enumerate([1, 3, 4])],
+    # --- Rocks, ore, plants
+    *[(f"Rocks/Boulder_{n}", f"Rock_Medium_{n}.gltf", QN, None, None) for n in [1, 2, 3]],
+    *[(f"Rocks/Pebble_{i + 1}", f"Pebble_Round_{n}.gltf", QN, None, None) for i, n in enumerate([1, 3, 5])],
+    ("Ores/Copper", "Copper_Nuggets.gltf", RB, None),
+    ("Ores/Iron", "Iron_Nuggets.gltf", RB, None),
+    ("Ores/Mithril", "Silver_Nuggets.gltf", RB, None),
+    ("Plants/Bush", "Bush_Common.gltf", QN, None, "bush"),
+    ("Plants/Bush_Flowers", "Bush_Common_Flowers.gltf", QN, None, "bush"),
+    ("Plants/Fern", "Fern_1.gltf", QN, None, None),
+    ("Plants/Flowers_Yellow", "Flower_4_Group.gltf", QN, None, None),
+    ("Plants/Flowers_Purple", "Plant_7_Big.gltf", QN, None, None),
+    ("Plants/Plant", "Plant_1_Big.gltf", QN, None, None),
+    ("Plants/Mushrooms", "Mushroom_Common.gltf", QN, None, None),
     # --- Characters (KayKit Adventurers / Skeletons, CC0)
     ("Characters/Knight", "Knight.glb", "adventures", HERO),
     ("Characters/Barbarian", "Barbarian.glb", "adventures", HERO),
@@ -64,13 +88,8 @@ MODELS = [
     ("Weapons/SkeletonShield", "Skeleton_Shield_Small_A.gltf", "skeletons", None),
     # --- Nature (Kenney Nature Kit, CC0)
     *[(f"Nature/{n}", f"{n}.glb", "nature-kit", None) for n in [
-        "tree_oak", "tree_default", "tree_detailed", "tree_fat", "tree_plateau", "tree_tall",
-        "tree_pineTallA_detailed", "tree_pineTallD_detailed", "tree_pineRoundC", "tree_pineTallB", "tree_cone_dark",
-        "stump_roundDetailed", "stump_old",
-        "rock_largeA", "rock_largeB", "rock_largeC", "rock_largeD", "rock_tallA", "rock_tallC", "rock_tallF",
-        "rock_smallA", "rock_smallC", "rock_smallE", "rock_smallFlatA",
-        "grass", "grass_large", "grass_leafsLarge", "flower_redA", "flower_yellowA", "flower_purpleA",
-        "plant_bush", "plant_bushLarge", "mushroom_redGroup", "mushroom_tanGroup",
+        # (trees, rocks and plants now come from the Quaternius / KayKit packs above)
+        "stump_roundDetailed", "stump_old", "grass", "grass_large", "grass_leafsLarge",
         "tent_detailedOpen", "tent_detailedClosed", "tent_smallClosed", "campfire_stones", "campfire_logs",
         "log_stack", "log_large", "fence_planks", "fence_simple"]],
     # --- Buildings (KayKit Medieval Hexagon, CC0)
@@ -89,8 +108,7 @@ MODELS = [
     # --- Graveyard (Kenney Graveyard Kit, CC0)
     *[(f"Graveyard/{n}", f"{n}.glb", "graveyard", None) for n in [
         "gravestone-cross", "gravestone-round", "gravestone-bevel", "gravestone-broken", "gravestone-decorative",
-        "grave", "crypt-large", "crypt", "iron-fence", "iron-fence-border", "lightpost-single", "pine-crooked",
-        "pine-fall-crooked", "trunk", "candle-multiple", "fire-basket", "altar-stone", "pillar-large", "coffin",
+        "grave", "crypt-large", "crypt", "iron-fence", "iron-fence-border", "lightpost-single", "trunk", "candle-multiple", "fire-basket", "altar-stone", "pillar-large", "coffin",
         "stone-wall", "stone-wall-column"]],
 ]
 
@@ -115,16 +133,22 @@ def main():
     src = os.path.abspath(sys.argv[1])
     only = sys.argv[2:]   # optional output-path prefixes, e.g. Characters/
     total = 0
-    for out_rel, name, hint, anims in MODELS:
+    built = 0
+    for entry in MODELS:
+        out_rel, name, hint, anims = entry[:4]
+        tint = entry[4] if len(entry) > 4 else None
         if only and not any(out_rel.startswith(o) for o in only):
             continue
+        built += 1
         source = find_source(src, name, hint)
         out = os.path.join(OUT, out_rel + ".glb")
+        processed = hint in (QN, RB)
         stats = gltf_pack.repack(source, out, anims if anims is not None else [],
-                                 synthesize=emotes.add if anims is HERO else None)
+                                 synthesize=emotes.add if anims is HERO else None,
+                                 image_transform=nature.transform(tint) if processed else None)
         total += stats["bytes"]
         print(f"{out_rel:40s} {stats['bytes'] / 1024:8.0f} KB  {len(stats['animations'])} anims")
-    print(f"\n{len(MODELS)} models, {total / 1024 / 1024:.1f} MB total -> {OUT}")
+    print(f"\n{built} models, {total / 1024 / 1024:.1f} MB total -> {OUT}")
 
 
 if __name__ == "__main__":

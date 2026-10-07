@@ -24,6 +24,17 @@ namespace Shadowfall
         {
             new Entry
             {
+                Id = 18, Date = "2026-10-07", Title = "A greener, wilder world",
+                Items = new[]
+                {
+                    "New trees everywhere: leafy oaks, golden willows and tall dark yews to chop, pine and broadleaf forests, gnarled dead trees in the graveyard.",
+                    "Mining rocks are mossy boulders studded with real copper, iron and glowing blue mithril ore.",
+                    "New boulders and cliffs, bushes, ferns, flowers, mushrooms and pebbles.",
+                    "Updating no longer locks anyone out: an outdated game reloads itself into the new version.",
+                },
+            },
+            new Entry
+            {
                 Id = 17, Date = "2026-10-07", Title = "Blood and guts",
                 Items = new[]
                 {
