@@ -71,6 +71,12 @@ If 7341 is taken on your machine, change the **host** side without touching the 
 SHADOWFALL_PORT=9000 task up          # or: SHADOWFALL_PORT=9000 docker compose up -d
 ```
 
+## The dashboard
+
+`task up` also starts **Homepage** on <http://your-host:3001>: one page with a card for the game (players online, heroes in
+dungeons, monsters, the build), the docs, Grafana (alerts), Prometheus (targets up) and Alertmanager, plus whether every
+container is running and the machine's CPU, memory and disk. See [Monitoring → The dashboard](monitoring.md#the-dashboard).
+
 ## Configuration
 
 | Variable | Default (in the image) | Meaning |
@@ -108,8 +114,11 @@ Passwords are stored as salted **scrypt** hashes. `task backup` dumps the databa
 `GET /healthz` returns:
 
 ```json
-{ "ok": true, "players": 3, "monsters": 96, "world": true }
+{ "ok": true, "players": 3, "online": 2, "dungeons": 1, "monsters": 96, "world": true, "build": "2026.10.07-150000", "uptime": 5400 }
 ```
+
+`players` counts open connections (including the login screen), `online` heroes in the world and `dungeons` those of them
+underground. The [dashboard](monitoring.md#the-dashboard) shows these.
 
 The Dockerfile's `HEALTHCHECK` uses this endpoint. `task ps` shows it as well.
 

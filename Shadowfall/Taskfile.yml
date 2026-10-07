@@ -237,15 +237,19 @@ tasks:
   # ---------------------------------------------------------------- docker
 
   up:
-    desc: Build and start the server, the docs and the monitoring stack in the background (game :7341, docs :8000, Grafana :3000)
+    desc: Build and start the server, the docs, the monitoring stack and the dashboard (game :7341, docs :8000, Grafana :3000, dashboard :3001)
     dir: "{{.SERVER_DIR}}"
     env:
       SHADOWFALL_PORT: "{{.GAME_PORT}}"
       GRAFANA_PORT: "{{.GRAFANA_PORT}}"
       DOCS_PORT: "{{.DOCS_PORT}}"
+      # The dashboard's links use this machine's name unless PUBLIC_HOST is set (in server/.env).
+      DEFAULT_PUBLIC_HOST:
+        sh: hostname
     cmds:
       - docker compose up -d --build --remove-orphans
       - echo "Shadowfall is running on http://localhost:{{.GAME_PORT}}  -  docs on http://localhost:{{.DOCS_PORT}}  -  monitoring (Grafana) on http://localhost:{{.GRAFANA_PORT}}"
+      - echo "Everything in one place - the dashboard on http://$(hostname):${HOMEPAGE_PORT:-3001}"
 
   down:
     desc: Stop the server container

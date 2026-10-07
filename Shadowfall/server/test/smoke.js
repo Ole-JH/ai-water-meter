@@ -403,6 +403,9 @@ async function main() {
   try {
     const res = await fetch(`http://localhost:${PORT}/healthz`);
     assert.strictEqual(res.status, 200, "healthz responds");
+    const health = await res.clone().json();
+    assert.ok(Number.isInteger(health.online) && Number.isInteger(health.monsters) && typeof health.build === "string",
+      "healthz reports players online, monsters and the build (the dashboard shows them)");
     const page = await fetch(`http://localhost:${PORT}/`);
     assert.strictEqual(page.status, 200, "index page served");
 

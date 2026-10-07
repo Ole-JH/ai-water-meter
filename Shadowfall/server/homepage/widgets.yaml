@@ -1,0 +1,10 @@
+# The strip along the top: the machine's load, memory and disk, and the time.
+- resources:
+    cpu: true
+    memory: true
+    disk: /
+- datetime:
+    text_size: md
+    format:
+      dateStyle: medium
+      timeStyle: short

@@ -71,7 +71,11 @@ const server = http.createServer((req, res) => {
   const url = new URL(req.url, "http://localhost");
   if (url.pathname === "/healthz") {
     res.writeHead(200, { "Content-Type": "application/json" });
-    return res.end(JSON.stringify({ ok: true, players: sessions.size, monsters: monsters.size, world: !!world }));
+    let online = 0, dungeons = 0;
+    for (const o of sessions.values()) if (o.inWorld) { online++; if (o.inst) dungeons++; }
+    // players: open connections; online: heroes in the world (dungeons: of them, underground). Read by the Homepage dashboard.
+    return res.end(JSON.stringify({ ok: true, players: sessions.size, online, dungeons, monsters: monsters.size, world: !!world,
+      build: latestBuild() || "none", uptime: Math.round(process.uptime()) }));
   }
 
   let rel = decodeURIComponent(url.pathname);

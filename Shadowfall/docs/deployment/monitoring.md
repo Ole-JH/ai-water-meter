@@ -4,6 +4,7 @@
 
 | Service | What it does | Where |
 | --- | --- | --- |
+| **Homepage** | The [dashboard](#the-dashboard): links to everything below, container status, live numbers | <http://localhost:3001> (`HOMEPAGE_PORT`) |
 | **Grafana** | Dashboards, log search, alert overview | <http://localhost:3000> (`GRAFANA_PORT`) |
 | **Prometheus** | Collects and stores metrics (30 days) and evaluates the alert rules | <http://localhost:19090>, this machine only |
 | **Alertmanager** | Groups alerts and sends notifications to Discord and/or Pushover (see [Getting notified](#getting-notified)) | <http://localhost:19093>, this machine only |
@@ -12,8 +13,38 @@
 | **cAdvisor** | Per-container CPU, memory, network and disk | through Grafana |
 | **postgres-exporter** | The account database: up, size, connections, transactions | through Grafana |
 
-Only the game port and Grafana are published to the network. The game server's metrics are on a private port (`9464`) that
+Only the game port, the docs, Grafana and the dashboard are published to the network. The game server's metrics are on a private port (`9464`) that
 only the other containers can reach, never on the public game port.
+
+## The dashboard
+
+[Homepage](https://gethomepage.dev) on <http://your-host:3001> is the front door: open it and click through to the game, the
+docs, Grafana, Prometheus or Alertmanager. Each card shows whether its container is up (green dot), and some show live
+numbers:
+
+| Card | Shows |
+| --- | --- |
+| Shadowfall | Heroes online, heroes in dungeons, monsters, the client build being served (from `/healthz`) |
+| Grafana | Dashboards, data sources, alerts firing |
+| Prometheus | Scrape targets up / down |
+
+Under them: PostgreSQL, Loki and cAdvisor (status only), and along the top the machine's CPU, memory and disk.
+
+How it works: each service in `server/docker-compose.yml` carries `homepage.*` labels (group, name, icon, link,
+widget); Homepage reads them through the Docker socket, mounted read-only. Its look and sections are in
+`server/homepage/settings.yaml`. To add a card, give a container labels like the others.
+
+| Setting (`server/.env`) | Default | Meaning |
+| --- | --- | --- |
+| `PUBLIC_HOST` | this machine's name | The host name the links use. `task up` fills in `hostname`; set it if you reach the server by another name or an IP, e.g. `PUBLIC_HOST=docker2.lan` |
+| `HOMEPAGE_PORT` / `HOMEPAGE_BIND` | `3001` / `0.0.0.0` | Where the dashboard listens |
+| `HOMEPAGE_ALLOWED_HOSTS` | `*` | Host names (with port) the page may be opened under, e.g. `docker2:3001,192.168.1.20:3001`. `*` allows any |
+| `PROMETHEUS_BIND` / `ALERTMANAGER_BIND` | `127.0.0.1` | Prometheus and Alertmanager have no login, so they only listen on the server itself and their links only work there (or through an SSH tunnel). `0.0.0.0` opens them to your network |
+
+!!! note
+    The Grafana card logs in with `GRAFANA_ADMIN_USER` / `GRAFANA_ADMIN_PASSWORD`. If you changed the admin password in
+    Grafana itself, put the new one in `server/.env` too, or the card shows an error. The dashboard has no login of its
+    own: keep port 3001 on your local network (or set `HOMEPAGE_BIND=127.0.0.1`).
 
 ## First login
 

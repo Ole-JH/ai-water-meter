@@ -32,6 +32,28 @@ services:
       postgres:
         condition: service_healthy
     stop_grace_period: 10s
+    labels:
+      # The Homepage dashboard (see the homepage service below). PUBLIC_HOST: the name you reach this machine by.
+      homepage.group: Shadowfall
+      homepage.name: Shadowfall
+      homepage.icon: mdi-sword-cross
+      homepage.href: http://${PUBLIC_HOST:-${DEFAULT_PUBLIC_HOST:-localhost}}:${SHADOWFALL_PORT:-7341}
+      homepage.description: The game
+      homepage.weight: "0"
+      homepage.widget.type: customapi
+      homepage.widget.url: http://shadowfall:7341/healthz
+      homepage.widget.refreshInterval: "15000"
+      homepage.widget.mappings[0].label: Online
+      homepage.widget.mappings[0].field: online
+      homepage.widget.mappings[0].format: number
+      homepage.widget.mappings[1].label: In dungeons
+      homepage.widget.mappings[1].field: dungeons
+      homepage.widget.mappings[1].format: number
+      homepage.widget.mappings[2].label: Monsters
+      homepage.widget.mappings[2].field: monsters
+      homepage.widget.mappings[2].format: number
+      homepage.widget.mappings[3].label: Build
+      homepage.widget.mappings[3].field: build
 
   # The account database. Not published to the host; `task db:psql` opens a prompt, `task backup` dumps it.
   postgres:
@@ -51,6 +73,11 @@ services:
       timeout: 3s
       retries: 20
     stop_grace_period: 30s
+    labels:
+      homepage.group: Infrastructure
+      homepage.name: PostgreSQL
+      homepage.icon: postgres.png
+      homepage.description: Accounts and characters (task db:psql)
 
   # The documentation site on http://localhost:8000 (DOCS_PORT). Serves ../docs live: a git pull shows up
   # without restarting. Only the docs and mkdocs.yml are mounted, read-only.
@@ -64,6 +91,13 @@ services:
       - ../docs:/docs/docs:ro
     ports:
       - "${DOCS_BIND:-0.0.0.0}:${DOCS_PORT:-8000}:8000"
+    labels:
+      homepage.group: Shadowfall
+      homepage.name: Documentation
+      homepage.icon: mdi-book-open-page-variant
+      homepage.href: http://${PUBLIC_HOST:-${DEFAULT_PUBLIC_HOST:-localhost}}:${DOCS_PORT:-8000}
+      homepage.description: How to play, run and extend it
+      homepage.weight: "1"
 
   # ---------------------------------------------------------------- monitoring
   # Grafana on http://localhost:3000 (GRAFANA_PORT), dashboards: Shadowfall, Node Exporter Full, cAdvisor.
@@ -82,7 +116,17 @@ services:
       - ./monitoring/prometheus:/etc/prometheus:ro
       - prometheus-data:/prometheus
     ports:
-      - "127.0.0.1:${PROMETHEUS_PORT:-19090}:9090"
+      # This machine only by default (no login): PROMETHEUS_BIND=0.0.0.0 opens it to your network.
+      - "${PROMETHEUS_BIND:-127.0.0.1}:${PROMETHEUS_PORT:-19090}:9090"
+    labels:
+      homepage.group: Monitoring
+      homepage.name: Prometheus
+      homepage.icon: prometheus.png
+      homepage.href: http://${PUBLIC_HOST:-${DEFAULT_PUBLIC_HOST:-localhost}}:${PROMETHEUS_PORT:-19090}
+      homepage.description: Metrics and alert rules
+      homepage.weight: "1"
+      homepage.widget.type: prometheus
+      homepage.widget.url: http://prometheus:9090
 
   alertmanager:
     image: prom/alertmanager:v0.34.1
@@ -98,7 +142,15 @@ services:
       - ./monitoring/alertmanager:/etc/alertmanager:ro
       - alertmanager-data:/alertmanager
     ports:
-      - "127.0.0.1:${ALERTMANAGER_PORT:-19093}:9093"
+      # This machine only by default (no login): ALERTMANAGER_BIND=0.0.0.0 opens it to your network.
+      - "${ALERTMANAGER_BIND:-127.0.0.1}:${ALERTMANAGER_PORT:-19093}:9093"
+    labels:
+      homepage.group: Monitoring
+      homepage.name: Alertmanager
+      homepage.icon: mdi-bell-alert
+      homepage.href: http://${PUBLIC_HOST:-${DEFAULT_PUBLIC_HOST:-localhost}}:${ALERTMANAGER_PORT:-19093}
+      homepage.description: Where alerts go (Discord, Pushover)
+      homepage.weight: "2"
 
   grafana:
     image: grafana/grafana:13.2.3
@@ -117,11 +169,28 @@ services:
       - grafana-data:/var/lib/grafana
     ports:
       - "${GRAFANA_BIND:-0.0.0.0}:${GRAFANA_PORT:-3000}:3000"
+    labels:
+      homepage.group: Monitoring
+      homepage.name: Grafana
+      homepage.icon: grafana.png
+      homepage.href: http://${PUBLIC_HOST:-${DEFAULT_PUBLIC_HOST:-localhost}}:${GRAFANA_PORT:-3000}
+      homepage.description: Dashboards, logs and alerts
+      homepage.weight: "0"
+      homepage.widget.type: grafana
+      homepage.widget.version: "2"
+      homepage.widget.url: http://grafana:3000
+      homepage.widget.username: ${GRAFANA_ADMIN_USER:-admin}
+      homepage.widget.password: ${GRAFANA_ADMIN_PASSWORD:-admin}
 
   loki:
     image: grafana/loki:3.7.8
     container_name: shadowfall-loki
     restart: unless-stopped
+    labels:
+      homepage.group: Infrastructure
+      homepage.name: Loki
+      homepage.icon: mdi-text-box-search-outline
+      homepage.description: Logs (search them in Grafana)
     command: ["-config.file=/etc/loki/loki.yml"]
     volumes:
       - ./monitoring/loki/loki.yml:/etc/loki/loki.yml:ro
@@ -164,6 +233,11 @@ services:
     image: gcr.io/cadvisor/cadvisor:v0.55.1
     container_name: shadowfall-cadvisor
     restart: unless-stopped
+    labels:
+      homepage.group: Infrastructure
+      homepage.name: cAdvisor
+      homepage.icon: mdi-docker
+      homepage.description: Container metrics
     privileged: true
     devices:
       - /dev/kmsg
@@ -174,6 +248,30 @@ services:
       - /sys:/sys:ro
       - /var/lib/docker/:/var/lib/docker:ro
       - /dev/disk/:/dev/disk:ro
+
+  # ---------------------------------------------------------------- dashboard
+
+  # Homepage (https://gethomepage.dev): one page with links to the game, the docs, Grafana, Prometheus and Alertmanager,
+  # whether each container is up, and live numbers (players online, Grafana alerts, Prometheus targets).
+  # http://<server>:3001 (HOMEPAGE_PORT). It finds the services by their homepage.* labels, through the Docker socket
+  # (read-only). Links use PUBLIC_HOST (default: this machine's name, set by task up).
+  homepage:
+    image: ghcr.io/gethomepage/homepage:v2.4.0
+    container_name: shadowfall-homepage
+    restart: unless-stopped
+    environment:
+      # Host names (with port) the page may be opened under; * allows any. e.g. HOMEPAGE_ALLOWED_HOSTS=docker2:3001,192.168.1.20:3001
+      HOMEPAGE_ALLOWED_HOSTS: ${HOMEPAGE_ALLOWED_HOSTS:-*}
+      LOG_TARGETS: stdout
+    volumes:
+      - ./homepage/settings.yaml:/app/config/settings.yaml:ro
+      - ./homepage/docker.yaml:/app/config/docker.yaml:ro
+      - ./homepage/services.yaml:/app/config/services.yaml:ro
+      - ./homepage/widgets.yaml:/app/config/widgets.yaml:ro
+      - ./homepage/bookmarks.yaml:/app/config/bookmarks.yaml:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    ports:
+      - "${HOMEPAGE_BIND:-0.0.0.0}:${HOMEPAGE_PORT:-3001}:3000"
 
   # Builds the Unity WebGL client in Docker and writes it to ./public (no local Unity needed).
   # Only runs on demand: task client:build   (or: docker compose --profile build run --rm client-builder)

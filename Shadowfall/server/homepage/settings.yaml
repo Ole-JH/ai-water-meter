@@ -1,0 +1,22 @@
+# Homepage (https://gethomepage.dev): the dashboard on http://<server>:3001 (HOMEPAGE_PORT).
+# Services come from the homepage.* labels in docker-compose.yml; this file only sets the look and the sections.
+title: Shadowfall
+description: Shadowfall server
+theme: dark
+color: stone
+headerStyle: clean
+statusStyle: dot
+hideVersion: true
+layout:
+  Shadowfall:
+    style: row
+    columns: 3
+    icon: mdi-sword-cross
+  Monitoring:
+    style: row
+    columns: 3
+    icon: mdi-chart-line
+  Infrastructure:
+    style: row
+    columns: 4
+    icon: mdi-server
