@@ -36,6 +36,9 @@ exploration count from the day achievements arrived.
 | **Rockbreaker** | Shatter 25 Rock Golems. | 10 |  |
 | **Champion Slayer** | Slay an elite champion. | 10 |  |
 | **Champion Hunter** | Slay 50 elite champions. | 25 | Champion Hunter |
+| **Hold the Gate** | Help beat off an [invasion](world.md#town-invasions) of a town. | 10 |  |
+| **Shield of the Realm** | Help beat off ten invasions. | 25 | the Defender |
+| **Warden of the Walls** | Defend Hollowmere, Frosthaven, Saltreach and Emberwatch from invasions. | 25 |  |
 
 ### Bosses
 

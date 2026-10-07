@@ -159,10 +159,10 @@ const DIFFICULTIES = [
 const TOWN = { x0: 116, z0: 116, x1: 173, z1: 173 };
 const pinecrestX = Math.round(144 + Math.sin((336 + 11) * 0.05) * 6);
 const TOWNS = [
-  { name: "Hollowmere Village", ...TOWN },
-  { name: "Frosthaven", x0: 126, z0: 446, x1: 163, z1: 483 },
-  { name: "Saltreach", x0: 446, z0: 126, x1: 483, z1: 163 },
-  { name: "Emberwatch", x0: 446, z0: 446, x1: 483, z1: 483 },
+  { name: "Hollowmere Village", ...TOWN, walled: true },
+  { name: "Frosthaven", x0: 126, z0: 446, x1: 163, z1: 483, walled: true },
+  { name: "Saltreach", x0: 446, z0: 126, x1: 483, z1: 163, walled: true },
+  { name: "Emberwatch", x0: 446, z0: 446, x1: 483, z1: 483, walled: true },
   { name: "Pinecrest", x0: pinecrestX - 14, z0: 336, x1: pinecrestX + 15, z1: 358 },
 ];
 // The original world's size: the Ashen Reach (north-east of it) counts as a deep place for loot.

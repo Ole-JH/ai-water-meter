@@ -384,6 +384,59 @@ async function outerLandsTests(a) {
   await sleep(150);
 }
 
+async function invasionTests(a, b) {
+  // An admin starts one at Hollowmere's south gate; everyone hears of it and gets its state.
+  a.ws.send(JSON.stringify({ t: "chat", msg: "/a invasion hollowmere south" }));
+  await sleep(300);
+  assert.ok(b.all("sys").some((m) => /Hollowmere Village is under attack! .* south gate/.test(m.msg)), "an invasion is announced to everyone");
+  const iv0 = b.all("invasion").at(-1)?.iv;
+  assert.ok(iv0 && iv0.phase === "gather" && iv0.town === "Hollowmere Village" && iv0.hp === 100 && iv0.gx === 144.5 && iv0.gz === 114.5,
+    "players get the invasion's state: town, gate, phase, the gate's integrity");
+  a.ws.send(JSON.stringify({ t: "adm", c: "invasion", town: "Saltreach" }));
+  await sleep(150);
+  assert.ok(a.all("sys").some((m) => /already under attack/.test(m.msg)), "one invasion at a time");
+  await sleep(1200); // INVASION_GATHER_S=1
+  const iv1 = a.all("invasion").at(-1).iv;
+  assert.ok(iv1.phase === "wave" && iv1.wave === 1 && iv1.left > 0, "after the gathering the first wave marches");
+
+  // Alice fights them in front of the gate (Bob stays in town): three waves, the last with a warlord.
+  state(a, 144.5, 96);
+  await sleep(300);
+  assert.ok(view(a).m.length >= iv1.left, "the invaders are out there");
+  for (let i = 0; i < 3; i++) {
+    a.ws.send(JSON.stringify({ t: "adm", c: "killall", r: 60 }));
+    await sleep(400);
+  }
+  const win = a.find("invwin");
+  assert.ok(win && win.k === "Hollowmere Village" && win.xp > 0 && win.drops.length >= 3, "beating every wave rewards the defenders with experience and loot");
+  assert.ok(a.all("kill").some((k) => /^Warlord /.test(k.el || "")), "the last wave is led by a warlord");
+  assert.ok(!b.find("invwin"), "heroes who didn't fight get nothing");
+  assert.strictEqual(b.all("invasion").at(-1).iv.phase, "won", "everyone sees the town hold");
+  assert.ok(b.all("sys").some((m) => /Hollowmere Village holds! 1 defender/.test(m.msg)), "the victory is announced");
+
+  // A new one can be started once that one is over; an admin can call it off.
+  a.ws.send(JSON.stringify({ t: "adm", c: "invasion", town: "Frost" }));
+  await sleep(200);
+  assert.ok(a.all("sys").some((m) => /Frosthaven is under attack/.test(m.msg)), "towns are found by the start of their name");
+  a.ws.send(JSON.stringify({ t: "adm", c: "invasion", stop: true }));
+  await sleep(200);
+  assert.strictEqual(b.all("invasion").at(-1).iv.phase, "none", "calling an invasion off clears it for everyone");
+  b.ws.send(JSON.stringify({ t: "adm", c: "invasion" }));
+  await sleep(150);
+  assert.strictEqual(b.all("invasion").at(-1).iv.phase, "none", "only admins start invasions");
+
+  // Nobody answers: the invaders march on the gate by themselves, batter it down and sack the town.
+  a.ws.send(JSON.stringify({ t: "adm", c: "invasion", town: "Saltreach", gate: "west" }));
+  let last;
+  for (let i = 0; i < 60 && (last = b.all("invasion").at(-1).iv).phase !== "lost"; i++) await sleep(500);
+  assert.strictEqual(last.phase, "lost", "unopposed invaders march on the gate and break it");
+  assert.strictEqual(last.hp, 0, "the gate's integrity runs out");
+  assert.ok(b.all("sys").some((m) => /broke through the west gate of Saltreach/.test(m.msg)), "the sack is announced");
+  assert.ok(b.all("invasion").some((m) => m.iv.phase === "wave" && m.iv.hp > 0 && m.iv.hp < 100), "the gate's integrity drops while they batter it");
+  state(a, 144, 150);
+  await sleep(150);
+}
+
 async function main() {
   checkDockerfile();
   checkGamedata();
@@ -391,7 +444,7 @@ async function main() {
   if (db.url) console.log("Testing against PostgreSQL");
   writeLegacyCharacter("Oldtimer", "oldpass", { level: 7, gold: 99, look: "Mage", x: 144, z: 150 });
   const server = spawn(process.execPath, [path.join(__dirname, "..", "server.js")], {
-    env: { ...process.env, PORT: String(PORT), DATA_DIR, PUBLIC_DIR, ELITE_CHANCE: "0", ADMINS: "alice", METRICS_PORT: String(METRICS_PORT), DATABASE_URL: db.url },
+    env: { ...process.env, PORT: String(PORT), DATA_DIR, PUBLIC_DIR, ELITE_CHANCE: "0", INVASION_MINUTES: "0", INVASION_GATHER_S: "1", INVASION_SIEGE_RATE: "15", ADMINS: "alice", METRICS_PORT: String(METRICS_PORT), DATABASE_URL: db.url },
     stdio: ["ignore", "pipe", "pipe"],
   });
   let serverLog = "";
@@ -596,6 +649,7 @@ async function main() {
     a.ws.send(JSON.stringify({ t: "adm", c: "who" }));
     await sleep(150);
     assert.ok(a.find("admwho").items.some((x) => x.includes("|Bob|")), "admins can list players");
+    await invasionTests(a, b);
 
     const danaId = d.find("welcome").id;
     d.ws.send(JSON.stringify({ t: "vanish", dur: 3 }));

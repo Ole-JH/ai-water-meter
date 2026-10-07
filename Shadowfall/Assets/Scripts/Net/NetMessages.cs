@@ -81,6 +81,17 @@ namespace Shadowfall
         public float i;
         public NetMonster[] m;
         public NetPlayer[] p;
+        public NetInvasion iv;         // "invasion": a town under attack (see Invasion.cs); "invwin": k = town, xp, drops
+    }
+
+    /// <summary>A town invasion (server/invasion.js): phase none | gather | wave | won | lost.</summary>
+    [Serializable]
+    public class NetInvasion
+    {
+        public string town, gate, phase;
+        public float gx, gz;           // where the invaders batter the gate
+        public int wave, waves, left;  // left: invaders alive (wave), or seconds until the first wave (gather)
+        public int hp;                 // the gate's integrity, 0..100
     }
 
     // ---------------------------------------------------------------- client -> server

@@ -53,6 +53,11 @@ namespace Shadowfall
             new AchievementDef { Id = "boss_nine", Name = "Crownbreaker", Description = "Defeat nine different bosses.", Category = AchievementCategory.Bosses, Icon = "ach_boss", Points = 100, Stat = "boss", Goal = 9, Title = "Crownbreaker" },
             new AchievementDef { Id = "boss_twelve", Name = "Nothing Left Standing", Description = "Defeat all twelve bosses.", Category = AchievementCategory.Bosses, Icon = "ach_boss", Points = 150, Stat = "boss", Goal = 12, Title = "the Undefeated" },
 
+            // ---- town invasions
+            new AchievementDef { Id = "defend_first", Name = "Hold the Gate", Description = "Help beat off an invasion of a town.", Category = AchievementCategory.Combat, Icon = "ach_castle", Points = 10, Stat = "defended", Goal = 1 },
+            new AchievementDef { Id = "defend_10", Name = "Shield of the Realm", Description = "Help beat off ten invasions.", Category = AchievementCategory.Combat, Icon = "ach_castle", Points = 25, Stat = "defended", Goal = 10, Title = "the Defender" },
+            new AchievementDef { Id = "defend_all", Name = "Warden of the Walls", Description = "Defend Hollowmere, Frosthaven, Saltreach and Emberwatch from invasions.", Category = AchievementCategory.Combat, Icon = "ach_castle", Points = 25, Stat = "defended_town", Goal = 4 },
+
             // ---- dungeons
             new AchievementDef { Id = "dungeon_first", Name = "Into the Dark", Description = "Enter a dungeon.", Category = AchievementCategory.Dungeons, Icon = "ach_dungeon", Points = 5, Stat = "dungeon", Goal = 1 },
             new AchievementDef { Id = "dungeon_all", Name = "Delver", Description = "Enter four different dungeons.", Category = AchievementCategory.Dungeons, Icon = "ach_dungeon", Points = 10, Stat = "dungeon", Goal = 4 },

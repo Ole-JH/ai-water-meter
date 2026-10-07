@@ -1010,6 +1010,16 @@ namespace Shadowfall
                 PartyMarker(r, toMap(at), (near ? mrp.transform.eulerAngles.y : m.ry) - camYaw, m, Factory.FlatDistance(at, pp));
             }
 
+            // A town under attack: a pulsing marker at the gate (on the rim when it's off the map)
+            if (Invasion.Active && !Dungeon.Active)
+            {
+                var gp = toMap(Invasion.Gate);
+                var c = r.center;
+                float rad = r.width / 2f - 8f;
+                if ((gp - c).magnitude > rad) gp = c + (gp - c).normalized * rad;
+                DotAt(gp, Invasion.Color, 9f + 4f * Mathf.Abs(Mathf.Sin(Time.time * 3f)));
+            }
+
             // Hero: an arrow pointing where we face.
             // (Not GUIUtility.RotateAroundPivot: that pivots in unscaled screen space, so with the UI scale the
             // arrow would orbit around the wrong point. Rotate around the map centre as it appears on screen.)
@@ -1120,10 +1130,28 @@ namespace Shadowfall
             GUI.color = Color.white;
         }
 
+        /// <summary>A town under attack: which, how it goes, and the gate's integrity. Returns the height it took.</summary>
+        float DrawInvasionTracker()
+        {
+            var iv = Invasion.Current;
+            if (iv == null || Dungeon.Active) return 0f;
+            float x = VW - 330, y = 342;
+            float pulse = Invasion.Active ? 0.75f + 0.25f * Mathf.Sin(Time.time * 4f) : 1f;
+            UISkin.Shadowed(new Rect(x, y, 300, 26), "Invasion: " + iv.town, UISkin.Heading, Invasion.Color * pulse + new Color(0, 0, 0, 1f - pulse));
+            y += 28;
+            UISkin.Shadowed(new Rect(x + 12, y, 300, 20), Invasion.Status, UISkin.Small, UISkin.Cream);
+            y += 24;
+            if (!Invasion.Active) return y - 342 + 10;
+            UISkin.Bar(new Rect(x + 12, y + 2, 230, 13), iv.hp / 100f, iv.hp > 50 ? "Yellow" : "Red", "Gate " + iv.hp + "%", new Color(0.85f, 0.6f, 0.2f));
+            y += 22;
+            return y - 342 + 12;
+        }
+
         void DrawQuestTracker(Player p)
         {
+            float top = DrawInvasionTracker();
             if (p.Quests.Active.Count == 0) return;
-            float x = VW - 330, y = 342;
+            float x = VW - 330, y = 342 + top;
             UISkin.Shadowed(new Rect(x, y, 300, 26), "Quests", UISkin.Heading, UISkin.Gold);
             y += 28;
             foreach (var q in p.Quests.Active)
@@ -1597,6 +1625,12 @@ namespace Shadowfall
                 var mc = m.dead ? new Color(0.55f, 0.5f, 0.5f) : MemberColor(m.id);
                 DotAt(mp, mc, 12);
                 UISkin.Shadowed(new Rect(mp.x - 90, mp.y + 7, 180, 20), m.name + (m.dead ? " (dead)" : ""), UISkin.SmallCenter, mc, 2);
+            }
+            if (Invasion.Active && !Dungeon.Active)
+            {
+                mark(Invasion.Gate, Invasion.Color, 12f + 5f * Mathf.Abs(Mathf.Sin(Time.time * 3f)));
+                var ig = toMap(Invasion.Gate);
+                if (r.Contains(ig)) UISkin.Shadowed(new Rect(ig.x - 110, ig.y + 8, 220, 20), "Under attack!", UISkin.SmallCenter, Invasion.Color, 2);
             }
             mark(p.transform.position, Color.white, 11);
 

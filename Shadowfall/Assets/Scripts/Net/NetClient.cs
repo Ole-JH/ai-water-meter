@@ -550,6 +550,11 @@ namespace Shadowfall
                 case "sys":
                     GameUI.Log(m.msg, new Color(1f, 0.85f, 0.4f));
                     break;
+                case "invasion": Invasion.Set(m.iv); break;
+                case "invwin":
+                    Invasion.Won(m.k, m.xp);
+                    SpawnDrops(m.drops);
+                    break;
 
                 case "leave":
                     if (RemotePlayer.ById.TryGetValue(m.id, out var gone)) Destroy(gone.gameObject);
@@ -696,6 +701,11 @@ namespace Shadowfall
             {
                 case "melee":
                     if (targetIsMe && p != null && !p.IsDead) p.TakeDamage(m.dmg, e);
+                    else if (m.tid < 0 && e != null && Invasion.Active) // an invader battering the town gate
+                    {
+                        Sfx.Play("chop", targetPos + Vector3.up, 0.8f, 0.1f, 40f);
+                        SpellFx.Hit(targetPos + Vector3.up * 1.2f, new Color(0.75f, 0.55f, 0.3f), false, 6); // splinters
+                    }
                     break;
 
                 case "shot":

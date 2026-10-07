@@ -107,6 +107,9 @@ ts("Open dungeon instances", [("shadowfall_dungeon_instances", "{{dungeon}}")], 
 table("Dungeon runs by difficulty (selected range)",
       'sort_desc(sum by (dungeon, difficulty) (increase(shadowfall_dungeon_entries_total[$__range])))', 12)
 y += 8
+table("Town invasions (selected range)", 'sort_desc(sum by (town, result) (increase(shadowfall_invasions_total[$__range])))', 0,
+      desc="won = beaten off by the players, lost = the gate fell or nobody came")
+y += 8
 
 # ---------------------------------------------------------------- economy & social
 row("Economy & social")

@@ -505,6 +505,18 @@
    "name": "Nothing Left Standing",
    "title": "the Undefeated"
   },
+  "defend_first": {
+   "name": "Hold the Gate",
+   "title": ""
+  },
+  "defend_10": {
+   "name": "Shield of the Realm",
+   "title": "the Defender"
+  },
+  "defend_all": {
+   "name": "Warden of the Walls",
+   "title": ""
+  },
   "dungeon_first": {
    "name": "Into the Dark",
    "title": ""

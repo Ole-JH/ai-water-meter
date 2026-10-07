@@ -1286,22 +1286,73 @@
    }
   },
   {
+   "type": "bargauge",
+   "title": "Town invasions (selected range)",
+   "id": 25,
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "description": "won = beaten off by the players, lost = the gate fell or nobody came",
+   "gridPos": {
+    "h": 8,
+    "w": 12,
+    "x": 0,
+    "y": 56
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "expr": "sort_desc(sum by (town, result) (increase(shadowfall_invasions_total[$__range])))",
+     "legendFormat": "{{monster}}{{boss}}{{dungeon}}{{difficulty}}",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "instant": true,
+     "format": "time_series"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short",
+     "color": {
+      "mode": "continuous-YlRd"
+     },
+     "min": 0
+    },
+    "overrides": []
+   },
+   "options": {
+    "orientation": "horizontal",
+    "displayMode": "gradient",
+    "showUnfilled": true,
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    }
+   }
+  },
+  {
    "type": "row",
    "title": "Economy & social",
-   "id": 25,
+   "id": 26,
    "collapsed": false,
    "gridPos": {
     "h": 1,
     "w": 24,
     "x": 0,
-    "y": 56
+    "y": 64
    },
    "panels": []
   },
   {
    "type": "timeseries",
    "title": "Trades",
-   "id": 26,
+   "id": 27,
    "datasource": {
     "type": "prometheus",
     "uid": "prometheus"
@@ -1311,7 +1362,7 @@
     "h": 8,
     "w": 8,
     "x": 0,
-    "y": 57
+    "y": 65
    },
    "targets": [
     {
@@ -1365,7 +1416,7 @@
   {
    "type": "timeseries",
    "title": "Chat messages per minute",
-   "id": 27,
+   "id": 28,
    "datasource": {
     "type": "prometheus",
     "uid": "prometheus"
@@ -1375,7 +1426,7 @@
     "h": 8,
     "w": 8,
     "x": 8,
-    "y": 57
+    "y": 65
    },
    "targets": [
     {
@@ -1420,7 +1471,7 @@
   {
    "type": "timeseries",
    "title": "Admin commands (per hour)",
-   "id": 28,
+   "id": 29,
    "datasource": {
     "type": "prometheus",
     "uid": "prometheus"
@@ -1430,7 +1481,7 @@
     "h": 8,
     "w": 8,
     "x": 16,
-    "y": 57
+    "y": 65
    },
    "targets": [
     {
@@ -1475,20 +1526,20 @@
   {
    "type": "row",
    "title": "Server health",
-   "id": 29,
+   "id": 30,
    "collapsed": false,
    "gridPos": {
     "h": 1,
     "w": 24,
     "x": 0,
-    "y": 65
+    "y": 73
    },
    "panels": []
   },
   {
    "type": "timeseries",
    "title": "Tick duration",
-   "id": 30,
+   "id": 31,
    "datasource": {
     "type": "prometheus",
     "uid": "prometheus"
@@ -1498,7 +1549,7 @@
     "h": 8,
     "w": 8,
     "x": 0,
-    "y": 66
+    "y": 74
    },
    "targets": [
     {
@@ -1561,7 +1612,7 @@
   {
    "type": "timeseries",
    "title": "Event loop lag (p99)",
-   "id": 31,
+   "id": 32,
    "datasource": {
     "type": "prometheus",
     "uid": "prometheus"
@@ -1571,7 +1622,7 @@
     "h": 8,
     "w": 8,
     "x": 8,
-    "y": 66
+    "y": 74
    },
    "targets": [
     {
@@ -1616,7 +1667,7 @@
   {
    "type": "timeseries",
    "title": "Errors",
-   "id": 32,
+   "id": 33,
    "datasource": {
     "type": "prometheus",
     "uid": "prometheus"
@@ -1626,7 +1677,7 @@
     "h": 8,
     "w": 8,
     "x": 16,
-    "y": 66
+    "y": 74
    },
    "targets": [
     {
@@ -1680,7 +1731,7 @@
   {
    "type": "timeseries",
    "title": "Memory",
-   "id": 33,
+   "id": 34,
    "datasource": {
     "type": "prometheus",
     "uid": "prometheus"
@@ -1690,7 +1741,7 @@
     "h": 8,
     "w": 8,
     "x": 0,
-    "y": 74
+    "y": 82
    },
    "targets": [
     {
@@ -1753,7 +1804,7 @@
   {
    "type": "timeseries",
    "title": "CPU",
-   "id": 34,
+   "id": 35,
    "datasource": {
     "type": "prometheus",
     "uid": "prometheus"
@@ -1763,7 +1814,7 @@
     "h": 8,
     "w": 8,
     "x": 8,
-    "y": 74
+    "y": 82
    },
    "targets": [
     {
@@ -1808,7 +1859,7 @@
   {
    "type": "timeseries",
    "title": "Network",
-   "id": 35,
+   "id": 36,
    "datasource": {
     "type": "prometheus",
     "uid": "prometheus"
@@ -1818,7 +1869,7 @@
     "h": 8,
     "w": 8,
     "x": 16,
-    "y": 74
+    "y": 82
    },
    "targets": [
     {
@@ -1872,7 +1923,7 @@
   {
    "type": "timeseries",
    "title": "Messages received per second",
-   "id": 36,
+   "id": 37,
    "datasource": {
     "type": "prometheus",
     "uid": "prometheus"
@@ -1882,7 +1933,7 @@
     "h": 8,
     "w": 12,
     "x": 0,
-    "y": 82
+    "y": 90
    },
    "targets": [
     {
@@ -1927,7 +1978,7 @@
   {
    "type": "timeseries",
    "title": "Messages sent per second",
-   "id": 37,
+   "id": 38,
    "datasource": {
     "type": "prometheus",
     "uid": "prometheus"
@@ -1937,7 +1988,7 @@
     "h": 8,
     "w": 12,
     "x": 12,
-    "y": 82
+    "y": 90
    },
    "targets": [
     {
@@ -1982,20 +2033,20 @@
   {
    "type": "row",
    "title": "Database",
-   "id": 38,
+   "id": 39,
    "collapsed": false,
    "gridPos": {
     "h": 1,
     "w": 24,
     "x": 0,
-    "y": 90
+    "y": 98
    },
    "panels": []
   },
   {
    "type": "stat",
    "title": "PostgreSQL",
-   "id": 39,
+   "id": 40,
    "datasource": {
     "type": "prometheus",
     "uid": "prometheus"
@@ -2005,7 +2056,7 @@
     "h": 4,
     "w": 4,
     "x": 0,
-    "y": 91
+    "y": 99
    },
    "targets": [
     {
@@ -2057,7 +2108,7 @@
   {
    "type": "stat",
    "title": "Database size",
-   "id": 40,
+   "id": 41,
    "datasource": {
     "type": "prometheus",
     "uid": "prometheus"
@@ -2067,7 +2118,7 @@
     "h": 4,
     "w": 4,
     "x": 4,
-    "y": 91
+    "y": 99
    },
    "targets": [
     {
@@ -2115,7 +2166,7 @@
   {
    "type": "timeseries",
    "title": "Database connections",
-   "id": 41,
+   "id": 42,
    "datasource": {
     "type": "prometheus",
     "uid": "prometheus"
@@ -2125,7 +2176,7 @@
     "h": 8,
     "w": 8,
     "x": 0,
-    "y": 95
+    "y": 103
    },
    "targets": [
     {
@@ -2170,7 +2221,7 @@
   {
    "type": "timeseries",
    "title": "Transactions per second",
-   "id": 42,
+   "id": 43,
    "datasource": {
     "type": "prometheus",
     "uid": "prometheus"
@@ -2180,7 +2231,7 @@
     "h": 8,
     "w": 8,
     "x": 8,
-    "y": 95
+    "y": 103
    },
    "targets": [
     {
@@ -2234,7 +2285,7 @@
   {
    "type": "timeseries",
    "title": "Rows written per second",
-   "id": 43,
+   "id": 44,
    "datasource": {
     "type": "prometheus",
     "uid": "prometheus"
@@ -2244,7 +2295,7 @@
     "h": 8,
     "w": 8,
     "x": 16,
-    "y": 95
+    "y": 103
    },
    "targets": [
     {
@@ -2307,20 +2358,20 @@
   {
    "type": "row",
    "title": "Logs",
-   "id": 44,
+   "id": 45,
    "collapsed": false,
    "gridPos": {
     "h": 1,
     "w": 24,
     "x": 0,
-    "y": 103
+    "y": 111
    },
    "panels": []
   },
   {
    "type": "logs",
    "title": "Server log",
-   "id": 45,
+   "id": 46,
    "datasource": {
     "type": "loki",
     "uid": "loki"
@@ -2329,7 +2380,7 @@
     "h": 12,
     "w": 24,
     "x": 0,
-    "y": 104
+    "y": 112
    },
    "targets": [
     {

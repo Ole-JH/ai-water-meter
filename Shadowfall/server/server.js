@@ -16,6 +16,7 @@ const { createStore, Taken } = require("./store");
 const I = require("./items");
 const { Weather, SEASONS, KINDS: WEATHER_KINDS } = require("./weather");
 const A = require("./accounts");
+const createInvasions = require("./invasion");
 
 const PORT = parseInt(process.env.PORT || "7341", 10);
 // Behind a reverse proxy, take the client's address from X-Forwarded-For (for login rate limits).
@@ -75,7 +76,7 @@ const server = http.createServer((req, res) => {
     for (const o of sessions.values()) if (o.inWorld) { online++; if (o.inst) dungeons++; }
     // players: open connections; online: heroes in the world (dungeons: of them, underground). Read by the Homepage dashboard.
     return res.end(JSON.stringify({ ok: true, players: sessions.size, online, dungeons, monsters: monsters.size, world: !!world,
-      build: latestBuild() || "none", uptime: Math.round(process.uptime()) }));
+      build: latestBuild() || "none", invasion: invasions.active(), uptime: Math.round(process.uptime()) }));
   }
 
   let rel = decodeURIComponent(url.pathname);
@@ -398,9 +399,10 @@ function sendNear(x, z, range, msg, inst = 0) {
     if (s.inWorld && (s.inst || 0) === inst && dist(s.x, s.z, x, z) <= range) safeSend(s, data);
 }
 
-function monsterAttack(m, s, kind, dmg) {
+/** A monster attacks hero s (or, with no hero, swings at tx, tz: an invader at a town gate). */
+function monsterAttack(m, s, kind, dmg, tx = m.x, tz = m.z) {
   if (s && hasAffix(m, "Vampiric") && dmg > 0) m.hp = Math.min(m.maxHp, m.hp + dmg * 0.6);
-  sendNear(m.x, m.z, PLAYER_VIEW, { t: "matk", mid: m.id, tid: s ? s.id : -1, dmg: r2(dmg), k: kind, x: r2(s ? s.x : m.x), z: r2(s ? s.z : m.z) }, m.inst);
+  sendNear(m.x, m.z, PLAYER_VIEW, { t: "matk", mid: m.id, tid: s ? s.id : -1, dmg: r2(dmg), k: kind, x: r2(s ? s.x : tx), z: r2(s ? s.z : tz) }, m.inst);
 }
 
 function updateMonster(m, t) {
@@ -414,6 +416,7 @@ function updateMonster(m, t) {
         if (d < bestD) { bestD = d; best = s; }
       }
       if (best) { aggro(m, best.id); alertNearby(m, best.id); break; }
+      if (m.invasion && invasions.idle(m, t)) break; // marching on a town gate, or battering it
       if (t >= m.wanderAt) {
         m.wanderAt = t + rand(3, 7);
         const wx = m.homeX + rand(-4, 4), wz = m.homeZ + rand(-4, 4);
@@ -466,6 +469,7 @@ function updateMonster(m, t) {
     }
 
     case "return": {
+      if (m.invasion) { m.state = "idle"; m.path = []; break; } // back to the siege, without healing
       m.hp = Math.min(m.maxHp, m.hp + m.maxHp * 0.25 * TICK);
       if (!m.path.length) {
         if (dist(m.x, m.z, m.homeX, m.homeZ) < 1.5) { m.state = "idle"; m.hp = m.maxHp; m.threat.clear(); break; }
@@ -512,6 +516,7 @@ function damageMonster(m, s, dmg) {
   if (now() < (m.shieldUntil || 0)) dmg = 0; // Shielding elites are immune for a moment
   m.hp -= dmg;
   m.threat.set(s.id, (m.threat.get(s.id) || 0) + dmg);
+  if (m.invasion) invasions.onDamage(m, s);
   if (m.state !== "chase") { aggro(m, s.id); alertNearby(m, s.id); }
   if (m.hp <= 0) killMonster(m);
 }
@@ -637,6 +642,7 @@ function completeLogin(s) {
   safeSend(s, JSON.stringify({ t: "welcome", id: s.id, name: ch.name, look: ch.look, hasSave: !isNew, save: isNew ? undefined : ch.save, now: worldClock(), admin: !!s.admin }));
   sendInv(s);
   safeSend(s, JSON.stringify(weather.message()));
+  invasions.sendTo(s);
   broadcast({ t: "sys", msg: `${ch.name} has entered the world.` });
   log(`${ch.name} entered the world (${sessions.size} connected)`);
 }
@@ -694,6 +700,7 @@ const M = {
   dungeonEntries: metrics.counter("shadowfall_dungeon_entries_total", "Players entering a dungeon level, by dungeon and difficulty."),
   admin: metrics.counter("shadowfall_admin_commands_total", "Admin commands run, by command."),
   saves: metrics.counter("shadowfall_character_saves_total", "Character files written, by result."),
+  invasions: metrics.counter("shadowfall_invasions_total", "Town invasions that ended, by town and result (won = beaten off, lost = the town was sacked)."),
   tick: metrics.histogram("shadowfall_tick_duration_seconds", "Time spent in one simulation tick.", [0.001, 0.0025, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25]),
 };
 // Start at zero so dashboards show a flat line rather than "no data" until the first event.
@@ -1161,7 +1168,7 @@ async function adminResetPassword(s, name) {
     `They choose "Forgot password?" > "I have a code" and enter it with their account name.`;
 }
 
-const ADMIN_COMMANDS = new Set(["tp", "tpto", "summon", "dungeon", "regen", "spawn", "killall", "time", "elites", "announce", "kick", "who", "resetpw", "give", "weather", "season"]);
+const ADMIN_COMMANDS = new Set(["tp", "tpto", "summon", "dungeon", "regen", "spawn", "killall", "time", "elites", "announce", "kick", "who", "resetpw", "give", "weather", "season", "invasion"]);
 
 function runAdmin(s, c, a) {
   a = a || {};
@@ -1258,6 +1265,8 @@ function runAdmin(s, c, a) {
       broadcast(weather.message());
       return `It is now ${SEASONS[i]}.`;
     }
+    case "invasion":
+      return a.stop ? invasions.stop() : invasions.start(a.town || "", a.gate);
     case "elites": {
       const v = Number(a.chance);
       if (!Number.isFinite(v)) return `Elite chance is ${ELITE_CHANCE}.`;
@@ -1326,7 +1335,11 @@ function adminFromChat(s, line) {
     case "who": return runAdmin(s, "who");
     case "resetpw": return runAdmin(s, "resetpw", { name: w[0] });
     case "give": return runAdmin(s, "give", { what: w[0], n: w[1] });
-    default: return "Admin commands: tp x z, tpto name, summon name, dungeon <id|0-6> [depth], regen, spawn <type> [level] [count] [elite], killall [radius], time dawn|day|dusk|night, elites <0-1>, announce text, kick name, who, resetpw <account or character>, give gold [n]|legendary|set|gems|potions, weather clear|cloudy|rain|storm|fog [minutes], season spring|summer|autumn|winter";
+    case "invasion": {
+      const gate = ["north", "south", "east", "west"].includes((w[w.length - 1] || "").toLowerCase()) ? w.pop().toLowerCase() : undefined;
+      return runAdmin(s, "invasion", w[0] === "stop" ? { stop: true } : { town: w.join(" "), gate });
+    }
+    default: return "Admin commands: tp x z, tpto name, summon name, dungeon <id|0-6> [depth], regen, spawn <type> [level] [count] [elite], killall [radius], time dawn|day|dusk|night, elites <0-1>, announce text, kick name, who, resetpw <account or character>, give gold [n]|legendary|set|gems|potions, weather clear|cloudy|rain|storm|fog [minutes], season spring|summer|autumn|winter, invasion [town] [north|south|east|west] | invasion stop";
   }
 }
 
@@ -2185,13 +2198,20 @@ function onDisconnect(s) {
 // =====================================================================================
 
 let tickCount = 0;
+// Town invasions (invasion.js): monsters attack a walled town's gate in waves now and then.
+const invasions = createInvasions({
+  TOWNS, SPAWNERS, MONSTERS, monsters, sessions, spawnMonster, makeElite, findPath, nearestWalkable, moveAlongPath, speedOf,
+  monsterAttack, broadcast, safeSend, rollLoot: I.rollLoot, dropFor, heroClass, log, now, rand, dist, r2, metrics: M.invasions,
+  deep: (x, z) => x >= OLD_SIZE && z >= OLD_SIZE,
+});
+
 function tick() {
   if (!world) return;
   const t = now();
   if (++tickCount % 10 === 0) for (const p of parties.values()) sendParty(p); // party frames: 1 Hz
   for (const m of monsters.values()) {
     // Monsters with no player anywhere nearby sleep (unless they need to walk home).
-    if (m.state === "idle") {
+    if (m.state === "idle" && !m.invasion) { // invaders march on even with nobody watching
       let awake = false;
       for (const s of sessions.values()) if (s.inWorld && (s.inst || 0) === m.inst && dist(s.x, s.z, m.x, m.z) < 60) { awake = true; break; }
       if (!awake) continue;
@@ -2201,6 +2221,7 @@ function tick() {
   }
   useGrid(0);
   updateSpawners(t);
+  invasions.tick(t);
   if (tickCount % 50 === 0) cleanupInstances(t);
 
   sendSnapshots(t);

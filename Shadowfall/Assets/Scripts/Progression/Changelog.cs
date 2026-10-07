@@ -24,6 +24,16 @@ namespace Shadowfall
         {
             new Entry
             {
+                Id = 27, Date = "2026-10-08", Title = "Town invasions",
+                Items = new[]
+                {
+                    "Now and then monsters from the wilds attack a walled town where heroes are: Hollowmere, Frosthaven, Saltreach or Emberwatch. Everyone hears of it, and the gate they gather at shows on the minimap and the world map.",
+                    "Three waves march on the gate, the last led by a warlord. Kill them before they batter the gate down (the tracker under the minimap shows how it holds), or they plunder the town and leave.",
+                    "Hold the town and everyone who fought gets experience and a boss's share of loot. Three new achievements, one with the title \"the Defender\".",
+                },
+            },
+            new Entry
+            {
                 Id = 26, Date = "2026-10-08", Title = "Faster, with more graphics settings",
                 Items = new[]
                 {

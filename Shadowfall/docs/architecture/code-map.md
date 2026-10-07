@@ -49,6 +49,7 @@
 | `Items/ItemPowers.cs` | Legendary powers, the four class sets and their bonuses, gems (stats, colors, fusing), loot hooks |
 | `World/StashChest.cs` | The stash chest in Hollowmere |
 | `World/DungeonSites.cs` | The four dungeons (`DungeonDef`: entrance, look, depths) and their entrances (`DungeonEntrance`) |
+| `World/Invasion.cs` | The client side of town invasions: state from the server, banners, the reward and achievements (tracker and map markers in `GameUI`) |
 | `Core/GameCheck.cs` | With `?sfcheck=1` only: the game plays a scripted session by itself for the [browser check](../development/testing.md#browser-check) |
 | `Core/Exploration.cs` | Fog of war (revealed tiles, saved with the character) and the client side of the admin module (`AdminTools`) |
 | `UI/Minimap.cs` | Round minimap and fogged world map rendering |
@@ -90,6 +91,7 @@
 | `admin-cli.js` | Command-line account admin: `reset-code`, `admin on\|off`, `accounts` ([Accounts & passwords](../deployment/accounts.md#admin-command-line)) |
 | `content.js` | Monster stats, spawner table, dungeons (`DUNGEONS`), global `BALANCE`, dungeon `DIFFICULTIES`, town safe-zone rectangle, spawn point |
 | `dungeon.js` | Dungeon level generators: rooms and corridors (`generate`) and natural caverns (`generateCaves`), with start, stairs, boss, chests and packs |
+| `invasion.js` | Town invasions: choosing the town and gate, the waves, the siege of the gate, rewards (`INVASION_MINUTES`) |
 | `weather.js` | Seasons (from the clock, `SEASON_MINUTES`) and the weather: what fits the season, changing every 6 to 16 minutes |
 | `metrics.js` | Dependency-free Prometheus metrics (counters, histograms, scrape-time gauges, process metrics), served on `METRICS_PORT` |
 | `test/smoke.js` | End-to-end test with fake clients, against files or PostgreSQL (`PG_TEST_URL`) |

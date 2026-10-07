@@ -128,6 +128,28 @@ About one in eight monsters in the open world spawns as an **elite champion** (d
 | Mighty | Hits much harder |
 | Extra Health | Much more health |
 
+## Town invasions
+
+Every 45 minutes or so (the server's `INVASION_MINUTES`), monsters from the surrounding lands gather outside a gate of
+one of the walled towns (Hollowmere, Frosthaven, Saltreach or Emberwatch), usually where heroes are. Everyone online
+hears of it, the town shows on the minimap and the world map with a pulsing red marker at the gate, and a tracker under
+the minimap counts down to the attack.
+
+- **A minute later the first wave marches on the gate**, then a second and a third, the last led by a **warlord** (a
+  three-affix champion with extra health). The next wave comes when the last is nearly dead, or after 75 seconds.
+- The invaders are monsters of the land around that gate, at about the level of the heroes near the town, and there
+  are more of them the more heroes are around. They fight anyone they meet on the way, as usual; heroes inside the
+  walls are out of their reach but can shoot back from there.
+- **At the gate they batter it.** The tracker shows the gate's integrity: big monsters count double, the warlord four
+  times. Kill them before it breaks.
+- **The town holds** when every wave is dead: every hero who hurt at least one invader gets experience (about a sixth of
+  a level) and a boss's share of loot at their feet: gold, a guaranteed rare and a gem, with a chance at set and
+  legendary items. Invaders also give 30% more experience each.
+- **The town is sacked** when the gate breaks, or when nobody stops the siege within 12 minutes: the invaders plunder
+  the market and withdraw, and nobody is rewarded.
+
+Defending counts towards three [achievements](achievements.md#combat), one of them with the title *the Defender*.
+
 ## Monsters
 
 Monsters live on the server, so every player sees the same ones. They:
