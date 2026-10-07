@@ -23,7 +23,11 @@ services:
     volumes:
       - ./data:/data              # accounts, characters, world map
       - ./public:/app/public:ro   # the Unity WebGL build
+    environment:
+      ADMINS: ${ADMINS:-}         # admin character names, e.g. from server/.env
 ```
+
+(The file also defines the `client-builder` and `license-helper` services, which only run on demand; see [Building the client in Docker](docker-client-build.md).)
 
 The WebGL build is **copied into the image** and also **mounted** by Compose. With Compose, a new client build only needs a browser refresh. A standalone image (`task docker:build`) works on its own anywhere.
 
@@ -49,6 +53,9 @@ SHADOWFALL_PORT=9000 task up          # or: SHADOWFALL_PORT=9000 docker compose 
 | `PORT` | `7341` | HTTP + WebSocket port inside the container |
 | `DATA_DIR` | `/data` | Where accounts, characters and `world.json` are stored |
 | `PUBLIC_DIR` | `/app/public` | Folder with the WebGL build |
+| `ADMINS` | empty | Comma-separated character names with admin rights (see [Admin module](admin.md)); passed through by `docker-compose.yml` from `server/.env` |
+| `ELITE_CHANCE` | `0.12` | Chance that a new open-world monster spawns as an elite (admins can change it at runtime) |
+| `DROP_PRIVILEGES` | `1` | Start as root only to `chown` the data volume, then run as the `node` user (uid/gid from `APP_UID`/`APP_GID`, default 1000) |
 
 ## Data volume
 

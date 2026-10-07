@@ -9,39 +9,45 @@
 | `Core/CameraRig.cs` | High-angle follow camera, zoom, screen shake |
 | `Core/ArtLibrary.cs` | Loads the CC0 models (glTFast), scales and places them, tints them |
 | `Core/DayNight.cs` | Day/night cycle on the server clock: sun, moon, ambient light, fog, `NightLight` |
+| `Core/GameSettings.cs` | Player options saved in the browser: graphics quality, UI scale, FPS counter, loot filter |
 | `Core/Sfx.cs` | Sound effects: clip variants, positional playback heard from the hero, ambience loops, volume |
 | `Core/ColorGrade.cs` | Full-screen color grade (darker, grittier palette) |
 | `Core/Util.cs` | Material cache (`Mat`), primitive builder (`Factory`), pulse/burst effects (`FxPulse`) |
 | `World/WorldGenerator.cs` | Seeded world: ground texture, village, zones, trees, rocks, lakes, NPCs |
 | `World/GroundSurface.cs` | Splat control maps, curving roads, ground mesh with lake beds, water, grass blades |
-| `World/Dungeon.cs` | The Catacombs on the client: builds the server's layout (walls, floors, torches, props), portals, chests, entrance |
+| `World/Dungeon.cs` | Dungeons on the client: builds the server's layout (walls, floors, torches, campfires, boss braziers, props), portals, stairs, chests |
 | `World/TownLife.cs` | Strolling villagers, patrolling guards, the village hound |
 | `World/Ambience.cs` | Crows, bats, fireflies and falling leaves around the hero |
 | `World/NpcChatter.cs` | What NPCs and villagers say in speech bubbles |
 | `World/WorldGrid.cs` | Tile walkability, A* pathfinding, line of sight, hashing and packing |
-| `World/Interactables.cs` | `LootDrop`, `ResourceNode` (gathering), `CraftingStation` + `Recipe`, `Npc` |
-| `Characters/Player.cs` | Click-to-move, targeting, melee, abilities, stats, potions, gathering, save and load |
+| `World/Interactables.cs` | `LootDrop`, `ResourceNode` (gathering), `CraftingStation` + `Recipe` (anvil sparks, cooking flare and steam), `Npc` |
+| `World/PropFire.cs` | Animated fire on a prop (campfires, gate torches, braziers, dungeon torches): flames, embers, smoke, a wobbling glow core and a flickering light; pauses when the hero is far away |
+| `Characters/Player.cs` | Click-to-move, targeting, melee, abilities, stats, potions, recall, gathering (and its effects), save and load |
 | `Characters/Enemy.cs` | `EnemyDef` (looks) and the `Enemy` network proxy (interpolation, hit prediction, death, personal loot) |
-| `Characters/CharacterView.cs` | Animated model wrapper (`AnimSet`, `CharacterLook`) for heroes, NPCs and monsters |
+| `Characters/CharacterView.cs` | Animated model wrapper (`AnimSet`, `CharacterLook`: model, weapon kind, headgear, extra `Parts`) for heroes, NPCs, companions and monsters |
 | `Characters/Avatar.cs` | The hero's avatar: a copy of the model in the current loadout, rendered off-screen for the portrait and character window |
-| `Characters/Companion.cs` | Companions for hire (`CompanionDef`) and the follower AI: pathing after the hero, targeting, melee/ranged/area attacks, heals (cosmetic for other players) |
+| `Characters/Companion.cs` | Companions for hire (`CompanionDef`: look, gear, stats) and the follower AI: pathing after the hero, targeting, melee/ranged/area attacks, heals, plus their arrival, idle and attack effects (cosmetic for other players) |
 | `Characters/HumanoidModel.cs` | Blocky procedural humanoid with walk and attack animation |
 | `Characters/Abilities.cs` | Ability definitions, class kits and starting stats (`ClassKits`), talents, buffs, meteor/Judgement and ground effects (Consecration, Rain of Arrows) |
 | `Combat/Combatant.cs` | Base class for health, armor, damage numbers and area queries |
-| `Combat/SpellFx.cs` | Particle and mesh effects for spells, hits, explosions, level-ups |
+| `Combat/SpellFx.cs` | Particle and mesh effects for spells, hits, explosions, level-ups, and the building blocks `CastCircle`, `Shockwave`, `CrossSlash`, `Swirl` and `Loop` (looping emitters); `IceSpike` |
 | `Combat/Projectile.cs` | Damaging and cosmetic projectiles |
-| `Combat/AbilityFx.cs` | Look and sound of each class ability, shared by the hero and other players' relayed casts; `LightningBolt` |
+| `Combat/AbilityFx.cs` | Look and sound of each class ability, shared by the hero and other players' relayed casts (`Remote`); `LightningBolt`, `BuffAura` (War Cry, Divine Shield, Vanished) and `StunStars` |
 | `Items/ItemPowers.cs` | Legendary powers, the four class sets and their bonuses, gems (stats, colors, fusing), loot hooks |
 | `World/StashChest.cs` | The stash chest in Hollowmere |
 | `World/DungeonSites.cs` | The four dungeons (`DungeonDef`: entrance, look, depths) and their entrances (`DungeonEntrance`) |
 | `Core/Exploration.cs` | Fog of war (revealed tiles, saved with the character) and the client side of the admin module (`AdminTools`) |
 | `UI/Minimap.cs` | Round minimap and fogged world map rendering |
 | `UI/GameUI.Admin.cs` | Admin panel (F10) |
-| `UI/GameUI.Menu.cs` | Esc game menu: settings, log out |
+| `UI/GameUI.Menu.cs` | Esc game menu: settings (graphics, UI scale, FPS, loot labels, volume), What's New, admin, log out |
+| `UI/GameUI.News.cs` | *What's New* window; unread entries are marked NEW |
 | `Items/VendorStock.cs` | What each vendor sells, prices and restocking |
-| `Items/*` | `Item` model and tooltips, random gear generator, inventory |
+| `Items/Item.cs` | `Item` model, rarity colors and tier, type line and tooltips |
+| `Items/ItemDatabase.cs` | Random gear generator: base types, affixes, legendary names, materials |
+| `Items/Inventory.cs` | Bags, equipment slots, stacking and sorting |
 | `Progression/SkillSet.cs` | RuneScape-style professions and XP curve |
 | `Progression/Quests.cs` | Quest definitions (chains per NPC) and quest log |
+| `Progression/Changelog.cs` | The in-game *What's New* entries (newest first) |
 | `Net/NetClient.cs` | Login flow, message dispatch, state and save sending |
 | `Net/NetClient.Trade.cs` | Player trading: escrow, offers, accept/cancel |
 | `Net/NetMessages.cs` | All wire message and save-data classes |
@@ -59,8 +65,19 @@
 
 | File | Responsibility |
 | --- | --- |
-| `server.js` | Static file host, WebSocket sessions, accounts, world grid and A*, monster AI (slows, stuns, vanished heroes), parties, trades, snapshots, persistence |
-| `content.js` | Monster stats, spawner table, town safe-zone rectangle |
+| `server.js` | Static file host, WebSocket sessions, accounts, world grid and A*, monster AI (slows, stuns, vanished heroes), elites, parties, trades, dungeon instances, admin commands, snapshots, persistence |
+| `content.js` | Monster stats, spawner table, dungeons (`DUNGEONS`), global `BALANCE`, dungeon `DIFFICULTIES`, town safe-zone rectangle, spawn point |
 | `dungeon.js` | Dungeon level generators: rooms and corridors (`generate`) and natural caverns (`generateCaves`), with start, stairs, boss, chests and packs |
-| `test/smoke.js` | End-to-end test with two fake clients |
+| `test/smoke.js` | End-to-end test with fake clients |
 | `Dockerfile`, `docker-compose.yml` | Container build and run |
+
+## Tools (`tools/`)
+
+| Path | Responsibility |
+| --- | --- |
+| `compile-check/` | .NET project that compiles `Assets/Scripts` without Unity (`task client:check`) |
+| `docker-build-client.sh` | Entry point of the Docker WebGL build (`task client:build`) |
+| `license-helper/` | Unity Hub in a container for `task license:activate` |
+| `art/` | Fetch and repack the 3D models, generate ground textures |
+| `audio/` | Fetch and build the sound effects |
+| `ui/make_skin.py`, `ui/render_icons.js` | Generate the UI skin and render the icons |

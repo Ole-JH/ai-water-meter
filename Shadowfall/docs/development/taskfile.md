@@ -4,7 +4,7 @@ Common commands are defined in `Taskfile.yml` and run with [Task](https://taskfi
 
 | Command | What it does |
 | --- | --- |
-| `task setup` | Install server dependencies |
+| `task setup` / `task server:install` | Install server dependencies |
 | `task server:dev` | Run the server locally with auto-reload on <http://localhost:7341> (data in `server/data`) |
 | `task server:test` | End-to-end smoke test against a throwaway server |
 | `task client:check` | Compile the C# scripts with the .NET SDK (no Unity) |
@@ -20,6 +20,11 @@ Common commands are defined in `Taskfile.yml` and run with [Task](https://taskfi
 | `task world:reset` | Delete the stored world map (after changing world generation) |
 | `task backup` | Archive `server/data` into `backups/` |
 | `task docs:serve` / `task docs:build` | Preview or build this documentation (local mkdocs, or Docker as a fallback) |
+| `task docs:install` | Install mkdocs-material locally with pip (optional) |
+| `task art:fetch` / `task art:build` | Download the CC0 art packs into `.art-cache`; repack the models into `Assets/Resources/Art` |
+| `task art:ground` | Regenerate the ground textures (needs numpy and Pillow) |
+| `task audio:fetch` / `task audio:build` | Download the sound packs; rebuild `Assets/Resources/Audio` (needs numpy and ffmpeg) |
+| `task ui:skin` / `task ui:icons` | Regenerate the dark UI skin; re-render the icons (see [Art & UI](art.md)) |
 | `task ci` | `server:test` + `client:check` + `docs:build` |
 
 ## Variables

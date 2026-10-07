@@ -85,7 +85,7 @@ Monsters hit hard: every monster has 50% more base life and 60% more base damage
 
 ## Elite monsters
 
-About one in twelve monsters spawns as an **elite champion**: a named monster (for example *Gorefang the Cruel*) shown with a blue name, a glowing aura and its affixes under its health bar. Elites are bigger, two levels higher, have about three times the health and hit harder. They give three times the XP or more, and always drop a pile of gold plus two or three magic items, with a good chance of rare and a small chance of legendary.
+About one in eight monsters in the open world spawns as an **elite champion** (dungeons have more, see above): a named monster (for example *Gorefang the Cruel*) shown with a blue name, a glowing aura and its affixes under its health bar. Elites are bigger, two levels higher, have about three times the health and hit harder. They give three times the XP or more, and always drop a pile of gold plus two or three magic items, with a good chance of rare and a small chance of legendary.
 
 | Affix | Effect |
 | --- | --- |

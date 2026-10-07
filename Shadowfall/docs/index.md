@@ -4,7 +4,7 @@
 
 | Inspiration | What Shadowfall takes from it |
 | --- | --- |
-| **Diablo** | High-angle camera, click-to-move and click-to-attack, health & mana orbs, randomized loot with Common / Magic / Rare / Legendary rarities, attribute points on level-up |
+| **Diablo** | High-angle camera, click-to-move and click-to-attack, health & mana orbs, randomized loot with Common / Magic / Rare / Set / Legendary rarities, elite monsters, dungeons with difficulty levels, attribute points on level-up |
 | **World of Warcraft** | Always-online shared world, accounts, quest givers with `!` and `?` markers, an ability bar with cooldowns, unit frames, chat, safe-zone village, personal loot |
 | **RuneScape** | Gathering and crafting professions (Woodcutting, Mining, Fishing, Smithing, Cooking) on the classic 1–99 XP curve |
 
@@ -47,16 +47,18 @@ flowchart LR
 Shadowfall/
 ├── Assets/
 │   ├── Scripts/            # all game code (C#)
+│   ├── Resources/          # models, UI skin, icons, fonts, sounds, ground textures, shaders
 │   ├── Editor/             # "Shadowfall > Build WebGL" menu + headless build entry point
 │   ├── Plugins/WebGL/      # browser WebSocket bridge (.jslib)
 │   └── WebGLTemplates/     # full-window HTML page for the browser build
 ├── Packages/ ProjectSettings/
 ├── server/                 # Node.js game server + Dockerfile + docker-compose.yml
 │   ├── server.js           # HTTP static host + WebSocket game server
-│   ├── content.js          # monster stats and spawn tables
+│   ├── content.js          # monster stats, spawn tables, dungeons, balance, difficulties
+│   ├── dungeon.js          # dungeon level generators
 │   ├── public/             # WebGL build output is written here
 │   └── test/smoke.js       # end-to-end server test
-├── tools/compile-check/    # compile the C# without Unity
+├── tools/                  # compile check, Docker build script, license helper, art/audio/UI generators
 ├── docs/ + mkdocs.yml      # this documentation
 └── Taskfile.yml            # common commands (task --list)
 ```

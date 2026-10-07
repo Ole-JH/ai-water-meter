@@ -12,7 +12,7 @@
 | ++"Right click"++ (hold) | Your class's second ability toward the cursor (Holy Bolt, Throwing Axe, Fireball or Multishot) |
 | ++1++ – ++5++ | Your class's five abilities (see [Items & progression](progression.md#classes-and-abilities)) |
 | ++q++ / ++e++ | Drink a health / mana potion (potions and food share a 3 s cooldown) |
-| ++r++ | Recall to Hollowmere: a 3 s channel (moving, casting or taking damage interrupts it; 20 s cooldown). Press ++r++ again in town to step back to where you left (not into the Catacombs) |
+| ++r++ | Recall to Hollowmere: a 3 s channel (moving, casting or taking damage interrupts it; 20 s cooldown). Press ++r++ again in town to step back to where you left (not into a dungeon) |
 | ++alt++ (hold) | Show labels for every item on the ground, including plain white gear when the loot filter hides it |
 
 ## Camera
@@ -38,7 +38,7 @@
 | ++f1++ or ++h++ | Help |
 | ++f10++ | Admin panel (admins only, see [Admin module](../deployment/admin.md)) |
 | ++enter++ or ++slash++ | Chat. `/p` party, `/w name` whisper, `/r` reply, `/invite name`, `/leave`, `/who` |
-| ++esc++ | Close the open windows; with nothing open, the **game menu** (also the cog button at the bottom right): Resume, Settings, How to Play, Log Out |
+| ++esc++ | Close the open windows; with nothing open, the **game menu** (also the cog button at the bottom right): Resume, Settings, How to Play, What's New, Log Out (and Admin for admins) |
 | ++arrow-up++ / ++arrow-down++ in chat | Recall the messages you sent before |
 
 ## Inventory
@@ -64,6 +64,10 @@ The settings are in the game menu (++esc++ → **Settings**):
 - **Volume**.
 
 Settings are remembered in your browser.
+
+## What's New
+
+The **What's New** window lists the latest changes to the game, with ones you haven't read marked **NEW**. It opens by itself shortly after you enter the world when there is something new, a pulsing *NEW* chip above the menu bar shows the unread count, and you can open it any time from the game menu (++esc++ → **What's New**). What you have read is saved with your character.
 
 ## Warnings
 

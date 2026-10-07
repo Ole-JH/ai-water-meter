@@ -55,8 +55,55 @@ To use another model, add a line to `MODELS` in `tools/art/build_art.py`, listin
 - **Meteor:** blazing trail, pulsing target ring, huge explosion, lingering ground fire, dust and flying rocks.
 - **Cleave:** a sweeping arc with sparks. Casting makes motes gather in the hero's hand.
 - **Hits:** blood, bone chips or stone sparks depending on the target; dust when monsters die.
+- **Projectile impacts:** fire projectiles leave burning ground and a ring of flame; Holy Bolt and other magic bolts a short pillar of light and a sparkle burst.
 
 Characters also squash briefly when hit and lunge forward on melee attacks (`CharacterView`).
+
+### Building blocks
+
+The class abilities, companions and world effects are put together from a few shared pieces in `SpellFx`:
+
+| Effect | What it draws | Used by |
+| --- | --- | --- |
+| `CastCircle` | A glowing rune circle under the caster: two rings spinning in opposite directions, with rising motes | Every spell cast (in the spell's color); War Cry, Consecration and Divine Shield (a larger circle in the class color); Chain Lightning, Teleport, Rain of Arrows, recall and companions' casts |
+| `Shockwave` | Two expanding ground rings, dust thrown outward, sparks and a flash | Shield Bash, Consecration, War Cry, Leap's landing, Fan of Knives, Meteor and Judgement, the golem's slams, the squire's stun |
+| `CrossSlash` | Two crossed `Cleave` arcs | Shield Bash, Twin Strike, the War Hound's bite |
+| `Swirl` | Particles spinning around a point, optionally following a character (sparks or smoke) | Whirlwind (a blood vortex and a dust ring), Fan of Knives, potions, teleports, buff auras, companions arriving and the Acolyte's heal |
+| `Loop` | A looping emitter attached to a character | Companions' idle effects |
+
+`AbilityFx` (`Assets/Scripts/Combat/AbilityFx.cs`) holds the look and sound of each class ability. The hero calls it when casting, and other players' casts arrive as `fx` messages and go through `AbilityFx.Remote`. It also has two attached effects:
+
+- **`BuffAura`:** while a buff lasts, War Cry burns with rising red embers and a pulsing ring, Divine Shield wraps the hero in a golden swirl with pulsing rings and light columns, and Smoke Bomb (*Vanished*) trails wisps of smoke.
+- **`StunStars`:** three little stars circle the head of a stunned monster until the stun ends.
+
+Leap also trails embers through the air.
+
+### Companions
+
+Companions carry their own kit through `CharacterLook`: `Weapon` (`wand` and `crossbow` work as well as the hero weapons), `Headgear` (the model's own hat or helmet) and `Parts` (extra built-in model nodes to show). The squire wears his helm and a round shield, the witch her hat, the ranger a crossbow and an off-hand knife, the acolyte a wand and an open spellbook.
+
+`Companion.cs` adds the effects:
+
+- **Arriving** (summoned, or catching up after falling far behind): a rune circle, a pillar of light and a swirl in the companion's color. Dismissing one leaves a pillar of light and dust.
+- **Idle:** fire burning in the witch's hand, light motes circling the acolyte, rune sparks and a blue glow on the golem, drifting leaves around the ranger. The witch, acolyte and golem also carry a small light. The hound and the golem kick up dust as they run.
+- **Attacks:** the hound bites with two claw arcs and blood, the squire cleaves (and his stun adds a golden shockwave), the witch and the acolyte cast with a hand glow and a cast circle, the ranger's shots spark at the bow, and the golem's slams send out a shockwave. The acolyte's heal adds a pillar of light and a swirl around you.
+
+### Gathering, crafting and travel
+
+- **Gathering** (`Player.GatherFx`): chopping throws wood chips and a few leaves, mining strikes sparks and grit, fishing splashes with a ripple ring.
+- **Crafting** (`CraftingStation.CraftFx`): the anvil throws sparks and a flash; the cooking fire flares and steams, and a burnt fish puffs dark smoke.
+- **Potions:** a red or blue swirl around the hero.
+- **Recall:** a rune circle and a hand glow while you channel, a pillar of light when you leave.
+- **Teleports** (entering or leaving a dungeon, admin teleports, stepping back with ++r++): a ring, a pillar of light and a swirl where you arrive.
+
+### Fires on props
+
+`PropFire` (`Assets/Scripts/World/PropFire.cs`) puts a living fire on a prop: looping flame tongues, rising embers, an optional thin smoke plume, a glowing core that wobbles and a light that flickers on top of whatever else drives it (the day/night cycle or `Flicker`). It is used on the cooking campfire in Hollowmere, the torches on the gate towers (when they are drawn without the tower model), the blue braziers at the Crypt of the Lich, dungeon wall torches, campfires in the Goblin Warrens' caverns and the braziers in boss rooms. Fires more than 45 units from the hero stop emitting, so dozens of torches cost nothing off screen.
+
+```csharp
+// size: 1 = a campfire, 0.3 = a wall torch; the light and glow core are optional
+PropFire.Add(parent, position, new Color(1f, 0.55f, 0.1f), 1f, smoke: true, light: null, glowCore: core.transform);
+```
 
 ## Sound
 
@@ -65,7 +112,7 @@ All sound effects are **CC0**: Kenney's RPG Audio, Impact Sounds and Interface S
 - Clips live in `Assets/Resources/Audio` as `key_N.ogg`. `Sfx.Play("swing", position)` picks a random variant with slight pitch variation.
 - Sounds are positional and heard from the hero (not from the camera high above).
 - **Ambience:** wind everywhere, crickets and distant wolf howls at night outside the walls, crackling campfires and braziers, lapping water at the lakes.
-- **Volume:** a slider in the Help window (++f1++), saved in the browser.
+- **Volume:** a slider in the game menu (++esc++ → **Settings**), saved in the browser.
 
 ```bash
 task audio:fetch   # download the source packs into .art-cache/audio

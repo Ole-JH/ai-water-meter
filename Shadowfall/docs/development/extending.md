@@ -19,6 +19,8 @@
 
     Set `Ranged = true` and a `ProjectileColor` for monsters that shoot. Ranged monsters also need `ranged: true` on the server.
 
+    To give it a 3D model instead of the primitive fallback, add an entry with the same name to the `monsters` dictionary of `CharacterLook` in `Assets/Scripts/Characters/CharacterView.cs` (see [Art & UI](art.md#how-models-are-used)).
+
 3. Rebuild the client and restart the server (`task deploy`).
 
 ## Add a quest
@@ -45,10 +47,10 @@ Pass `blocksTile: false` (all of Hollowmere's NPCs do), so adding or moving an N
 
 ## Add an ability
 
-1. Add an entry to `AbilityId` and `AbilityDef.All` in `Characters/Abilities.cs`.
+1. Add an entry to `AbilityId` and `AbilityDef.All` in `Characters/Abilities.cs`, and put it in a class's kit in `ClassKits` (five slots, cast with ++1++–++5++).
 2. Implement it in the `switch` in `Player.CastAbility`. Use `Combatant.Overlap` to find enemies, and call `NetClient.I?.SendFx(...)` so other players see it.
-3. Handle the new fx kind in `NetClient.HandleFx`, and add it to the server's fx whitelist in `server.js`.
-4. Add a hotkey in `Player.HandleInput`, plus a `GKey` in `GameInput.cs` if you need a new key.
+3. Put its look and sound in a method in `Combat/AbilityFx.cs` (built from `SpellFx` pieces such as `CastCircle`, `Shockwave` or `Swirl`; see [Art & UI → Building blocks](art.md#building-blocks)), call it from the cast, and add the fx kind to `AbilityFx.Remote` and to the server's `FX_KINDS` whitelist in `server.js`.
+4. The kit slots already have hotkeys in `Player.HandleInput`. For an extra key, add it there plus a `GKey` in `GameInput.cs`.
 
 ## Add items or affixes
 
@@ -56,6 +58,12 @@ Pass `blocksTile: false` (all of Hollowmere's NPCs do), so adding or moving an N
 - New stat: add it to the `Stat` enum, `RollStat`, the `prefixes`/`suffixes` dictionaries and `Item.StatText`. Then apply it in `Player.RecalculateStats`.
 - Legendary names: `legendaryNames`.
 
+## Announce a change
+
+Add an entry at the **top** of `Changelog.Entries` in `Assets/Scripts/Progression/Changelog.cs`, with the next `Id`, a date, a title and a few lines. Heroes see it marked NEW in the *What's New* window until they open it.
+
 ## Change the world
 
-Everything is in `World/WorldGenerator.cs`. The seed is `WorldGenerator.Seed`. Any change to walls, trees, rocks, water or NPC positions changes the walkability map, so run `task world:reset` when you deploy.
+Everything is in `World/WorldGenerator.cs`. The seed is `WorldGenerator.Seed`. Any change to walls, trees, rocks, water or blocking NPC positions changes the walkability map, so bump `WorldGenerator.LayoutVersion`: the first updated client to log in while nobody is online uploads the new map (see [Operations](../deployment/operations.md#updating-the-game)). `task world:reset` still forces a fresh upload.
+
+To put a burning fire on a new prop, use `PropFire.Add` (see [Art & UI → Fires on props](art.md#fires-on-props)).

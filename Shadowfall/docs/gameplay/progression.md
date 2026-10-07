@@ -32,19 +32,19 @@ You get **one talent point per level** from level 2. Open the talent window with
 
 ## Buffs
 
-Divine Shield, War Cry and Smoke Bomb show as icons above the action bar with their remaining time; hover for details.
+Divine Shield, War Cry and Smoke Bomb show as icons above the action bar with their remaining time; hover for details. While they last, your hero also wears an aura: rising red embers for War Cry, a golden swirl for Divine Shield, wisps of smoke for Smoke Bomb.
 
 ## Loot
 
 Equipment drops in eight slots: weapon, helm, chest, gloves, legs, boots, ring and amulet. Every tooltip starts with the item's **type line** in its rarity colour (for example *LEGENDARY WAR AXE* or *MAGIC RING*), then its slot, item level and rarity tier (1 of 5 to 5 of 5). Rare and better items on the ground also show their rarity next to their name.
 
-| Rarity | Color | Affixes | Notes |
-| --- | --- | --- | --- |
-| Common | White | 0 | Base item |
-| Magic | Blue | 1–2 | Prefix/suffix name, e.g. *Swift Broadsword of the Bear* |
-| Rare | Yellow | 3–4 | Random name, e.g. *Doom Bite*, short loot beam |
-| Legendary | Orange | 5 | Unique name, boosted stats, a **legendary power**, tall loot beam |
-| Set | Green | 4 | One of four class sets (helm, chest, gloves, boots), tall loot beam |
+| Rarity | Tier | Color | Affixes | Notes |
+| --- | --- | --- | --- | --- |
+| Common | 1 of 5 | White | 0 | Base item |
+| Magic | 2 of 5 | Blue | 1–2 | Prefix/suffix name, e.g. *Swift Broadsword of the Bear* |
+| Rare | 3 of 5 | Yellow | 3–4 | Random name, e.g. *Doom Bite*, short loot beam |
+| Set | 4 of 5 | Green | 4 | One of four class sets (helm, chest, gloves, boots), tall loot beam |
+| Legendary | 5 of 5 | Orange | 5 | Unique name, boosted stats, a **legendary power**, tall loot beam |
 
 Possible affixes: Strength, Dexterity, Intelligence, Vitality, Life, Mana, Armor, Critical Chance, Attack Speed, Life per Hit, Movement Speed, Life Regeneration and Mana Regeneration.
 
@@ -103,7 +103,9 @@ Beastmaster Orla, by Hollowmere's east road, hires out companions. You pay once;
 | Acolyte Mira | 2,800 | 12 | Holy bolts; heals you for 10% life when you drop below 70% |
 | Stone Golem | 5,000 | 15 | Slow ground slams that hit everything nearby |
 
-Companions grow 12% stronger per hero level, follow you into the Catacombs, attack what you attack (or whatever is nearest) and rest while you are in town. Monsters don't target them, so they never die. Their hits count as yours for kills and loot. Other players see your companion following you.
+Companions grow 12% stronger per hero level, follow you into dungeons, attack what you attack (or whatever is nearest) and rest while you are in town. Monsters don't target them, so they never die. Their hits count as yours for kills and loot. Other players see your companion following you.
+
+Each companion carries its own gear (the squire's helm and shield, the witch's hat and staff, the ranger's crossbow, the acolyte's wand and spellbook) and has its own look in a fight: fire in the witch's hand, light motes around the acolyte, glowing runes on the golem, and a different effect for every attack. See [Art & UI → Companions](../development/art.md#companions).
 
 ## Stash
 

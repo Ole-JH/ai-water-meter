@@ -2,7 +2,7 @@
 
 An **online, browser-playable top-down action RPG** built with Unity: Diablo-style click-to-move combat and loot, a WoW-style shared world with quests, chat and personal loot, and RuneScape-style gathering and crafting professions.
 
-- **Client:** Unity (WebGL). The whole world is generated from code, with no scenes, prefabs or art assets.
+- **Client:** Unity (WebGL). The whole world is generated from code, with no scenes or prefabs, and dressed with free CC0 low-poly models, sounds and a CC BY icon set (see the Art & UI docs page).
 - **Server:** Node.js in a single Docker container. It serves the WebGL build and runs the world over WebSocket: accounts, character saves, and server-simulated monsters.
 
 ## Quick start

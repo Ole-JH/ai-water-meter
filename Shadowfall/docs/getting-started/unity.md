@@ -8,7 +8,7 @@
 2. generates the world (`WorldGenerator`) from a fixed seed: ground texture, village, trees, rocks, lakes and NPCs;
 3. adds the `NetClient` (networking) and `GameUI` (all UI, drawn with IMGUI).
 
-All models are built from Unity primitives, and materials are cloned from the render pipeline's default material. As a result the project works with both the **Built-in Render Pipeline** and **URP**.
+Models are CC0 glTF files in `Assets/Resources/Art`, loaded at runtime by **glTFast** (see [Art & UI](../development/art.md)); when a model can't be loaded the game falls back to shapes built from Unity primitives. Materials are cloned from the render pipeline's default material, so the basic look works with both the **Built-in Render Pipeline** and **URP**. The custom terrain, grass, water, color grade and effect shaders are written for the built-in pipeline; if the effect or color grade shader isn't supported, spell effects fall back to simple glowing shapes and the grade is skipped.
 
 The build script (**Shadowfall → Build WebGL**) creates `Assets/Scenes/Main.unity` for you if it doesn't exist. Any empty scene works for Play mode.
 
@@ -29,7 +29,7 @@ The build script also creates `Assets/Resources/ShadowfallVariants.mat`, a mater
 ## WebGL specifics
 
 - **Networking:** browsers can't open raw sockets, so the client talks to the server over a WebSocket. In WebGL builds `WebSocketConnection` calls `Plugins/WebGL/ShadowfallWebSocket.jslib`, which wraps the browser `WebSocket`. In the editor and desktop builds it uses `System.Net.WebSockets.ClientWebSocket`.
-- **Page template:** `Assets/WebGLTemplates/Shadowfall` makes the canvas fill the browser window and disables the right-click context menu, because right-click casts Fireball.
+- **Page template:** `Assets/WebGLTemplates/Shadowfall` makes the canvas fill the browser window and disables the right-click context menu, because right-click casts your class's second ability.
 - **Compression:** builds use **Gzip**. `server.js` sends `*.gz` files with `Content-Encoding: gzip`, so no decompression fallback is needed.
 
 ## Compiling without Unity

@@ -70,8 +70,8 @@ Open **<http://localhost:7341>** in your browser.
 
 ## 3. Play
 
-1. Choose a character name and password, and pick a hero: **Knight**, **Barbarian**, **Mage** or **Rogue**. Other players see your choice, and you can change it at any login. The account is created the first time you log in, and your password protects the character after that.
-2. Talk to **Captain Aldric** (yellow `!`) in the village square to get your first quest.
+1. Choose a character name and password, and pick a hero: **Knight**, **Barbarian**, **Mage** or **Rogue**. Other players see your choice. The account is created with that class the first time you log in; existing heroes keep their class, and your password protects the character after that.
+2. Talk to **Captain Aldric** (yellow `!`) by Hollowmere's north gate to get your first quest.
 3. Press ++f1++ in game to see the controls.
 
 !!! note "The first login uploads the world map"
