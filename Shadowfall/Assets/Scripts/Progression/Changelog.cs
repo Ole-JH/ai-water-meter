@@ -32,6 +32,7 @@ namespace Shadowfall
                     "Fixed slowdowns from the bigger world: hundreds of mithril rocks each had a light, and the map and labels walked through every tree and rock several times a frame.",
                     "Grass is only drawn near you, and the snow and lantern updates are spread out instead of landing on one frame.",
                     "Hollowmere's well, winch and bucket, now stands in the middle of the square instead of off in a corner of it.",
+                    "Waystones got a proper look: a stone pillar on a stepped plinth with glowing rune bands, the orb floating right above it.",
                 },
             },
             new Entry

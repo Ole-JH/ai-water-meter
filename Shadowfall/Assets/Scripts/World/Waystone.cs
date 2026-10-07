@@ -41,13 +41,20 @@ namespace Shadowfall
             w.InteractRange = 2.4f;
             w.AddClickCollider(0.6f, 2.6f);
             var rune = new Color(0.45f, 0.75f, 1f);
-            if (ArtLibrary.Spawn("Graveyard/stone-wall-column", go.transform, Vector3.zero, 2.6f, ArtLibrary.Fit.Height, 0f) == null)
-                Factory.Prim(PrimitiveType.Cube, go.transform, new Vector3(0, 1.2f, 0), new Vector3(0.7f, 2.4f, 0.7f), new Color(0.42f, 0.42f, 0.46f));
-            var orb = Factory.Prim(PrimitiveType.Sphere, go.transform, new Vector3(0, 2.95f, 0), Vector3.one * 0.38f, rune, false, Mat.Glow(rune));
+            // A slim stone pillar on a stepped plinth, two glowing rune bands, and the orb floating above its tip.
+            // Everything is centred on the stone's position (the pillar model is centred too), so the orb sits right on top.
+            var stone = new Color(0.46f, 0.47f, 0.52f);
+            Factory.Prim(PrimitiveType.Cylinder, go.transform, new Vector3(0, 0.1f, 0), new Vector3(1.5f, 0.1f, 1.5f), stone * 0.8f);
+            Factory.Prim(PrimitiveType.Cylinder, go.transform, new Vector3(0, 0.3f, 0), new Vector3(1.05f, 0.1f, 1.05f), stone * 0.9f);
+            if (ArtLibrary.Spawn("Graveyard/pillar-large", go.transform, new Vector3(0, 0.4f, 0), 2f, ArtLibrary.Fit.Height, 0f, true, true, true) == null)
+                Factory.Prim(PrimitiveType.Cube, go.transform, new Vector3(0, 1.4f, 0), new Vector3(0.42f, 2f, 0.42f), stone);
+            foreach (float y in new[] { 1.05f, 1.75f })
+                Factory.Prim(PrimitiveType.Cylinder, go.transform, new Vector3(0, y, 0), new Vector3(0.5f, 0.025f, 0.5f), rune, false, Mat.Glow(rune));
+            var orb = Factory.Prim(PrimitiveType.Sphere, go.transform, new Vector3(0, 2.85f, 0), Vector3.one * 0.36f, rune, false, Mat.Glow(rune));
             orb.AddComponent<WaystoneOrb>();
             var l = new GameObject("WaystoneLight").AddComponent<Light>();
             l.transform.SetParent(go.transform, false);
-            l.transform.localPosition = new Vector3(0, 2.9f, 0);
+            l.transform.localPosition = new Vector3(0, 2.85f, 0);
             l.type = LightType.Point;
             l.color = rune;
             l.range = 6f;
