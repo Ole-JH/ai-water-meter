@@ -505,6 +505,18 @@
    "name": "Nothing Left Standing",
    "title": "the Undefeated"
   },
+  "duel_first": {
+   "name": "Honour Satisfied",
+   "title": ""
+  },
+  "duel_25": {
+   "name": "Duelist",
+   "title": "the Duelist"
+  },
+  "duel_foes": {
+   "name": "Open Challenge",
+   "title": ""
+  },
   "salvage_50": {
    "name": "Scrapper",
    "title": ""

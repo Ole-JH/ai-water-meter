@@ -54,6 +54,8 @@ namespace Shadowfall
 
         // ---- Hover / targeting (read by UI)
         public Enemy HoveredEnemy { get; private set; }
+        /// <summary>Our duel opponent under the mouse (see Duel).</summary>
+        public DuelFoe HoveredFoe { get; private set; }
         public Interactable HoveredInteractable { get; private set; }
         public Combatant AttackTarget { get; private set; }
         public Vector3 MouseGround { get; private set; }
@@ -446,6 +448,7 @@ namespace Shadowfall
 
         void Update()
         {
+            Duel.Update();
             if (IsDead)
             {
                 if (model != null)
@@ -499,6 +502,7 @@ namespace Shadowfall
         void UpdateHover()
         {
             HoveredEnemy = null;
+            HoveredFoe = null;
             HoveredInteractable = null;
             var cam = GameManager.I.Cam;
             Ray ray = cam.ScreenPointToRay(GameInput.MousePosition);
@@ -513,6 +517,8 @@ namespace Shadowfall
                 var h = rayHits[i];
                 var e = h.collider.GetComponentInParent<Enemy>();
                 if (e != null && !e.IsDead && h.distance < bestEnemy) { bestEnemy = h.distance; HoveredEnemy = e; continue; }
+                var foe = h.collider.GetComponentInParent<DuelFoe>();
+                if (foe != null && !foe.IsDead) { HoveredFoe = foe; continue; }
                 var it = h.collider.GetComponentInParent<Interactable>();
                 if (it != null && it.CanInteract && h.distance < bestInter) { bestInter = h.distance; HoveredInteractable = it; }
             }
@@ -549,6 +555,7 @@ namespace Shadowfall
                         action = Action.None;
                     }
                     else if (HoveredEnemy != null) SetAttackTarget(HoveredEnemy);
+                    else if (HoveredFoe != null) SetAttackTarget(HoveredFoe);
                     else if (HoveredInteractable != null) SetInteract(HoveredInteractable);
                     else
                     {

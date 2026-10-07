@@ -81,6 +81,7 @@ namespace Shadowfall
         public float i;
         public NetMonster[] m;
         public NetPlayer[] p;
+        public int win;                // "duel" (end): the winner's id (0 = a draw)
         public NetWorldBoss wb;        // "wboss": the world boss that is up (see WorldBoss.cs)
         public NetInvasion iv;         // "invasion": a town under attack (see Invasion.cs); "invwin": k = town, xp, drops
     }
@@ -112,6 +113,8 @@ namespace Shadowfall
     [Serializable] public class NetCharacter { public string name, look; public int lvl; }
     [Serializable] public class WorldMsg { public string t = "world"; public string hash, cells; public int w, h; }
     [Serializable] public class HitMsg { public string t = "hit"; public int mid, dmg; public bool crit; }
+    /// <summary>Duels: dreq (challenge id), dans (answer: yes), dhit (a hit on opponent id), dyield (we lost).</summary>
+    [Serializable] public class DuelMsg { public string t; public int id, dmg; public bool yes; }
     [Serializable] public class SlowMsg { public string t = "slow"; public int mid; public float dur; }
     [Serializable] public class StunMsg { public string t = "stun"; public int mid; public float dur; }
     [Serializable] public class VanishMsg { public string t = "vanish"; public float dur; }

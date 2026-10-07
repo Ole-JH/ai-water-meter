@@ -171,6 +171,7 @@ namespace Shadowfall
 
         public void Disconnect(string reason)
         {
+            Duel.Reset();
             if (State == ConnState.InWorld) SaveNow();
             socket.Close();
             bool wasInWorld = State == ConnState.InWorld;
@@ -212,6 +213,9 @@ namespace Shadowfall
         {
             if (State == ConnState.InWorld) Send(new HitMsg { mid = monsterId, dmg = dmg, crit = crit });
         }
+
+        public void SendDuel(string t, int id = 0, bool yes = false) { if (State == ConnState.InWorld) Send(new DuelMsg { t = t, id = id, yes = yes }); }
+        public void SendDuelHit(int id, int dmg) { if (State == ConnState.InWorld && id != 0) Send(new DuelMsg { t = "dhit", id = id, dmg = dmg }); }
 
         public void SendSlow(int monsterId, float duration)
         {
@@ -552,6 +556,9 @@ namespace Shadowfall
                     break;
                 case "invasion": Invasion.Set(m.iv); break;
                 case "wboss": WorldBoss.Set(m.wb); break;
+                case "dreq": Duel.Challenged(m.id, m.name); break;
+                case "duel": Duel.OnState(m); break;
+                case "dhit": Duel.OnHit(m.id, Mathf.RoundToInt(m.dmg)); break;
                 case "invwin":
                     Invasion.Won(m.k, m.xp);
                     SpawnDrops(m.drops);

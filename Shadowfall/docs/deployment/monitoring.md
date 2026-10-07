@@ -110,6 +110,7 @@ The game server exports these (all prefixed `shadowfall_`):
 | `handler_errors_total` | counter | `type` |
 | `client_errors_total` | counter | `kind` (load, js, exception, error: see [client errors](#client-errors)) |
 | `invasions_total` | counter | `town`, `result` (won, lost) |
+| `duels_total` | counter | `result` (won, draw) |
 | `character_saves_total` | counter | `result` (ok, error) |
 | `tick_duration_seconds` | histogram | |
 

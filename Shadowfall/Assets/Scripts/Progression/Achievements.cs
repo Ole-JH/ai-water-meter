@@ -53,6 +53,11 @@ namespace Shadowfall
             new AchievementDef { Id = "boss_nine", Name = "Crownbreaker", Description = "Defeat nine different bosses.", Category = AchievementCategory.Bosses, Icon = "ach_boss", Points = 100, Stat = "boss", Goal = 9, Title = "Crownbreaker" },
             new AchievementDef { Id = "boss_twelve", Name = "Nothing Left Standing", Description = "Defeat all twelve bosses.", Category = AchievementCategory.Bosses, Icon = "ach_boss", Points = 150, Stat = "boss", Goal = 12, Title = "the Undefeated" },
 
+            // ---- duels
+            new AchievementDef { Id = "duel_first", Name = "Honour Satisfied", Description = "Win a duel.", Category = AchievementCategory.Social, Icon = "ach_axe", Points = 10, Stat = "duels_won", Goal = 1 },
+            new AchievementDef { Id = "duel_25", Name = "Duelist", Description = "Win 25 duels.", Category = AchievementCategory.Social, Icon = "ach_axe", Points = 25, Stat = "duels_won", Goal = 25, Title = "the Duelist" },
+            new AchievementDef { Id = "duel_foes", Name = "Open Challenge", Description = "Beat ten different heroes in duels.", Category = AchievementCategory.Social, Icon = "ach_axe", Points = 25, Stat = "duel_foe", Goal = 10 },
+
             // ---- the forge
             new AchievementDef { Id = "salvage_50", Name = "Scrapper", Description = "Salvage 50 pieces of gear at a blacksmith.", Category = AchievementCategory.Professions, Icon = "ach_anvil", Points = 10, Stat = "salvaged", Goal = 50 },
             new AchievementDef { Id = "reforge_first", Name = "Second Opinion", Description = "Reforge a property of an item.", Category = AchievementCategory.Professions, Icon = "ach_anvil", Points = 5, Stat = "reforged", Goal = 1 },

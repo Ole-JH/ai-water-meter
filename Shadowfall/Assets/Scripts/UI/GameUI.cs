@@ -191,7 +191,7 @@ namespace Shadowfall
             var want = CursorKind.Default;
             if (p != null && !MouseOverUI)
             {
-                if (p.HoveredEnemy != null) want = CursorKind.Attack;
+                if (p.HoveredEnemy != null || p.HoveredFoe != null) want = CursorKind.Attack;
                 else if (p.HoveredInteractable != null || RemotePlayerUnderMouse() != null) want = CursorKind.Interact;
             }
             if (want == cursor) return;
@@ -480,7 +480,8 @@ namespace Shadowfall
             if (rp == null) { menuPlayer = null; return; }
             var net = NetClient.I;
             bool canInvite = !net.IsPartyMember(rp.Id) && (!net.InParty || net.IsLeader);
-            var r = new Rect(menuPos.x - 100, menuPos.y + 10, 200, 60 + (canInvite ? 44 : 0) + 132);
+            bool canDuel = !Dungeon.Active && !Duel.Active;
+            var r = new Rect(menuPos.x - 100, menuPos.y + 10, 200, 60 + (canInvite ? 44 : 0) + (canDuel ? 44 : 0) + 132);
             UISkin.Box(r, UISkin.PanelPlain);
             Block(r);
             UISkin.Shadowed(new Rect(r.x, r.y + 12, r.width, 24), rp.Name, UISkin.HeadingCenter, UISkin.Gold);
@@ -494,6 +495,11 @@ namespace Shadowfall
             y += 44;
             if (UISkin.Btn(new Rect(r.x + 16, y, r.width - 32, 38), "Trade", UISkin.Button)) { net.RequestTrade(rp.Id); menuPlayer = null; }
             y += 44;
+            if (canDuel)
+            {
+                if (UISkin.Btn(new Rect(r.x + 16, y, r.width - 32, 38), "Challenge to Duel", UISkin.Button)) { Duel.Challenge(rp); menuPlayer = null; }
+                y += 44;
+            }
             if (UISkin.Btn(new Rect(r.x + 16, y, r.width - 32, 38), "Close", UISkin.Button)) menuPlayer = null;
             if (Event.current.type == EventType.MouseDown && !r.Contains(Event.current.mousePosition) && Time.frameCount > menuOpenedFrame + 1) menuPlayer = null;
         }
@@ -553,6 +559,14 @@ namespace Shadowfall
                 else if (OfferBox(y, "<b>" + ti.Name + "</b> wants to trade with you.", out bool yes)) net.AnswerTradeInvite(yes);
                 y += 140;
             }
+            if (Duel.ChallengerId != 0)
+            {
+                if (Time.time - Duel.ChallengeTime > 30f) Duel.Answer(false);
+                else if (OfferBox(y, "<b>" + Duel.ChallengerName + "</b> challenges you to a duel.\nNobody dies: the first to drop to their last breath loses.", out bool yes)) Duel.Answer(yes);
+                y += 140;
+            }
+            if (Duel.Phase == "count")
+                UISkin.Shadowed(new Rect(0, VH * 0.3f, VW, 80), Duel.Countdown > 0 ? Duel.Countdown.ToString() : "Fight!", UISkin.V(UISkin.HeadingCenter, fontSize: 64), Duel.Color, 3);
             var q = net.QuestOffer;
             if (q != null)
             {

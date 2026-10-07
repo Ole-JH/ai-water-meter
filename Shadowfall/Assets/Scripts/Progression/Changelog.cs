@@ -24,6 +24,15 @@ namespace Shadowfall
         {
             new Entry
             {
+                Id = 31, Date = "2026-10-08", Title = "Duels",
+                Items = new[]
+                {
+                    "Right-click another hero and challenge them to a duel. After a countdown you fight each other, and only each other, with everything you've got.",
+                    "Nobody dies: at your last breath you yield. Running from the duel flag loses too. Three new achievements, one with the title \"the Duelist\".",
+                },
+            },
+            new Entry
+            {
                 Id = 30, Date = "2026-10-08", Title = "Paragon levels",
                 Items = new[]
                 {

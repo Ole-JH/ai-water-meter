@@ -74,6 +74,18 @@ Right-click another player (anywhere on their character, or click the name above
 - The party leader can remove members with the **x** on their party frame.
 - **Shared kills** give every member their **own loot**: nobody else sees or can take it.
 
+## Duels
+
+Right-click another hero within 20 m and choose **Challenge to Duel**; they have 30 seconds to accept. A flag goes
+into the ground between you, a three-second countdown runs, and then you fight each other, and only each other: every
+attack and ability works on your opponent (click them like a monster), but nobody else can join in, and monsters still
+fight you both.
+
+Nobody dies in a duel. When a hit would drop you, you **yield** at your last hit point and lose. You also lose if you
+run more than 45 m from the flag, die to something else, enter a dungeon or log out. After three minutes it's a draw.
+The result is announced to everyone nearby. Not in dungeons. Three [achievements](achievements.md#social), one with
+the title *the Duelist*.
+
 ## Dungeons
 
 Seven dungeons lie hidden in the wilds, three of them in the [outer lands](#the-outer-lands). They are **not marked on the map**: find their entrances by exploring.

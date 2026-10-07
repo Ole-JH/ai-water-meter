@@ -18,6 +18,7 @@ const { Weather, SEASONS, KINDS: WEATHER_KINDS } = require("./weather");
 const A = require("./accounts");
 const createInvasions = require("./invasion");
 const createWorldBosses = require("./worldboss");
+const createDuels = require("./duel");
 
 const PORT = parseInt(process.env.PORT || "7341", 10);
 // Behind a reverse proxy, take the client's address from X-Forwarded-For (for login rate limits).
@@ -684,6 +685,7 @@ function leaveWorld(s, why) {
   if (!s.inWorld) return Promise.resolve();
   if (partyOf(s)) leaveParty(s, why === "select" ? "has left the world." : "has gone offline.");
   if (trades.has(s.id)) closeTrade(trades.get(s.id), `${s.name} has left.`);
+  duels.left(s);
   const saved = saveCharacter(s);
   s.inWorld = false;
   s.inst = 0;
@@ -733,6 +735,7 @@ const M = {
   admin: metrics.counter("shadowfall_admin_commands_total", "Admin commands run, by command."),
   saves: metrics.counter("shadowfall_character_saves_total", "Character files written, by result."),
   clientErrors: metrics.counter("shadowfall_client_errors_total", "Errors reported by players' browsers and games, by kind: load (the page couldn't start the game), js (browser script errors), exception (the game threw), error (the game logged an error)."),
+  duels: metrics.counter("shadowfall_duels_total", "Duels that ended, by result (won, draw)."),
   invasions: metrics.counter("shadowfall_invasions_total", "Town invasions that ended, by town and result (won = beaten off, lost = the town was sacked)."),
   tick: metrics.histogram("shadowfall_tick_duration_seconds", "Time spent in one simulation tick.", [0.001, 0.0025, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25]),
 };
@@ -2143,6 +2146,12 @@ const handlers = {
       ti: titleOf(s, m.ti) };
   },
 
+  // Duels (duel.js)
+  dreq(s, m) { if (s.inWorld) duels.challenge(s, m.id); },
+  dans(s, m) { if (s.inWorld) duels.answer(s, !!m.yes); },
+  dhit(s, m) { if (s.inWorld && !s.dead) duels.hit(s, m.id, m.dmg, 100 + s.lvl * 60); },
+  dyield(s) { if (s.inWorld) duels.yieldDuel(s); },
+
   hit(s, m) {
     if (!s.inWorld || s.dead) return;
     const mon = monsters.get(m.mid);
@@ -2293,6 +2302,9 @@ const invasions = createInvasions({
   deep: (x, z) => x >= OLD_SIZE && z >= OLD_SIZE,
 });
 
+// Duels (duel.js): two heroes fight each other, and only each other, until one yields.
+const duels = createDuels({ sessions, safeSend, sendNear, sys, dist, now, log, metrics: M.duels });
+
 // World bosses (worldboss.js): a giant rises at its lair now and then, for everyone to fight together.
 const worldBosses = createWorldBosses({
   map: designToWorld, monsters, sessions, spawnMonster, nearestWalkable, walkable, aggro, monsterAttack, sendNear, broadcast, safeSend,
@@ -2317,6 +2329,7 @@ function tick() {
   updateSpawners(t);
   invasions.tick(t);
   worldBosses.tick(t);
+  if (tickCount % 5 === 0) duels.tick(t);
   if (tickCount % 50 === 0) cleanupInstances(t);
 
   sendSnapshots(t);

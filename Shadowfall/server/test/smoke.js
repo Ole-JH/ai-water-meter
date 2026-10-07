@@ -484,6 +484,50 @@ async function invasionTests(a, b) {
   await sleep(150);
 }
 
+async function duelTests(a, b) {
+  const aId = a.find("welcome").id, bId = b.find("welcome").id;
+  state(a, 140, 150);
+  state(b, 146, 150);
+  await sleep(200);
+  a.ws.send(JSON.stringify({ t: "dreq", id: bId }));
+  await sleep(200);
+  assert.strictEqual(b.all("dreq").at(-1)?.id, aId, "a duel challenge reaches the other hero");
+  b.ws.send(JSON.stringify({ t: "dans", yes: true }));
+  await sleep(200);
+  const ca = a.all("duel").at(-1), cb = b.all("duel").at(-1);
+  assert.ok(ca && cb && ca.k === "count" && ca.id === bId && cb.id === aId && Math.abs(ca.x - 143) < 0.01, "accepting starts a countdown for both, with a flag between them");
+  a.ws.send(JSON.stringify({ t: "dhit", id: bId, dmg: 30 }));
+  await sleep(150);
+  assert.ok(!b.find("dhit"), "no hits before the fight starts");
+  await sleep(3100);
+  assert.strictEqual(a.all("duel").at(-1).k, "fight", "then the fight starts");
+  a.ws.send(JSON.stringify({ t: "dhit", id: bId, dmg: 30 }));
+  b.ws.send(JSON.stringify({ t: "dhit", id: 999, dmg: 30 }));
+  await sleep(200);
+  assert.deepStrictEqual([b.all("dhit").at(-1)?.id, b.all("dhit").at(-1)?.dmg], [aId, 30], "hits on the opponent reach them");
+  assert.ok(!a.find("dhit"), "hits only count on your own opponent");
+  b.ws.send(JSON.stringify({ t: "dyield" }));
+  await sleep(200);
+  assert.ok(a.all("duel").at(-1).k === "end" && a.all("duel").at(-1).win === aId && b.all("duel").at(-1).win === aId, "yielding ends the duel: the other one wins");
+  assert.ok(b.all("sys").some((m) => /Alice has defeated Bob in a duel/.test(m.msg)), "the result is announced nearby");
+
+  // Running from the flag loses.
+  b.ws.send(JSON.stringify({ t: "dreq", id: aId }));
+  await sleep(150);
+  a.ws.send(JSON.stringify({ t: "dans", yes: true }));
+  await sleep(3400);
+  state(a, 144, 210); // 60 m away
+  await sleep(800);
+  const end = b.all("duel").at(-1);
+  assert.ok(end.k === "end" && end.win === bId, "fleeing from the duel loses it");
+  a.ws.send(JSON.stringify({ t: "dreq", id: bId }));
+  await sleep(150);
+  assert.ok(a.all("sys").some((m) => /too far away/.test(m.msg)), "you can only challenge heroes nearby");
+  state(a, 144, 150);
+  state(b, 145, 187);
+  await sleep(200);
+}
+
 async function worldBossTests(a, b) {
   a.ws.send(JSON.stringify({ t: "adm", c: "worldboss", name: "bramble" }));
   await sleep(300);
@@ -755,6 +799,7 @@ async function main() {
     assert.ok(a.find("admwho").items.some((x) => x.includes("|Bob|")), "admins can list players");
     await invasionTests(a, b);
     await worldBossTests(a, b);
+    await duelTests(a, b);
 
     const danaId = d.find("welcome").id;
     d.ws.send(JSON.stringify({ t: "vanish", dur: 3 }));
