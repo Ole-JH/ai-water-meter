@@ -10,7 +10,11 @@ set -u
 cd "$(dirname "$0")/.." || exit 1
 state=.autodeploy
 mkdir -p "$state"
-TASK="${TASK:-task}"
+# The task binary: $TASK (the install passes the one it ran with), else ./bin/task or ../bin/task, else task on the PATH.
+case "${TASK:-}" in
+  "") TASK=task; for t in ./bin/task ../bin/task; do [ -x "$t" ] && { TASK="$PWD/$t"; break; }; done ;;
+  */*) TASK="$(cd "$(dirname "$TASK")" && pwd)/$(basename "$TASK")" ;;
+esac
 
 # One run at a time: a client build takes a while, and cron keeps ticking.
 exec 9>"$state/lock"

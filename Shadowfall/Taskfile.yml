@@ -141,12 +141,10 @@ tasks:
     desc: "On the server host: check origin every INTERVAL minutes (default 5) and deploy new commits automatically (cron)"
     vars:
       INTERVAL: '{{.INTERVAL | default "5"}}'
-      TASK_BIN:
-        sh: for t in ./bin/task ../bin/task; do [ -x "$t" ] && { cd "$(dirname "$t")" && echo "$PWD/task"; exit; }; done; command -v task
     cmds:
       - mkdir -p .autodeploy
       - |
-        line='*/{{.INTERVAL}} * * * * cd {{.ROOT_DIR}} && PATH="'"$PATH"'" TASK={{.TASK_BIN}} sh tools/autodeploy.sh >> .autodeploy/log 2>&1 # shadowfall-autodeploy'
+        line='*/{{.INTERVAL}} * * * * cd {{.ROOT_DIR}} && PATH="'"$PATH"'" TASK="{{.TASK_EXE}}" sh tools/autodeploy.sh >> .autodeploy/log 2>&1 # shadowfall-autodeploy'
         { crontab -l 2>/dev/null | grep -v '# shadowfall-autodeploy'; echo "$line"; } | crontab -
       - 'echo "Auto-deploy on: every {{.INTERVAL}} min this checkout follows origin/$(git rev-parse --abbrev-ref HEAD). Log: task autodeploy:log  -  off: task autodeploy:uninstall"'
 
