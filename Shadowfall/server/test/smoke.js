@@ -401,6 +401,9 @@ async function main() {
     const party = d.all("party").at(-1);
     assert.strictEqual(party.pm.length, 3, "party has three members");
     assert.strictEqual(party.id, a.find("welcome").id, "Alice leads the party");
+    const bobInParty = party.pm.find((x) => x.name === "Bob");
+    assert.ok(bobInParty && bobInParty.mdl === "Knight" && "mp" in bobInParty && "mmp" in bobInParty && "wk" in bobInParty && "ry" in bobInParty && bobInParty.dn === "",
+      "party members carry what the party frames show (class, mana, weapon, facing, where)");
 
     b.ws.send(JSON.stringify({ t: "chat", msg: "/p group up" }));
     b.ws.send(JSON.stringify({ t: "pshare", q: "wolves" }));
@@ -518,6 +521,7 @@ async function main() {
     state(b, dg.start[0], dg.start[1]);
     await sleep(500);
     const inside = b.all("snap").at(-1);
+    assert.match(a.all("party").at(-1).pm.find((x) => x.name === "Bob")?.dn || "", /^The Catacombs, level 1$/, "the party sees which dungeon a member is in");
     assert.ok(!inside.p.some((p) => p.name === "Alice"), "players in a dungeon don't see the overworld");
     b.ws.send(JSON.stringify({ t: "dleave" }));
     await sleep(300);

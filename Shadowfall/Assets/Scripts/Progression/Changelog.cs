@@ -24,6 +24,16 @@ namespace Shadowfall
         {
             new Entry
             {
+                Id = 20, Date = "2026-10-07", Title = "See your party",
+                Items = new[]
+                {
+                    "Party frames show each member's live portrait in their own gear, their level and class, life and mana, and where they are.",
+                    "Every party member has a color. On the minimap they are arrows pointing where they face; out of range, they wait on the edge pointing the way.",
+                    "The world map (M) shows your party with their names, wherever they are.",
+                },
+            },
+            new Entry
+            {
                 Id = 19, Date = "2026-10-07", Title = "Your loot, kept safe",
                 Items = new[]
                 {

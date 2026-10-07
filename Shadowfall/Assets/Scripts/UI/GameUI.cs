@@ -360,35 +360,106 @@ namespace Shadowfall
             }
         }
 
+        float partyTop = 120; // under the hero frame (and the attribute button and companion frame, when shown)
+
+        /// <summary>Each other party member's color on the frames and the maps, by their place in the party.</summary>
+        static readonly Color[] memberColors =
+        {
+            new Color(0.4f, 1f, 0.5f), new Color(0.35f, 0.85f, 1f), new Color(1f, 0.7f, 0.3f), new Color(1f, 0.5f, 0.85f),
+        };
+
+        public static Color MemberColor(int id)
+        {
+            var net = NetClient.I;
+            int k = 0;
+            if (net != null)
+                foreach (var m in net.Party)
+                {
+                    if (m.id == net.MyId) continue;
+                    if (m.id == id) return memberColors[k % memberColors.Length];
+                    k++;
+                }
+            return memberColors[0];
+        }
+
+        /// <summary>Where a party member is, as seen from here: distance in the same place, else the dungeon or zone.</summary>
+        static string MemberWhere(NetPartyMember m, Player p, out bool here)
+        {
+            var net = NetClient.I;
+            here = m.di == net.DungeonId;
+            if (here)
+            {
+                Vector3 at = RemotePlayer.ById.TryGetValue(m.id, out var rp) && rp != null ? rp.transform.position : new Vector3(m.x, 0f, m.z);
+                return Mathf.RoundToInt(Factory.FlatDistance(at, p.transform.position)) + " m away";
+            }
+            if (!string.IsNullOrEmpty(m.dn)) return m.dn;
+            return WorldGenerator.ZoneAt(new Vector3(m.x, 0f, m.z));
+        }
+
+        /// <summary>One frame per other party member: live portrait, name, level and class, life, mana and where they are.</summary>
         void DrawPartyFrames(Player p)
         {
             var net = NetClient.I;
             if (!net.InParty) return;
-            float y = 12 + 96 + 10 + (p.StatPoints > 0 ? 46 : 0);
+            float y = partyTop;
+            int k = 0;
             foreach (var m in net.Party)
             {
                 if (m.id == net.MyId) continue;
+                var col = memberColors[k++ % memberColors.Length];
                 float hp = m.hp, mhp = m.mhp;
                 bool near = RemotePlayer.ById.TryGetValue(m.id, out var rp) && rp != null;
                 if (near) { hp = rp.Health; mhp = rp.MaxHealth; }
-                var r = new Rect(12, y, 250, 58);
+                string cls = string.IsNullOrEmpty(m.mdl) ? "Knight" : m.mdl;
+                string where = MemberWhere(m, p, out bool here);
+
+                var r = new Rect(12, y, 290, 82);
                 UISkin.Box(r, UISkin.PanelPlain);
                 Block(r);
-                var icon = new Rect(r.x + 9, r.y + 9, 40, 40);
-                UISkin.Box(icon, UISkin.Slot);
-                UISkin.IconInSlot(icon, UISkin.Icon((m.mdl ?? "knight").ToLower()), m.dead ? new Color(0.5f, 0.5f, 0.5f) : Color.white, 3);
+                GUI.color = col;
+                GUI.DrawTexture(new Rect(r.x + 3, r.y + 8, 3, r.height - 16), UISkin.White);
+                GUI.color = Color.white;
+
+                // Portrait: the member's live 3D model (or their class icon until it is ready), with a level badge.
+                var pr = new Rect(r.x + 10, r.y + 8, 66, 66);
+                UISkin.Box(pr, UISkin.Slot);
+                var tex = PartyPortraits.For(m.id);
+                var tint = m.dead ? new Color(0.4f, 0.36f, 0.36f) : Color.white;
+                if (tex != null)
+                {
+                    GUI.color = tint;
+                    if (Event.current.type == EventType.Repaint)
+                        GUI.DrawTextureWithTexCoords(new Rect(pr.x + 4, pr.y + 4, pr.width - 8, pr.height - 8), tex, Avatar.HeadCrop, true);
+                    GUI.color = Color.white;
+                }
+                else UISkin.IconInSlot(pr, UISkin.Icon(cls.ToLower()), tint, 6);
+                if (m.dead) UISkin.Shadowed(new Rect(pr.x, pr.y + 22, pr.width, 22), "DEAD", UISkin.V(UISkin.SmallCenter, fontSize: 14), new Color(1f, 0.35f, 0.3f), 2);
+                var lv = new Rect(pr.xMax - 22, pr.yMax - 20, 26, 22);
+                UISkin.Box(lv, UISkin.Slot);
+                UISkin.Shadowed(lv, m.lvl.ToString(), UISkin.SmallCenter, UISkin.Gold);
+
+                // Name, class and where; life and mana.
                 bool leader = m.id == net.PartyLeader;
-                UISkin.Shadowed(new Rect(r.x + 58, r.y + 7, 160, 20), m.name + "  " + m.lvl + (leader ? "  (Leader)" : ""),
-                    UISkin.Small, leader ? UISkin.Gold : near ? new Color(0.45f, 1f, 0.5f) : UISkin.Muted);
-                UISkin.Bar(new Rect(r.x + 58, r.y + 30, 180, 16), mhp > 0 ? hp / mhp : 0f, "Red",
+                float tx = pr.xMax + 10, tw = r.xMax - tx - 10;
+                UISkin.Shadowed(new Rect(tx, r.y + 6, tw - (net.IsLeader ? 26 : 0), 20), m.name, UISkin.V(UISkin.Label, fontSize: 16), col);
+                if (leader) UISkin.Shadowed(new Rect(tx, r.y + 6, tw - (net.IsLeader ? 30 : 4), 20), "Leader", UISkin.V(UISkin.Small, alignment: TextAnchor.MiddleRight), UISkin.Gold);
+                UISkin.Shadowed(new Rect(tx, r.y + 25, tw, 16), cls + "  -  " + where, UISkin.V(UISkin.Small, fontSize: 12),
+                    here ? UISkin.Muted : new Color(0.75f, 0.68f, 0.9f));
+                UISkin.Bar(new Rect(tx, r.y + 45, tw, 15), mhp > 0 ? hp / mhp : 0f, "Red",
                     m.dead ? "Dead" : Mathf.CeilToInt(hp) + " / " + Mathf.CeilToInt(mhp), new Color(0.75f, 0.12f, 0.1f));
+                if (m.mmp > 0) UISkin.Bar(new Rect(tx, r.y + 64, tw, 9), m.mp / m.mmp, "Blue", null, new Color(0.2f, 0.35f, 0.9f));
+
                 if (net.IsLeader)
                 {
-                    var kick = new Rect(r.xMax - 30, r.y + 6, 22, 22);
+                    var kick = new Rect(r.xMax - 28, r.y + 5, 22, 22);
                     if (UISkin.Btn(kick, "x", UISkin.SquareButton)) net.KickFromParty(m.id);
                     if (kick.Contains(Event.current.mousePosition)) tooltip = "Remove " + m.name + " from the party";
                 }
-                y += 62;
+                else if (r.Contains(Event.current.mousePosition))
+                    tooltip = "<b><color=#" + Item.Hex(col) + ">" + m.name + "</color></b>  level " + m.lvl + " " + cls + (leader ? "  (party leader)" : "") +
+                              "\nLife " + Mathf.CeilToInt(hp) + " / " + Mathf.CeilToInt(mhp) + (m.mmp > 0 ? ",  mana " + Mathf.FloorToInt(m.mp) + " / " + Mathf.FloorToInt(m.mmp) : "") +
+                              "\n" + where + (here ? "" : "\n<color=#998877>Not in the same place as you</color>");
+                y += 88;
             }
             var leave = new Rect(12, y, 130, 32);
             Block(leave);
@@ -621,6 +692,7 @@ namespace Shadowfall
                 below += 46;
             }
             DrawCompanionFrame(p, below);
+            partyTop = below + (p.CompanionInstance != null ? 58 : 0);
 
             Combatant target = p.HoveredEnemy != null ? p.HoveredEnemy : p.AttackTarget;
             if (target != null && !target.IsDead)
@@ -866,9 +938,15 @@ namespace Shadowfall
                 foreach (var e in Enemy.ById.Values)
                     if (e != null && !e.IsDead) Dot(r, toMap(e.transform.position), e.Def.Boss ? new Color(1f, 0.5f, 0f) : e.Elite ? Enemy.ChampionColor : new Color(0.9f, 0.15f, 0.1f), e.Def.Boss ? 10 : e.Elite ? 8 : 5);
             foreach (var rp in RemotePlayer.ById.Values)
-                if (rp != null) Dot(r, toMap(rp.transform.position), net.IsPartyMember(rp.Id) ? new Color(0.35f, 1f, 0.45f) : new Color(0.3f, 0.6f, 1f), 7);
-            foreach (var m in net.Party) // party members out of view range, in the same place as us
-                if (m.id != net.MyId && m.di == net.DungeonId && !RemotePlayer.ById.ContainsKey(m.id)) Dot(r, toMap(new Vector3(m.x, 0, m.z)), new Color(0.35f, 1f, 0.45f), 6);
+                if (rp != null && !net.IsPartyMember(rp.Id)) Dot(r, toMap(rp.transform.position), new Color(0.3f, 0.6f, 1f), 7);
+            // Party members in the same place as us (near or far): an arrow in their color, facing where they face.
+            foreach (var m in net.Party)
+            {
+                if (m.id == net.MyId || m.di != net.DungeonId) continue;
+                bool near = RemotePlayer.ById.TryGetValue(m.id, out var mrp) && mrp != null;
+                Vector3 at = near ? mrp.transform.position : new Vector3(m.x, 0f, m.z);
+                PartyMarker(r, toMap(at), near ? mrp.transform.eulerAngles.y : m.ry, m, Factory.FlatDistance(at, pp));
+            }
 
             // Hero: an arrow pointing where we face.
             // (Not GUIUtility.RotateAroundPivot: that pivots in unscaled screen space, so with the UI scale the
@@ -891,6 +969,44 @@ namespace Shadowfall
             if (UISkin.Btn(zout, "-", UISkin.SquareButton)) Minimap.Span = Mathf.Min(Minimap.MaxSpan, Minimap.Span * 1.3f);
             if (zin.Contains(Event.current.mousePosition)) tooltip = "Zoom in";
             if (zout.Contains(Event.current.mousePosition)) tooltip = "Zoom out";
+        }
+
+        /// <summary>
+        /// A party member on the minimap: an arrow in their color pointing where they face. Out of range, it sits on the
+        /// rim pointing toward them, slightly smaller. Hover for their name and distance.
+        /// </summary>
+        void PartyMarker(Rect circle, Vector2 pos, float facing, NetPartyMember m, float distance)
+        {
+            float rim = circle.width / 2 - 10;
+            var d = pos - circle.center;
+            bool pinned = d.magnitude > rim;
+            if (pinned)
+            {
+                pos = circle.center + d.normalized * rim;
+                facing = Mathf.Atan2(d.x, -d.y) * Mathf.Rad2Deg;
+            }
+            var c = m.dead ? new Color(0.55f, 0.5f, 0.5f) : MemberColor(m.id);
+            if (Event.current.type == EventType.Repaint)
+            {
+                GUI.color = new Color(0f, 0f, 0f, 0.6f);
+                GUI.DrawTexture(new Rect(pos.x - 8, pos.y - 8, 16, 16), UISkin.Circle);
+                RotatedTexture(new Rect(pos.x - 7, pos.y - 8, 14, 16), Minimap.Arrow, facing, c, pinned ? 0.8f : 1f);
+            }
+            if (new Rect(pos.x - 10, pos.y - 10, 20, 20).Contains(Event.current.mousePosition))
+                tooltip = "<b><color=#" + Item.Hex(MemberColor(m.id)) + ">" + m.name + "</color></b>  " + Mathf.RoundToInt(distance) + " m" + (m.dead ? "  (dead)" : "");
+        }
+
+        /// <summary>Draws a texture turned <paramref name="degrees"/> clockwise around its center (correct under the UI scale).</summary>
+        static void RotatedTexture(Rect rect, Texture tex, float degrees, Color c, float scale = 1f)
+        {
+            var saved = GUI.matrix;
+            Vector3 pivot = saved.MultiplyPoint3x4(new Vector3(rect.center.x, rect.center.y, 0f));
+            GUI.matrix = Matrix4x4.TRS(pivot, Quaternion.Euler(0f, 0f, degrees), new Vector3(scale, scale, 1f)) *
+                         Matrix4x4.TRS(-pivot, Quaternion.identity, Vector3.one) * saved;
+            GUI.color = c;
+            GUI.DrawTexture(rect, tex);
+            GUI.matrix = saved;
+            GUI.color = Color.white;
         }
 
         static bool InCircle(Rect circle, Vector2 pos, float margin) =>
@@ -1364,7 +1480,18 @@ namespace Shadowfall
             if (AdminTools.ShowEnemies)
                 foreach (var e in Enemy.ById.Values)
                     if (e != null && !e.IsDead) mark(e.transform.position, e.Def.Boss ? new Color(1f, 0.5f, 0f) : e.Elite ? Enemy.ChampionColor : new Color(0.9f, 0.15f, 0.1f), e.Def.Boss ? 10 : 6);
-            foreach (var rp in RemotePlayer.ById.Values) if (rp != null) mark(rp.transform.position, NetClient.I.IsPartyMember(rp.Id) ? new Color(0.35f, 1f, 0.45f) : new Color(0.3f, 0.6f, 1f), 9);
+            var net = NetClient.I;
+            foreach (var rp in RemotePlayer.ById.Values) if (rp != null && !net.IsPartyMember(rp.Id)) mark(rp.transform.position, new Color(0.3f, 0.6f, 1f), 9);
+            foreach (var m in net.Party) // the party, wherever they are on this map, with their names
+            {
+                if (m.id == net.MyId || m.di != net.DungeonId) continue;
+                Vector3 at = RemotePlayer.ById.TryGetValue(m.id, out var mrp) && mrp != null ? mrp.transform.position : new Vector3(m.x, 0f, m.z);
+                var mp = toMap(at);
+                if (!r.Contains(mp)) continue;
+                var mc = m.dead ? new Color(0.55f, 0.5f, 0.5f) : MemberColor(m.id);
+                DotAt(mp, mc, 12);
+                UISkin.Shadowed(new Rect(mp.x - 90, mp.y + 7, 180, 20), m.name + (m.dead ? " (dead)" : ""), UISkin.SmallCenter, mc, 2);
+            }
             mark(p.transform.position, Color.white, 11);
 
             string hint = AdminTools.IsAdmin && !underground ? "Click or M to close   -   Admin: right-click to teleport there" : "Click anywhere or press M to close";

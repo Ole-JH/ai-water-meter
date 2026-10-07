@@ -49,10 +49,13 @@ A full day takes **48 minutes** (2 real minutes per in-game hour) and follows th
 
 Click another player's name above their head and choose **Invite to Party**, or type `/invite name`. Up to 5 players per party.
 
-- **Shared kills:** party members within 60 m of a monster when it dies get the kill: XP, quest progress and their own loot roll.
+- **Shared kills:** party members within 60 m of a monster when it dies get the kill: XP, quest progress and their own loot.
 - **Shared quests:** open the quest log (++l++) and click **Share** to offer a quest to your party. A shared quest can be turned in to its giver even if it's later in their quest chain.
 - **Chat:** `/p message` talks to your party. `/w name message` whispers, `/r message` replies to the last whisper, `/leave` leaves the party.
+- **Party frames** (top left, under your own) show each member's live portrait in their gear, their level and class, life and mana, and where they are: how far away, or which zone or dungeon level. Dead members are greyed out. Each member has their own color.
+- **On the maps:** party members are arrows in their color on the minimap, pointing where they face; one who is out of range sits on the rim, pointing toward them. Hover for their name and distance. The world map (++m++) shows them with their names, wherever they are.
 - The party leader can remove members with the **x** on their party frame.
+- **Shared kills** give every member their **own loot**: nobody else sees or can take it.
 
 ## Dungeons
 

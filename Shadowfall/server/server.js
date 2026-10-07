@@ -747,10 +747,14 @@ function findOnline(name) {
 }
 
 function sendParty(p) {
-  const pm = partyMembers(p).map((o) => ({
-    id: o.id, name: o.name, lvl: o.lvl, hp: Math.ceil(o.hp || 0), mhp: Math.ceil(o.mhp || 1),
-    mdl: (o.look && o.look.mdl) || "Knight", x: r2(o.x), z: r2(o.z), dead: !!o.dead, di: o.inst || 0,
-  }));
+  const pm = partyMembers(p).map((o) => {
+    const inst = o.inst && instances.get(o.inst), look = o.look || {};
+    return {
+      id: o.id, name: o.name, lvl: o.lvl, hp: Math.ceil(o.hp || 0), mhp: Math.ceil(o.mhp || 1), mp: Math.ceil(o.mp || 0), mmp: Math.ceil(o.mmp || 0),
+      mdl: look.mdl || "Knight", wk: look.wk || "", helm: look.helm || "", x: r2(o.x), z: r2(o.z), ry: Math.round(o.ry || 0), dead: !!o.dead,
+      di: o.inst || 0, dn: inst ? `${DUNGEONS[inst.dIdx].name}, level ${inst.depth}` : "",
+    };
+  });
   const data = JSON.stringify({ t: "party", id: p.leader, pm });
   for (const o of partyMembers(p)) safeSend(o, data);
 }
@@ -1976,6 +1980,8 @@ const handlers = {
     s.ry = Number(m.ry) || 0;
     s.hp = Number(m.hp) || 0;
     s.mhp = Number(m.mhp) || 1;
+    s.mp = Math.max(0, Number(m.mp) || 0);
+    s.mmp = Math.max(0, Number(m.mmp) || 0);
     s.lvl = Math.max(1, Math.min(100, parseInt(m.lvl, 10) || 1));
     if (m.dead && !s.dead) { M.deaths.inc(); deathPenalty(s); }
     s.mv = !!m.mv; s.atk = !!m.atk; s.dead = !!m.dead;

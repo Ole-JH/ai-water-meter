@@ -96,7 +96,7 @@ namespace Shadowfall
     public class StateMsg
     {
         public string t = "state";
-        public float x, z, ry, hp, mhp;
+        public float x, z, ry, hp, mhp, mp, mmp;
         public int lvl;
         public bool mv, atk, dead;
         public string body, legs, weapon, helm, mdl, wk; // wk = weapon model kind
@@ -107,10 +107,12 @@ namespace Shadowfall
     public class NetPartyMember
     {
         public int id, lvl;
-        public string name, mdl;
-        public float hp, mhp, x, z;
+        public string name, mdl;    // mdl = hero model, which is also the class (Knight, Mage, ...)
+        public string wk, helm;     // weapon in hand, helm color (empty = no helm), for the portrait
+        public float hp, mhp, mp, mmp, x, z, ry;
         public bool dead;
         public int di;          // dungeon instance the member is in (0 = overworld)
+        public string dn;       // where in a dungeon ("Catacombs, level 2"); empty in the overworld
     }
 
     /// <summary>Dungeon commands: denter, dstairs, dleave (town = after dying).</summary>

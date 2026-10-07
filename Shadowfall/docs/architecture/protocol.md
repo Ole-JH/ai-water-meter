@@ -84,7 +84,7 @@ Server → client:
 | `t` | Fields | Purpose |
 | --- | --- | --- |
 | `world` | `hash`, `w`, `h`, `cells` | Upload the walkability bitmap (bit set = blocked, LSB first, row-major) |
-| `state` | `x`, `z`, `ry`, `hp`, `mhp`, `lvl`, `mv`, `atk`, `dead`, `body`, `legs`, `weapon`, `helm`, `mdl`, `wk`, `cp` | Own position, health and appearance, 10× per second. `mdl` = hero model, `wk` = hero weapon in hand (`sword`, `axe`, `mace`, `dagger`, `staff` or empty; anything else is dropped), `cp` = companion following them (`hound`, `squire`, `witch`, `ranger`, `acolyte`, `golem` or empty) |
+| `state` | `x`, `z`, `ry`, `hp`, `mhp`, `mp`, `mmp`, `lvl`, `mv`, `atk`, `dead`, `body`, `legs`, `weapon`, `helm`, `mdl`, `wk`, `cp` | Own position, health and appearance, 10× per second. `mdl` = hero model, `wk` = hero weapon in hand (`sword`, `axe`, `mace`, `dagger`, `staff` or empty; anything else is dropped), `cp` = companion following them (`hound`, `squire`, `witch`, `ranger`, `acolyte`, `golem` or empty) |
 | `hit` | `mid`, `dmg`, `crit` | Report damage dealt to monster `mid` (after armor) |
 | `slow` | `mid`, `dur` | Slow a monster (Frost Nova, Fan of Knives, Leap). Capped at 5 s |
 | `stun` | `mid`, `dur` | Stun a monster (Shield Bash, Judgement). Capped at 3 s, bosses take 40% of it; within 16 m |
@@ -129,7 +129,7 @@ Server → client:
 | `fx` | `id`, `k`, `x`, `z`, `tx`, `tz` | Another player's spell effect |
 | `emote` | `id`, `name`, `e` | Another player's emote (play it and print "Alice waves.") |
 | `chat` | `id`, `name`, `msg`, `ch` | Chat line. `ch`: empty = everyone, `p` = party, `w` = whisper to you, `wto` = echo of your whisper (`name` = recipient) |
-| `party` | `id` (leader), `pm[]` | Your party, sent on every change and once a second: `{id,name,lvl,hp,mhp,mdl,x,z,dead,di}`. Empty `pm` = not in a party |
+| `party` | `id` (leader), `pm[]` | Your party, sent on every change and once a second: `{id,name,lvl,hp,mhp,mp,mmp,mdl,wk,helm,x,z,ry,dead,di,dn}` (`mdl` = class model, `wk` weapon and `helm` for the portrait, `di` = dungeon instance, `dn` = "The Catacombs, level 2" or empty). Empty `pm` = not in a party |
 | `pinv` | `id`, `name` | Someone invites you to their party |
 | `qshare` | `id`, `name`, `k` | A party member shares quest `k` |
 | `dungeon` | `id`, `l`, `k`, `d`, `n`, `df`, `seed`, `w`, `h`, `cells`, `rooms`, `start`, `exit`, `stairs`, `boss`, `chests` | You entered dungeon instance `id` at depth `l`: the generated layout (walkability bitmap like the world map, rooms as `x,y,w,h` quadruples, positions as `x,z` pairs). `id` 0 = you are back in the overworld at `x`, `z` |

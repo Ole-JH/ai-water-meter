@@ -108,14 +108,14 @@ namespace Shadowfall
         }
 
         /// <summary>Dungeons use close fog; the studio camera renders without it.</summary>
-        class NoFog : MonoBehaviour
+        internal class NoFog : MonoBehaviour
         {
             bool fog;
             void OnPreRender() { fog = RenderSettings.fog; RenderSettings.fog = false; }
             void OnPostRender() { RenderSettings.fog = fog; }
         }
 
-        static void SetLayer(Transform t)
+        internal static void SetLayer(Transform t)
         {
             t.gameObject.layer = Layer;
             for (int i = 0; i < t.childCount; i++) SetLayer(t.GetChild(i));
