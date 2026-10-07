@@ -36,7 +36,7 @@ Divine Shield, War Cry and Smoke Bomb show as icons above the action bar with th
 
 ## Loot
 
-Equipment drops in eight slots: weapon, helm, chest, gloves, legs, boots, ring and amulet.
+Equipment drops in eight slots: weapon, helm, chest, gloves, legs, boots, ring and amulet. Every tooltip starts with the item's **type line** in its rarity colour (for example *LEGENDARY WAR AXE* or *MAGIC RING*), then its slot, item level and rarity tier (1 of 5 to 5 of 5). Rare and better items on the ground also show their rarity next to their name.
 
 | Rarity | Color | Affixes | Notes |
 | --- | --- | --- | --- |

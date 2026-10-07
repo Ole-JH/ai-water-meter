@@ -204,7 +204,7 @@ namespace Shadowfall
             AttackSpeed = baseAps * (1f + ItemStat(Stat.AttackSpeed) / 100f);
             MoveSpeed = 6.2f * (1f + ItemStat(Stat.MoveSpeed) / 100f + 0.04f * Tal("swiftness")) * (AdminTools.Fast ? 2.2f : 1f);
             LifeOnHit = ItemStat(Stat.LifeOnHit);
-            HealthRegen = 1f + Level * 0.2f + ItemStat(Stat.HealthRegen);
+            HealthRegen = 0.6f + Level * 0.12f + ItemStat(Stat.HealthRegen);
             ManaRegen = (2f + TotInt * 0.06f + ItemStat(Stat.ManaRegen)) * (1f + 0.12f * Tal("manafont"));
             ItemPowers.ApplySetBonuses(this);
 
@@ -316,7 +316,9 @@ namespace Shadowfall
             }
 
             float dt = Time.deltaTime;
-            Health = Mathf.Min(MaxHealth, Health + HealthRegen * dt);
+            // Regeneration is slow in a fight and quick out of it (6 s without being hit).
+            bool inCombat = Time.time - LastDamagedTime < 6f;
+            Health = Mathf.Min(MaxHealth, Health + HealthRegen * (inCombat ? 0.3f : 2.5f) * dt);
             Mana = Mathf.Min(MaxMana, Mana + ManaRegen * dt);
 
             UpdateHover();
@@ -1115,6 +1117,11 @@ namespace Shadowfall
             if (item == null || IsDead) return;
             if (item.Kind == ItemKind.Equipment) { Equip(index); return; }
             if (item.Kind != ItemKind.Consumable) return;
+            if (Time.time < potionReadyAt)
+            {
+                GameUI.Float(transform.position + Vector3.up * 2.5f, "Ready in " + (potionReadyAt - Time.time).ToString("0.0") + "s", Color.gray, 0.7f);
+                return;
+            }
 
             if (item.HealAmount > 0 && Health >= MaxHealth && item.ManaAmount <= 0)
             {
@@ -1127,6 +1134,7 @@ namespace Shadowfall
                 return;
             }
             var used = Inventory.TakeOne(index);
+            potionReadyAt = Time.time + PotionCooldown;
             Sfx.Play2D("potion", 0.6f, Random.Range(0.92f, 1.08f));
             if (used.HealAmount > 0)
             {
@@ -1302,6 +1310,11 @@ namespace Shadowfall
                 }
             GameUI.Log("You need three gems of the same kind and quality (Chipped or Flawless).", Color.gray);
         }
+
+        /// <summary>Potions and food share a short cooldown, so fights can't be won by drinking alone.</summary>
+        public const float PotionCooldown = 3f;
+        float potionReadyAt;
+        public float PotionCooldownLeft => Mathf.Max(0f, potionReadyAt - Time.time);
 
         public void Equip(int index)
         {

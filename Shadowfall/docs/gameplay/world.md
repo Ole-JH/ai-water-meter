@@ -65,6 +65,7 @@ Four dungeons lie hidden in the wilds. They are **not marked on the map**: find 
 | **The Catacombs** (level 6+) | South-east of the Forsaken Graveyard: an old crypt | 3 | Crypt halls | Skeletons, skeleton archers, zombies | **Crypt Lord** |
 | **Ironvein Deep** (level 10+) | In the western quarry: a timbered mine adit | 3 | Caves, lit by glowing ore | Rock golems, skeletons, zombies | **Stone Colossus** |
 
+- **Difficulty:** clicking an entrance lets you choose **Normal**, **Veteran**, **Nightmare** or **Hell**. Harder tiers give monsters more life (×1.7 / ×2.8 / ×4.5) and damage (×1.4 / ×1.9 / ×2.6) and more elites, and in return more XP (+50% / +120% / +220%) and better loot (more items, higher rarity, more legendaries from bosses). Whoever opens the dungeon for the party picks; party members who follow join at that difficulty, and the stairs keep it.
 - **Generated for your party:** every party (or solo hero) gets its own copy of each level, with a fresh layout each time. Halls and corridors in the crypts and cellars, natural caverns in the warrens and the mine. Party members who walk in join the same copy, so friends explore together. An empty dungeon closes two minutes after the last player leaves.
 - **Monsters** scale to your party's level, the dungeon's minimum level and the depth. More party members means bigger packs and a tougher boss. Every room or clearing holds a pack, some led by an elite.
 - **Treasure:** chests in side rooms hold gold and a magic or rare item (each hero opens their own).
@@ -77,6 +78,10 @@ Four dungeons lie hidden in the wilds. They are **not marked on the map**: find 
 The minimap and the world map (++m++) start dark except for Hollowmere; everything within about 15 tiles of you is revealed as you travel, and what you have explored is saved with your character. Zone names appear on the world map once you've been there.
 
 Enemies are **not shown** on the minimap or the world map, and neither are dungeon entrances: you have to look. Quest givers, vendors and other players are shown where you have explored.
+
+## Balance
+
+Monsters hit hard: every monster has 50% more base life and 60% more base damage than at launch, and grows faster with level (+32% life and +20% damage per level). About one in eight is an elite. Life regenerates slowly while you're fighting (until 6 seconds after you were last hit) and quickly afterwards, and potions and food share a 3-second cooldown.
 
 ## Elite monsters
 

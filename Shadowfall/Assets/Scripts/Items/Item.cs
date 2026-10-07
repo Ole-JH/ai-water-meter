@@ -72,6 +72,36 @@ namespace Shadowfall
             return c;
         }
 
+        /// <summary>"LEGENDARY WAR AXE", "SET HELM", "MAGIC RING", "GEM", "CONSUMABLE", "CRAFTING MATERIAL".</summary>
+        public string TypeLine
+        {
+            get
+            {
+                switch (Kind)
+                {
+                    case ItemKind.Equipment: return (RarityName(Rarity) + " " + (BaseType ?? SlotName(Slot))).ToUpperInvariant();
+                    case ItemKind.Gem: return "GEM";
+                    case ItemKind.Consumable: return "CONSUMABLE";
+                    default: return "CRAFTING MATERIAL";
+                }
+            }
+        }
+
+        public static string RarityName(Rarity r) => r == Rarity.Set ? "Set" : r.ToString();
+
+        /// <summary>Where a rarity sits in the ladder, shown on equipment tooltips.</summary>
+        public static string RarityRank(Rarity r)
+        {
+            switch (r)
+            {
+                case Rarity.Common: return "tier 1 of 5";
+                case Rarity.Magic: return "tier 2 of 5";
+                case Rarity.Rare: return "tier 3 of 5";
+                case Rarity.Set: return "tier 4 of 5";
+                default: return "tier 5 of 5";
+            }
+        }
+
         public static Color RarityColor(Rarity r)
         {
             switch (r)
@@ -113,14 +143,16 @@ namespace Shadowfall
         public string Tooltip(Player player, Item compareTo = null)
         {
             var sb = new StringBuilder();
-            sb.Append("<b><color=#").Append(Hex(NameColor)).Append(">").Append(Name).Append("</color></b>");
+            sb.Append("<size=17><b><color=#").Append(Hex(NameColor)).Append(">").Append(Name).Append("</color></b></size>");
             if (Count > 1) sb.Append(" x").Append(Count);
             sb.Append('\n');
+            // Type line: rarity tier and what the item is, in capitals, e.g. "LEGENDARY WAR AXE".
+            sb.Append("<b><color=#").Append(Hex(NameColor)).Append(">").Append(TypeLine).Append("</color></b>\n");
 
             if (Kind == ItemKind.Equipment)
             {
-                sb.Append("<color=#").Append(Hex(NameColor)).Append(">").Append(Rarity).Append(' ').Append(BaseType).Append("</color>\n");
-                sb.Append("<color=#999999>").Append(SlotName(Slot)).Append("   Item Level ").Append(ItemLevel).Append("</color>\n");
+                sb.Append("<color=#999999>").Append(SlotName(Slot)).Append("   -   Item Level ").Append(ItemLevel)
+                  .Append("   -   ").Append(RarityRank(Rarity)).Append("</color>\n");
                 if (Slot == EquipSlot.Weapon)
                 {
                     sb.Append("<size=16><b>").Append(MinDamage).Append(" - ").Append(MaxDamage).Append("</b></size> Damage\n");

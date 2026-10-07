@@ -46,7 +46,8 @@ namespace Shadowfall
         public NetPartyMember[] pm; // "party": members (id = leader)
         // "dungeon": id (0 = back in the overworld at x, z), l = depth, k = name, plus the generated layout
         public int w, h, seed;
-        public int d, n;               // "dungeon": which dungeon (DungeonDef index) and how many levels it has
+        public int d, n, df;           // "dungeon": which dungeon (DungeonDef index), how many levels, difficulty
+        public float lb;               // "kill": loot bonus from the dungeon difficulty
         public bool admin;             // "welcome": this account is an admin
         public string cells;
         public int[] rooms;            // x, y, w, h per room
@@ -92,9 +93,9 @@ namespace Shadowfall
     }
 
     /// <summary>Dungeon commands: denter, dstairs, dleave (town = after dying).</summary>
-    [Serializable] public class DungeonCmd { public string t; public bool town; public int d; }
+    [Serializable] public class DungeonCmd { public string t; public bool town; public int d, df; }
     /// <summary>Admin command (the server checks the sender is an admin). Unused fields are ignored.</summary>
-    [Serializable] public class AdminCmd { public string t = "adm"; public string c, name, type, text, phase; public float x, z, r, chance; public int d, l, n; public bool elite, fresh; }
+    [Serializable] public class AdminCmd { public string t = "adm"; public string c, name, type, text, phase; public float x, z, r, chance; public int d, l, n, df; public bool elite, fresh; }
 
     /// <summary>Party commands: pinvite (name), paccept, pdecline, pleave, pkick (id), pshare (q).</summary>
     [Serializable] public class PartyCmd { public string t, name, q; public int id; }

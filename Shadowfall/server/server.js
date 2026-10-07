@@ -9,7 +9,7 @@ const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
 const { WebSocketServer } = require("ws");
-const { MONSTERS, SPAWNERS, TOWN, SPAWN, DUNGEONS, map: designToWorld } = require("./content");
+const { MONSTERS, SPAWNERS, TOWN, SPAWN, DUNGEONS, BALANCE, DIFFICULTIES, map: designToWorld } = require("./content");
 const dungeonGen = require("./dungeon");
 
 const PORT = parseInt(process.env.PORT || "7341", 10);
@@ -250,7 +250,7 @@ function spawnFrom(sp) {
 // Elite monsters: champions with a name and random affixes (Diablo style).
 // =====================================================================================
 
-let ELITE_CHANCE = Number(process.env.ELITE_CHANCE ?? 0.08); // admins can change it at runtime
+let ELITE_CHANCE = Number(process.env.ELITE_CHANCE ?? 0.12); // admins can change it at runtime
 const AFFIXES = ["Fast", "Vampiric", "Fire Enchanted", "Teleporter", "Shielding", "Mighty", "Extra Health"];
 const NAME_A = ["Grim", "Blood", "Rot", "Skull", "Ash", "Gore", "Bone", "Black", "Iron", "Venom", "Dread", "Hollow", "Grave", "Thorn"];
 const NAME_B = ["maw", "fang", "hide", "claw", "bane", "heart", "eye", "tooth", "grin", "spine", "shade", "gut", "jaw", "skull"];
@@ -299,10 +299,10 @@ function eliteAbilities(m, s, d, t) {
 
 function spawnMonster(type, level, x, z, spawner, inst = 0) {
   const def = MONSTERS[type];
-  const hp = Math.round(def.hp * (1 + 0.28 * (level - 1)));
+  const hp = Math.round(def.hp * BALANCE.hp * (1 + BALANCE.hpPerLevel * (level - 1)));
   const m = {
     id: nextMonsterId++, type, def, level, x, z, ry: rand(0, 360), homeX: x, homeZ: z,
-    hp, maxHp: hp, armor: def.armor + level * 2, dmg: def.dmg * (1 + 0.16 * (level - 1)),
+    hp, maxHp: hp, armor: def.armor + level * 2, dmg: def.dmg * BALANCE.dmg * (1 + BALANCE.dmgPerLevel * (level - 1)),
     state: "idle", target: 0, path: [], repathAt: 0, nextAttack: 0, slowUntil: 0, stunUntil: 0,
     wanderAt: now() + rand(1, 5), threat: new Map(), spawner, summoned: false, novaAt: 0,
     leash: def.boss ? 40 : 28, inst,
@@ -489,8 +489,8 @@ function killMonster(m) {
     const diff = m.level - s.lvl;
     const mul = diff < -6 ? 0.1 : diff < -3 ? 0.5 : diff > 3 ? 1.3 : 1;
     const eliteMul = m.elite ? 3 + m.elite.affixes.length * 0.5 : 1;
-    const xp = Math.max(1, Math.round(m.def.xp * (1 + 0.12 * (m.level - 1)) * mul * eliteMul));
-    safeSend(s, JSON.stringify({ t: "kill", mid: m.id, name: m.type, l: m.level, xp, x: r2(m.x), z: r2(m.z), ...(m.elite ? { el: m.elite.name } : {}) }));
+    const xp = Math.max(1, Math.round(m.def.xp * (1 + 0.12 * (m.level - 1)) * mul * eliteMul * (m.xpMul || 1)));
+    safeSend(s, JSON.stringify({ t: "kill", mid: m.id, name: m.type, l: m.level, xp, x: r2(m.x), z: r2(m.z), ...(m.elite ? { el: m.elite.name } : {}), ...(m.lootBonus ? { lb: m.lootBonus } : {}) }));
   }
   if (m.def.boss && m.inst) {
     const inst = instances.get(m.inst);
@@ -837,23 +837,25 @@ const exitOf = (dIdx) => { const e = entrances()[dIdx]; return [e[0], e[1] - 2.5
 const partyKey = (s) => { const p = partyOf(s); return p ? "p" + p.id : "s" + s.id; };
 
 /** The party's (or solo hero's) instance of a dungeon level, generated on first entry. */
-function getInstance(s, depth, dIdx, fresh = false) {
+function getInstance(s, depth, dIdx, fresh = false, df = 0) {
   const key = partyKey(s) + ":" + dIdx + ":" + depth;
   for (const inst of instances.values()) if (inst.key === key) {
-    if (!fresh) return inst;
+    if (!fresh) return inst; // the party is already in there: join it, at its difficulty
+    df = inst.df;
     closeInstance(inst);
     break;
   }
+  df = Math.max(0, Math.min(DIFFICULTIES.length - 1, df | 0));
   const def = DUNGEONS[dIdx];
   const p = partyOf(s);
   const members = p ? partyMembers(p) : [s];
   const level = Math.max(def.minLevel, Math.round(members.reduce((a, o) => a + (o.lvl || 1), 0) / members.length));
   const seed = (Math.random() * 2147483647) | 0;
   const L = def.style === "caves" ? dungeonGen.generateCaves(seed, depth, def.depths) : dungeonGen.generate(seed, depth, def.depths);
-  const inst = { id: nextInstanceId++, key, dIdx, depth, seed, layout: L, grid: { w: L.w, h: L.h, blocked: L.blocked }, cells: dungeonGen.pack(L.blocked), lastActive: now(), level };
+  const inst = { id: nextInstanceId++, key, dIdx, depth, df, seed, layout: L, grid: { w: L.w, h: L.h, blocked: L.blocked }, cells: dungeonGen.pack(L.blocked), lastActive: now(), level };
   instances.set(inst.id, inst);
   populate(inst, members.length);
-  log(`Dungeon ${inst.id} (${def.name}, ${key}, depth ${depth}, level ${level}) created`);
+  log(`Dungeon ${inst.id} (${def.name} ${DIFFICULTIES[df].name}, ${key}, depth ${depth}, level ${level}) created`);
   return inst;
 }
 
@@ -866,6 +868,16 @@ function populate(inst, players) {
   useGrid(inst.id);
   const def = DUNGEONS[inst.dIdx];
   const L = inst.layout, types = def.types[Math.min(inst.depth, def.types.length) - 1];
+  const diff = DIFFICULTIES[inst.df || 0];
+  /** Applies the dungeon difficulty to a monster (after makeElite, which scales from the base stats). */
+  const harden = (m) => {
+    m.maxHp = m.hp = Math.round(m.hp * diff.hp);
+    m.dmg *= diff.dmg;
+    m.xpMul = diff.xp;
+    m.lootBonus = diff.loot;
+    m.leash = 70;
+    return m;
+  };
   for (const pk of L.packs) {
     const eliteRoom = Math.random() < 0.3;
     const n = pk.n + Math.max(0, players - 1);
@@ -874,8 +886,8 @@ function populate(inst, players) {
         const x = pk.room.x + 1 + Math.random() * (pk.room.w - 2), z = pk.room.y + 1 + Math.random() * (pk.room.h - 2);
         if (!walkable(x, z)) continue;
         const m = spawnMonster(types[randInt(0, types.length - 1)], Math.max(3, inst.level + inst.depth - 1 + randInt(-1, 1)), x, z, null, inst.id);
-        m.leash = 70;
-        if ((eliteRoom && i === 0) || Math.random() < 0.06) makeElite(m);
+        if ((eliteRoom && i === 0) || Math.random() < 0.06 + diff.elite) makeElite(m);
+        harden(m);
         break;
       }
     }
@@ -883,7 +895,7 @@ function populate(inst, players) {
   if (L.boss) {
     const b = spawnMonster(def.boss, inst.level + 3, L.boss[0], L.boss[1], null, inst.id);
     b.maxHp = b.hp = Math.round(b.hp * (0.7 + 0.3 * players));
-    b.leash = 70;
+    harden(b);
   }
   useGrid(0);
 }
@@ -895,7 +907,7 @@ function enterInstance(s, inst) {
   inst.lastActive = now();
   const L = inst.layout;
   safeSend(s, JSON.stringify({
-    t: "dungeon", id: inst.id, l: inst.depth, k: DUNGEONS[inst.dIdx].name, d: inst.dIdx, n: DUNGEONS[inst.dIdx].depths, seed: inst.seed, w: L.w, h: L.h, cells: inst.cells,
+    t: "dungeon", id: inst.id, l: inst.depth, k: DUNGEONS[inst.dIdx].name, d: inst.dIdx, n: DUNGEONS[inst.dIdx].depths, df: inst.df, seed: inst.seed, w: L.w, h: L.h, cells: inst.cells,
     rooms: L.rooms.flatMap((r) => [r.x, r.y, r.w, r.h]), start: L.start, exit: L.exit,
     stairs: L.stairs || [], boss: L.boss || [], chests: L.chests.flat(),
   }));
@@ -928,12 +940,12 @@ const dungeonHandlers = {
     const dIdx = Math.max(0, Math.min(DUNGEONS.length - 1, m.d | 0));
     const e = entrances()[dIdx];
     if (!s.inWorld || s.dead || s.inst || dist(s.x, s.z, e[0], e[1]) > 6) return;
-    enterInstance(s, getInstance(s, 1, dIdx));
+    enterInstance(s, getInstance(s, 1, dIdx, false, m.df));
   },
   dstairs(s) {
     const cur = s.inst && instances.get(s.inst);
     if (!cur || !cur.layout.stairs || s.dead || dist(s.x, s.z, cur.layout.stairs[0], cur.layout.stairs[1]) > 5) return;
-    enterInstance(s, getInstance(s, cur.depth + 1, cur.dIdx));
+    enterInstance(s, getInstance(s, cur.depth + 1, cur.dIdx, false, cur.df));
   },
   dleave(s, m) {
     if (s.inst) leaveInstance(s, !!m.town);
@@ -998,7 +1010,7 @@ function runAdmin(s, c, a) {
       const def = DUNGEONS[dIdx];
       const depth = Math.max(1, Math.min(def.depths, a.l | 0 || 1));
       s.inst = 0;
-      enterInstance(s, getInstance(s, depth, dIdx, !!a.fresh));
+      enterInstance(s, getInstance(s, depth, dIdx, !!a.fresh, a.df));
       return `Entered ${def.name}, depth ${depth}.`;
     }
     case "regen": {

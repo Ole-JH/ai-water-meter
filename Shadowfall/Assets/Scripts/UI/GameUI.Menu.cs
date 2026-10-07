@@ -138,6 +138,48 @@ namespace Shadowfall
 
         float uiScaleDraft = -1f;
 
+        // ---- dungeon difficulty picker (shown when clicking a dungeon entrance)
+
+        int chooseDungeon = -1;
+
+        public void ChooseDifficulty(int dungeonIndex)
+        {
+            chooseDungeon = dungeonIndex;
+            Sfx.Play2D("ui_open", 0.4f);
+        }
+
+        void DrawDifficultyPicker(Player p)
+        {
+            var def = DungeonDef.Get(chooseDungeon);
+            if (Factory.FlatDistance(p.transform.position, def.Entrance) > 7f || p.IsDead) { chooseDungeon = -1; return; }
+            const float w = 520;
+            float h = 150 + Difficulties.Names.Length * 66 + 70;
+            var r = new Rect((VW - w) / 2, (VH - h) / 2, w, h);
+            if (UISkin.Window(r, def.Name)) { chooseDungeon = -1; return; }
+            Block(r);
+            float x = r.x + 26, y = r.y + 56;
+            GUI.Label(new Rect(x, y, w - 52, 44), def.Blurb + "  <color=#c8a060>Recommended level " + def.MinLevel + "+, " + def.Depths + " levels.</color>",
+                UISkin.V(UISkin.Rich, wordWrap: true));
+            y += 50;
+            string party = NetClient.I.InParty ? "If your party is already inside, you join them at their difficulty." : "Choose a difficulty:";
+            UISkin.Shadowed(new Rect(x, y, w - 52, 22), party, UISkin.Small, UISkin.Muted);
+            y += 30;
+            for (int i = 0; i < Difficulties.Names.Length; i++)
+            {
+                var row = new Rect(x, y, w - 52, 58);
+                if (UISkin.Btn(new Rect(row.x, row.y, 150, 46), Difficulties.Names[i], UISkin.V(UISkin.Button, fontSize: 17)))
+                {
+                    NetClient.I.EnterDungeon(chooseDungeon, i);
+                    chooseDungeon = -1;
+                    return;
+                }
+                GUI.Label(new Rect(row.x + 162, row.y, row.width - 162, 50),
+                    "<color=#" + Item.Hex(Difficulties.Colors[i]) + ">" + Difficulties.Blurbs[i] + "</color>", UISkin.V(UISkin.RichSmall, wordWrap: true));
+                y += 66;
+            }
+            if (UISkin.Btn(new Rect(r.center.x - 80, r.yMax - 62, 160, 42), "Cancel", UISkin.Button)) chooseDungeon = -1;
+        }
+
         /// <summary>A checkbox drawn from the slot and gold textures; returns true when clicked.</summary>
         bool Toggle(Rect r, bool on, string text)
         {

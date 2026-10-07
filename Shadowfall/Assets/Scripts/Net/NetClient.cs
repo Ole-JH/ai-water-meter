@@ -165,7 +165,7 @@ namespace Shadowfall
 
         // ---- dungeons
 
-        public void EnterDungeon(int index) { if (State == ConnState.InWorld) Send(new DungeonCmd { t = "denter", d = index }); }
+        public void EnterDungeon(int index, int difficulty) { if (State == ConnState.InWorld) Send(new DungeonCmd { t = "denter", d = index, df = difficulty }); }
         public void DescendDungeon() { if (State == ConnState.InWorld) Send(new DungeonCmd { t = "dstairs" }); }
 
         /// <param name="toTown">True after dying: the hero respawns in Hollowmere (we leave right away).</param>
@@ -446,11 +446,11 @@ namespace Shadowfall
                 p.Quests.OnKill(def.Name);
                 if (!string.IsNullOrEmpty(m.el))
                 {
-                    Enemy.RollEliteLoot(def, m.l, pos);
+                    Enemy.RollEliteLoot(def, m.l, pos, m.lb);
                     Sfx.Play2D("quest_done", 0.5f, 0.9f);
                     GameUI.Banner(m.el + " slain!", Enemy.ChampionColor);
                 }
-                else Enemy.RollLoot(def, m.l, pos);
+                else Enemy.RollLoot(def, m.l, pos, m.lb);
             }
             if (def.Boss) GameUI.Banner(def.Name + " has been slain!", new Color(1f, 0.55f, 0.1f));
         }

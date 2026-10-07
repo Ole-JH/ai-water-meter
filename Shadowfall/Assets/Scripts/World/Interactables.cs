@@ -44,7 +44,8 @@ namespace Shadowfall
         Vector3 fallFrom;
 
         public override bool CanInteract => !taken;
-        public override string HoverText => Gold > 0 ? Gold + " Gold" : Item.Count > 1 ? Item.Name + " (" + Item.Count + ")" : Item.Name;
+        public override string HoverText => Gold > 0 ? Gold + " Gold" : Item.Count > 1 ? Item.Name + " (" + Item.Count + ")" :
+            Item.Kind == ItemKind.Equipment && Item.Rarity >= Rarity.Rare ? Item.Name + "  [" + Item.RarityName(Item.Rarity) + "]" : Item.Name;
         public override Color LabelColor => Gold > 0 ? new Color(1f, 0.85f, 0.2f) : Item.NameColor;
         public override float LabelHeight => 0.6f;
 

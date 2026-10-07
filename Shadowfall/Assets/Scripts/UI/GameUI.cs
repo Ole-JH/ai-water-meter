@@ -166,7 +166,8 @@ namespace Shadowfall
                 if (GameInput.Down(GKey.F1) || GameInput.Down(GKey.H)) showHelp = !showHelp;
                 if (GameInput.Down(GKey.Escape))
                 {
-                    if (dialogNpc != null || craftStation != null) { dialogNpc = null; craftStation = null; }
+                    if (chooseDungeon >= 0) chooseDungeon = -1;
+                    else if (dialogNpc != null || craftStation != null) { dialogNpc = null; craftStation = null; }
                     else if (tradeOpen) NetClient.I?.CancelTrade();
                     else if (menu != MenuPage.None) menu = menu == MenuPage.Main ? MenuPage.None : MenuPage.Main;
                     else if (showBags | showChar | showSkills | showQuests | showMap | showHelp | showTalents | showStash | showAdmin)
@@ -243,6 +244,7 @@ namespace Shadowfall
             if (showStash) DrawStash(p);
             if (tradeOpen) DrawTrade(p);
             if (showAdmin) DrawAdmin(p);
+            if (chooseDungeon >= 0) DrawDifficultyPicker(p);
             else tradeGoldFocused = false;
             if (dialogNpc != null) DrawDialog(p);
             if (craftStation != null) DrawCrafting(p);
@@ -691,7 +693,15 @@ namespace Shadowfall
                 UISkin.IconInSlot(r, UISkin.Icon(icons[i]), n > 0 ? Color.white : new Color(0.4f, 0.4f, 0.4f), 6);
                 UISkin.Shadowed(new Rect(r.x + 5, r.y + 2, r.width, 18), keys[i], UISkin.Small, UISkin.Gold, 2);
                 UISkin.Shadowed(new Rect(r.x, r.y + r.height - 22, r.width - 6, 20), n.ToString(), UISkin.SmallRight, n > 0 ? Color.white : new Color(1f, 0.4f, 0.4f), 2);
-                if (r.Contains(Event.current.mousePosition)) tooltip = "<b>" + potions[i] + "</b>  [" + keys[i] + "]\nYou have " + n + ".";
+                float pcd = p.PotionCooldownLeft;
+                if (pcd > 0f)
+                {
+                    float frac = Mathf.Clamp01(pcd / Player.PotionCooldown);
+                    GUI.color = new Color(0, 0, 0, 0.6f);
+                    GUI.DrawTexture(new Rect(r.x + 3, r.y + 3 + (r.height - 6) * (1 - frac), r.width - 6, (r.height - 6) * frac), UISkin.White);
+                    GUI.color = Color.white;
+                }
+                if (r.Contains(Event.current.mousePosition)) tooltip = "<b>" + potions[i] + "</b>  [" + keys[i] + "]\nYou have " + n + ".\n<color=#999999>Potions and food share a " + Player.PotionCooldown + " s cooldown.</color>";
                 if (ClickedIn(r) == 0) p.UseItemByName(potions[i]);
             }
 

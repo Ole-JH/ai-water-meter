@@ -10,7 +10,7 @@ namespace Shadowfall
     public partial class GameUI
     {
         bool showAdmin;
-        int adminTab, spawnType, spawnLevel = 5, spawnCount = 1;
+        int adminTab, spawnType, spawnLevel = 5, spawnCount = 1, adminDifficulty;
         bool spawnElite;
         string announceText = "";
         static readonly string[] adminTabs = { "Map & Hero", "Dungeons", "World", "Players" };
@@ -107,13 +107,17 @@ namespace Shadowfall
         void AdminDungeons(float x, float y, float w)
         {
             Section(ref y, x, w, "Enter any dungeon at any depth");
+            float dw = (w - 18) / 4f;
+            for (int i = 0; i < Difficulties.Names.Length; i++)
+                if (AdminButton(new Rect(x + i * (dw + 6), y, dw, 28), (i == adminDifficulty ? "> " : "") + Difficulties.Names[i])) adminDifficulty = i;
+            y += 38;
             for (int d = 0; d < DungeonDef.All.Length; d++)
             {
                 var def = DungeonDef.All[d];
                 UISkin.Shadowed(new Rect(x, y + 6, 180, 22), def.Name, UISkin.Label, UISkin.Cream);
                 for (int depth = 1; depth <= def.Depths; depth++)
                     if (AdminButton(new Rect(x + 190 + (depth - 1) * 74, y, 68, 32), "Depth " + depth))
-                        AdminTools.Send(new AdminCmd { c = "dungeon", d = d, l = depth });
+                        AdminTools.Send(new AdminCmd { c = "dungeon", d = d, l = depth, df = adminDifficulty });
                 y += 40;
             }
             y += 10;
@@ -121,7 +125,7 @@ namespace Shadowfall
             if (AdminButton(new Rect(x, y, w, 36), "Regenerate this level (new layout, new monsters)")) AdminTools.Send(new AdminCmd { c = "regen" });
             y += 42;
             if (AdminButton(new Rect(x, y, w, 36), "Fresh copy of this level (only me)"))
-                AdminTools.Send(new AdminCmd { c = "dungeon", d = Dungeon.Index, l = Dungeon.Depth, fresh = true });
+                AdminTools.Send(new AdminCmd { c = "dungeon", d = Dungeon.Index, l = Dungeon.Depth, fresh = true, df = adminDifficulty });
             GUI.enabled = true;
             y += 48;
             UISkin.Shadowed(new Rect(x, y, w, 60), "Dungeons are generated per party: everyone in your party\nwho enters gets the same layout.", UISkin.V(UISkin.Small, wordWrap: true), UISkin.Muted);

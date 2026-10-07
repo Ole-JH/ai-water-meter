@@ -225,10 +225,11 @@ async function main() {
     // ---- another dungeon: the Bandit Hideout (index 1), entered at its own entrance; admins can jump anywhere
     state(b, 168.5, 224.5);
     await sleep(150);
-    b.ws.send(JSON.stringify({ t: "denter", d: 1 }));
+    b.ws.send(JSON.stringify({ t: "denter", d: 1, df: 2 })); // Nightmare
     await sleep(300);
     const hide = b.all("dungeon").at(-1);
     assert.strictEqual(hide.d, 1, "the hideout is its own dungeon");
+    assert.strictEqual(hide.df, 2, "the dungeon opens at the requested difficulty");
     assert.strictEqual(hide.k, "Bandit Hideout", "dungeon names come from the server");
     b.ws.send(JSON.stringify({ t: "dleave" }));
     await sleep(200);

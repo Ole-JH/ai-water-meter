@@ -167,7 +167,7 @@ namespace Shadowfall
         {
             if (p.Level < Def.MinLevel)
                 GameUI.Log(Def.Name + " is dangerous below level " + Def.MinLevel + ". Bring friends.", new Color(1f, 0.6f, 0.4f));
-            NetClient.I.EnterDungeon(Index);
+            GameUI.I?.ChooseDifficulty(Index);
         }
     }
 }

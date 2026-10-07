@@ -93,9 +93,21 @@ const DUNGEONS = [
     types: [["Rock Golem", "Skeleton"], ["Rock Golem", "Zombie", "Skeleton"], ["Rock Golem", "Skeleton Archer", "Zombie"]] },
 ];
 
+// Global balance: every monster's base health and damage are multiplied by these (the game was too easy).
+const BALANCE = { hp: 1.5, dmg: 1.6, hpPerLevel: 0.32, dmgPerLevel: 0.2 };
+
+// Dungeon difficulty, picked by whoever opens the dungeon for the party. Monsters get tougher and more often
+// elite; they give more XP and better loot (loot = extra rarity bonus for the client's loot rolls).
+const DIFFICULTIES = [
+  { name: "Normal",    hp: 1,   dmg: 1,   elite: 0,    xp: 1,   loot: 0 },
+  { name: "Veteran",   hp: 1.7, dmg: 1.4, elite: 0.08, xp: 1.5, loot: 0.2 },
+  { name: "Nightmare", hp: 2.8, dmg: 1.9, elite: 0.18, xp: 2.2, loot: 0.45 },
+  { name: "Hell",      hp: 4.5, dmg: 2.6, elite: 0.35, xp: 3.2, loot: 0.8 },
+];
+
 // Safe zone: monsters never follow players inside the village walls (cells 116..172).
 const TOWN = { x0: 116, z0: 116, x1: 173, z1: 173 };
 // Where new heroes start and dead ones wake up (the plaza, matches WorldGenerator.SpawnPoint).
 const SPAWN = { x: 144.5, z: 141.5 };
 
-module.exports = { MONSTERS, SPAWNERS, TOWN, SPAWN, DUNGEONS, map };
+module.exports = { MONSTERS, SPAWNERS, TOWN, SPAWN, DUNGEONS, BALANCE, DIFFICULTIES, map };

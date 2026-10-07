@@ -20,7 +20,9 @@ namespace Shadowfall
         public static bool Active => root != null;
         public static int Depth { get; private set; }
         public static string Name { get; private set; } = "The Catacombs";
-        public static string ZoneName => Name + "  -  Depth " + Depth;
+        public static string ZoneName => Name + "  -  Depth " + Depth + (Difficulty > 0 ? "  (" + Difficulties.Names[Difficulty] + ")" : "");
+        /// <summary>0 Normal, 1 Veteran, 2 Nightmare, 3 Hell (see DIFFICULTIES in server/content.js).</summary>
+        public static int Difficulty { get; private set; }
         public static Texture2D MapTexture { get; private set; }
         public static int Width { get; private set; }
         public static int Height { get; private set; }
@@ -40,6 +42,7 @@ namespace Shadowfall
             Exit();
             Depth = m.l;
             Index = m.d;
+            Difficulty = Mathf.Clamp(m.df, 0, Difficulties.Names.Length - 1);
             Depths = m.n > 0 ? m.n : Def.Depths;
             Name = string.IsNullOrEmpty(m.k) ? Def.Name : m.k;
             Width = m.w;
@@ -389,5 +392,22 @@ namespace Shadowfall
             LootDrop.Spawn(transform.position + Vector3.right * 0.8f, ItemDatabase.RandomEquipment(level, 0.4f, Random.value < 0.25f ? Rarity.Rare : Rarity.Magic), 0);
             if (Random.value < 0.4f) LootDrop.Spawn(transform.position + Vector3.left * 0.8f, ItemDatabase.RandomEquipment(level, 0.4f), 0);
         }
+    }
+
+    /// <summary>Dungeon difficulty tiers (must match DIFFICULTIES in server/content.js).</summary>
+    public static class Difficulties
+    {
+        public static readonly string[] Names = { "Normal", "Veteran", "Nightmare", "Hell" };
+        public static readonly string[] Blurbs =
+        {
+            "The dungeon as intended.",
+            "Monsters have 70% more life and hit 40% harder; more elites. +50% XP, better loot.",
+            "Monsters have almost 3x life and hit almost twice as hard; many elites. +120% XP, much better loot.",
+            "4.5x life, 2.6x damage, elites everywhere. For full parties in good gear. +220% XP, the best loot.",
+        };
+        public static readonly Color[] Colors =
+        {
+            new Color(0.85f, 0.85f, 0.8f), new Color(0.55f, 0.75f, 1f), new Color(0.85f, 0.45f, 1f), new Color(1f, 0.35f, 0.25f),
+        };
     }
 }
