@@ -24,6 +24,17 @@ namespace Shadowfall
         {
             new Entry
             {
+                Id = 26, Date = "2026-10-08", Title = "Faster, with more graphics settings",
+                Items = new[]
+                {
+                    "Settings > Graphics > More... has every option on its own: resolution, frame rate, shadows, shadow distance, lights, grass, small details and effects.",
+                    "On Retina and other high-resolution screens the game no longer draws at twice the page's resolution by default (four times the pixels); choose 150% or Native if your machine can take it.",
+                    "Fixed slowdowns from the bigger world: hundreds of mithril rocks each had a light, and the map and labels walked through every tree and rock several times a frame.",
+                    "Grass is only drawn near you, and the snow and lantern updates are spread out instead of landing on one frame.",
+                },
+            },
+            new Entry
+            {
                 Id = 25, Date = "2026-10-07", Title = "Dungeons beyond, mounts, and a harder world",
                 Items = new[]
                 {

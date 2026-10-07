@@ -395,6 +395,7 @@ namespace Shadowfall
                     var b = mesh.bounds; b.Expand(new Vector3(0.6f, 0.2f, 0.6f)); mesh.bounds = b; // room for the wind sway
                     mesh.UploadMeshData(true);
                     var go = new GameObject("GrassChunk");
+                    GrassWind.Chunks.Add((go, new Vector2(cx + chunk * 0.5f, cz + chunk * 0.5f)));
                     go.transform.SetParent(root, false);
                     go.AddComponent<MeshFilter>().sharedMesh = mesh;
                     var mr = go.AddComponent<MeshRenderer>();
@@ -439,14 +440,30 @@ namespace Shadowfall
     }
 
     /// <summary>Feeds the hero's position to the grass shader so blades bend out of the way.</summary>
+    /// <summary>Also draws grass only near the hero (Settings > Graphics > Grass: Near 30, Far 60 paces), a slice of chunks a frame.</summary>
     public class GrassWind : MonoBehaviour
     {
         static readonly int PlayerPos = Shader.PropertyToID("_SfPlayerPos");
+        public static readonly List<(GameObject go, Vector2 center)> Chunks = new List<(GameObject, Vector2)>();
+        int cursor;
 
         void Update()
         {
             var p = Player.I != null ? Player.I.transform.position : new Vector3(-999f, 0f, -999f);
             Shader.SetGlobalVector(PlayerPos, p);
+            if (Chunks.Count == 0) return;
+            // the far corner of a 16-tile chunk is ~11.3 from its centre
+            float reach = GameSettings.GrassDistance + 11.3f, reach2 = reach * reach;
+            int n = Mathf.Max(1, Chunks.Count / 10);
+            for (int i = 0; i < n; i++)
+            {
+                if (cursor >= Chunks.Count) cursor = 0;
+                var (go, c) = Chunks[cursor++];
+                if (go == null) continue;
+                float dx = c.x - p.x, dz = c.y - p.z;
+                bool show = Player.I == null || dx * dx + dz * dz < reach2;
+                if (go.activeSelf != show) go.SetActive(show);
+            }
         }
     }
 }

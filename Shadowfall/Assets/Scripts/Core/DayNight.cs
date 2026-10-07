@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace Shadowfall
@@ -141,38 +142,54 @@ namespace Shadowfall
     /// A light that brightens at night: lanterns, braziers, windows. <see cref="DayFactor"/> is how bright
     /// it is during the day (0 = off, 1 = always full).
     /// </summary>
-    public class NightLight : MonoBehaviour
+    public class NightLight
     {
         public float BaseIntensity = 1f, DayFactor = 0f, BaseRange = 6f;
         float rangeBoost = 1.3f;
         Light l;
 
+        static readonly List<NightLight> all = new List<NightLight>();
+        static int cursor;
+
         public static NightLight Add(Light light, float dayFactor, float nightRangeBoost = 1.3f)
         {
-            var n = light.gameObject.AddComponent<NightLight>();
-            n.l = light;
-            n.BaseIntensity = light.intensity;
-            n.BaseRange = light.range;
-            n.DayFactor = dayFactor;
-            n.rangeBoost = nightRangeBoost;
+            var n = new NightLight { l = light, BaseIntensity = light.intensity, BaseRange = light.range, DayFactor = dayFactor, rangeBoost = nightRangeBoost };
+            all.Add(n);
+            if (updater == null) updater = new GameObject("NightLights").AddComponent<NightLightUpdater>();
             return n;
         }
 
-        /// <summary>Lights further than this from the hero are switched off (nobody sees them; they only cost).</summary>
-        public const float CullDistance = 45f;
-        float next;
+        static NightLightUpdater updater;
 
-        // Night changes slowly: four updates a second are plenty (staggered so they don't all land on one frame).
-        void Update()
+        /// <summary>
+        /// Night changes slowly: one shared updater goes through an eighth of the lights each frame (every light about
+        /// eight times a second), instead of every lantern running its own Update. Lights further than
+        /// <see cref="GameSettings.LightCullDistance"/> from the hero are switched off: nobody sees them, they only cost.
+        /// </summary>
+        internal static void Step()
         {
-            if (l == null || Time.time < next) return;
-            next = Time.time + 0.25f + Random.value * 0.05f;
-            float k = Mathf.Lerp(DayFactor, 1f, DayNight.Night);
+            if (all.Count == 0) return;
             var hero = Player.I;
-            bool near = hero == null || (hero.transform.position - transform.position).sqrMagnitude < CullDistance * CullDistance;
-            l.intensity = BaseIntensity * k;
-            l.range = BaseRange * Mathf.Lerp(1f, rangeBoost, DayNight.Night);
-            l.enabled = k > 0.02f && near;
+            Vector3 at = hero != null ? hero.transform.position : Vector3.zero;
+            float cull = GameSettings.LightCullDistance, cull2 = cull * cull, night = DayNight.Night;
+            int n = Mathf.Max(1, all.Count / 8);
+            for (int i = 0; i < n; i++)
+            {
+                if (cursor >= all.Count) cursor = 0;
+                var x = all[cursor];
+                if (x.l == null) { all.RemoveAt(cursor); continue; }
+                cursor++;
+                float k = Mathf.Lerp(x.DayFactor, 1f, night);
+                bool near = hero == null || (x.l.transform.position - at).sqrMagnitude < cull2;
+                x.l.intensity = x.BaseIntensity * k;
+                x.l.range = x.BaseRange * Mathf.Lerp(1f, x.rangeBoost, night);
+                x.l.enabled = k > 0.02f && near;
+            }
         }
+    }
+
+    public class NightLightUpdater : MonoBehaviour
+    {
+        void Update() => NightLight.Step();
     }
 }

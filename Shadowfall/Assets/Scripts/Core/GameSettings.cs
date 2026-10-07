@@ -3,8 +3,8 @@ using UnityEngine;
 namespace Shadowfall
 {
     /// <summary>
-    /// Player options stored in PlayerPrefs: graphics quality (Low / Medium / High), the FPS counter and the
-    /// loot filter. <see cref="Apply"/> pushes the graphics level into Unity's quality settings.
+    /// Player options stored in PlayerPrefs: the graphics preset (Low / Medium / High) and the individual graphics
+    /// options it sets, the FPS counter and the loot filter. <see cref="Apply"/> pushes the graphics options into Unity.
     /// </summary>
     public static class GameSettings
     {
@@ -24,11 +24,103 @@ namespace Shadowfall
             try { PlayerPrefs.SetInt(key, v); PlayerPrefs.Save(); } catch (System.Exception) { }
         }
 
+        /// <summary>
+        /// The graphics preset (Low / Medium / High). Choosing one sets every option on the Graphics page; changing an
+        /// option afterwards makes it "Custom" (<see cref="IsCustom"/>). New players start on Medium.
+        /// </summary>
         public static int Quality
         {
-            get { if (quality < 0) quality = Mathf.Clamp(Load("sf_quality", 2), 0, 2); return quality; }
-            set { quality = Mathf.Clamp(value, 0, 2); Store("sf_quality", quality); Apply(); }
+            get { if (quality < 0) quality = Mathf.Clamp(Load("sf_quality", 1), 0, 2); return quality; }
+            set
+            {
+                quality = Mathf.Clamp(value, 0, 2);
+                Store("sf_quality", quality);
+                for (int i = 0; i < Options.Length; i++) Options[i].Set(Options[i].Presets[quality], false);
+                Apply();
+            }
         }
+
+        /// <summary>True when some option differs from what the preset would set.</summary>
+        public static bool IsCustom
+        {
+            get
+            {
+                foreach (var o in Options) if (o.Value != o.Presets[Quality]) return true;
+                return false;
+            }
+        }
+
+        // ------------------------------------------------------------------ the options on the Graphics page
+
+        public class Option
+        {
+            public string Key, Name, Help;
+            public string[] Choices;
+            public int[] Presets;   // the choice for Low, Medium, High
+            int value = -1;
+
+            public int Value
+            {
+                get { if (value < 0) value = Mathf.Clamp(Load(Key, Presets[Quality]), 0, Choices.Length - 1); return value; }
+            }
+
+            public void Set(int v, bool apply = true)
+            {
+                value = Mathf.Clamp(v, 0, Choices.Length - 1);
+                Store(Key, value);
+                if (apply) Apply();
+            }
+        }
+
+        public static readonly Option Resolution = new Option
+        {
+            Key = "sf_g_resolution", Name = "Resolution", Choices = new[] { "60%", "75%", "100%", "150%", "Native" }, Presets = new[] { 1, 2, 2 },
+            Help = "How many pixels the game draws, compared with the page's size. 100% is one game pixel per page pixel; " +
+                   "Native uses every pixel of a high-resolution (Retina) screen: sharpest, but up to four times the work. " +
+                   "The biggest single setting for speed on laptops.",
+        };
+        public static readonly Option FrameRate = new Option
+        {
+            Key = "sf_g_fps", Name = "Frame rate", Choices = new[] { "30", "60", "Unlimited" }, Presets = new[] { 1, 1, 1 },
+            Help = "The most frames a second the game draws. 30 halves the work (cooler, quieter, longer battery); Unlimited follows the screen.",
+        };
+        public static readonly Option Shadows = new Option
+        {
+            Key = "sf_g_shadows", Name = "Shadows", Choices = new[] { "Off", "Hard", "Soft" }, Presets = new[] { 0, 1, 2 },
+            Help = "Shadows from the sun and moon. Soft shadows have blurred edges and cost the most.",
+        };
+        public static readonly Option ShadowRange = new Option
+        {
+            Key = "sf_g_shadowrange", Name = "Shadow distance", Choices = new[] { "Short", "Medium", "Far" }, Presets = new[] { 0, 1, 2 },
+            Help = "How far from the camera shadows are drawn.",
+        };
+        public static readonly Option Lights = new Option
+        {
+            Key = "sf_g_lights", Name = "Lights", Choices = new[] { "Few", "Some", "Many" }, Presets = new[] { 0, 1, 2 },
+            Help = "Lanterns, torches, windows and spells: how many light each object at once, and how far away they still shine. " +
+                   "Every light on an object draws it once more, so towns at night are where this matters.",
+        };
+        public static readonly Option Grass = new Option
+        {
+            Key = "sf_g_grass", Name = "Grass", Choices = new[] { "Off", "Near", "Far" }, Presets = new[] { 0, 1, 2 },
+            Help = "Grass blades on the ground, drawn up to 30 (Near) or 60 (Far) paces away.",
+        };
+        public static readonly Option Details = new Option
+        {
+            Key = "sf_g_details", Name = "Small details", Choices = new[] { "Off", "On" }, Presets = new[] { 0, 1, 1 },
+            Help = "Flowers, ferns, pebbles, mushrooms and grass tufts scattered over the ground.",
+        };
+        public static readonly Option Effects = new Option
+        {
+            Key = "sf_g_effects", Name = "Effects", Choices = new[] { "Low", "High" }, Presets = new[] { 0, 1, 1 },
+            Help = "Spell and weather particles, blood stains and the colour grade. Low halves the particles and turns the colour grade off.",
+        };
+
+        public static readonly Option[] Options = { Resolution, FrameRate, Shadows, ShadowRange, Lights, Grass, Details, Effects };
+
+        /// <summary>The resolution choices as a multiple of the page's (CSS) pixels; Native = the screen's own ratio.</summary>
+        static readonly float[] ResolutionScale = { 0.6f, 0.75f, 1f, 1.5f, 99f };
+        public static float ResolutionMultiplier => ResolutionScale[Resolution.Value];
 
         static int gore = -1;
 
@@ -83,19 +175,32 @@ namespace Shadowfall
             }
         }
 
-        public static float ShadowDistanceScale => Quality == 0 ? 0.5f : Quality == 1 ? 0.75f : 1f;
-        public static bool ColorGrading => Quality > 0;
-        /// <summary>Particle effects are thinned out on Low.</summary>
-        public static float ParticleScale => Quality == 0 ? 0.5f : 1f;
+        public static float ShadowDistanceScale => ShadowRange.Value == 0 ? 0.45f : ShadowRange.Value == 1 ? 0.7f : 1f;
+        public static bool ColorGrading => Effects.Value > 0;
+        /// <summary>Particle effects are thinned out on Low effects.</summary>
+        public static float ParticleScale => Effects.Value == 0 ? 0.5f : 1f;
+        /// <summary>Lights further than this from the hero are switched off.</summary>
+        public static float LightCullDistance => Lights.Value == 0 ? 25f : Lights.Value == 1 ? 35f : 45f;
+        /// <summary>Grass is drawn up to this far from the hero (0 = no grass).</summary>
+        public static float GrassDistance => Grass.Value == 0 ? 0f : Grass.Value == 1 ? 30f : 60f;
+
+#if UNITY_WEBGL && !UNITY_EDITOR
+        [System.Runtime.InteropServices.DllImport("__Internal")] static extern void SF_SetRenderScale(float scale);
+#else
+        static void SF_SetRenderScale(float scale) { }
+#endif
 
         public static void Apply()
         {
-            int q = Quality;
-            QualitySettings.pixelLightCount = q == 0 ? 1 : q == 1 ? 3 : 4; // each extra pixel light is one more pass per lit object
-            QualitySettings.shadowCascades = q == 2 ? 2 : 1;
+            QualitySettings.pixelLightCount = Lights.Value == 0 ? 1 : Lights.Value == 1 ? 2 : 4; // each extra pixel light is one more pass per lit object
+            QualitySettings.shadowCascades = Shadows.Value == 2 && ShadowRange.Value == 2 ? 2 : 1;
             QualitySettings.antiAliasing = 0;
-            if (Sun != null) Sun.shadows = q == 0 ? LightShadows.None : q == 1 ? LightShadows.Hard : LightShadows.Soft;
-            if (GroundSurface.GrassRoot != null) GroundSurface.GrassRoot.SetActive(q > 0);
+            if (Sun != null) Sun.shadows = Shadows.Value == 0 ? LightShadows.None : Shadows.Value == 1 ? LightShadows.Hard : LightShadows.Soft;
+            if (GroundSurface.GrassRoot != null) GroundSurface.GrassRoot.SetActive(Grass.Value > 0);
+            if (WorldGenerator.DetailRoot != null) WorldGenerator.DetailRoot.gameObject.SetActive(Details.Value > 0);
+            // In the browser -1 follows the display; 30 skips every other frame.
+            Application.targetFrameRate = FrameRate.Value == 0 ? 30 : FrameRate.Value == 1 ? 60 : -1;
+            SF_SetRenderScale(ResolutionMultiplier); // the page also reads it at the next start (see the WebGL template)
         }
     }
 

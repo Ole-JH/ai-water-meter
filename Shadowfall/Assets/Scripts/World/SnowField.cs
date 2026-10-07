@@ -87,7 +87,13 @@ namespace Shadowfall
             Clear(p, 0.45f, Packed / 255f);
         }
 
-        /// <summary>Called by the weather every frame: fresh snow fills paths in; with no snow around the mask fades.</summary>
+        static int refillRow, refillAmount;
+
+        /// <summary>
+        /// Called by the weather every frame: fresh snow fills paths in; with no snow around the mask fades. The refill
+        /// works through the mask a band of rows per frame (a full pass every second) instead of all 1.3 million cells
+        /// in one frame, and the mask goes to the GPU at most twice a second.
+        /// </summary>
         public static void Tick()
         {
             Ensure();
@@ -95,24 +101,26 @@ namespace Shadowfall
             {
                 nextRefill = Time.time + 1f;
                 bool snowing = Weather.Precip > 0.15f && Weather.Season != Season.Summer;
-                bool bare = Weather.SnowNorth < 0.01f && Weather.SnowSouth < 0.01f;
-                int fill = snowing ? Mathf.RoundToInt(Weather.Precip * 255f / 100f) : bare ? 20 : 0;
-                if (fill > 0)
+                bool bare = Weather.SnowNorth < 0.01f && Weather.SnowSouth < 0.01f && Weather.SnowPerm < 0.01f;
+                refillAmount = snowing ? Mathf.RoundToInt(Weather.Precip * 255f / 100f) : bare ? 20 : 0;
+                refillRow = 0;
+            }
+            if (refillAmount > 0 && refillRow < h)
+            {
+                int rows = Mathf.Max(1, Mathf.CeilToInt(h * Time.deltaTime * 1.1f)); // the whole mask in about a second
+                int end = Mathf.Min(h, refillRow + rows);
+                for (int i = refillRow * w, last = end * w; i < last; i++)
                 {
-                    // Snow only falls in the north outside winter: only fill there then.
-                    int y0 = Weather.Season == Season.Winter || bare ? 0 : Mathf.Clamp(Mathf.FloorToInt((Weather.NorthLine - Weather.NorthBlend / 2f) * Res), 0, h);
-                    for (int i = y0 * w; i < mask.Length; i++)
-                    {
-                        int v = mask[i], f = floor[i];
-                        if (v <= f) continue;
-                        mask[i] = (byte)Mathf.Max(f, v - fill);
-                        dirty = true;
-                    }
+                    int v = mask[i], f = floor[i];
+                    if (v <= f) continue;
+                    mask[i] = (byte)Mathf.Max(f, v - refillAmount);
+                    dirty = true;
                 }
+                refillRow = end;
             }
             if (dirty && Time.time >= nextUpload)
             {
-                nextUpload = Time.time + 0.25f;
+                nextUpload = Time.time + 0.5f;
                 dirty = false;
                 tex.LoadRawTextureData(mask);
                 tex.Apply(false);

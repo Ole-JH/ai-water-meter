@@ -170,6 +170,14 @@ namespace Shadowfall
 
     public class ResourceNode : Interactable
     {
+        /// <summary>
+        /// Trees, rocks and fishing spots are kept out of <see cref="Interactable.All"/>: there are thousands of them, and
+        /// the labels, minimap and world map walk that list several times a frame. They are found by clicking (colliders).
+        /// </summary>
+        public static readonly List<ResourceNode> Nodes = new List<ResourceNode>();
+        protected override void OnEnable() => Nodes.Add(this);
+        protected override void OnDisable() => Nodes.Remove(this);
+
         public ResourceKind Kind;
         public SkillType Skill;
         public string ItemName;
@@ -330,17 +338,8 @@ namespace Shadowfall
                     if (i > 0) chunk.transform.localRotation *= Quaternion.Euler((float)visualRandom.NextDouble() * 50f - 25f, 0f, 35f * Mathf.Sign(p.x));
                     if (tier == 2) ArtLibrary.Tint(chunk, new Color(0.75f, 0.9f, 1.35f)); // mithril: a cold blue sheen
                 }
-                if (tier == 2)
-                {
-                    var glow = new GameObject("MithrilGlow").AddComponent<Light>();
-                    glow.transform.SetParent(activeVisual.transform, false);
-                    glow.transform.localPosition = new Vector3(0f, 1.4f, 0f);
-                    glow.type = LightType.Point;
-                    glow.color = new Color(0.45f, 0.65f, 1f);
-                    glow.range = 3.5f;
-                    glow.intensity = 0.9f;
-                    glow.shadows = LightShadows.None;
-                }
+                // (Mithril used to carry its own point light: with hundreds of mithril rocks in the outer lands that was
+                // hundreds of lights for Unity to sort every frame. The blue tint is enough.)
                 depletedVisual.SetActive(false);
                 return;
             }

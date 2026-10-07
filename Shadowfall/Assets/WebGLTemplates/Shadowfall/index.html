@@ -237,7 +237,15 @@
       companyName: {{{ JSON.stringify(COMPANY_NAME) }}},
       productName: {{{ JSON.stringify(PRODUCT_NAME) }}},
       productVersion: {{{ JSON.stringify(PRODUCT_VERSION) }}},
+      // The in-game Resolution setting (Settings > Graphics), remembered here. Default: one game pixel per page pixel,
+      // not the screen's 2x on a Retina display, which is four times the pixels to draw.
+      devicePixelRatio: renderRatio(),
     };
+    function renderRatio() {
+      var scale = 1;
+      try { var v = parseFloat(localStorage.getItem("sf_render_scale")); if (v > 0) scale = v; } catch (e) {}
+      return Math.min(window.devicePixelRatio || 1, scale);
+    }
     var canvas = document.getElementById("unity-canvas");
     var hasWebGL = (function () { try { var c = document.createElement("canvas"); return !!(c.getContext("webgl2") || c.getContext("webgl")); } catch (e) { return false; } })();
     if (!hasWebGL) {
@@ -246,7 +254,9 @@
       var script = document.createElement("script");
       script.src = "Build/{{{ LOADER_FILENAME }}}";
       script.onload = function () {
-        createUnityInstance(canvas, config, setProgress).then(function () {
+        createUnityInstance(canvas, config, setProgress).then(function (instance) {
+          // The game changes the resolution live (Settings > Graphics) through this.
+          window.sfSetPixelRatio = function (ratio) { try { instance.Module.devicePixelRatio = ratio; } catch (e) {} };
           done();
           canvas.focus();
         }).catch(function (message) {

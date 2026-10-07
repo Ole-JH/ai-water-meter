@@ -885,9 +885,22 @@ namespace Shadowfall
         // ------------------------------------------------------------------ detail
 
         /// <summary>Grass, flowers, bushes, mushrooms and pebbles. Purely visual: never blocks tiles.</summary>
+        /// <summary>The small scattered props (flowers, pebbles, tufts): switched off by Settings > Graphics > Small details.</summary>
+        public static Transform DetailRoot { get; private set; }
+
         void ScatterDetail()
         {
             if (!art) return;
+            // Under the decoration (so they are batched with it) but in a group of their own the settings can hide.
+            var decoration = deco;
+            DetailRoot = Factory.Empty("Details", deco, Vector3.zero);
+            deco = DetailRoot;
+            try { ScatterDetailInto(); } finally { deco = decoration; }
+            GameSettings.Apply();
+        }
+
+        void ScatterDetailInto()
+        {
             for (int y = 5; y < H - 5; y++)
                 for (int x = 5; x < W - 5; x++)
                 {

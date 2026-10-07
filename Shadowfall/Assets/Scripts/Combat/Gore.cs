@@ -217,7 +217,7 @@ namespace Shadowfall
         bool dirty;
         float nextAge;
 
-        int MaxDecals => (GameSettings.Quality == 0 ? 160 : GameSettings.Quality == 1 ? 320 : 500) * (GameSettings.Gore == 2 ? 3 : 2) / 2;
+        int MaxDecals => (GameSettings.Effects.Value == 0 ? 160 : 400) * (GameSettings.Gore == 2 ? 3 : 2) / 2;
         float DecalLife => GameSettings.Gore == 2 ? 360f : 180f;
         const float FadeTime = 20f, DryTime = 45f;
         const int MaxGibs = 80;

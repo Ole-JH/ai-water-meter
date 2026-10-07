@@ -82,7 +82,7 @@ chips and grave dust for skeletons, rubble for golems.
 Ground splats are quads in a single dynamic mesh drawn with `Resources/Shaders/ShadowfallDecal.shader` (a lit, alpha-blended
 surface shader with a little wet shine). Their texture is a 2x2 atlas generated at start-up from metaballs: a pool, droplets and
 two splashes whose spikes point along the spray direction. Splats dry darker over 45 s, last 3 minutes (6 on *Extra*), then fade;
-the oldest go first beyond a cap that depends on the graphics quality. Stains are cleared when you change level or leave the world.
+the oldest go first beyond a cap that depends on the Effects setting. Stains are cleared when you change level or leave the world.
 
 ## Spell effects
 

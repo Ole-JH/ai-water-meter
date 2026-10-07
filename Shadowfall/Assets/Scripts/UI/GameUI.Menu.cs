@@ -5,7 +5,7 @@ namespace Shadowfall
     /// <summary>The Esc game menu: resume, settings, help and logging out.</summary>
     public partial class GameUI
     {
-        enum MenuPage { None, Main, Settings, ConfirmLogout, Account }
+        enum MenuPage { None, Main, Settings, Graphics, ConfirmLogout, Account }
         MenuPage menu = MenuPage.None;
 
         bool logoutToSelect;
@@ -25,6 +25,7 @@ namespace Shadowfall
             {
                 case MenuPage.Main: DrawMenuMain(p); break;
                 case MenuPage.Settings: DrawMenuSettings(); break;
+                case MenuPage.Graphics: DrawMenuGraphics(); break;
                 case MenuPage.ConfirmLogout: DrawMenuLogout(p); break;
                 case MenuPage.Account: DrawMenuAccount(); break;
             }
@@ -108,17 +109,21 @@ namespace Shadowfall
             float x = r.x + 34, y = r.y + 66;
             var label = UISkin.V(UISkin.Label, fontSize: 17);
 
-            // Graphics quality
+            // Graphics preset, and the page with every option
             UISkin.Shadowed(new Rect(x, y + 6, 120, 26), "Graphics", label, UISkin.Cream);
+            bool custom = GameSettings.IsCustom;
             for (int i = 0; i < GameSettings.QualityNames.Length; i++)
             {
-                var br = new Rect(x + 130 + i * 118, y, 110, 38);
-                bool on = GameSettings.Quality == i;
+                var br = new Rect(x + 130 + i * 92, y, 86, 38);
+                bool on = !custom && GameSettings.Quality == i;
                 if (UISkin.Btn(br, on ? "> " + GameSettings.QualityNames[i] + " <" : GameSettings.QualityNames[i], UISkin.Button) && !on)
                     GameSettings.Quality = i;
             }
-            if (new Rect(x + 130, y, 346, 38).Contains(Event.current.mousePosition))
-                tooltip = "<b>Low</b>: no shadows or grass, fewer lights and particles, no color grade.\n<b>Medium</b>: hard shadows, fewer lights.\n<b>High</b>: everything.";
+            if (UISkin.Btn(new Rect(x + 130 + 3 * 92, y, 110, 38), custom ? "> Custom <" : "More...", UISkin.Button)) menu = MenuPage.Graphics;
+            if (new Rect(x + 130, y, 386, 38).Contains(Event.current.mousePosition))
+                tooltip = "<b>Low</b>: lower resolution, no shadows, grass or small details, few lights, fewer particles.\n" +
+                          "<b>Medium</b>: hard shadows, near grass, some lights.\n<b>High</b>: soft far shadows, far grass, many lights.\n" +
+                          "<b>More...</b>: every option on its own (resolution, frame rate, shadows, lights, grass...).";
             y += 58;
 
             // Gore
@@ -170,6 +175,40 @@ namespace Shadowfall
         }
 
         float uiScaleDraft = -1f;
+
+        /// <summary>Settings > Graphics: every option with its choices; hovering a row explains it.</summary>
+        void DrawMenuGraphics()
+        {
+            var options = GameSettings.Options;
+            const float w = 660;
+            float h = 190 + options.Length * 50;
+            var r = new Rect((VW - w) / 2, (VH - h) / 2, w, h);
+            if (UISkin.Window(r, "Graphics")) { menu = MenuPage.Settings; return; }
+            Block(r);
+            float x = r.x + 30, y = r.y + 62;
+            var label = UISkin.V(UISkin.Label, fontSize: 16);
+            string preset = GameSettings.IsCustom ? "Custom" : GameSettings.QualityNames[GameSettings.Quality];
+            GUI.Label(new Rect(x, y, w - 60, 22), "<color=#b8a88c>Preset:</color> <color=#f0c45a>" + preset + "</color><color=#b8a88c>  -  pick one in Settings, or change anything here.</color>",
+                UISkin.V(UISkin.RichSmall, fontSize: 14));
+            y += 32;
+            foreach (var o in options)
+            {
+                UISkin.Shadowed(new Rect(x, y + 7, 160, 24), o.Name, label, UISkin.Cream);
+                float bw = Mathf.Min(96f, (w - 60 - 170) / o.Choices.Length - 6f);
+                for (int i = 0; i < o.Choices.Length; i++)
+                {
+                    bool on = o.Value == i;
+                    if (UISkin.Btn(new Rect(x + 170 + i * (bw + 6), y, bw, 38), on ? "> " + o.Choices[i] + " <" : o.Choices[i], UISkin.V(UISkin.Button, fontSize: 14)) && !on)
+                        o.Set(i);
+                }
+                if (new Rect(x, y, w - 60, 40).Contains(Event.current.mousePosition)) tooltip = "<b>" + o.Name + "</b>\n" + o.Help;
+                y += 50;
+            }
+            GUI.Label(new Rect(x, y + 2, w - 60, 40),
+                "<color=#b8a88c>Slow on a laptop? Lower <b>Resolution</b> first, then Shadows and Lights. Frame rate 30 saves battery. " +
+                "If a resolution change doesn't show, reload the page.</color>", UISkin.V(UISkin.RichSmall, fontSize: 13, wordWrap: true));
+            if (UISkin.Btn(new Rect(r.x + (w - 200) / 2, r.yMax - 64, 200, 44), "Back", UISkin.Button)) menu = MenuPage.Settings;
+        }
 
         // ---- dungeon difficulty picker (shown when clicking a dungeon entrance)
 

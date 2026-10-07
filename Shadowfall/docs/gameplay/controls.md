@@ -63,7 +63,22 @@ Every time you enter the world the camera starts in the classic view.
 
 The settings are in the game menu (++esc++ → **Settings**):
 
-- **Graphics**: *Low* turns off shadows, grass and the color grade and halves particle effects; *Medium* uses hard shadows and fewer lights; *High* is everything. Try Low on laptops or if the frame rate drops.
+- **Graphics**: a preset (*Low*, *Medium*, *High*) and **More...** for every option on its own. Changing any option makes the preset *Custom*.
+
+    | Option | Choices | What it does |
+    | --- | --- | --- |
+    | Resolution | 60%, 75%, 100%, 150%, Native | Pixels drawn, compared with the page's size. *Native* uses every pixel of a Retina / high-DPI screen (up to 4x the work). The biggest setting for speed |
+    | Frame rate | 30, 60, Unlimited | The most frames a second. 30 halves the work and saves battery |
+    | Shadows | Off, Hard, Soft | Sun and moon shadows |
+    | Shadow distance | Short, Medium, Far | How far away shadows are drawn |
+    | Lights | Few, Some, Many | How many lanterns, torches and spells light an object at once, and how far away lights still shine |
+    | Grass | Off, Near, Far | Grass blades up to 30 or 60 paces away |
+    | Small details | Off, On | Flowers, ferns, pebbles, mushrooms |
+    | Effects | Low, High | Particles, blood stains and the colour grade |
+
+    *Low* is 75% resolution, no shadows, grass or small details and few lights; *Medium* (the default) 100% resolution, hard
+    shadows, near grass and some lights; *High* adds soft far shadows, far grass and many lights. Slow on a laptop? Lower
+    *Resolution* first. The resolution is remembered by the browser and used from the first frame next time.
 - **UI scale** makes the whole interface bigger or smaller (70–150%), applied when you let go of the slider.
 - **Show FPS** puts a frame counter at the top of the screen.
 - **Label common items**: when off, plain white gear on the ground has no label unless you hold ++alt++ or hover it.

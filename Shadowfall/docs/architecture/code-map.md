@@ -9,7 +9,7 @@
 | `Core/CameraRig.cs` | High-angle follow camera, zoom, screen shake |
 | `Core/ArtLibrary.cs` | Loads the CC0 models (glTFast), scales and places them, tints them |
 | `Core/DayNight.cs` | Day/night cycle on the server clock: sun, moon, ambient light, fog, `NightLight` |
-| `Core/GameSettings.cs` | Player options saved in the browser: graphics quality, UI scale, FPS counter, loot filter |
+| `Core/GameSettings.cs` | Player options saved in the browser: the graphics preset and options (resolution via `Plugins/WebGL/ShadowfallDisplay.jslib`), UI scale, FPS counter, loot filter |
 | `Core/Sfx.cs` | Sound effects: clip variants, positional playback heard from the hero, ambience loops, volume |
 | `Core/ColorGrade.cs` | Full-screen color grade (darker, grittier palette) |
 | `Core/Util.cs` | Material cache (`Mat`), primitive builder (`Factory`), pulse/burst effects (`FxPulse`) |
