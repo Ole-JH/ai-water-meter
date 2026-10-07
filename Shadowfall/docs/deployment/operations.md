@@ -40,6 +40,31 @@
 
     Nothing needs bumping by hand. `task world:reset` still clears the stored map if you ever want a fresh one.
 
+### Auto-deploy
+
+The server host can deploy every push by itself. On it (docker2), once:
+
+```bash
+task autodeploy:install        # every 5 minutes; INTERVAL=2 task autodeploy:install for more often
+```
+
+A cron job then checks `origin` for new commits on the branch the checkout is on. When there are some, it moves the
+checkout to them and:
+
+- **builds the client in Docker, then runs `task up`** when the commits touch the Unity project (`Assets/`, `Packages/`,
+  `ProjectSettings/`). This needs the Unity license on the host, like `task update`;
+- **only runs `task up`** for anything else (server, docs, monitoring);
+- does nothing for commits outside `Shadowfall/`.
+
+If the client build or `task up` fails, the running server is left as it was and that commit isn't tried again; the next push
+is. If local edits in the checkout are in the way, it stops and logs it instead of overwriting them. One run at a time, so a
+long client build is never started twice.
+
+`task autodeploy:log` shows the log, `task autodeploy:uninstall` turns it off. With `DISCORD_WEBHOOK_URL` in `server/.env`
+(the same one the [alerts](monitoring.md) use) it also posts each deploy and each failure to Discord.
+
+With auto-deploy on you don't need `task update` or `task release` any more: push, and the host takes it from there.
+
 ## Restoring a backup
 
 `task backup` writes two files. Restore the account database (stops the game server, replaces every account and character, and

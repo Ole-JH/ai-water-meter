@@ -42,3 +42,6 @@ __pycache__/
 # Local tool binaries (e.g. a downloaded task binary)
 /bin/
 server/.env
+
+# Auto-deploy state and log (task autodeploy:install)
+/.autodeploy/
