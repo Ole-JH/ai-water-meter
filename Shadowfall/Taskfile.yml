@@ -131,8 +131,10 @@ tasks:
   # ---------------------------------------------------------------- build here, run there
 
   release:
-    desc: "Build the WebGL client on this machine, then deploy it with the current commit to DEPLOY_HOST (default docker2)"
+    desc: "git pull, build the WebGL client on this machine, then deploy it with that commit to DEPLOY_HOST (default docker2)"
     cmds:
+      # Fast-forward only: stops if this checkout has diverged from the remote (sort that out by hand first).
+      - git pull --ff-only
       - task: deploy:check
       - task: '{{if eq .CLIENT_BUILD "local"}}client:build:local{{else}}client:build{{end}}'
       - task: deploy:remote

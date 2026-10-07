@@ -120,13 +120,13 @@ The Dockerfile's `HEALTHCHECK` uses this endpoint. `task ps` shows it as well.
 Build the client on your desktop (where Unity is fast) and run the server on another machine, e.g. `docker2`:
 
 ```bash
-task release                    # build the WebGL client here, deploy it and this commit to docker2
+task release                    # git pull, build the WebGL client here, deploy it and that commit to docker2
 CLIENT_BUILD=local task release # the same, building with your local Unity editor (UNITY_PATH)
 task deploy:remote              # deploy the build already in server/public, without building
 task remote -- logs             # run any task on the server host (ps, backup, accounts, data:reset...)
 ```
 
-`task release` checks that the server code is committed and pushed and that it can reach the host over SSH, builds the client,
+`task release` pulls the latest commits (fast-forward only), checks that the server code is committed and pushed and that it can reach the host over SSH, builds the client,
 then on the host pulls the same commit into its git checkout, copies `server/public` there with rsync and runs `task up`.
 Players get the reload prompt as usual.
 
