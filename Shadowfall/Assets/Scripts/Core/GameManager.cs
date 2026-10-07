@@ -90,7 +90,7 @@ namespace Shadowfall
             sun.shadowStrength = 0.85f;
             QualitySettings.shadowDistance = 70f;
             QualitySettings.shadowCascades = 2;
-            QualitySettings.pixelLightCount = 6; // lanterns and torches at night
+            QualitySettings.pixelLightCount = 4; // lanterns and torches at night (GameSettings.Apply sets it per quality)
 
             RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Trilight;
             RenderSettings.ambientSkyColor = new Color(0.5f, 0.55f, 0.68f);

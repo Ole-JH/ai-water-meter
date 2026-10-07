@@ -82,7 +82,7 @@ namespace Shadowfall
         public static void Apply()
         {
             int q = Quality;
-            QualitySettings.pixelLightCount = q == 0 ? 2 : q == 1 ? 4 : 6;
+            QualitySettings.pixelLightCount = q == 0 ? 1 : q == 1 ? 3 : 4; // each extra pixel light is one more pass per lit object
             QualitySettings.shadowCascades = q == 2 ? 2 : 1;
             QualitySettings.antiAliasing = 0;
             if (Sun != null) Sun.shadows = q == 0 ? LightShadows.None : q == 1 ? LightShadows.Hard : LightShadows.Soft;

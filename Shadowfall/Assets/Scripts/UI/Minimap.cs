@@ -40,51 +40,101 @@ namespace Shadowfall
             lastUnderground = underground;
 
             var map = underground ? Dungeon.MapTexture : GameManager.I.World.MapTexture;
-            var grid = WorldGrid.Instance;
             Vector3 origin = underground ? Dungeon.Origin : Vector3.zero;
-            float mapW = underground ? Dungeon.Width : WorldGenerator.W, mapH = underground ? Dungeon.Height : WorldGenerator.H;
+            if (map != baseFor) BuildBase(map, origin, underground);
+            if (rim == null) BuildRim();
             float step = Span / Size, half = Size / 2f;
-            var outside = new Color(0.04f, 0.035f, 0.03f);
+            var outside = new Color32(10, 9, 8, 255);
 
+            // Per pixel: two lookups in the precomputed maps, the fog, the rim. (The expensive parts, sampling the map,
+            // finding wall edges and the fog's noise, were done once in BuildBase.)
             for (int y = 0; y < Size; y++)
+            {
+                float wz = center.z + (y + 0.5f - half) * step;
+                int by = Mathf.FloorToInt((wz - origin.z) * BaseRes);
                 for (int x = 0; x < Size; x++)
                 {
-                    float dx = x + 0.5f - half, dy = y + 0.5f - half;
-                    float r = Mathf.Sqrt(dx * dx + dy * dy) / half;   // 0 center .. 1 rim
                     int i = y * Size + x;
-                    if (r > 1f) { buf[i] = new Color32(0, 0, 0, 0); continue; }
-                    float wx = center.x + dx * step, wz = center.z + dy * step;
-                    float u = (wx - origin.x) / mapW, v = (wz - origin.z) / mapH;
-                    Color c;
-                    if (map == null || u < 0f || v < 0f || u > 1f || v > 1f) c = outside;
+                    byte a = rimAlpha[i];
+                    if (a == 0) { buf[i] = new Color32(0, 0, 0, 0); continue; }
+                    float wx = center.x + (x + 0.5f - half) * step;
+                    int bx = Mathf.FloorToInt((wx - origin.x) * BaseRes);
+                    Color32 c;
+                    if (bx < 0 || by < 0 || bx >= baseW || by >= baseH) c = outside;
                     else
                     {
-                        c = map.GetPixelBilinear(u, v);
-                        var p = new Vector3(wx, 0f, wz);
-                        if (!grid.IsWalkable(p))
-                        {
-                            // Blocked: darker, with a light edge where it meets open ground (buildings, walls, cliffs).
-                            bool edge = grid.IsWalkable(p + new Vector3(step * 1.5f, 0, 0)) || grid.IsWalkable(p - new Vector3(step * 1.5f, 0, 0)) ||
-                                        grid.IsWalkable(p + new Vector3(0, 0, step * 1.5f)) || grid.IsWalkable(p - new Vector3(0, 0, step * 1.5f));
-                            c = edge ? Color.Lerp(c, new Color(0.85f, 0.75f, 0.55f), 0.55f) : c * 0.45f;
-                        }
+                        int b = by * baseW + bx;
+                        c = baseMap[b];
+                        float seen = Exploration.At(new Vector3(wx, 0f, wz));
+                        if (seen < 1f) c = Color32.Lerp(fogMap[b], c, seen);
                     }
-                    // gritty grade: a little desaturated, darker toward the rim
-                    float g = c.r * 0.3f + c.g * 0.59f + c.b * 0.11f;
-                    c = Color.Lerp(new Color(g, g, g), c, 0.8f);
-                    // fog of war over what hasn't been explored
-                    float seen = Exploration.At(new Vector3(wx, 0f, wz));
-                    if (seen < 1f) c = Color.Lerp(Fog(wx, wz), c, seen);
-                    c *= Mathf.Lerp(1.05f, 0.55f, r * r * r);
-                    float alpha = Mathf.Clamp01((1f - r) * half * 0.9f); // ~1 px anti-aliased edge
-                    buf[i] = new Color32((byte)(Mathf.Clamp01(c.r) * 255), (byte)(Mathf.Clamp01(c.g) * 255), (byte)(Mathf.Clamp01(c.b) * 255), (byte)(alpha * 255));
+                    float k = rim[i];
+                    buf[i] = new Color32((byte)Mathf.Min(255f, c.r * k), (byte)Mathf.Min(255f, c.g * k), (byte)Mathf.Min(255f, c.b * k), a);
                 }
+            }
             tex.SetPixels32(buf);
             tex.Apply(false);
             return tex;
         }
 
         static bool lastReveal;
+
+        // ---- precomputed: the map at BaseRes samples per tile with walls shaded and edged (and graded), the fog colour
+        // under it, and the round mask (darkening toward the rim, soft edge).
+        const int BaseRes = 2;
+        static Color32[] baseMap, fogMap;
+        static int baseW, baseH;
+        static Texture2D baseFor;
+        static float[] rim;
+        static byte[] rimAlpha;
+
+        static void BuildBase(Texture2D map, Vector3 origin, bool underground)
+        {
+            baseFor = map;
+            var grid = WorldGrid.Instance;
+            float mapW = underground ? Dungeon.Width : WorldGenerator.W, mapH = underground ? Dungeon.Height : WorldGenerator.H;
+            baseW = Mathf.CeilToInt(mapW * BaseRes);
+            baseH = Mathf.CeilToInt(mapH * BaseRes);
+            baseMap = new Color32[baseW * baseH];
+            fogMap = new Color32[baseW * baseH];
+            float step = 1f / BaseRes;
+            for (int y = 0; y < baseH; y++)
+                for (int x = 0; x < baseW; x++)
+                {
+                    float wx = origin.x + (x + 0.5f) * step, wz = origin.z + (y + 0.5f) * step;
+                    Color c = map != null ? map.GetPixelBilinear((wx - origin.x) / mapW, (wz - origin.z) / mapH) : Color.black;
+                    var p = new Vector3(wx, 0f, wz);
+                    if (!grid.IsWalkable(p))
+                    {
+                        // Blocked: darker, with a light edge where it meets open ground (buildings, walls, cliffs).
+                        float e = step * 1.5f;
+                        bool edge = grid.IsWalkable(p + new Vector3(e, 0, 0)) || grid.IsWalkable(p - new Vector3(e, 0, 0)) ||
+                                    grid.IsWalkable(p + new Vector3(0, 0, e)) || grid.IsWalkable(p - new Vector3(0, 0, e));
+                        c = edge ? Color.Lerp(c, new Color(0.85f, 0.75f, 0.55f), 0.55f) : c * 0.45f;
+                    }
+                    // gritty grade: a little desaturated
+                    float g = c.r * 0.3f + c.g * 0.59f + c.b * 0.11f;
+                    c = Color.Lerp(new Color(g, g, g), c, 0.8f);
+                    baseMap[y * baseW + x] = c;
+                    fogMap[y * baseW + x] = Fog(wx, wz);
+                }
+        }
+
+        static void BuildRim()
+        {
+            rim = new float[Size * Size];
+            rimAlpha = new byte[Size * Size];
+            float half = Size / 2f;
+            for (int y = 0; y < Size; y++)
+                for (int x = 0; x < Size; x++)
+                {
+                    float dx = x + 0.5f - half, dy = y + 0.5f - half;
+                    float r = Mathf.Sqrt(dx * dx + dy * dy) / half;   // 0 center .. 1 rim
+                    int i = y * Size + x;
+                    rim[i] = Mathf.Lerp(1.05f, 0.55f, r * r * r);
+                    rimAlpha[i] = r > 1f ? (byte)0 : (byte)(Mathf.Clamp01((1f - r) * half * 0.9f) * 255f); // ~1 px anti-aliased edge
+                }
+        }
 
         /// <summary>The unexplored color: a dark, faintly cloudy murk.</summary>
         static Color Fog(float x, float z)
@@ -96,14 +146,16 @@ namespace Shadowfall
         static Texture2D fogged;
         static int foggedVersion = -1;
         static bool foggedUnderground, foggedReveal;
+        static float nextFogged;
 
         /// <summary>The whole map (world or dungeon level) with fog over the unexplored parts, for the M window.</summary>
         public static Texture2D FoggedMap(bool underground)
         {
             var map = underground ? Dungeon.MapTexture : GameManager.I.World.MapTexture;
             if (map == null) return Texture2D.blackTexture;
-            if (fogged != null && fogged.width == map.width && fogged.height == map.height && foggedVersion == Exploration.Version &&
-                foggedUnderground == underground && foggedReveal == AdminTools.RevealMap) return fogged;
+            bool same = fogged != null && fogged.width == map.width && fogged.height == map.height && foggedUnderground == underground && foggedReveal == AdminTools.RevealMap;
+            if (same && (foggedVersion == Exploration.Version || Time.unscaledTime < nextFogged)) return fogged; // at most twice a second
+            nextFogged = Time.unscaledTime + 0.5f;
             if (fogged == null || fogged.width != map.width || fogged.height != map.height)
                 fogged = new Texture2D(map.width, map.height, TextureFormat.RGBA32, false) { filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp, name = "FoggedMap" };
             var src = map.GetPixels32();

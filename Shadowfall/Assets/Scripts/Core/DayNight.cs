@@ -158,13 +158,21 @@ namespace Shadowfall
             return n;
         }
 
+        /// <summary>Lights further than this from the hero are switched off (nobody sees them; they only cost).</summary>
+        public const float CullDistance = 45f;
+        float next;
+
+        // Night changes slowly: four updates a second are plenty (staggered so they don't all land on one frame).
         void Update()
         {
-            if (l == null) return;
+            if (l == null || Time.time < next) return;
+            next = Time.time + 0.25f + Random.value * 0.05f;
             float k = Mathf.Lerp(DayFactor, 1f, DayNight.Night);
+            var hero = Player.I;
+            bool near = hero == null || (hero.transform.position - transform.position).sqrMagnitude < CullDistance * CullDistance;
             l.intensity = BaseIntensity * k;
             l.range = BaseRange * Mathf.Lerp(1f, rangeBoost, DayNight.Night);
-            l.enabled = k > 0.02f;
+            l.enabled = k > 0.02f && near;
         }
     }
 }

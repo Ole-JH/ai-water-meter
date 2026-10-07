@@ -264,7 +264,12 @@ namespace Shadowfall
         /// <summary>After DayNight has set the light and fog for the hour: clouds, fog, snow glare and lightning on top.</summary>
         void LateUpdate()
         {
-            if (inDungeon) return;
+            var cam0 = GameManager.I != null ? GameManager.I.Cam : null;
+            if (inDungeon)
+            {
+                if (cam0 != null) cam0.farClipPlane = Mathf.Clamp(RenderSettings.fogEndDistance + 15f, 50f, 200f);
+                return;
+            }
             float dim = 1f - 0.5f * Cloud;
             var sun = GameSettings.Sun;
             if (sun != null) sun.intensity = sun.intensity * dim + flash * 1.6f;
@@ -283,7 +288,12 @@ namespace Shadowfall
             RenderSettings.fogStartDistance = Mathf.Lerp(RenderSettings.fogStartDistance, 4f, Fog);
             RenderSettings.fogEndDistance = Mathf.Lerp(RenderSettings.fogEndDistance, 34f, Fog);
             var cam = GameManager.I != null ? GameManager.I.Cam : null;
-            if (cam != null) cam.backgroundColor = RenderSettings.fogColor;
+            if (cam != null)
+            {
+                cam.backgroundColor = RenderSettings.fogColor;
+                // Nothing beyond the fog can be seen: don't draw it.
+                cam.farClipPlane = Mathf.Clamp(RenderSettings.fogEndDistance + 15f, 50f, 200f);
+            }
         }
 
         void OnDestroy()
