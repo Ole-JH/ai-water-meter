@@ -169,8 +169,9 @@ tasks:
       - task: deploy:check
       - echo "Updating the checkout on {{.DEPLOY_HOST}} to {{.BRANCH}} @ {{.SHA}}..."
       - |
-        ssh {{.DEPLOY_HOST}} "cd {{.DEPLOY_DIR}} && git fetch -q origin {{.BRANCH}} && git checkout -q {{.BRANCH}} && git pull -q --ff-only origin {{.BRANCH}} \
-          && [ \"\$(git rev-parse HEAD)\" = {{.SHA}} ] || { echo 'The checkout on {{.DEPLOY_HOST}} is not at {{.SHA}} (local changes there?)'; exit 1; }"
+        # Exactly the commit built here (the branch may have moved on since); --keep refuses to throw away local edits there.
+        ssh {{.DEPLOY_HOST}} "cd {{.DEPLOY_DIR}} && git fetch -q origin {{.BRANCH}} && git checkout -q {{.BRANCH}} && git reset -q --keep {{.SHA}} \
+          && [ \"\$(git rev-parse HEAD)\" = {{.SHA}} ] || { echo 'Could not move the checkout on {{.DEPLOY_HOST}} to {{.SHA}}: it has local changes to files that differ (see git status there).'; exit 1; }"
       - echo "Copying the WebGL build..."
       - rsync -az --delete --info=stats1 {{.SERVER_DIR}}/public/ {{.DEPLOY_HOST}}:{{.DEPLOY_DIR}}/{{.SERVER_DIR}}/public/
       - echo "Restarting on {{.DEPLOY_HOST}}..."

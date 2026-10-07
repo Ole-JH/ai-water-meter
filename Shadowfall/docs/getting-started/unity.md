@@ -29,7 +29,7 @@ The build script also creates `Assets/Resources/ShadowfallVariants.mat`, a mater
 ## WebGL specifics
 
 - **Networking:** browsers can't open raw sockets, so the client talks to the server over a WebSocket. In WebGL builds `WebSocketConnection` calls `Plugins/WebGL/ShadowfallWebSocket.jslib`, which wraps the browser `WebSocket`. In the editor and desktop builds it uses `System.Net.WebSockets.ClientWebSocket`.
-- **Page template:** `Assets/WebGLTemplates/Shadowfall` makes the canvas fill the browser window and disables the right-click context menu, because right-click casts your class's second ability.
+- **Page template:** `Assets/WebGLTemplates/Shadowfall` makes the canvas fill the browser window and disables the right-click context menu, because right-click casts your class's second ability. It is also the loading screen: a night scene over Hollowmere with rising embers, the progress bar with a stage name, rotating gameplay tips (the `TIPS` list in the page), and clear messages when WebGL is missing or the download fails. It needs no files besides the Cinzel and EB Garamond web fonts (with serif fallbacks).
 - **Compression:** builds use **Gzip**. `server.js` sends `*.gz` files with `Content-Encoding: gzip`, so no decompression fallback is needed.
 
 ## Compiling without Unity
