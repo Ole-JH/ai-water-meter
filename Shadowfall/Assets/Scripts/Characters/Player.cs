@@ -492,6 +492,8 @@ namespace Shadowfall
             transform.position = pos;
             CameraRig.I?.SnapToTarget();
             SpellFx.Ring(pos, new Color(0.7f, 0.6f, 1f), 1.5f, 0.6f);
+            SpellFx.Column(pos, new Color(0.6f, 0.75f, 1f), 0.9f, 5f, 0.5f);
+            SpellFx.Swirl(pos + Vector3.up * 0.3f, null, new Color(0.6f, 0.75f, 1f), 1f, 0.5f, 60f, false);
         }
 
         void UpdateAction(float dt)
@@ -1160,11 +1162,13 @@ namespace Shadowfall
             {
                 Heal(used.HealAmount + MaxHealth * 0.1f);
                 FxPulse.Ring(transform.position, new Color(0.9f, 0.2f, 0.2f), 1.5f, 0.35f);
+                SpellFx.Swirl(transform.position + Vector3.up * 0.2f, transform, new Color(1f, 0.3f, 0.3f), 0.8f, 0.6f, 50f, false);
             }
             if (used.ManaAmount > 0)
             {
                 RestoreMana(used.ManaAmount + MaxMana * 0.1f);
                 FxPulse.Ring(transform.position, new Color(0.2f, 0.4f, 1f), 1.5f, 0.35f);
+                SpellFx.Swirl(transform.position + Vector3.up * 0.2f, transform, new Color(0.35f, 0.55f, 1f), 0.8f, 0.6f, 50f, false);
             }
         }
 
@@ -1211,6 +1215,8 @@ namespace Shadowfall
             recallFrom = transform.position;
             castAnim = 0f;
             view?.Action("Spellcast_Raise", RecallTime);
+            SpellFx.CastCircle(transform.position, new Color(0.55f, 0.75f, 1f), 1.4f, RecallTime);
+            if (view != null) SpellFx.CastGlow(view.Hand, new Color(0.55f, 0.75f, 1f), RecallTime);
             Sfx.Play("holy_cast", transform.position, 0.5f, 0.05f);
             recallFx = SpellFx.Emit(new SpellFx.P
             {
@@ -1417,6 +1423,33 @@ namespace Shadowfall
             GatherProgress = 0f;
         }
 
+        /// <summary>Wood chips, rock sparks and grit, or a splash, at the node being worked.</summary>
+        void GatherFx(SkillType skill, Vector3 node)
+        {
+            if (!SpellFx.Ready) return;
+            var toward = Factory.Flat(transform.position - node).normalized;
+            if (skill == SkillType.Woodcutting)
+            {
+                var at = node + toward * 0.4f + Vector3.up * 1f;
+                SpellFx.Emit(new SpellFx.P { Burst = 12, Duration = 0.1f, Life = new Vector2(0.4f, 0.8f), Speed = new Vector2(2f, 4f), Size = new Vector2(0.06f, 0.12f),
+                    Start = new Color(0.85f, 0.7f, 0.45f), End = new Color(0.6f, 0.45f, 0.25f, 0f), Gravity = 1.5f, Radius = 0.15f, Smoke = true }, at);
+                SpellFx.Emit(new SpellFx.P { Burst = 3, Duration = 0.1f, Life = new Vector2(1f, 1.6f), Speed = new Vector2(0.3f, 0.8f), Size = new Vector2(0.08f, 0.14f),
+                    Start = new Color(0.45f, 0.65f, 0.25f), End = new Color(0.4f, 0.55f, 0.2f, 0f), Gravity = 0.15f, Radius = 0.8f, Smoke = true }, node + Vector3.up * 2.6f);
+            }
+            else if (skill == SkillType.Mining)
+            {
+                var at = node + toward * 0.5f + Vector3.up * 0.6f;
+                SpellFx.Hit(at, new Color(1f, 0.8f, 0.4f), false, 14);
+                SpellFx.Dust(at - Vector3.up * 0.4f, 0.35f, new Color(0.55f, 0.52f, 0.5f));
+            }
+            else
+            {
+                SpellFx.Emit(new SpellFx.P { Burst = 18, Duration = 0.1f, Life = new Vector2(0.4f, 0.7f), Speed = new Vector2(1.5f, 3f), Size = new Vector2(0.05f, 0.1f),
+                    Start = new Color(0.85f, 0.95f, 1f), End = new Color(0.6f, 0.8f, 1f, 0f), Gravity = 1.4f, Shape = ParticleSystemShapeType.Circle, Radius = 0.3f, Velocity = new Vector3(0f, 2f, 0f) }, node + Vector3.up * 0.05f);
+                SpellFx.Ring(node, new Color(0.7f, 0.85f, 1f), 1f, 0.6f);
+            }
+        }
+
         void UpdateGathering(float dt)
         {
             if (GatherNode == null || GatherNode.Depleted) { StopGathering(); return; }
@@ -1430,6 +1463,7 @@ namespace Shadowfall
             view?.Interact();
             var skill = GatherNode.Skill;
             Sfx.Play(skill == SkillType.Woodcutting ? "chop" : skill == SkillType.Mining ? "mine" : "splash", GatherNode.Position + Vector3.up, 0.6f, 0.1f);
+            GatherFx(skill, GatherNode.Position);
 
             int lvl = Skills.Level(GatherNode.Skill);
             float chance = Mathf.Clamp(0.4f + (lvl - GatherNode.LevelRequired) * 0.05f, 0.4f, 0.95f);

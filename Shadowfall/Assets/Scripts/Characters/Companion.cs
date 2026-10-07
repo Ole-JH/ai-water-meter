@@ -29,28 +29,28 @@ namespace Shadowfall
             {
                 Id = "squire", Name = "Squire Edric", Role = "Sword & shield", Icon = "companion_squire", Price = 800, RequiredLevel = 4,
                 Description = "A sworn squire in his father's mail. Every few seconds he bashes a foe senseless (stun).",
-                Look = new CharacterLook { Model = "Characters/Knight", Height = 1.75f, Tint = new Color(0.8f, 0.85f, 0.95f), Weapon = "sword" },
+                Look = new CharacterLook { Model = "Characters/Knight", Height = 1.75f, Tint = new Color(0.8f, 0.85f, 0.95f), Weapon = "sword", Headgear = true, Parts = new[] { "Round_Shield" } },
                 Damage = 8f, Cooldown = 1.2f, Range = 1.8f, Special = "stun", Color = new Color(0.8f, 0.85f, 1f),
             },
             new CompanionDef
             {
                 Id = "witch", Name = "Hedge Witch Nell", Role = "Fire magic", Icon = "companion_witch", Price = 1400, RequiredLevel = 7,
                 Description = "She hurls fire from a safe distance. Her fireballs burn everything around the target.",
-                Look = new CharacterLook { Model = "Characters/Mage", Height = 1.85f, Tint = new Color(0.75f, 1f, 0.7f), Weapon = "staff" },
+                Look = new CharacterLook { Model = "Characters/Mage", Height = 1.85f, Tint = new Color(0.75f, 1f, 0.7f), Weapon = "staff", Headgear = true },
                 Damage = 9f, Cooldown = 1.6f, Range = 9f, Ranged = true, Aoe = 1.8f, Color = new Color(1f, 0.45f, 0.1f),
             },
             new CompanionDef
             {
                 Id = "ranger", Name = "Ranger Kestrel", Role = "Archer", Icon = "companion_ranger", Price = 2000, RequiredLevel = 10,
                 Description = "A hooded scout who never misses twice. Fires two arrows at a time.",
-                Look = new CharacterLook { Model = "Characters/RogueHooded", Height = 1.85f, Tint = new Color(0.8f, 0.95f, 0.8f), Weapon = "dagger" },
+                Look = new CharacterLook { Model = "Characters/RogueHooded", Height = 1.85f, Tint = new Color(0.8f, 0.95f, 0.8f), Weapon = "crossbow", Parts = new[] { "Knife_Offhand" } },
                 Damage = 7f, Cooldown = 1.1f, Range = 11f, Ranged = true, Special = "volley", Color = new Color(0.9f, 0.9f, 0.8f),
             },
             new CompanionDef
             {
                 Id = "acolyte", Name = "Acolyte Mira", Role = "Healer", Icon = "companion_acolyte", Price = 2800, RequiredLevel = 12,
                 Description = "A novice of the Light. Heals you for 10% of your life when you are hurt, and smites with holy bolts.",
-                Look = new CharacterLook { Model = "Characters/Mage", Height = 1.8f, Tint = new Color(1.2f, 1.15f, 1.05f), Weapon = "staff" },
+                Look = new CharacterLook { Model = "Characters/Mage", Height = 1.8f, Tint = new Color(1.2f, 1.15f, 1.05f), Weapon = "wand", Parts = new[] { "Spellbook_open" } },
                 Damage = 5f, Cooldown = 1.5f, Range = 9f, Ranged = true, Special = "heal", Color = new Color(1f, 0.88f, 0.45f),
             },
             new CompanionDef
@@ -97,14 +97,98 @@ namespace Shadowfall
             c.view = CharacterView.Create(go.transform, def.Look);
             if (c.view == null)
                 Factory.Prim(PrimitiveType.Capsule, go.transform, new Vector3(0, def.Look.Height * 0.5f, 0), new Vector3(0.6f, def.Look.Height * 0.5f, 0.6f), def.Color);
-            SpellFx.Ring(go.transform.position, def.Color, 1.2f, 0.5f);
+            c.Arrive(go.transform.position);
+            c.Dress();
             return c;
         }
 
         public void Dismiss()
         {
-            SpellFx.Ring(transform.position, Def.Color, 1.2f, 0.4f);
+            SpellFx.Column(transform.position, Def.Color, 0.7f, 3.5f, 0.5f);
+            SpellFx.Dust(transform.position, 0.8f);
             Destroy(gameObject);
+        }
+
+        /// <summary>A summoning flourish: a rune circle, a pillar of light and a swirl in the companion's colour.</summary>
+        void Arrive(Vector3 at)
+        {
+            SpellFx.CastCircle(at, Def.Color, 1.4f, 0.8f);
+            SpellFx.Column(at, Def.Color, 0.7f, 4f, 0.6f);
+            SpellFx.Swirl(at + Vector3.up * 0.6f, null, Def.Color, 1f, 0.6f, 60f, false);
+        }
+
+        /// <summary>Idle effects that give each companion its own presence (fire in the witch's hand, the golem's runes...).</summary>
+        void Dress()
+        {
+            if (!SpellFx.Ready) return;
+            float h = Def.Look.Height;
+            switch (Def.Id)
+            {
+                case "witch":
+                    // a little fire burning in her hand
+                    if (view != null)
+                        SpellFx.Loop(new SpellFx.P
+                        {
+                            Rate = 18, Life = new Vector2(0.25f, 0.5f), Speed = new Vector2(0.05f, 0.2f), Size = new Vector2(0.1f, 0.2f),
+                            Start = new Color(1f, 0.9f, 0.5f), Mid = Def.Color, End = new Color(0.6f, 0.1f, 0f, 0f), Radius = 0.06f, Velocity = new Vector3(0f, 0.9f, 0f), Max = 40,
+                        }, view.Hand, Vector3.up * 0.15f);
+                    Glow(new Color(1f, 0.55f, 0.2f), 0.9f, 4f, h * 0.6f);
+                    break;
+                case "acolyte":
+                    // motes of light circling her
+                    var motes = SpellFx.Loop(new SpellFx.P
+                    {
+                        Rate = 10, Life = new Vector2(1f, 1.6f), Speed = new Vector2(0f, 0.05f), Size = new Vector2(0.05f, 0.1f),
+                        Start = Color.white, Mid = Def.Color, End = new Color(1f, 0.8f, 0.4f, 0f), Shape = ParticleSystemShapeType.Circle, Radius = 0.7f,
+                        Orbital = 2f, Velocity = new Vector3(0f, 0.5f, 0f), Max = 30,
+                    }, transform, Vector3.up * 0.3f);
+                    if (motes != null) { var main = motes.main; main.simulationSpace = ParticleSystemSimulationSpace.Local; }
+                    Glow(Def.Color, 0.8f, 4f, h * 0.7f);
+                    break;
+                case "golem":
+                    // rune sparks rising from its core
+                    SpellFx.Loop(new SpellFx.P
+                    {
+                        Rate = 8, Life = new Vector2(0.8f, 1.4f), Speed = new Vector2(0.1f, 0.3f), Size = new Vector2(0.06f, 0.12f),
+                        Start = new Color(0.8f, 0.95f, 1f), Mid = new Color(0.4f, 0.7f, 1f), End = new Color(0.2f, 0.4f, 1f, 0f), Radius = 0.5f,
+                        Velocity = new Vector3(0f, 0.8f, 0f), Max = 30,
+                    }, transform, Vector3.up * h * 0.55f);
+                    Glow(new Color(0.45f, 0.7f, 1f), 1.2f, 5f, h * 0.6f);
+                    break;
+                case "squire":
+                    break;
+                case "ranger":
+                    // drifting leaves
+                    SpellFx.Loop(new SpellFx.P
+                    {
+                        Rate = 2, Life = new Vector2(1.5f, 2.5f), Speed = new Vector2(0.1f, 0.3f), Size = new Vector2(0.06f, 0.1f),
+                        Start = new Color(0.5f, 0.8f, 0.3f, 0.9f), End = new Color(0.4f, 0.6f, 0.2f, 0f), Radius = 0.5f, Gravity = 0.05f, Smoke = true, Max = 10,
+                    }, transform, Vector3.up * h * 0.8f);
+                    break;
+            }
+        }
+
+        void Glow(Color c, float intensity, float range, float y)
+        {
+            var l = new GameObject("CompanionGlow").AddComponent<Light>();
+            l.transform.SetParent(transform, false);
+            l.transform.localPosition = new Vector3(0f, y, 0.3f);
+            l.type = LightType.Point;
+            l.color = c;
+            l.intensity = intensity;
+            l.range = range;
+            l.shadows = LightShadows.None;
+        }
+
+        float nextStep;
+
+        /// <summary>Heavy companions kick up dust as they run.</summary>
+        void Footfalls()
+        {
+            if (speed <= 0.1f || Time.time < nextStep || (Def.Id != "golem" && Def.Id != "hound")) return;
+            bool heavy = Def.Id == "golem";
+            nextStep = Time.time + (heavy ? 0.45f : 0.3f);
+            SpellFx.Dust(transform.position - transform.forward * 0.3f, heavy ? 0.5f : 0.22f);
         }
 
         Vector3 FollowSpot => owner.position - owner.forward * 1.6f + owner.right * 1.3f;
@@ -121,7 +205,7 @@ namespace Shadowfall
                 transform.position = new Vector3(FollowSpot.x, 0f, FollowSpot.z);
                 path.Clear();
                 target = null;
-                SpellFx.Ring(transform.position, Def.Color, 1f, 0.4f);
+                Arrive(transform.position);
                 return;
             }
 
@@ -154,7 +238,10 @@ namespace Shadowfall
                 nextHeal = Time.time + 6f;
                 hero.Heal(hero.MaxHealth * 0.1f);
                 view?.Cast();
+                if (view != null) SpellFx.CastGlow(view.Hand, Def.Color, 0.5f);
                 SpellFx.HolyLight(hero.transform.position);
+                SpellFx.Column(hero.transform.position, Def.Color, 0.8f, 4f, 0.7f);
+                SpellFx.Swirl(hero.transform.position + Vector3.up * 0.4f, hero.transform, Def.Color, 0.9f, 0.8f, 50f, false);
                 Sfx.Play("holy_cast", hero.transform.position, 0.5f, 0.05f);
             }
 
@@ -180,6 +267,7 @@ namespace Shadowfall
             }
             else if (target == null) Factory.Face(transform, owner.position + owner.forward * 3f, 0.05f);
             view?.UpdateLocomotion(speed);
+            Footfalls();
 
             if (fights && Time.time >= nextBark && target != null)
             {
@@ -218,18 +306,23 @@ namespace Shadowfall
                 if (Def.Id == "witch")
                 {
                     view?.Cast();
+                    if (view != null) SpellFx.CastGlow(view.Hand, Def.Color, 0.35f);
+                    SpellFx.CastCircle(transform.position, Def.Color, 0.9f, 0.45f);
                     Sfx.Play("fire_cast", transform.position, 0.4f, 0.1f);
                     Projectile.Fire(hero, from, at, 18f, dmg, Def.Color, 0.4f, Def.Aoe, Def.Range + 4f).WithTrail(SpellFx.Trail.Fire);
                 }
                 else if (Def.Id == "acolyte")
                 {
                     view?.Cast();
+                    if (view != null) SpellFx.CastGlow(view.Hand, Def.Color, 0.35f);
+                    SpellFx.CastCircle(transform.position, Def.Color, 0.9f, 0.45f);
                     Projectile.Fire(hero, from, at, 20f, dmg, Def.Color, 0.35f, 0f, Def.Range + 4f).WithTrail(SpellFx.Trail.Magic);
                 }
                 else
                 {
                     view?.Shoot();
                     Sfx.Play("bow", transform.position, 0.4f, 0.12f);
+                    SpellFx.Hit(from, new Color(0.8f, 1f, 0.7f), false, 6);
                     int arrows = Def.Special == "volley" ? 2 : 1;
                     for (int i = 0; i < arrows; i++)
                     {
@@ -246,18 +339,34 @@ namespace Shadowfall
             {
                 Combatant.Overlap(target.transform.position, Def.Aoe, Faction.Player, buffer);
                 foreach (var c in buffer.ToArray()) c.TakeDamage(dmg, hero, false);
-                SpellFx.Dust(target.transform.position, Def.Aoe * 0.6f);
-                SpellFx.Ring(target.transform.position, Def.Color, Def.Aoe, 0.4f);
-                CameraRig.Shake(0.08f);
+                SpellFx.Shockwave(target.transform.position, Def.Color, Def.Aoe);
+                SpellFx.Dust(target.transform.position, Def.Aoe * 0.5f);
+                CameraRig.Shake(0.1f);
             }
-            else target.TakeDamage(dmg, hero, false);
+            else
+            {
+                target.TakeDamage(dmg, hero, false);
+                var facing = Quaternion.LookRotation(Factory.Flat(target.transform.position - transform.position).normalized + transform.forward * 0.001f);
+                if (Def.Id == "hound")
+                {
+                    // a snapping bite: two claw arcs and blood
+                    SpellFx.CrossSlash(transform.position + Vector3.down * 0.5f, facing, 1.3f, new Color(0.9f, 0.3f, 0.2f));
+                    SpellFx.Hit(target.Center, new Color(0.55f, 0.03f, 0.03f), true, 8);
+                }
+                else
+                {
+                    SpellFx.Cleave(transform.position, facing, 2f, AbilityFx.Steel);
+                    SpellFx.Hit(target.Center, AbilityFx.Steel, false, 8);
+                }
+            }
 
             if (Def.Special == "slow" && Random.value < 0.35f) target.Slow(2f);
             if (Def.Special == "stun" && Time.time >= nextSpecial)
             {
                 nextSpecial = Time.time + 7f;
                 target.Stun(1.2f);
-                SpellFx.Hit(target.Center, new Color(1f, 0.9f, 0.5f), false, 12);
+                SpellFx.Hit(target.Center, new Color(1f, 0.9f, 0.5f), false, 20);
+                SpellFx.Shockwave(target.transform.position, AbilityFx.Gold, 1.2f);
                 Sfx.Play("hit_armor", target.Center, 0.5f, 0.1f);
             }
         }

@@ -158,6 +158,19 @@ namespace Shadowfall
             return ps;
         }
 
+        /// <summary>A looping emitter attached to <paramref name="follow"/> (auras, idle glows); lives as long as its parent.</summary>
+        public static ParticleSystem Loop(P p, Transform follow, Vector3 local)
+        {
+            var ps = Emit(p, follow.position, follow);
+            if (ps == null) return null;
+            var main = ps.main;
+            main.loop = true;
+            main.stopAction = ParticleSystemStopAction.None;
+            ps.transform.localPosition = local;
+            ps.Play();
+            return ps;
+        }
+
         /// <summary>Stops a (following) emitter, lets its particles finish, then removes it.</summary>
         public static void Detach(ParticleSystem ps)
         {

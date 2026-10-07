@@ -57,7 +57,9 @@ namespace Shadowfall
         public Color? Tint;
         public float RunSpeed = 6f;     // world speed at which the run cycle looks right
         public Color? Light;            // optional point light (bosses)
-        public string Weapon;           // weapon kind shown in hand (sword, axe, mace, dagger, staff); null = none
+        public string Weapon;           // weapon kind shown in hand (sword, axe, mace, dagger, staff, wand, crossbow); null = none
+        public string[] Parts;          // extra built-in model parts to show (a shield, a spellbook), by node name
+        public bool Headgear;           // show the model's own hat or helmet
 
         static readonly Dictionary<string, CharacterLook> monsters = new Dictionary<string, CharacterLook>
         {
@@ -160,7 +162,13 @@ namespace Shadowfall
             }
             var view = new CharacterView(go, look, anim);
             view.HideAccessories();
-            view.Equip(look.Weapon, false);
+            view.Equip(look.Weapon, look.Headgear);
+            if (look.Parts != null)
+                foreach (var part in look.Parts)
+                {
+                    var t = ArtLibrary.FindDeep(go.transform, part);
+                    if (t != null) t.gameObject.SetActive(true);
+                }
             view.Play(look.Anims.Idle, 0f);
             return view;
         }
@@ -348,7 +356,8 @@ namespace Shadowfall
             if (hand == null) return;
 
             // Prefer the model's own matching weapon (already posed for its hand), else attach a separate weapon model.
-            string builtin = kind == "sword" ? "1H_Sword" : kind == "axe" ? "1H_Axe" : kind == "dagger" ? "Knife" : kind == "staff" ? "2H_Staff" : null;
+            string builtin = kind == "sword" ? "1H_Sword" : kind == "axe" ? "1H_Axe" : kind == "dagger" ? "Knife" : kind == "staff" ? "2H_Staff" :
+                             kind == "wand" ? "1H_Wand" : kind == "crossbow" ? "1H_Crossbow" : null;
             for (int i = 0; builtin != null && i < hand.childCount; i++)
             {
                 var c = hand.GetChild(i);
@@ -358,7 +367,8 @@ namespace Shadowfall
                 weaponIsBuiltin = true;
                 return;
             }
-            string path = kind == "axe" || kind == "mace" ? "Weapons/Axe" : kind == "dagger" ? "Weapons/Dagger" : kind == "staff" ? "Weapons/Staff" : "Weapons/Sword";
+            string path = kind == "axe" || kind == "mace" ? "Weapons/Axe" : kind == "dagger" ? "Weapons/Dagger" : kind == "staff" || kind == "wand" ? "Weapons/Staff" :
+                          kind == "crossbow" ? "Weapons/Crossbow" : "Weapons/Sword";
             weaponIsBuiltin = false;
             weapon = ArtLibrary.Spawn(path, hand, Vector3.zero, 0f, ArtLibrary.Fit.Height, 0f, true, false, false);
         }

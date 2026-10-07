@@ -383,6 +383,25 @@ namespace Shadowfall
         };
 
         /// <summary>Attempts one craft. Returns false if the player lacks the level or materials.</summary>
+        /// <summary>Sparks off the anvil, or a flare and steam from the cooking fire.</summary>
+        void CraftFx(Player p)
+        {
+            if (!SpellFx.Ready) return;
+            var at = p.transform.position + p.transform.forward * 1.2f;
+            if (Skill == SkillType.Smithing)
+            {
+                SpellFx.Hit(at + Vector3.up * 0.8f, new Color(1f, 0.6f, 0.2f), false, 26);
+                SpellFx.Flash(at + Vector3.up, new Color(1f, 0.6f, 0.3f), 4f, 2f, 0.2f);
+            }
+            else
+            {
+                SpellFx.Emit(new SpellFx.P { Burst = 16, Duration = 0.1f, Life = new Vector2(0.3f, 0.6f), Speed = new Vector2(0.3f, 1f), Size = new Vector2(0.2f, 0.4f),
+                    Start = new Color(1f, 0.85f, 0.4f), Mid = new Color(1f, 0.45f, 0.1f), End = new Color(0.5f, 0.1f, 0f, 0f), Radius = 0.3f, Velocity = new Vector3(0f, 2f, 0f) }, at + Vector3.up * 0.3f);
+                SpellFx.Emit(new SpellFx.P { Burst = 8, Duration = 0.1f, Life = new Vector2(1f, 1.6f), Speed = new Vector2(0.1f, 0.4f), Size = new Vector2(0.4f, 0.7f),
+                    Start = new Color(0.9f, 0.9f, 0.9f, 0.35f), End = new Color(0.9f, 0.9f, 0.9f, 0f), Radius = 0.3f, Velocity = new Vector3(0f, 1.2f, 0f), Grow = true, Smoke = true }, at + Vector3.up * 0.7f);
+            }
+        }
+
         public bool Craft(Player p)
         {
             if (p.Skills.Level(Skill) < LevelRequired)
@@ -404,6 +423,7 @@ namespace Shadowfall
                 {
                     p.Inventory.Add(ItemDatabase.Material(FailItem));
                     GameUI.Log("You accidentally burn the fish.", new Color(0.8f, 0.5f, 0.3f));
+                    SpellFx.Dust(p.transform.position + p.transform.forward * 1.2f + Vector3.up * 0.4f, 0.5f, new Color(0.12f, 0.11f, 0.1f));
                     return true;
                 }
             }
@@ -411,6 +431,7 @@ namespace Shadowfall
             var result = Make(p);
             if (!p.Inventory.Add(result)) LootDrop.Spawn(p.transform.position, result, 0);
             Sfx.Play(Skill == SkillType.Smithing ? "anvil" : "sizzle", p.transform.position, 0.6f);
+            CraftFx(p);
             p.Skills.AddXp(Skill, Xp);
             GameUI.Log("You make: " + result.Name, result.NameColor);
             return true;
