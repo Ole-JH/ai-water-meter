@@ -25,6 +25,10 @@ Common commands are defined in `Taskfile.yml` and run with [Task](https://taskfi
 | `task docker:build` | Build the server image only |
 | `task deploy` | `client:build` (Docker) followed by `up` |
 | `task update` | `git pull`, then `deploy`: the one command to update everything when the game and server run on the same machine |
+| `task release` | Build the WebGL client **on this machine**, then deploy it and the current commit to the server host (`DEPLOY_HOST`, default `docker2`); see [Docker](../deployment/docker.md#build-here-run-there). `CLIENT_BUILD=local task release` builds with a local Unity editor |
+| `task deploy:remote` | Only the deploy half of `release`: ship the build already in `server/public` and restart the server host |
+| `task remote -- <task>` | Run any task on the server host, e.g. `task remote -- logs`, `task remote -- backup`, `task remote -- data:reset` |
+| `task data:reset` | **Wipe all game data** (every account, character and stash, and the world map) for a fresh start. Asks first and runs `task backup` before deleting anything |
 | `task world:reset` | Delete the stored world map (after changing world generation) |
 | `task backup` | Dump the account database (`pg_dump`, if the `postgres` container runs) and archive `server/data` into `backups/` |
 | `task db:restore -- <file>` | Restore the account database from a `backups/shadowfall-db-*.sql.gz` dump (asks first; stops the game server meanwhile) |

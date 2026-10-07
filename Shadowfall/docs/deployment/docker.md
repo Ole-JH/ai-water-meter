@@ -115,6 +115,34 @@ The Dockerfile's `HEALTHCHECK` uses this endpoint. `task ps` shows it as well.
 
 ## Deploying to your own server
 
+### Build here, run there
+
+Build the client on your desktop (where Unity is fast) and run the server on another machine, e.g. `docker2`:
+
+```bash
+task release                    # build the WebGL client here, deploy it and this commit to docker2
+CLIENT_BUILD=local task release # the same, building with your local Unity editor (UNITY_PATH)
+task deploy:remote              # deploy the build already in server/public, without building
+task remote -- logs             # run any task on the server host (ps, backup, accounts, data:reset...)
+```
+
+`task release` checks that the server code is committed and pushed and that it can reach the host over SSH, builds the client,
+then on the host pulls the same commit into its git checkout, copies `server/public` there with rsync and runs `task up`.
+Players get the reload prompt as usual.
+
+Once, on the host: clone the repository, check out your branch, create `server/.env`, and make sure Task is installed
+(`./bin/task` or `task` on the PATH). On the desktop you need `ssh` access to the host (keys, no password prompt) and `rsync`.
+
+Settings, per run (`DEPLOY_HOST=myhost task release`) or in a `.deploy.env` file next to `Taskfile.yml` (not in git):
+
+| Setting | Default | Meaning |
+| --- | --- | --- |
+| `DEPLOY_HOST` | `docker2` | SSH host (an alias from `~/.ssh/config` works) |
+| `DEPLOY_DIR` | `~/ai-water-meter/Shadowfall` | The `Shadowfall` folder of the checkout on the host |
+| `CLIENT_BUILD` | Docker | `local` to build with a local Unity editor |
+
+### By hand
+
 ```bash
 # On your workstation: build the client
 task client:build              # or use the Unity menu

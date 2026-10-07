@@ -2,6 +2,9 @@
 # Install: https://taskfile.dev/installation/   then run `task` to list everything.
 version: "3"
 
+# Per-machine settings (DEPLOY_HOST, DEPLOY_DIR...) can go in .deploy.env next to this file (not in git).
+dotenv: [".deploy.env"]
+
 vars:
   SERVER_DIR: server
   # Path to the Unity editor binary, e.g.
@@ -15,6 +18,12 @@ vars:
   GAME_PORT: '{{.SHADOWFALL_PORT | default "7341"}}'
   # Host port for Grafana (monitoring). Override: GRAFANA_PORT=3001 task up
   GRAFANA_PORT: '{{.GRAFANA_PORT | default "3000"}}'
+  # Remote deploys (task release / deploy:remote / remote): the SSH host running the server, and the Shadowfall folder
+  # of its git checkout there. Override per run (DEPLOY_HOST=myhost task release) or in .deploy.env.
+  DEPLOY_HOST: '{{.DEPLOY_HOST | default "docker2"}}'
+  DEPLOY_DIR: '{{.DEPLOY_DIR | default "~/ai-water-meter/Shadowfall"}}'
+  # Runs Task on the deploy host: its ./bin/task (here or in the repo root) if there is one, else task on the PATH.
+  REMOTE_TASK: 'cd {{.DEPLOY_DIR | default "~/ai-water-meter/Shadowfall"}} && T=task; for t in ./bin/task ../bin/task; do [ -x "$t" ] && T=$t && break; done; $T'
   # Unity version for the Docker build image, read from the project
   UNITY_VERSION:
     sh: "sed -n 's/^m_EditorVersion: *//p' ProjectSettings/ProjectVersion.txt | tr -d '\\r'"
@@ -118,6 +127,62 @@ tasks:
     cmds:
       - git pull
       - task: deploy
+
+  # ---------------------------------------------------------------- build here, run there
+
+  release:
+    desc: "Build the WebGL client on this machine, then deploy it with the current commit to DEPLOY_HOST (default docker2)"
+    cmds:
+      - task: deploy:check
+      - task: '{{if eq .CLIENT_BUILD "local"}}client:build:local{{else}}client:build{{end}}'
+      - task: deploy:remote
+
+  deploy:check:
+    desc: Check this commit can be deployed (server code committed and pushed, the deploy host reachable)
+    internal: true
+    vars:
+      BRANCH:
+        sh: git rev-parse --abbrev-ref HEAD
+    cmds:
+      - cmd: |
+          if ! git diff --quiet HEAD -- server ':(exclude)server/public'; then
+            echo "Uncommitted changes in server/: commit and push them first (the deploy host takes the server code from git)."; exit 1
+          fi
+      - git fetch -q origin {{.BRANCH}}
+      - cmd: |
+          if ! git merge-base --is-ancestor HEAD origin/{{.BRANCH}}; then
+            echo "This commit isn't on origin/{{.BRANCH}} yet: git push first."; exit 1
+          fi
+      - ssh -o BatchMode=yes -o ConnectTimeout=10 {{.DEPLOY_HOST}} true
+
+  deploy:remote:
+    desc: "Deploy the WebGL build in server/public and the current commit to DEPLOY_HOST, and restart it there (no client build)"
+    vars:
+      BRANCH:
+        sh: git rev-parse --abbrev-ref HEAD
+      SHA:
+        sh: git rev-parse HEAD
+    preconditions:
+      - sh: test -f {{.SERVER_DIR}}/public/build.json
+        msg: "There is no WebGL build in server/public: run task client:build first (or task release, which does both)."
+    cmds:
+      - task: deploy:check
+      - echo "Updating the checkout on {{.DEPLOY_HOST}} to {{.BRANCH}} @ {{.SHA}}..."
+      - |
+        ssh {{.DEPLOY_HOST}} "cd {{.DEPLOY_DIR}} && git fetch -q origin {{.BRANCH}} && git checkout -q {{.BRANCH}} && git pull -q --ff-only origin {{.BRANCH}} \
+          && [ \"\$(git rev-parse HEAD)\" = {{.SHA}} ] || { echo 'The checkout on {{.DEPLOY_HOST}} is not at {{.SHA}} (local changes there?)'; exit 1; }"
+      - echo "Copying the WebGL build..."
+      - rsync -az --delete --info=stats1 {{.SERVER_DIR}}/public/ {{.DEPLOY_HOST}}:{{.DEPLOY_DIR}}/{{.SERVER_DIR}}/public/
+      - echo "Restarting on {{.DEPLOY_HOST}}..."
+      - ssh {{.DEPLOY_HOST}} '{{.REMOTE_TASK}} up'
+      - |
+        echo "Deployed {{.SHA}} with build $(sed -n 's/.*"build" *: *"\([^"]*\)".*/\1/p' {{.SERVER_DIR}}/public/build.json) to {{.DEPLOY_HOST}}."
+
+  remote:
+    desc: "Run any task on DEPLOY_HOST: task remote -- data:reset   (or logs, ps, backup, accounts...)"
+    interactive: true
+    cmds:
+      - ssh -t {{.DEPLOY_HOST}} '{{.REMOTE_TASK}} {{.CLI_ARGS}}'
 
   client:clean-cache:
     desc: Delete the Docker build's Unity import cache (next build re-imports everything)
@@ -269,6 +334,22 @@ tasks:
     cmds:
       - rm -f {{.SERVER_DIR}}/data/world.json
       - echo "World map removed. Restart the server; the next client to log in uploads the new map."
+
+  data:reset:
+    desc: "Wipe ALL game data - every account, character, stash and the world map (backs up first). On the deploy host: task remote -- data:reset"
+    dir: "{{.SERVER_DIR}}"
+    prompt: "This deletes EVERY account and character (the database and server/data) and the world map, for a fresh start. A backup goes to backups/ first. Continue?"
+    cmds:
+      - task: backup
+      - docker compose stop shadowfall
+      - docker compose up -d --wait postgres
+      # Drop every table; the server recreates the schema when it starts.
+      - docker compose exec -T postgres psql -q -v ON_ERROR_STOP=1 -U shadowfall shadowfall -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
+      # server/data too: the world map, and old account files the server would otherwise import again (as root, it owns them).
+      - docker compose run --rm --no-deps --entrypoint "" shadowfall sh -c 'rm -rf /data/* /data/.[!.]*'
+      - docker compose up -d shadowfall
+      - echo "All game data wiped. The first player to log in uploads the world map."
+      - echo "Register your admin account (the name in ADMINS) right away - until you do, anyone who registers that name becomes admin."
 
   backup:
     desc: Back up the account database (pg_dump) and server/data (world map, old character files) into backups/

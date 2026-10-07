@@ -60,6 +60,17 @@ task up
 Backups made before accounts only contain `server/data`. Restoring one into a fresh database (an empty `shadowfall-postgres-data`
 volume) imports its characters on the next start; see [Accounts → Upgrading](accounts.md#upgrading-from-character-files).
 
+## Starting over
+
+`task data:reset` wipes **all game data**: every account, character, stash and quest log (the database tables) and
+everything in `server/data` (the world map and any old account files, which the server would otherwise import again). It
+asks first and runs `task backup` before deleting anything, so `task db:restore` can undo it. The server restarts with an
+empty database; the first player to log in uploads the world map. Accounts named in `ADMINS` are admins again as soon as
+they are registered, so **register your admin account straight away**: until then, whoever registers that name first gets
+admin rights. Monitoring data (Prometheus, Grafana, Loki) is not touched.
+
+On the deploy host from your desktop: `task remote -- data:reset`.
+
 ## Resetting a password
 
 Players can reset their own password with their recovery code, or by email if the server can send mail. Otherwise give them a

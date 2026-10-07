@@ -28,6 +28,8 @@
 /tools/compile-check/obj/
 /site/
 /backups/
+# Per-machine deploy settings (task release)
+/.deploy.env
 /.task/
 
 # Unity license used by the Docker client build - never commit it
