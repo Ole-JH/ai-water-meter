@@ -143,11 +143,11 @@ namespace Shadowfall
 
             if (!ChatOpen)
             {
-                bool before = showBags | showChar | showSkills | showQuests | showMap | showHelp | showTalents | menu != MenuPage.None;
+                bool before = showBags | showChar | showSkills | showQuests | showMap | showHelp | showTalents | showAchievements | menu != MenuPage.None;
                 bool questsBefore = showQuests;
                 WindowKeys();
                 AdminKeys();
-                bool after = showBags | showChar | showSkills | showQuests | showMap | showHelp | showTalents | menu != MenuPage.None;
+                bool after = showBags | showChar | showSkills | showQuests | showMap | showHelp | showTalents | showAchievements | menu != MenuPage.None;
                 if (showQuests && !questsBefore) Sfx.Play2D("book", 0.5f);
                 else if (after != before) Sfx.Play2D(after ? "ui_open" : "ui_close", 0.4f);
             }
@@ -167,6 +167,7 @@ namespace Shadowfall
                 if (GameInput.Down(GKey.M)) showMap = !showMap;
                 if (GameInput.Down(GKey.F1) || GameInput.Down(GKey.H)) showHelp = !showHelp;
                 if (GameInput.Down(GKey.G)) showEmotes = !showEmotes;
+                if (GameInput.Down(GKey.Y)) showAchievements = !showAchievements;
                 if (GameInput.Down(GKey.Escape))
                 {
                     if (chooseDungeon >= 0) chooseDungeon = -1;
@@ -175,8 +176,8 @@ namespace Shadowfall
                     else if (menu != MenuPage.None) menu = menu == MenuPage.Main ? MenuPage.None : MenuPage.Main;
                     else if (showNews) CloseNews(Player.I);
                     else if (showEmotes) showEmotes = false;
-                    else if (showBags | showChar | showSkills | showQuests | showMap | showHelp | showTalents | showStash | showAdmin)
-                        showBags = showChar = showSkills = showQuests = showMap = showHelp = showTalents = showStash = showAdmin = false;
+                    else if (showBags | showChar | showSkills | showQuests | showMap | showHelp | showTalents | showStash | showAdmin | showAchievements)
+                        showBags = showChar = showSkills = showQuests = showMap = showHelp = showTalents = showStash = showAdmin = showAchievements = false;
                     else menu = MenuPage.Main; // nothing to close: open the game menu
                 }
             }
@@ -245,6 +246,7 @@ namespace Shadowfall
             if (showChar) DrawCharacter(p);
             if (showSkills) DrawSkills(p);
             if (showQuests) DrawQuestLog(p);
+            if (showAchievements) DrawAchievements(p);
             if (showTalents) DrawTalents(p);
             if (showStash) DrawStash(p);
             if (tradeOpen) DrawTrade(p);
@@ -260,6 +262,7 @@ namespace Shadowfall
             if (menuPlayer != null) DrawPlayerMenu();
             DrawOffers();
             if (p.IsDead) DrawDeath(p);
+            DrawAchievementToasts();
             if (menu != MenuPage.None) DrawGameMenu(p);
 
             DrawRecoveryCode();
@@ -573,6 +576,8 @@ namespace Shadowfall
                 string plate = rp.Name + "  " + rp.Level + (rp.Dead ? "  (dead)" : "");
                 UISkin.Shadowed(new Rect(g.x - 140, g.y - 22, 280, 22), plate, UISkin.SmallCenter,
                     mate ? new Color(0.45f, 1f, 0.5f) : new Color(0.5f, 0.78f, 1f));
+                if (!string.IsNullOrEmpty(rp.Title))
+                    UISkin.Shadowed(new Rect(g.x - 140, g.y - 40, 280, 20), "«" + rp.Title + "»", UISkin.V(UISkin.SmallCenter, fontSize: 12), TitleColor);
                 float pw = UISkin.SmallCenter.CalcSize(new GUIContent(plate)).x + 12f;
                 var plateRect = new Rect(g.x - pw / 2, g.y - 22, pw, 22);
                 Block(plateRect);
@@ -581,7 +586,11 @@ namespace Shadowfall
             }
 
             if (WorldToGui(p.transform.position + Vector3.up * 2.45f, out var pg))
+            {
                 UISkin.Shadowed(new Rect(pg.x - 140, pg.y - 20, 280, 22), p.DisplayName, UISkin.SmallCenter, new Color(0.65f, 0.9f, 1f));
+                if (p.Achievements.Title != null)
+                    UISkin.Shadowed(new Rect(pg.x - 140, pg.y - 38, 280, 20), "«" + p.Achievements.Title + "»", UISkin.V(UISkin.SmallCenter, fontSize: 12), TitleColor);
+            }
 
             foreach (var it in Interactable.All)
             {
@@ -847,10 +856,12 @@ namespace Shadowfall
             Block(r);
         }
 
+        static readonly Color TitleColor = new Color(0.85f, 0.75f, 1f);
+
         void DrawMenuButtons()
         {
-            string[] icons = { "bags", "character", "talents", "skills", "quests", "map", "help", "menu" };
-            string[] tips = { "Bags  [I]", "Character  [C]", "Talents  [T]", "Skills  [K]", "Quest Log  [L]", "World Map  [M]", "Help  [F1]", "Game Menu  [Esc]\nSettings, log out" };
+            string[] icons = { "bags", "character", "talents", "skills", "quests", "achievements", "map", "help", "menu" };
+            string[] tips = { "Bags  [I]", "Character  [C]", "Talents  [T]", "Skills  [K]", "Quest Log  [L]", "Achievements  [Y]", "World Map  [M]", "Help  [F1]", "Game Menu  [Esc]\nSettings, log out" };
             const float s = 44, gap = 6;
             float w = icons.Length * (s + gap) - gap;
             var r = new Rect(VW - w - 20, VH - s - 18, w, s);
@@ -868,8 +879,9 @@ namespace Shadowfall
                         case 2: showTalents = !showTalents; break;
                         case 3: showSkills = !showSkills; break;
                         case 4: showQuests = !showQuests; break;
-                        case 5: showMap = !showMap; break;
-                        case 6: showHelp = !showHelp; break;
+                        case 5: showAchievements = !showAchievements; break;
+                        case 6: showMap = !showMap; break;
+                        case 7: showHelp = !showHelp; break;
                         default: menu = menu == MenuPage.None ? MenuPage.Main : MenuPage.None; break;
                     }
                 }
@@ -1529,7 +1541,7 @@ namespace Shadowfall
                 "<b>1-5</b> your class's abilities (right-click casts ability 2),  <b>Q / E</b> health / mana potions,  <b>R</b> recall to town (and back),  " +
                 "<b>Alt</b> shows every item on the ground,  mouse wheel zooms.\n\n" +
                 "<b>Windows</b>\n" +
-                "<b>I</b> bags   <b>C</b> character   <b>T</b> talents   <b>K</b> skills   <b>L</b> quests   <b>M</b> map   <b>Enter</b> chat   <b>Esc</b> close / game menu\n" +
+                "<b>I</b> bags   <b>C</b> character   <b>T</b> talents   <b>K</b> skills   <b>L</b> quests   <b>Y</b> achievements   <b>M</b> map   <b>Enter</b> chat   <b>Esc</b> close / game menu\n" +
                 "<b>Camera:</b> middle-drag or arrow keys rotate and tilt,  <b>Space</b> resets\n\n" +
                 "<b>Emotes:</b> <b>G</b> opens the emote menu, or type /wave, /dance, /bow, /sit, /sleep... (/e lists them all)\n\n" +
                 "<b>Chat & parties</b>\n" +

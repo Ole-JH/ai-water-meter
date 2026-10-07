@@ -36,6 +36,7 @@ Every time you enter the world the camera starts in the classic view.
 | ++t++ | Talents: spend a point per level |
 | ++k++ | Skills: professions and abilities |
 | ++l++ | Quest log |
+| ++y++ | Achievements and titles ([Achievements & titles](achievements.md)) |
 | ++m++ | World map |
 | ++f1++ or ++h++ | Help |
 | ++f10++ | Admin panel (admins only, see [Admin module](../deployment/admin.md)) |

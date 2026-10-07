@@ -83,6 +83,7 @@ namespace Shadowfall
                 GameUI.Banner("Your " + s + " level is now " + level[i] + "!", SkillColor(s));
                 GameUI.Log("Congratulations, you just advanced a " + s + " level. You are now level " + level[i] + ".", SkillColor(s));
                 FxPulse.Ring(Player.I.transform.position, SkillColor(s), 2.5f, 0.6f);
+                Player.I.Achievements.Max("skill." + s, level[i]);
                 NetClient.I?.SaveNow(); // the server checks skill levels for gathering and crafting
             }
         }

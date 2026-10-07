@@ -4,10 +4,25 @@ namespace Shadowfall.EditorTools
 {
     /// <summary>
     /// Import settings for the UI art in Assets/Resources/UI (crisp, uncompressed, no mipmaps) and the
-    /// ground textures in Assets/Resources/Ground (tiling, mipmapped; the water ripple map is linear data).
+    /// ground textures in Assets/Resources/Ground (tiling, mipmapped; the water ripple map is linear data), and the
+    /// music in Assets/Resources/Music (streamed, loaded only when played).
     /// </summary>
     public class ShadowfallImportSettings : AssetPostprocessor
     {
+        void OnPreprocessAudio()
+        {
+            if (!assetPath.Replace('\\', '/').Contains("/Resources/Music/")) return;
+            var importer = (AudioImporter)assetImporter;
+            importer.forceToMono = false;
+            importer.loadInBackground = true;
+            var s = importer.defaultSampleSettings;
+            s.loadType = UnityEngine.AudioClipLoadType.Streaming;
+            s.compressionFormat = UnityEngine.AudioCompressionFormat.Vorbis;
+            s.quality = 0.45f;
+            s.preloadAudioData = false; // the Music player loads one track at a time
+            importer.defaultSampleSettings = s;
+        }
+
         void OnPreprocessTexture()
         {
             string path = assetPath.Replace('\\', '/');

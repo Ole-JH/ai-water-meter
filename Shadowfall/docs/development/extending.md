@@ -41,6 +41,14 @@ Then run `task gamedata`: the server pays the gold and item reward from `server/
 !!! warning "Quest ids are saved"
     Completed and active quests are stored by `Id`, so don't rename ids that players may already have.
 
+## Add an achievement
+
+Add an `AchievementDef` to `AchievementDatabase.All` in `Assets/Scripts/Progression/Achievements.cs`: it is earned when the
+counter `Stat` reaches `Goal`. Use an existing counter (`kills`, `elites`, `boss.<name>`, `level`, `skill.<skill>`, `quests`,
+`gold`, `explored`, `zone`, `dungeon`, `trades`...) or count a new one where it happens with `Player.I.Achievements.Add(...)`,
+`Max(...)` or `Once(...)`. Give it an `Icon` (an `ach_*` badge from `tools/ui/render_icons.js`) and optionally a `Title`.
+Then run `task gamedata` so the server knows its name and title. Don't rename ids: they're saved.
+
 ## Add an NPC
 
 Call `Npc.Create(...)` in `WorldGenerator.BuildTown()`. Roles are `QuestGiver`, `Vendor` and `Healer`. A quest giver offers the chain in `QuestDatabase.Chains[npcName]`.

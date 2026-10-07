@@ -150,6 +150,7 @@ namespace Shadowfall
                     break;
                 case "tdone": // the server already moved everything (an "inv" follows)
                     CloseTrade("Trade with " + m.name + " complete.");
+                    Player.I?.Achievements.Add("trades");
                     Sfx.Play2D("coins", 0.6f);
                     SaveNow();
                     break;

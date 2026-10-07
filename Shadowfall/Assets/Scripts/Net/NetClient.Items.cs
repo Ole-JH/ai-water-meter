@@ -81,6 +81,7 @@ namespace Shadowfall
                     GameUI.Log("Vex fuses three gems into a " + m.name + " (" + m.gold + " gold).", GoldColor);
                     break;
                 case "socket":
+                    p.Achievements.Add("sockets");
                     Sfx.Play2D("anvil", 0.5f, 1.3f);
                     GameUI.Log("You socket the " + m.name + " into " + m.target + ".", new Color(0.7f, 0.85f, 1f));
                     break;

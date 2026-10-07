@@ -160,6 +160,33 @@ task audio:build   # rebuild Assets/Resources/Audio (needs numpy and ffmpeg)
 
 To add a sound, add an entry to `PICKS` (a clip from a pack) or to `synth()` (generated) in `tools/audio/build_audio.py`, rebuild, and call `Sfx.Play("your_key", position)`.
 
+## Music
+
+Fourteen **CC0** tracks from OpenGameArt (composers in `Assets/Resources/Music/CREDITS.md`). `tools/audio/build_music.py`
+downloads them, trims long pieces with a fade-out, normalizes their loudness, encodes stereo 32 kHz OGG (about 11 MB in
+all) and writes `music.json`, the playlist per context:
+
+| Context | When | Tracks |
+| --- | --- | --- |
+| `login` | The login and hero screens | Dark Intro |
+| `town` | Hollowmere | A New Town, Minstrel Dance |
+| `wilds` | Whisperwood, the Goblin Encampment, Ironvein Quarry | Dark Forest Theme, La Citadelle |
+| `graveyard` | The Forsaken Graveyard, the Crypt of the Lich | Death Waltz, Dark Forest Theme |
+| `dungeon` | Any dungeon | Dungeon Ambience, Dark Shrine, Dark Cavern Ambient, Cold Silence |
+| `combat` | Fighting an elite, or four or more monsters | Determined Pursuit, Battle Theme A, Ghosts & Heroes (loops) |
+| `boss` | Fighting a boss | Boss Battle #2 (an opening, then a loop) |
+
+`Core/Music.cs` checks the context twice a second, crossfades (2.5 s, 1.2 s into a fight), leaves 20 to 50 s of quiet
+between exploration pieces, and loads one track at a time (the importer sets the clips to stream without preloading, and
+finished clips are unloaded).
+
+```bash
+task music:build   # download the tracks into .art-cache/music and rebuild Assets/Resources/Music (needs ffmpeg)
+```
+
+To add a track, add a line to `TRACKS` in `tools/audio/build_music.py` (CC0, or credit it) and rebuild; to add a context,
+also teach `Music.Want()` when it applies.
+
 ## Credits
 
 | Pack | Creator | License | Used for |
@@ -169,5 +196,6 @@ To add a sound, add an entry to `PICKS` (a clip from a pack) or to `synth()` (ge
 | Resource Bits | Kay Lousberg | CC0 | Ore nuggets on mining rocks |
 | Nature Kit, Fantasy Town Kit, Graveyard Kit, UI Pack RPG Expansion | Kenney | CC0 | Stumps, tents, campfires, town props, graveyard, zombie, UI skin, cursors |
 | Ultimate Monsters, Ultimate Animated Animals | Quaternius | CC0 | Goblins, warchief, golem, wolves |
-| game-icons.net | Lorc, Delapouite, DarkZaitzev, Faithtoken, Sbed | CC BY 3.0 | All UI icons (recolored) |
+| game-icons.net | Lorc, Delapouite, DarkZaitzev, Faithtoken, Sbed | CC BY 3.0 | All UI icons (recolored), achievement badges |
+| Music from OpenGameArt | Nikke, The Cynic Project, RandomMind, Komiku, northivanastan, yd, qubodup, Paul Wortmann, Eponasoft, Emma_MA, Bobjt, nene | CC0 | Music (see `Assets/Resources/Music/CREDITS.md`) |
 | Cinzel, Alegreya Sans | Natanael Gama; Huerta Tipográfica | SIL OFL 1.1 | Fonts |

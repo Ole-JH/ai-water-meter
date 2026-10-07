@@ -1,0 +1,114 @@
+# Achievements & titles
+
+Press ++y++ (or the trophy button at the bottom right) for the achievements window. Achievements are grouped in seven
+categories; each shows its progress toward the goal, and the ones you have earned show the date. Every achievement is worth
+points, and the total is at the top of the window.
+
+When you earn one, a gold plate rises under the banner with a fanfare, and your party (wherever they are) and the players
+around you see a line in their chat: *"Alice has earned the achievement [Lichbane]!"*.
+
+## Titles
+
+Some achievements award a **title**. Pick one with the arrows at the top of the achievements window, and it shows under your
+name, for everyone: *«Lichbane»*. The server only shows titles you have actually earned.
+
+## Heroes from before achievements
+
+Progress that was already saved counts: level, skill levels, completed quests, hired companions and gold are caught up
+when you log in, and the achievements they earn arrive quietly, with one line in the chat. Kills, bosses, dungeons and
+exploration count from the day achievements arrived.
+
+## The list
+
+
+### Combat
+
+| Achievement | How | Points | Title |
+| --- | --- | --- | --- |
+| **First Blood** | Slay your first monster. | 5 |  |
+| **Monster Slayer** | Slay 100 monsters. | 10 |  |
+| **Scourge of the Wilds** | Slay 1,000 monsters. | 25 | the Slayer |
+| **Unstoppable** | Slay 5,000 monsters. | 50 | the Unstoppable |
+| **Wolfbane** | Slay 50 Dire Wolves. | 10 | Wolfbane |
+| **Goblin Smasher** | Slay 100 goblins, shamans and warchiefs. | 10 |  |
+| **Bone Collector** | Put 100 skeletons and zombies back in the ground. | 10 | Bonebreaker |
+| **Law of Hollowmere** | Slay 50 bandits. | 10 |  |
+| **Rockbreaker** | Shatter 25 Rock Golems. | 10 |  |
+| **Champion Slayer** | Slay an elite champion. | 10 |  |
+| **Champion Hunter** | Slay 50 elite champions. | 25 | Champion Hunter |
+
+### Bosses
+
+| Achievement | How | Points | Title |
+| --- | --- | --- | --- |
+| **Warchief's End** | Defeat the Goblin Warchief in his camp. | 10 |  |
+| **Lichbane** | Defeat the Lich King in his crypt. | 25 | Lichbane |
+| **Rest in Pieces** | Defeat the Crypt Lord at the bottom of the Catacombs. | 10 |  |
+| **Hideout Raided** | Defeat the Bandit Lord in his hideout. | 10 |  |
+| **Regicide** | Defeat the Goblin King in the Warrens. | 10 |  |
+| **Colossus Toppled** | Defeat the Stone Colossus in Ironvein Deep. | 10 |  |
+| **Kingslayer** | Defeat all six bosses. | 50 | Kingslayer |
+
+### Dungeons
+
+| Achievement | How | Points | Title |
+| --- | --- | --- | --- |
+| **Into the Dark** | Enter a dungeon. | 5 |  |
+| **Delver** | Enter all four dungeons. | 10 |  |
+| **Rock Bottom** | Reach the deepest level of a dungeon. | 10 |  |
+| **Veteran** | Defeat a dungeon boss on Veteran or harder. | 10 |  |
+| **Nightmare Walker** | Defeat a dungeon boss on Nightmare or harder. | 25 | Nightmare Walker |
+| **Through Hell** | Defeat a dungeon boss on Hell. | 50 | the Hellborn |
+
+### Exploration
+
+| Achievement | How | Points | Title |
+| --- | --- | --- | --- |
+| **Pathfinder** | Explore a quarter of the world. | 10 |  |
+| **Cartographer** | Explore three quarters of the world. | 25 | Cartographer |
+| **Wanderer** | Visit Hollowmere, Whisperwood, the Goblin Encampment, the Forsaken Graveyard, Ironvein Quarry and the Crypt of the Lich. | 25 | the Wanderer |
+
+### Hero
+
+| Achievement | How | Points | Title |
+| --- | --- | --- | --- |
+| **Adventurer** | Reach level 5. | 5 |  |
+| **Seasoned** | Reach level 10. | 10 |  |
+| **Veteran Hero** | Reach level 20. | 25 |  |
+| **Living Legend** | Reach level 30. | 50 | the Legendary |
+| **Helping Hand** | Complete 10 quests. | 10 |  |
+| **Hero of Hollowmere** | Complete 24 quests. | 25 | Hero of Hollowmere |
+| **Well-Off** | Have 1,000 gold. | 10 |  |
+| **Dragon's Hoard** | Have 25,000 gold. | 25 | the Wealthy |
+| **Legendary!** | Pick up a legendary item. | 10 |  |
+| **Hoarder of Legends** | Pick up 10 legendary items. | 25 |  |
+| **Part of a Set** | Pick up a set item. | 10 |  |
+| **Jeweler** | Socket 10 gems. | 10 |  |
+| **Death's Regular** | Die 10 times. It happens to the best of us. | 5 | Death's Regular |
+
+### Professions
+
+| Achievement | How | Points | Title |
+| --- | --- | --- | --- |
+| **Lumberjack** | Reach Woodcutting level 10. | 10 |  |
+| **Timberlord** | Reach Woodcutting level 25. | 25 |  |
+| **Prospector** | Reach Mining level 10. | 10 |  |
+| **Deep Delver** | Reach Mining level 25. | 25 |  |
+| **Angler** | Reach Fishing level 10. | 10 |  |
+| **Master Angler** | Reach Fishing level 25. | 25 |  |
+| **Apprentice Smith** | Reach Smithing level 10. | 10 |  |
+| **Master Smith** | Reach Smithing level 25. | 25 | Master Smith |
+| **Camp Cook** | Reach Cooking level 10. | 10 |  |
+| **Master Chef** | Reach Cooking level 25. | 25 | Master Chef |
+| **Busy Hands** | Forge or cook 50 times. | 10 |  |
+
+### Social
+
+| Achievement | How | Points | Title |
+| --- | --- | --- | --- |
+| **Better Together** | Join a party. | 5 |  |
+| **Fair Deal** | Complete a trade with another player. | 5 |  |
+| **Merchant Prince** | Complete 25 trades. | 25 | Merchant Prince |
+| **Life of the Party** | Use every emote. | 10 | Life of the Party |
+| **A Loyal Friend** | Hire a companion. | 5 |  |
+| **Beastmaster** | Hire all six companions. | 25 | Beastmaster |

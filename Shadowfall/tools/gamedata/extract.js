@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Extracts the game data the server needs (quest rewards, companion prices) from the C# sources into
+// Extracts the game data the server needs (quest rewards, companion prices, achievement names and titles) from the C# sources into
 // server/gamedata.json, so the server and the client always agree.
 //   node tools/gamedata/extract.js          writes server/gamedata.json
 //   node tools/gamedata/extract.js --check  exits 1 if server/gamedata.json is out of date (the smoke test runs this)
@@ -44,7 +44,12 @@ function extract() {
     const id = str(b, "Id");
     if (id) companions[id] = { price: num(b, "Price"), level: num(b, "RequiredLevel", 1) };
   }
-  return { generatedFrom: "Assets/Scripts (tools/gamedata/extract.js)", quests, companions };
+  const achievements = {};
+  for (const b of blocks(read("Assets/Scripts/Progression/Achievements.cs"), "AchievementDef")) {
+    const id = str(b, "Id");
+    if (id) achievements[id] = { name: str(b, "Name"), title: str(b, "Title") || "" };
+  }
+  return { generatedFrom: "Assets/Scripts (tools/gamedata/extract.js)", quests, companions, achievements };
 }
 
 const out = path.join(ROOT, "server", "gamedata.json");
@@ -55,5 +60,5 @@ if (process.argv.includes("--check")) {
 } else {
   fs.writeFileSync(out, json);
   const d = JSON.parse(json);
-  console.log(`Wrote server/gamedata.json: ${Object.keys(d.quests).length} quests, ${Object.keys(d.companions).length} companions`);
+  console.log(`Wrote server/gamedata.json: ${Object.keys(d.quests).length} quests, ${Object.keys(d.companions).length} companions, ${Object.keys(d.achievements).length} achievements`);
 }

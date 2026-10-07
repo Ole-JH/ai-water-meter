@@ -71,6 +71,7 @@ nav:
       - Controls: gameplay/controls.md
       - The world: gameplay/world.md
       - Items & progression: gameplay/progression.md
+      - Achievements & titles: gameplay/achievements.md
   - Deployment:
       - Docker: deployment/docker.md
       - Building the client in Docker: deployment/docker-client-build.md

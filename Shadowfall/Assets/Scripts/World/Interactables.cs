@@ -143,6 +143,8 @@ namespace Shadowfall
             else
             {
                 Sfx.Play2D("loot", 0.6f);
+                if (d.Item.Kind == ItemKind.Equipment && d.Item.Rarity == Rarity.Legendary) Player.I?.Achievements.Add("legendaries");
+                if (d.Item.Kind == ItemKind.Equipment && d.Item.Rarity == Rarity.Set) Player.I?.Achievements.Add("sets");
                 GameUI.Log("You pick up " + (d.Item.Count > 1 ? d.Item.Count + "x " : "") + d.Item.Name + ".", d.Item.NameColor);
             }
             byId.Remove(id);
@@ -480,6 +482,7 @@ namespace Shadowfall
             Sfx.Play(Skill == SkillType.Smithing ? "anvil" : "sizzle", p.transform.position, 0.6f);
             CraftFx(p);
             p.Skills.AddXp(Skill, Xp);
+            p.Achievements.Add("crafted");
             GameUI.Log("You make: " + made, Skill == SkillType.Smithing ? Item.RarityColor(rarity) : Color.white);
         }
     }

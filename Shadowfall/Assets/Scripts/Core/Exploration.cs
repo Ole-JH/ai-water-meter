@@ -29,6 +29,22 @@ namespace Shadowfall
             }
         }
 
+        /// <summary>How much of the walkable overworld this hero has explored, in percent.</summary>
+        public static int WorldPercent()
+        {
+            var w = World;
+            var grid = WorldGrid.Instance;
+            int seen = 0, total = 0;
+            for (int y = 0; y < WorldGenerator.H; y++)
+                for (int x = 0; x < WorldGenerator.W; x++)
+                {
+                    if (!grid.IsWalkable(new Vector3(x + 0.5f, 0f, y + 0.5f))) continue;
+                    total++;
+                    if (w[y * WorldGenerator.W + x] > 128) seen++;
+                }
+            return total > 0 ? Mathf.FloorToInt(seen * 100f / total) : 0;
+        }
+
         /// <summary>A fresh hero knows only the village.</summary>
         public static void ResetWorld()
         {

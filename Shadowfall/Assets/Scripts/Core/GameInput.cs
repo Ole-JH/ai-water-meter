@@ -5,7 +5,7 @@ using UnityEngine.InputSystem;
 
 namespace Shadowfall
 {
-    public enum GKey { Alpha1, Alpha2, Alpha3, Alpha4, Alpha5, Q, E, I, B, C, K, L, M, H, Escape, Shift, Alt, Space, F1, W, A, S, D, Left, Right, Up, Down, Backspace, T, R, F10, G }
+    public enum GKey { Alpha1, Alpha2, Alpha3, Alpha4, Alpha5, Q, E, I, B, C, K, L, M, H, Escape, Shift, Alt, Space, F1, W, A, S, D, Left, Right, Up, Down, Backspace, T, R, F10, G, Y }
 
     /// <summary>
     /// Thin input wrapper so the project works with either the legacy Input Manager
@@ -76,6 +76,7 @@ namespace Shadowfall
                 case GKey.R: return KeyCode.R;
                 case GKey.F10: return KeyCode.F10;
                 case GKey.G: return KeyCode.G;
+                case GKey.Y: return KeyCode.Y;
                 default: return KeyCode.None;
             }
         }
@@ -154,6 +155,7 @@ namespace Shadowfall
                 case GKey.R: return Key.R;
                 case GKey.F10: return Key.F10;
                 case GKey.G: return Key.G;
+                case GKey.Y: return Key.Y;
                 default: return Key.None;
             }
         }

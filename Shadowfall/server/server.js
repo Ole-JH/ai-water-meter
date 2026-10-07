@@ -621,6 +621,7 @@ function completeLogin(s) {
   s.inst = 0;
   const isNew = !ch.save;
   openLedger(s);
+  s.earned = earnedFrom(ch.save);
   s.lvl = ch.save && ch.save.level ? ch.save.level : 1;
   s.x = ch.save && ch.save.x ? ch.save.x : SPAWN.x;
   s.z = ch.save && ch.save.z ? ch.save.z : SPAWN.z;
@@ -679,6 +680,7 @@ const M = {
   deaths: metrics.counter("shadowfall_player_deaths_total", "Player deaths."),
   trades: metrics.counter("shadowfall_trades_completed_total", "Completed player trades."),
   itemOps: metrics.counter("shadowfall_item_actions_total", "Item and gold actions players asked for, by action (equip, sell, buy, pickup...)."),
+  achievements: metrics.counter("shadowfall_achievements_total", "Achievements earned by players."),
   dungeonEntries: metrics.counter("shadowfall_dungeon_entries_total", "Players entering a dungeon level, by dungeon and difficulty."),
   admin: metrics.counter("shadowfall_admin_commands_total", "Admin commands run, by command."),
   saves: metrics.counter("shadowfall_character_saves_total", "Character files written, by result."),
@@ -1879,6 +1881,22 @@ function deathPenalty(s) {
   ledgerChanged(s);
 }
 
+/** The achievement ids a save says were earned ("id@date"). */
+function earnedFrom(save) {
+  const ids = new Set();
+  for (const e of (save && Array.isArray(save.ach) ? save.ach : [])) {
+    const id = String(e).split("@")[0];
+    if (I.GAMEDATA.achievements[id]) ids.add(id);
+  }
+  return ids;
+}
+
+/** The title a player may wear: from an achievement they have earned that gives one, else none. */
+function titleOf(s, id) {
+  const a = I.GAMEDATA.achievements[String(id || "")];
+  return a && a.title && s.earned && s.earned.has(String(id)) ? a.title : "";
+}
+
 /** Character chosen: sync the world map if needed, then enter. */
 function beginPlay(s, ch) {
   for (const o of sessions.values())
@@ -1988,7 +2006,8 @@ const handlers = {
     s.look = { body: String(m.body || "").slice(0, 6), legs: String(m.legs || "").slice(0, 6), weapon: String(m.weapon || "").slice(0, 6), helm: String(m.helm || "").slice(0, 6),
       mdl: HERO_MODELS.includes(m.mdl) ? m.mdl : "Knight",
       wk: ["sword", "axe", "mace", "dagger", "staff"].includes(m.wk) ? m.wk : "",
-      cp: COMPANIONS.includes(m.cp) ? m.cp : "" };
+      cp: COMPANIONS.includes(m.cp) ? m.cp : "",
+      ti: titleOf(s, m.ti) };
   },
 
   hit(s, m) {
@@ -2070,6 +2089,24 @@ const handlers = {
   },
 
   // Emotes (/wave, /dance...): shown to players nearby, who also get the "Alice waves." line.
+  /** An achievement earned: tell the party (wherever they are) and the players nearby, once per achievement. */
+  ach(s, m) {
+    if (!s.inWorld) return;
+    const id = String(m.id || ""), a = I.GAMEDATA.achievements[id];
+    const t = now();
+    if (!a || s.earned.has(id) || t - (s.lastAch || 0) < 0.3) return;
+    s.lastAch = t;
+    s.earned.add(id);
+    M.achievements.inc();
+    const msg = JSON.stringify({ t: "ach", id: s.id, name: s.name, k: a.name });
+    const p = partyOf(s);
+    for (const o of sessions.values()) {
+      if (o === s || !o.inWorld) continue;
+      const near = (o.inst || 0) === (s.inst || 0) && dist(o.x, o.z, s.x, s.z) < PLAYER_VIEW;
+      if (near || (p && p.members.has(o.id))) safeSend(o, msg);
+    }
+  },
+
   emote(s, m) {
     if (!s.inWorld || s.dead) return;
     const t = now();
@@ -2101,6 +2138,7 @@ const handlers = {
     const lvl = parseInt(m.save.level, 10);
     if (!(lvl >= 1 && lvl <= 100)) return;
     s.char.save = m.save;   // items, gold and companions are the server's: saveCharacter writes the ledger over them
+    for (const id of earnedFrom(m.save)) s.earned.add(id);
     saveCharacter(s);
   },
 };

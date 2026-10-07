@@ -73,6 +73,7 @@ namespace Shadowfall
             if (q == null) return;
             MarkDone(id);
             p.AddXp(q.Def.RewardXp);
+            p.Achievements.Max("quests", Completed.Count);
             if (!string.IsNullOrEmpty(item)) GameUI.Log("You receive: " + item, Item.RarityColor(rarity));
             NetClient.I?.SaveNow();
             Sfx.Play2D("quest_done", 0.8f);

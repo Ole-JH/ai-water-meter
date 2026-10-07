@@ -11,6 +11,7 @@ namespace Shadowfall
         public int Id;
         public string Name;
         public int Level;
+        public string Title;   // worn under their name (empty = none)
         public float Health, MaxHealth;
         public bool Dead;
         public float LastSeen;
@@ -61,6 +62,7 @@ namespace Shadowfall
             LastSeen = Time.time;
             Name = p.name;
             Level = p.lvl;
+            Title = p.ti;
             Health = p.hp;
             MaxHealth = Mathf.Max(1f, p.mhp);
             Dead = p.dead;

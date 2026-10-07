@@ -324,6 +324,8 @@ namespace Shadowfall
                 SwitchSpace(m.id, m);
                 Exploration.ResetDungeon(m.w, m.h);
                 p.TeleportTo(Dungeon.ToWorld(m.start[0], m.start[1]));
+                p.Achievements.Once("dungeon", Dungeon.Index.ToString());
+                if (Dungeon.Depth >= Dungeon.Depths) p.Achievements.Once("bottom", Dungeon.Index.ToString());
                 GameUI.Banner(Dungeon.ZoneName, new Color(1f, 0.55f, 0.3f));
                 Sfx.Play2D(deeper ? "rubble" : "gong", 0.6f);
                 if (m.boss != null && m.boss.Length == 2) GameUI.Log("You sense a terrible presence. " + Dungeon.Def.Boss + " waits on this level.", new Color(1f, 0.45f, 0.35f));
@@ -343,6 +345,14 @@ namespace Shadowfall
             if (State == ConnState.InWorld) Send(cmd);
         }
 
+        /// <summary>Saves within a couple of seconds (several changes in a row become one save).</summary>
+        public void SaveSoon() => nextSave = Mathf.Min(nextSave, Time.time + 2f);
+
+        public void SendAchievement(string id)
+        {
+            if (State == ConnState.InWorld) Send(new AchMsg { id = id });
+        }
+
         public void SaveNow()
         {
             if (State != ConnState.InWorld || Player.I == null) return;
@@ -358,7 +368,7 @@ namespace Shadowfall
             {
                 x = p.transform.position.x - Offset.x, z = p.transform.position.z - Offset.z, ry = p.transform.eulerAngles.y,
                 hp = p.Health, mhp = p.MaxHealth, mp = p.Mana, mmp = p.MaxMana, lvl = p.Level, mv = p.IsMoving, atk = p.IsAttacking, dead = p.IsDead,
-                body = p.BodyHex, legs = p.LegsHex, weapon = p.WeaponHex, helm = p.HelmHex, mdl = p.Look, wk = p.WeaponKind ?? "", cp = p.ActiveCompanion ?? "",
+                body = p.BodyHex, legs = p.LegsHex, weapon = p.WeaponHex, helm = p.HelmHex, mdl = p.Look, wk = p.WeaponKind ?? "", cp = p.ActiveCompanion ?? "", ti = p.Achievements.Title != null ? p.Achievements.TitleFrom : "",
             });
         }
 
@@ -503,6 +513,9 @@ namespace Shadowfall
                 case "matk": HandleMonsterAttack(m); break;
                 case "fx": HandleFx(m); break;
                 case "emote": HandleEmote(m); break;
+                case "ach": // someone in the party or nearby earned an achievement
+                    if (m.id != MyId) GameUI.Log(m.name + " has earned the achievement [" + m.k + "]!", AchievementLog.AchievementColor);
+                    break;
 
                 case "chat": HandleChat(m); break;
                 case "dungeon": HandleDungeon(m); break;
@@ -510,7 +523,11 @@ namespace Shadowfall
                     bool wasInParty = InParty;
                     Party = m.pm ?? new NetPartyMember[0];
                     PartyLeader = m.id;
-                    if (!wasInParty && InParty) GameUI.Log("You joined a party. Type /p to talk to your party.", PartyColor);
+                    if (!wasInParty && InParty)
+                    {
+                        GameUI.Log("You joined a party. Type /p to talk to your party.", PartyColor);
+                        Player.I?.Achievements.Add("parties");
+                    }
                     break;
                 case "inv": case "drops": case "stock": case "iok": case "ierr":
                     HandleItems(m);
@@ -638,6 +655,15 @@ namespace Shadowfall
                 ItemPowers.OnKill(p, pos);
                 p.AddXp(m.xp);
                 p.Quests.OnKill(def.Name);
+                var ach = p.Achievements;
+                ach.Add("kills");
+                ach.Add(AchievementDatabase.KillGroup(def.Name));
+                if (!string.IsNullOrEmpty(m.el)) ach.Add("elites");
+                if (def.Boss)
+                {
+                    ach.Once("boss", def.Name);
+                    if (Dungeon.Active) ach.Max("hardest_boss", Dungeon.Difficulty);
+                }
                 if (!string.IsNullOrEmpty(m.el))
                 {
                     Sfx.Play2D("quest_done", 0.5f, 0.9f);

@@ -267,5 +267,235 @@
    "price": 5000,
    "level": 15
   }
+ },
+ "achievements": {
+  "first_blood": {
+   "name": "First Blood",
+   "title": ""
+  },
+  "slayer_100": {
+   "name": "Monster Slayer",
+   "title": ""
+  },
+  "slayer_1000": {
+   "name": "Scourge of the Wilds",
+   "title": "the Slayer"
+  },
+  "slayer_5000": {
+   "name": "Unstoppable",
+   "title": "the Unstoppable"
+  },
+  "wolves": {
+   "name": "Wolfbane",
+   "title": "Wolfbane"
+  },
+  "goblins": {
+   "name": "Goblin Smasher",
+   "title": ""
+  },
+  "undead": {
+   "name": "Bone Collector",
+   "title": "Bonebreaker"
+  },
+  "bandits": {
+   "name": "Law of Hollowmere",
+   "title": ""
+  },
+  "golems": {
+   "name": "Rockbreaker",
+   "title": ""
+  },
+  "elite_1": {
+   "name": "Champion Slayer",
+   "title": ""
+  },
+  "elite_50": {
+   "name": "Champion Hunter",
+   "title": "Champion Hunter"
+  },
+  "boss_warchief": {
+   "name": "Warchief's End",
+   "title": ""
+  },
+  "boss_lich": {
+   "name": "Lichbane",
+   "title": "Lichbane"
+  },
+  "boss_crypt_lord": {
+   "name": "Rest in Pieces",
+   "title": ""
+  },
+  "boss_bandit_lord": {
+   "name": "Hideout Raided",
+   "title": ""
+  },
+  "boss_goblin_king": {
+   "name": "Regicide",
+   "title": ""
+  },
+  "boss_colossus": {
+   "name": "Colossus Toppled",
+   "title": ""
+  },
+  "boss_all": {
+   "name": "Kingslayer",
+   "title": "Kingslayer"
+  },
+  "dungeon_first": {
+   "name": "Into the Dark",
+   "title": ""
+  },
+  "dungeon_all": {
+   "name": "Delver",
+   "title": ""
+  },
+  "dungeon_bottom": {
+   "name": "Rock Bottom",
+   "title": ""
+  },
+  "dungeon_veteran": {
+   "name": "Veteran",
+   "title": ""
+  },
+  "dungeon_nightmare": {
+   "name": "Nightmare Walker",
+   "title": "Nightmare Walker"
+  },
+  "dungeon_hell": {
+   "name": "Through Hell",
+   "title": "the Hellborn"
+  },
+  "explore_25": {
+   "name": "Pathfinder",
+   "title": ""
+  },
+  "explore_75": {
+   "name": "Cartographer",
+   "title": "Cartographer"
+  },
+  "zones_all": {
+   "name": "Wanderer",
+   "title": "the Wanderer"
+  },
+  "level_5": {
+   "name": "Adventurer",
+   "title": ""
+  },
+  "level_10": {
+   "name": "Seasoned",
+   "title": ""
+  },
+  "level_20": {
+   "name": "Veteran Hero",
+   "title": ""
+  },
+  "level_30": {
+   "name": "Living Legend",
+   "title": "the Legendary"
+  },
+  "quests_10": {
+   "name": "Helping Hand",
+   "title": ""
+  },
+  "quests_all": {
+   "name": "Hero of Hollowmere",
+   "title": "Hero of Hollowmere"
+  },
+  "gold_1000": {
+   "name": "Well-Off",
+   "title": ""
+  },
+  "gold_25000": {
+   "name": "Dragon's Hoard",
+   "title": "the Wealthy"
+  },
+  "legendary_1": {
+   "name": "Legendary!",
+   "title": ""
+  },
+  "legendary_10": {
+   "name": "Hoarder of Legends",
+   "title": ""
+  },
+  "set_1": {
+   "name": "Part of a Set",
+   "title": ""
+  },
+  "socket_10": {
+   "name": "Jeweler",
+   "title": ""
+  },
+  "deaths_10": {
+   "name": "Death's Regular",
+   "title": "Death's Regular"
+  },
+  "woodcutting_10": {
+   "name": "Lumberjack",
+   "title": ""
+  },
+  "woodcutting_25": {
+   "name": "Timberlord",
+   "title": ""
+  },
+  "mining_10": {
+   "name": "Prospector",
+   "title": ""
+  },
+  "mining_25": {
+   "name": "Deep Delver",
+   "title": ""
+  },
+  "fishing_10": {
+   "name": "Angler",
+   "title": ""
+  },
+  "fishing_25": {
+   "name": "Master Angler",
+   "title": ""
+  },
+  "smithing_10": {
+   "name": "Apprentice Smith",
+   "title": ""
+  },
+  "smithing_25": {
+   "name": "Master Smith",
+   "title": "Master Smith"
+  },
+  "cooking_10": {
+   "name": "Camp Cook",
+   "title": ""
+  },
+  "cooking_25": {
+   "name": "Master Chef",
+   "title": "Master Chef"
+  },
+  "crafted_50": {
+   "name": "Busy Hands",
+   "title": ""
+  },
+  "party_1": {
+   "name": "Better Together",
+   "title": ""
+  },
+  "trade_1": {
+   "name": "Fair Deal",
+   "title": ""
+  },
+  "trade_25": {
+   "name": "Merchant Prince",
+   "title": "Merchant Prince"
+  },
+  "emotes_all": {
+   "name": "Life of the Party",
+   "title": "Life of the Party"
+  },
+  "companion_1": {
+   "name": "A Loyal Friend",
+   "title": ""
+  },
+  "companion_all": {
+   "name": "Beastmaster",
+   "title": "Beastmaster"
+  }
  }
 }

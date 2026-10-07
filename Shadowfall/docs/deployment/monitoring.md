@@ -67,7 +67,7 @@ The game server exports these (all prefixed `shadowfall_`):
 | `password_resets_total` | counter | `method` (recovery = recovery code used, code = email or admin code used, admin = code issued with `/a resetpw`, change = changed in game) |
 | `monsters_killed_total` | counter | `monster`, `elite` |
 | `bosses_killed_total` | counter | `boss` |
-| `player_deaths_total`, `trades_completed_total` | counter | |
+| `player_deaths_total`, `trades_completed_total`, `achievements_total` | counter | |
 | `dungeon_entries_total` | counter | `dungeon`, `difficulty` |
 | `admin_commands_total` | counter | `cmd` |
 | `messages_received_total` | counter | `type` (protocol message type) |

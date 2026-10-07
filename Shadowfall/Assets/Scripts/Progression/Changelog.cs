@@ -24,6 +24,17 @@ namespace Shadowfall
         {
             new Entry
             {
+                Id = 21, Date = "2026-10-07", Title = "Music and achievements",
+                Items = new[]
+                {
+                    "Music! Hollowmere, the wilds, the graveyard and the dungeons each have their own, and fights with elites, crowds and bosses get battle music. Volume under Esc > Settings > Music.",
+                    "57 achievements to earn: press <b>Y</b>. Slay monsters and bosses, conquer dungeons on every difficulty, explore the world, master your professions, make friends.",
+                    "Some achievements give a <b>title</b> to wear under your name, like «Lichbane» or «Kingslayer».",
+                    "Your party and the players around you see when you earn one. What your hero already did counts.",
+                },
+            },
+            new Entry
+            {
                 Id = 20, Date = "2026-10-07", Title = "See your party",
                 Items = new[]
                 {

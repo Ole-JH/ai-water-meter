@@ -29,6 +29,7 @@ namespace Shadowfall
         public bool mv, atk, dead;
         public string body, legs, weapon, helm, mdl, wk; // wk = weapon model kind
         public string cp;      // companion following them (id, empty = none)
+        public string ti;      // title worn under their name (empty = none)
     }
 
     /// <summary>Union of every server -> client message.</summary>
@@ -89,6 +90,8 @@ namespace Shadowfall
     [Serializable] public class VanishMsg { public string t = "vanish"; public float dur; }
     [Serializable] public class ChatMsg { public string t = "chat"; public string msg; }
     [Serializable] public class EmoteMsg { public string t = "emote"; public string e; }
+    /// <summary>We earned achievement <c>id</c>: the server tells the party and players nearby.</summary>
+    [Serializable] public class AchMsg { public string t = "ach"; public string id; }
     [Serializable] public class FxMsg { public string t = "fx"; public string k; public float x, z, tx, tz; }
     [Serializable] public class SaveMsg { public string t = "save"; public SaveData save; }
 
@@ -101,6 +104,7 @@ namespace Shadowfall
         public bool mv, atk, dead;
         public string body, legs, weapon, helm, mdl, wk; // wk = weapon model kind
         public string cp;      // active companion id
+        public string ti;      // the achievement whose title we wear (the server checks we earned it)
     }
 
     [Serializable]
@@ -155,5 +159,8 @@ namespace Shadowfall
         public string fog;            // explored overworld tiles, 1 bit each, base64 (see Exploration)
         public int news;              // the newest Changelog entry this hero has read (0 = saved before the changelog)
         public int wv;                // WorldGenerator.LayoutVersion when saved (older positions get converted)
+        public string[] stats;        // achievement counters, "name=value"
+        public string[] ach;          // achievements earned, "id@yyyy-MM-dd"
+        public string title;          // the achievement whose title is worn (empty = none)
     }
 }

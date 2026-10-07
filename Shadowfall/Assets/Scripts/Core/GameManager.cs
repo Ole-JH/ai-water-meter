@@ -50,6 +50,7 @@ namespace Shadowfall
             DungeonEntrance.SpawnAll();
             StashChest.Spawn();
             gameObject.AddComponent<Ambience>();
+            Music.Ensure();
 
             gameObject.AddComponent<NetClient>();
             gameObject.AddComponent<GameUI>();

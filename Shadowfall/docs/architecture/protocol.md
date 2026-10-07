@@ -84,7 +84,7 @@ Server → client:
 | `t` | Fields | Purpose |
 | --- | --- | --- |
 | `world` | `hash`, `w`, `h`, `cells` | Upload the walkability bitmap (bit set = blocked, LSB first, row-major) |
-| `state` | `x`, `z`, `ry`, `hp`, `mhp`, `mp`, `mmp`, `lvl`, `mv`, `atk`, `dead`, `body`, `legs`, `weapon`, `helm`, `mdl`, `wk`, `cp` | Own position, health and appearance, 10× per second. `mdl` = hero model, `wk` = hero weapon in hand (`sword`, `axe`, `mace`, `dagger`, `staff` or empty; anything else is dropped), `cp` = companion following them (`hound`, `squire`, `witch`, `ranger`, `acolyte`, `golem` or empty) |
+| `state` | `x`, `z`, `ry`, `hp`, `mhp`, `mp`, `mmp`, `ti`, `lvl`, `mv`, `atk`, `dead`, `body`, `legs`, `weapon`, `helm`, `mdl`, `wk`, `cp` | Own position, health and appearance, 10× per second. `mdl` = hero model, `wk` = hero weapon in hand (`sword`, `axe`, `mace`, `dagger`, `staff` or empty; anything else is dropped), `cp` = companion following them (`hound`, `squire`, `witch`, `ranger`, `acolyte`, `golem` or empty) |
 | `hit` | `mid`, `dmg`, `crit` | Report damage dealt to monster `mid` (after armor) |
 | `slow` | `mid`, `dur` | Slow a monster (Frost Nova, Fan of Knives, Leap). Capped at 5 s |
 | `stun` | `mid`, `dur` | Stun a monster (Shield Bash, Judgement). Capped at 3 s, bosses take 40% of it; within 16 m |
@@ -106,6 +106,7 @@ Server → client:
 | `dstairs` | — | Take the stairs to the next depth (must be near them) |
 | `dleave` | `town` | Leave the dungeon: to the entrance, or to Hollowmere (`town`, after dying) |
 | `fx` | `k`, `x`, `z`, `tx`, `tz` | Cosmetic spell effect (drawn by `NetClient.HandleFx`, class abilities by `AbilityFx.Remote`): `fireball`, `nova`, `heal`, `meteor`, `cleave`, `levelup`, `bash`, `holybolt`, `consecrate`, `dshield`, `judgement`, `axe`, `whirl`, `leap`, `warcry`, `chain`, `teleport`, `twin`, `multi`, `knives`, `smoke`, `rain` |
+| `ach` | `id` | You earned achievement `id` (from `Achievements.cs`): the server tells your party and the players nearby, once per achievement |
 | `emote` | `e` | Play emote `e` (`wave`, `dance`, `bow`, `cheer`, `clap`, `point`, `flex`, `sit`, `sleep`, `jump`, `kick`, `shadowbox`, `guard`) for players nearby |
 | `save` | `save` | Character snapshot (`SaveData`). Gold, items and companions in it are ignored: the server saves its own |
 
@@ -122,11 +123,12 @@ Server → client:
 | `stock` | `k`, `stock[]`, `restock` | What vendor `k` sells you now, and seconds until it restocks |
 | `iok` | `op` + what happened | An `iop` went through: `name`, `n`, `gold`, `k`, `item`, `rarity`, `burnt`, `target`, `drops` (what didn't fit in your bags). `op` `death`: the gold you lost by dying |
 | `ierr` | `op`, `msg`, `id`, `k`, `n` | An `iop` was refused; `msg` says why (empty = say nothing). For `pickup`: `id`, and `n` left on the ground when your bags filled up |
-| `snap` | `l` (online count), `m[]`, `p[]` | Nearby monsters `{id,n,l,x,z,ry,hp,mhp,ar,sl,st}` (`sl` slowed, `st` stunned) (elites also `el` name, `af` comma-separated affixes, `sh` shield up) and players `{id,name,x,z,ry,hp,mhp,lvl,mv,atk,dead,body,legs,weapon,helm,mdl,wk,cp}` |
+| `snap` | `l` (online count), `m[]`, `p[]` | Nearby monsters `{id,n,l,x,z,ry,hp,mhp,ar,sl,st}` (`sl` slowed, `st` stunned) (elites also `el` name, `af` comma-separated affixes, `sh` shield up) and players `{id,name,x,z,ry,hp,mhp,lvl,mv,atk,dead,body,legs,weapon,helm,mdl,wk,cp,ti}` (`ti` = the title they wear, or empty) |
 | `matk` | `mid`, `tid`, `dmg`, `k`, `x`, `z` | Monster attack: `k` = `melee`, `shot`, `nova`, `summon`, `blink` (elite teleports to `x`,`z` from `tx`,`tz`) or `explode` (Fire Enchanted death, area damage at `x`,`z`); `tid` = target session (−1 for area effects) |
 | `mdie` | `mid` | Monster died (play the death animation) |
 | `kill` | `mid`, `name`, `l`, `xp`, `x`, `z`, `el`, `lb`, `drops[]` | You get credit for a kill (you damaged it, or a party member did within 60 m): award XP, update quests, show your loot (`drops`, as in `drops`) |
 | `fx` | `id`, `k`, `x`, `z`, `tx`, `tz` | Another player's spell effect |
+| `ach` | `id`, `name`, `k` | A party member or a player nearby earned achievement `k` (its name) |
 | `emote` | `id`, `name`, `e` | Another player's emote (play it and print "Alice waves.") |
 | `chat` | `id`, `name`, `msg`, `ch` | Chat line. `ch`: empty = everyone, `p` = party, `w` = whisper to you, `wto` = echo of your whisper (`name` = recipient) |
 | `party` | `id` (leader), `pm[]` | Your party, sent on every change and once a second: `{id,name,lvl,hp,mhp,mp,mmp,mdl,wk,helm,x,z,ry,dead,di,dn}` (`mdl` = class model, `wk` weapon and `helm` for the portrait, `di` = dungeon instance, `dn` = "The Catacombs, level 2" or empty). Empty `pm` = not in a party |
@@ -159,6 +161,8 @@ Each dungeon level is an instance with its own grid, monsters and id. Positions 
 - `hit`: the monster must be within 30 units of the player, and damage is capped at `100 + level × 60`.
 - `chat`: limited to 2 per second, 200 characters, with `<` and `>` stripped so it can't inject IMGUI rich-text tags.
 - `fx`: limited to 10 per second, and only whitelisted kinds are relayed.
+- `state` `ti`: the id of an achievement you have earned (in your save or announced with `ach`) that gives a title; anything else shows no title.
+- `ach`: only ids in `gamedata.json`, each announced once per session and character, at most one every 0.3 s.
 - `emote`: at most one every 0.8 s, only the ids in `EMOTES` (`content.js`), not while dead.
 - `save`: at most 256 KB, and `level` must be between 1 and 100. Its gold, items and companions are replaced by the server's.
 - `iop`: every action is checked against the server's ledger: you must have the item, merchants, the stash, Vex and Orla only work in Hollowmere, purchases check the name and price of the current stock, crafting and gathering check the skill level (gathering at most once every 1.2 s), quests pay once per character, loot can only be picked up within 7 m by the player it dropped for (and expires after 5 minutes), and nothing but potions while a trade is open or while dead.

@@ -146,6 +146,11 @@ tasks:
     cmds:
       - bash tools/audio/fetch_sources.sh .art-cache/audio
 
+  music:build:
+    desc: Download the CC0 music from OpenGameArt and rebuild Assets/Resources/Music and its playlist (needs ffmpeg)
+    cmds:
+      - python3 tools/audio/build_music.py .art-cache/music
+
   audio:build:
     desc: Rebuild Assets/Resources/Audio from .art-cache/audio plus synthesized sounds (needs numpy and ffmpeg)
     cmds:

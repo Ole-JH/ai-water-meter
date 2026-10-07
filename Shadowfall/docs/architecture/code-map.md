@@ -23,6 +23,9 @@
 | `World/Interactables.cs` | `LootDrop`, `ResourceNode` (gathering), `CraftingStation` + `Recipe` (anvil sparks, cooking flare and steam), `Npc` |
 | `Combat/Gore.cs` | Blood and gore: directional hit sprays, death bursts, gibs, and ground splats/pools drawn as one decal mesh (`Shadowfall/Decal` shader, procedurally generated splat atlas) that dry and fade; per-monster kinds (blood, goblin ichor, rot, bone, stone) and the Gore setting |
 | `World/PropFire.cs` | Animated fire on a prop (campfires, gate torches, braziers, dungeon torches): flames, embers, smoke, a wobbling glow core and a flickering light; pauses when the hero is far away |
+| `Core/Music.cs` | Background music: picks the context (town, wilds, graveyard, dungeon, combat, boss, login), crossfades, gaps between pieces |
+| `Progression/Achievements.cs` | Achievement definitions (`AchievementDatabase`) and each hero's counters, earned achievements and title (`AchievementLog`) |
+| `UI/GameUI.Achievements.cs` | The achievements window (++y++), the "Achievement earned" toasts and the title picker |
 | `Characters/PartyPortraits.cs` | Live portraits of the other party members (their model, weapon and helm in a lit booth of the avatar studio) |
 | `Characters/Player.cs` | Click-to-move, targeting, melee, abilities, stats, potions, recall, gathering (and its effects), save and load |
 | `Characters/Enemy.cs` | `EnemyDef` (looks) and the `Enemy` network proxy (interpolation, hit prediction, death, personal loot) |
@@ -89,7 +92,8 @@
 | Path | Responsibility |
 | --- | --- |
 | `compile-check/` | .NET project that compiles `Assets/Scripts` without Unity (`task client:check`) |
-| `gamedata/extract.js` | Writes `server/gamedata.json` from `Quests.cs` and `Companion.cs` (`task gamedata`; the smoke test fails if it is stale) |
+| `audio/build_music.py` | Downloads, trims, normalizes and encodes the music, and writes its playlist (`task music:build`) |
+| `gamedata/extract.js` | Writes `server/gamedata.json` from `Quests.cs`, `Companion.cs` and `Achievements.cs` (`task gamedata`; the smoke test fails if it is stale) |
 | `docker-build-client.sh` | Entry point of the Docker WebGL build (`task client:build`) |
 | `license-helper/` | Unity Hub in a container for `task license:activate` |
 | `art/emotes.py` | Authors the Wave, Dance, Bow, Point, Clap and Flex animations for the hero rig (and previews them as stick figures) |

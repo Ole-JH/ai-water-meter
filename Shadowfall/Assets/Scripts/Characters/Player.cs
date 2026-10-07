@@ -19,6 +19,7 @@ namespace Shadowfall
         public readonly Inventory Stash = new Inventory(40);
         public readonly SkillSet Skills = new SkillSet();
         public readonly QuestLog Quests = new QuestLog();
+        public readonly AchievementLog Achievements = new AchievementLog();
         public readonly float[] CooldownEnd = new float[5];
         /// <summary>This hero's five abilities (keys 1-5), from its class.</summary>
         public AbilityDef[] Kit { get; private set; } = ClassKits.For("Knight");
@@ -277,6 +278,7 @@ namespace Shadowfall
             {
                 Xp -= XpToNext;
                 Level++;
+                Achievements.Max("level", Level);
                 StatPoints += 5;
                 RecalculateStats();
                 Health = MaxHealth;
@@ -315,6 +317,8 @@ namespace Shadowfall
             if (companions != null)
                 foreach (var c in companions) if (CompanionDef.Get(c) != null && !OwnedCompanions.Contains(c)) OwnedCompanions.Add(c);
             Inventory.NotifyChanged(); // recalculates stats
+            if (ledgerLoaded) { Achievements.Max("gold", Gold); Achievements.Max("companions", OwnedCompanions.Count); }
+            else Achievements.CatchUp(this, false); // what an older hero already had counts, quietly
             Stash.NotifyChanged();
             // At full health (a new hero too), stay full with whatever the gear now gives.
             if (fullHealth) Health = MaxHealth;
@@ -521,6 +525,7 @@ namespace Shadowfall
             if (view == null || !view.Emote(e)) return;
             if (e.Sound != null) Sfx.Play(e.Sound, transform.position + Vector3.up, 0.4f, 0.1f);
             GameUI.Log(e.You, EmoteColor);
+            Achievements.Once("emote", e.Id);
             NetClient.I?.SendEmote(e.Id);
         }
 
@@ -1534,6 +1539,7 @@ namespace Shadowfall
                 skillXp = Skills.SaveXp(),
                 completedQuests = new List<string>(Quests.Completed).ToArray(),
                 activeQuests = active.ToArray(),
+                stats = Achievements.SaveStats(), ach = Achievements.SaveEarned(), title = Achievements.TitleFrom ?? "",
             };
         }
 
@@ -1595,6 +1601,8 @@ namespace Shadowfall
             if (s.wv < 3) pos = WorldGenerator.Map(pos); // saved on the smaller world: same place in the new layout
             Exploration.Load(s.wv < 3 ? null : s.fog);
             NewsSeen = s.news > 0 ? s.news : Changelog.Baseline;
+            Achievements.Load(s.stats, s.ach, s.title);
+            Achievements.CatchUp(this, false);
             if (s.x > 0 && WorldGrid.Instance.IsWalkable(pos)) transform.position = pos;
             RecalculateStats();
             Health = s.hp > 0 ? Mathf.Min(s.hp, MaxHealth) : MaxHealth;
@@ -1614,8 +1622,16 @@ namespace Shadowfall
                 if (lastZone != null)
                     GameUI.Banner(zone, WorldGenerator.InTown(transform.position) ? new Color(0.5f, 1f, 0.5f) : new Color(1f, 0.85f, 0.6f));
                 lastZone = zone;
+                if (!Dungeon.Active) Achievements.Once("zone", zone);
+            }
+            if (Time.time >= nextExploredCheck && !Dungeon.Active)
+            {
+                nextExploredCheck = Time.time + 10f;
+                Achievements.Max("explored", Exploration.WorldPercent());
             }
         }
+
+        float nextExploredCheck;
 
         public override void TakeDamage(float amount, Combatant source, bool crit = false)
         {
@@ -1642,6 +1658,7 @@ namespace Shadowfall
             action = Action.None;
             AttackTarget = null;
             view?.Die();
+            Achievements.Add("deaths");
             Sfx.Play2D("death", 0.8f);
             GameUI.Log("You have been slain" + (killer != null ? " by " + killer.DisplayName : "") + ".", new Color(1f, 0.3f, 0.3f));
         }

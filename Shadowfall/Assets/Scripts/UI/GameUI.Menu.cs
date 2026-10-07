@@ -92,7 +92,7 @@ namespace Shadowfall
 
         void CloseAllWindows()
         {
-            showBags = showChar = showSkills = showQuests = showMap = showHelp = showTalents = showStash = showAdmin = showNews = showEmotes = false;
+            showBags = showChar = showSkills = showQuests = showMap = showHelp = showTalents = showStash = showAdmin = showNews = showEmotes = showAchievements = false;
             dialogNpc = null;
             craftStation = null;
             menuPlayer = null;
@@ -102,7 +102,7 @@ namespace Shadowfall
 
         void DrawMenuSettings()
         {
-            const float w = 560, h = 500;
+            const float w = 560, h = 550;
             var r = new Rect((VW - w) / 2, (VH - h) / 2, w, h);
             if (UISkin.Window(r, "Settings")) { menu = MenuPage.Main; return; }
             float x = r.x + 34, y = r.y + 66;
@@ -139,6 +139,15 @@ namespace Shadowfall
             float v = GUI.HorizontalSlider(new Rect(x + 130, y + 8, 300, 20), Sfx.Volume, 0f, 1f);
             if (Mathf.Abs(v - Sfx.Volume) > 0.001f) Sfx.Volume = v;
             UISkin.Shadowed(new Rect(x + 444, y, 60, 26), Mathf.RoundToInt(Sfx.Volume * 100) + "%", label, UISkin.Gold);
+            y += 50;
+
+            // Music (on top of the master volume)
+            UISkin.Shadowed(new Rect(x, y, 120, 26), "Music", label, UISkin.Cream);
+            float mv = GUI.HorizontalSlider(new Rect(x + 130, y + 8, 300, 20), Music.Volume, 0f, 1f);
+            if (Mathf.Abs(mv - Music.Volume) > 0.001f) Music.Volume = mv;
+            UISkin.Shadowed(new Rect(x + 444, y, 60, 26), Music.Volume < 0.005f ? "Off" : Mathf.RoundToInt(Music.Volume * 100) + "%", label, UISkin.Gold);
+            if (new Rect(x, y, w - 68, 30).Contains(Event.current.mousePosition))
+                tooltip = "Music for Hollowmere, the wilds, the graveyard and the dungeons; fights with elites, crowds and bosses have their own.";
             y += 50;
 
             // Interface size: applied when the mouse button is released, so the slider doesn't jump under the cursor.

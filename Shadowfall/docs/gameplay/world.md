@@ -112,3 +112,16 @@ Monsters live on the server, so every player sees the same ones. They:
 **The Lich King** shoots frost bolts, casts a Frost Nova when you're close, and raises four skeletons at half health.
 
 Everyone who damages a monster gets **full XP and quest credit**. Each player then rolls **their own loot**, which only they can see.
+
+## Music
+
+Every place has its own music: a harp and a minstrel's dance in Hollowmere, brooding strings and guitar in the wilds, a dark
+waltz over the graveyard and the Crypt of the Lich, and slow, uneasy ambience in the dungeons. Exploration music plays a
+piece and then leaves a quiet stretch before the next one.
+
+Fights worth it get their own: battling an **elite** champion or a crowd of four or more monsters crossfades to an
+orchestral battle theme, and a **boss** gets a symphonic metal track. When the fight is over, the music of the place comes
+back. The login screen has its own dark theme.
+
+Set the music volume (or turn it off) under ++esc++ → **Settings** → **Music**; it sits on top of the master volume.
+
