@@ -16,7 +16,7 @@ vars:
   DOCS_PORT: '{{.DOCS_PORT | default "8000"}}'
   # Host port for the game (Docker). Override: SHADOWFALL_PORT=9000 task up
   GAME_PORT: '{{.SHADOWFALL_PORT | default "7341"}}'
-  # Host port for Grafana (monitoring). Override: GRAFANA_PORT=3001 task up
+  # Host port for Grafana (monitoring). Override: GRAFANA_PORT=3005 task up
   GRAFANA_PORT: '{{.GRAFANA_PORT | default "3000"}}'
   # Remote deploys (task release / deploy:remote / remote): the SSH host running the server, and the Shadowfall folder
   # of its git checkout there. Override per run (DEPLOY_HOST=myhost task release) or in .deploy.env.
@@ -237,7 +237,7 @@ tasks:
   # ---------------------------------------------------------------- docker
 
   up:
-    desc: Build and start the server, the docs, the monitoring stack and the dashboard (game :7341, docs :8000, Grafana :3000, dashboard :3001)
+    desc: Build and start the server, the docs, the monitoring stack and the dashboard (game :7341, docs :8000, Grafana :3000, dashboard :7342)
     dir: "{{.SERVER_DIR}}"
     env:
       SHADOWFALL_PORT: "{{.GAME_PORT}}"
@@ -249,7 +249,7 @@ tasks:
     cmds:
       - docker compose up -d --build --remove-orphans
       - echo "Shadowfall is running on http://localhost:{{.GAME_PORT}}  -  docs on http://localhost:{{.DOCS_PORT}}  -  monitoring (Grafana) on http://localhost:{{.GRAFANA_PORT}}"
-      - echo "Everything in one place - the dashboard on http://$(hostname):${HOMEPAGE_PORT:-3001}"
+      - echo "Everything in one place - the dashboard on http://$(hostname):${HOMEPAGE_PORT:-7342}"
 
   down:
     desc: Stop the server container

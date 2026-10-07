@@ -4,7 +4,7 @@
 
 | Service | What it does | Where |
 | --- | --- | --- |
-| **Homepage** | The [dashboard](#the-dashboard): links to everything below, container status, live numbers | <http://localhost:3001> (`HOMEPAGE_PORT`) |
+| **Homepage** | The [dashboard](#the-dashboard): links to everything below, container status, live numbers | <http://localhost:7342> (`HOMEPAGE_PORT`) |
 | **Grafana** | Dashboards, log search, alert overview | <http://localhost:3000> (`GRAFANA_PORT`) |
 | **Prometheus** | Collects and stores metrics (30 days) and evaluates the alert rules | <http://localhost:19090>, this machine only |
 | **Alertmanager** | Groups alerts and sends notifications to Discord and/or Pushover (see [Getting notified](#getting-notified)) | <http://localhost:19093>, this machine only |
@@ -18,7 +18,7 @@ only the other containers can reach, never on the public game port.
 
 ## The dashboard
 
-[Homepage](https://gethomepage.dev) on <http://your-host:3001> is the front door: open it and click through to the game, the
+[Homepage](https://gethomepage.dev) on <http://your-host:7342> is the front door: open it and click through to the game, the
 docs, Grafana, Prometheus or Alertmanager. Each card shows whether its container is up (green dot), and some show live
 numbers:
 
@@ -37,14 +37,14 @@ widget); Homepage reads them through the Docker socket, mounted read-only. Its l
 | Setting (`server/.env`) | Default | Meaning |
 | --- | --- | --- |
 | `PUBLIC_HOST` | this machine's name | The host name the links use. `task up` fills in `hostname`; set it if you reach the server by another name or an IP, e.g. `PUBLIC_HOST=docker2.lan` |
-| `HOMEPAGE_PORT` / `HOMEPAGE_BIND` | `3001` / `0.0.0.0` | Where the dashboard listens |
-| `HOMEPAGE_ALLOWED_HOSTS` | `*` | Host names (with port) the page may be opened under, e.g. `docker2:3001,192.168.1.20:3001`. `*` allows any |
+| `HOMEPAGE_PORT` / `HOMEPAGE_BIND` | `7342` / `0.0.0.0` | Where the dashboard listens (next to the game's 7341; if `task up` says *port is already allocated*, pick another here) |
+| `HOMEPAGE_ALLOWED_HOSTS` | `*` | Host names (with port) the page may be opened under, e.g. `docker2:7342,192.168.1.20:7342`. `*` allows any |
 | `PROMETHEUS_BIND` / `ALERTMANAGER_BIND` | `127.0.0.1` | Prometheus and Alertmanager have no login, so they only listen on the server itself and their links only work there (or through an SSH tunnel). `0.0.0.0` opens them to your network |
 
 !!! note
     The Grafana card logs in with `GRAFANA_ADMIN_USER` / `GRAFANA_ADMIN_PASSWORD`. If you changed the admin password in
     Grafana itself, put the new one in `server/.env` too, or the card shows an error. The dashboard has no login of its
-    own: keep port 3001 on your local network (or set `HOMEPAGE_BIND=127.0.0.1`).
+    own: keep port 7342 on your local network (or set `HOMEPAGE_BIND=127.0.0.1`).
 
 ## First login
 

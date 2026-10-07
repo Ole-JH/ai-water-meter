@@ -253,14 +253,14 @@ services:
 
   # Homepage (https://gethomepage.dev): one page with links to the game, the docs, Grafana, Prometheus and Alertmanager,
   # whether each container is up, and live numbers (players online, Grafana alerts, Prometheus targets).
-  # http://<server>:3001 (HOMEPAGE_PORT). It finds the services by their homepage.* labels, through the Docker socket
+  # http://<server>:7342 (HOMEPAGE_PORT). It finds the services by their homepage.* labels, through the Docker socket
   # (read-only). Links use PUBLIC_HOST (default: this machine's name, set by task up).
   homepage:
     image: ghcr.io/gethomepage/homepage:v2.4.0
     container_name: shadowfall-homepage
     restart: unless-stopped
     environment:
-      # Host names (with port) the page may be opened under; * allows any. e.g. HOMEPAGE_ALLOWED_HOSTS=docker2:3001,192.168.1.20:3001
+      # Host names (with port) the page may be opened under; * allows any. e.g. HOMEPAGE_ALLOWED_HOSTS=docker2:7342,192.168.1.20:7342
       HOMEPAGE_ALLOWED_HOSTS: ${HOMEPAGE_ALLOWED_HOSTS:-*}
       LOG_TARGETS: stdout
     volumes:
@@ -271,7 +271,7 @@ services:
       - ./homepage/bookmarks.yaml:/app/config/bookmarks.yaml:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
     ports:
-      - "${HOMEPAGE_BIND:-0.0.0.0}:${HOMEPAGE_PORT:-3001}:3000"
+      - "${HOMEPAGE_BIND:-0.0.0.0}:${HOMEPAGE_PORT:-7342}:3000"
 
   # Builds the Unity WebGL client in Docker and writes it to ./public (no local Unity needed).
   # Only runs on demand: task client:build   (or: docker compose --profile build run --rm client-builder)

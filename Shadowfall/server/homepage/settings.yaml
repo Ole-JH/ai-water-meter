@@ -1,4 +1,4 @@
-# Homepage (https://gethomepage.dev): the dashboard on http://<server>:3001 (HOMEPAGE_PORT).
+# Homepage (https://gethomepage.dev): the dashboard on http://<server>:7342 (HOMEPAGE_PORT).
 # Services come from the homepage.* labels in docker-compose.yml; this file only sets the look and the sections.
 title: Shadowfall
 description: Shadowfall server

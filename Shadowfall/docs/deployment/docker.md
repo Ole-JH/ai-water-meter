@@ -73,7 +73,7 @@ SHADOWFALL_PORT=9000 task up          # or: SHADOWFALL_PORT=9000 docker compose 
 
 ## The dashboard
 
-`task up` also starts **Homepage** on <http://your-host:3001>: one page with a card for the game (players online, heroes in
+`task up` also starts **Homepage** on <http://your-host:7342>: one page with a card for the game (players online, heroes in
 dungeons, monsters, the build), the docs, Grafana (alerts), Prometheus (targets up) and Alertmanager, plus whether every
 container is running and the machine's CPU, memory and disk. See [Monitoring → The dashboard](monitoring.md#the-dashboard).
 
