@@ -53,6 +53,15 @@ namespace Shadowfall
             set { showCommon = value ? 1 : 0; Store("sf_common_loot", showCommon); }
         }
 
+        static int minimapRotate = -1;
+
+        /// <summary>The minimap turns with the camera (true), or keeps north up. Toggled on the minimap itself.</summary>
+        public static bool MinimapRotate
+        {
+            get { if (minimapRotate < 0) minimapRotate = Load("sf_minimap_rotate", 1); return minimapRotate == 1; }
+            set { minimapRotate = value ? 1 : 0; Store("sf_minimap_rotate", minimapRotate); }
+        }
+
         static float uiScale = -1f;
 
         /// <summary>Multiplier on the size of the whole interface (0.7 .. 1.5).</summary>

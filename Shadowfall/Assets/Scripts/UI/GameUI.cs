@@ -962,12 +962,22 @@ namespace Shadowfall
             GUI.color = new Color(0.03f, 0.025f, 0.02f, 1f);
             GUI.DrawTexture(new Rect(r.x - 2, r.y - 2, r.width + 4, r.height + 4), UISkin.Circle);
             GUI.color = Color.white;
-            if (Event.current.type == EventType.Repaint) GUI.DrawTexture(r, Minimap.Render(pp));
+            // Rotating mode: the camera's view direction is up on the map (the map turns as you turn the camera).
+            float camYaw = MinimapYaw();
+            if (Event.current.type == EventType.Repaint)
+            {
+                if (camYaw != 0f) RotatedTexture(r, Minimap.Render(pp), -camYaw, Color.white);
+                else GUI.DrawTexture(r, Minimap.Render(pp));
+            }
 
             float span = Minimap.Span;
-            System.Func<Vector3, Vector2> toMap = w => new Vector2(
-                r.center.x + (w.x - pp.x) / span * r.width,
-                r.center.y - (w.z - pp.z) / span * r.height);
+            float ya = camYaw * Mathf.Deg2Rad, sa = Mathf.Sin(ya), ca = Mathf.Cos(ya);
+            System.Func<Vector3, Vector2> toMap = w =>
+            {
+                float dx = w.x - pp.x, dz = w.z - pp.z;
+                float mx = dx * ca - dz * sa, my = dx * sa + dz * ca; // along the camera's right and forward
+                return new Vector2(r.center.x + mx / span * r.width, r.center.y - my / span * r.height);
+            };
 
             foreach (var it in Interactable.All)
             {
@@ -995,7 +1005,7 @@ namespace Shadowfall
                 if (m.id == net.MyId || m.di != net.DungeonId) continue;
                 bool near = RemotePlayer.ById.TryGetValue(m.id, out var mrp) && mrp != null;
                 Vector3 at = near ? mrp.transform.position : new Vector3(m.x, 0f, m.z);
-                PartyMarker(r, toMap(at), near ? mrp.transform.eulerAngles.y : m.ry, m, Factory.FlatDistance(at, pp));
+                PartyMarker(r, toMap(at), (near ? mrp.transform.eulerAngles.y : m.ry) - camYaw, m, Factory.FlatDistance(at, pp));
             }
 
             // Hero: an arrow pointing where we face.
@@ -1003,7 +1013,7 @@ namespace Shadowfall
             // arrow would orbit around the wrong point. Rotate around the map centre as it appears on screen.)
             var saved = GUI.matrix;
             Vector3 pivot = saved.MultiplyPoint3x4(new Vector3(r.center.x, r.center.y, 0f));
-            GUI.matrix = Matrix4x4.TRS(pivot, Quaternion.Euler(0f, 0f, p.transform.eulerAngles.y), Vector3.one) *
+            GUI.matrix = Matrix4x4.TRS(pivot, Quaternion.Euler(0f, 0f, p.transform.eulerAngles.y - camYaw), Vector3.one) *
                          Matrix4x4.TRS(-pivot, Quaternion.identity, Vector3.one) * saved;
             GUI.color = new Color(1f, 0.95f, 0.8f);
             GUI.DrawTexture(new Rect(r.center.x - 8, r.center.y - 9, 16, 18), Minimap.Arrow);
@@ -1012,7 +1022,16 @@ namespace Shadowfall
 
             // Bronze ring, north marker and zoom buttons.
             if (UISkin.OrbFrame != null) GUI.DrawTexture(frame, UISkin.OrbFrame);
-            UISkin.Shadowed(new Rect(frame.center.x - 12, frame.y + 2, 24, 22), "N", UISkin.V(UISkin.HeadingCenter, fontSize: 15), UISkin.Gold, 2);
+            // North: at the top, or wherever north is on a rotating map.
+            float nr = frame.width / 2f - 12f;
+            var npos = new Vector2(frame.center.x - sa * nr, frame.center.y - ca * nr);
+            UISkin.Shadowed(new Rect(npos.x - 12, npos.y - 11, 24, 22), "N", UISkin.V(UISkin.HeadingCenter, fontSize: 15), UISkin.Gold, 2);
+            // The rotate / north-up toggle, on the frame.
+            var rot = new Rect(frame.x + 10, frame.y + 10, 26, 26);
+            if (UISkin.Btn(rot, GameSettings.MinimapRotate ? "R" : "N", UISkin.SquareButton)) GameSettings.MinimapRotate = !GameSettings.MinimapRotate;
+            if (rot.Contains(Event.current.mousePosition))
+                tooltip = GameSettings.MinimapRotate ? "The minimap turns with the camera.\n<color=#998877>Click to keep north up.</color>"
+                                                     : "North is up on the minimap.\n<color=#998877>Click to turn it with the camera.</color>";
             var zin = new Rect(frame.xMax - 40, frame.yMax - 44, 26, 26);
             var zout = new Rect(frame.x + 14, frame.yMax - 44, 26, 26);
             if (UISkin.Btn(zin, "+", UISkin.SquareButton)) Minimap.Span = Mathf.Max(Minimap.MinSpan, Minimap.Span / 1.3f);
@@ -1057,6 +1076,16 @@ namespace Shadowfall
             GUI.DrawTexture(rect, tex);
             GUI.matrix = saved;
             GUI.color = Color.white;
+        }
+
+        CameraRig rig;
+
+        /// <summary>How far the minimap is turned: the camera's yaw when it rotates, 0 for north up.</summary>
+        float MinimapYaw()
+        {
+            if (!GameSettings.MinimapRotate) return 0f;
+            if (rig == null && GameManager.I != null && GameManager.I.Cam != null) rig = GameManager.I.Cam.GetComponent<CameraRig>();
+            return rig != null ? rig.Yaw : 0f;
         }
 
         /// <summary>"clear", "snow", "blizzard", "fog"... for the minimap plate.</summary>

@@ -39,6 +39,7 @@ Every time you enter the world the camera starts in the classic view.
 | ++l++ | Quest log |
 | ++y++ | Achievements and titles ([Achievements & titles](achievements.md)) |
 | ++m++ | World map |
+| **R** / **N** button on the minimap | The minimap turns with the camera (R, the default) or keeps north up (N); the gold **N** on the rim always points north |
 | ++f1++ or ++h++ | Help |
 | ++f10++ | Admin panel (admins only, see [Admin module](../deployment/admin.md)) |
 | ++enter++ or ++slash++ | Chat. `/p` party, `/w name` whisper, `/r` reply, `/invite name`, `/leave`, `/who` |

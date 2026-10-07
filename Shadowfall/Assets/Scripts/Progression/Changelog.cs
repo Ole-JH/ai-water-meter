@@ -24,6 +24,18 @@ namespace Shadowfall
         {
             new Entry
             {
+                Id = 23, Date = "2026-10-07", Title = "A day in Hollowmere, and harder loot",
+                Items = new[]
+                {
+                    "The village lives by the clock: villagers go to work at dawn, lunch outside the tavern, chat on the square in the evening and go home at night. Children play tag, the guards change shifts, the smith hammers.",
+                    "Loot is scarcer. Monsters in the open world rarely drop gear and never anything better than magic; rare, set and legendary items come from dungeons, the Crypt of the Lich, elites, chests and above all bosses.",
+                    "Right-click anywhere on another player to invite them, whisper or trade.",
+                    "The minimap turns with the camera. Prefer north up? Click the R button on the minimap.",
+                    "Smoother: lighter network traffic, a cheaper minimap and fewer lights drawn far away.",
+                },
+            },
+            new Entry
+            {
                 Id = 22, Date = "2026-10-07", Title = "Seasons, weather and festivals",
                 Items = new[]
                 {
