@@ -28,7 +28,7 @@ namespace Shadowfall
             new Color(0.558f, 0.494f, 0.353f),
         };
 
-        const int R = 4;            // control map pixels per tile
+        const int R = 3;            // control map pixels per tile (3 since the world grew to 576 tiles: 1728 px a side)
         const float WaterLevel = -0.15f;
 
         readonly int W, H, CW, CH;
@@ -36,7 +36,7 @@ namespace Shadowfall
         readonly Color[] tint;      // W*H, 1 = neutral
         readonly List<List<Vector2>> roads = new List<List<Vector2>>();
         readonly List<Vector3> lakes = new List<Vector3>(); // x, z, radius
-        RectInt noRoads;
+        readonly List<RectInt> noRoads = new List<RectInt>();
         Color32[] c0, c1;
         float[] roadW;              // CW*CH road weight
 
@@ -71,6 +71,18 @@ namespace Shadowfall
             for (int i = 0; i < Layers; i++) tile[b + i] = sum > 0f ? w[i] / sum : (i == 0 ? 1f : 0f);
         }
 
+        /// <summary>Blends tile (x, y) toward the weights <paramref name="w"/> (normalized here) by <paramref name="amount"/>.</summary>
+        public void Blend(int x, int y, float[] w, float amount)
+        {
+            if (x < 0 || y < 0 || x >= W || y >= H || amount <= 0f) return;
+            amount = Mathf.Clamp01(amount);
+            float sum = 0f;
+            for (int i = 0; i < Layers; i++) sum += w[i];
+            if (sum <= 0f) return;
+            int b = (y * W + x) * Layers;
+            for (int i = 0; i < Layers; i++) tile[b + i] = tile[b + i] * (1f - amount) + w[i] / sum * amount;
+        }
+
         public void Tint(int x, int y, Color c)
         {
             if (x < 0 || y < 0 || x >= W || y >= H) return;
@@ -79,8 +91,8 @@ namespace Shadowfall
 
         public void AddRoad(List<Vector2> centerline) => roads.Add(centerline);
         public void AddLake(Vector2 center, float radius) => lakes.Add(new Vector3(center.x, center.y, radius));
-        /// <summary>Roads are not drawn inside this rectangle (the cobbled village).</summary>
-        public void ExcludeRoads(RectInt r) => noRoads = r;
+        /// <summary>Roads are not drawn inside these rectangles (the cobbled towns).</summary>
+        public void ExcludeRoads(RectInt r) => noRoads.Add(r);
 
         // ------------------------------------------------------------------ baking
 
@@ -155,7 +167,9 @@ namespace Shadowfall
                     float d = dist[py * CW + px];
                     if (d > reach) continue;
                     float wx = (px + 0.5f) / R, wz = (py + 0.5f) / R;
-                    if (wx >= noRoads.xMin && wx < noRoads.xMax && wz >= noRoads.yMin && wz < noRoads.yMax) continue;
+                    bool town = false;
+                    foreach (var nr in noRoads) if (wx >= nr.xMin && wx < nr.xMax && wz >= nr.yMin && wz < nr.yMax) { town = true; break; }
+                    if (town) continue;
                     // Wobbly edges: the half-width varies along the road, plus fine noise.
                     float half = 1.9f + (Mathf.PerlinNoise(wx * 0.21f, wz * 0.21f) - 0.5f) * 1.1f
                                       + (Mathf.PerlinNoise(wx * 1.3f + 7f, wz * 1.3f) - 0.5f) * 0.5f;
@@ -224,12 +238,20 @@ namespace Shadowfall
             mat.SetFloat("_Tiling", 5f);
             mat.SetVector("_WorldSize", new Vector4(W, H, 0, 0));
 
+            // In 64x64 tile chunks, so the parts off screen are culled (the world is 576 tiles a side).
             var go = new GameObject("Ground");
             go.transform.SetParent(parent, false);
-            go.AddComponent<MeshFilter>().sharedMesh = BuildMesh();
-            var mr = go.AddComponent<MeshRenderer>();
-            mr.sharedMaterial = mat;
-            mr.shadowCastingMode = ShadowCastingMode.Off;
+            const int chunk = 64;
+            for (int cz = 0; cz < H; cz += chunk)
+                for (int cx = 0; cx < W; cx += chunk)
+                {
+                    var part = new GameObject("GroundChunk");
+                    part.transform.SetParent(go.transform, false);
+                    part.AddComponent<MeshFilter>().sharedMesh = BuildMesh(cx, cz, Mathf.Min(chunk, W - cx), Mathf.Min(chunk, H - cz));
+                    var mr = part.AddComponent<MeshRenderer>();
+                    mr.sharedMaterial = mat;
+                    mr.shadowCastingMode = ShadowCastingMode.Off;
+                }
             return go;
         }
 
@@ -246,17 +268,17 @@ namespace Shadowfall
             return t;
         }
 
-        Mesh BuildMesh()
+        Mesh BuildMesh(int x0, int z0, int w, int h)
         {
-            int vw = W + 1, vh = H + 1;
+            int vw = w + 1, vh = h + 1;
             var verts = new Vector3[vw * vh];
             for (int z = 0; z < vh; z++)
                 for (int x = 0; x < vw; x++)
-                    verts[z * vw + x] = new Vector3(x, LakeDepth(x, z), z);
-            var tris = new int[W * H * 6];
+                    verts[z * vw + x] = new Vector3(x0 + x, LakeDepth(x0 + x, z0 + z), z0 + z);
+            var tris = new int[w * h * 6];
             int k = 0;
-            for (int z = 0; z < H; z++)
-                for (int x = 0; x < W; x++)
+            for (int z = 0; z < h; z++)
+                for (int x = 0; x < w; x++)
                 {
                     int i = z * vw + x;
                     tris[k++] = i; tris[k++] = i + vw; tris[k++] = i + 1;
@@ -277,6 +299,7 @@ namespace Shadowfall
             float y = 0f;
             foreach (var l in lakes)
             {
+                if (Mathf.Abs(x - l.x) > l.z + 3f || Mathf.Abs(z - l.y) > l.z + 3f) continue; // too far to matter
                 float d = Vector2.Distance(new Vector2(x, z), new Vector2(l.x, l.y));
                 float edge = l.z + (Mathf.PerlinNoise(x * 0.3f, z * 0.3f) - 0.5f) * 3f;
                 float depth = Mathf.Clamp01((edge - d) / 2.5f) * 1.1f;
@@ -351,9 +374,9 @@ namespace Shadowfall
                             if (x < 4 || z < 4 || x >= W - 4 || z >= H - 4 || grid.IsBlocked(x, z)) continue;
                             // Patchy meadows: dense clumps and bare spots.
                             float patch = Mathf.Clamp01(Mathf.PerlinNoise(x * 0.09f + 3.1f, z * 0.09f + 8.7f) * 1.7f - 0.35f);
-                            // Thinner far from the village: the world is large and grass is mostly seen up close in town and on the roads.
-                            float far = Mathf.Max(Mathf.Abs(x - W * 0.5f), Mathf.Abs(z - H * 0.5f));
-                            float keep = far < 60f ? 1f : Mathf.Lerp(1f, 0.45f, (far - 60f) / 80f);
+                            // Thinner far from the towns: the world is large and grass is mostly seen up close in town and on the roads.
+                            float far = WorldGenerator.FarFromTowns(x, z);
+                            float keep = far < 60f ? 1f : Mathf.Lerp(1f, 0.35f, (far - 60f) / 80f);
                             int tufts = (int)(5f * patch * keep + rng.NextDouble());
                             for (int t = 0; t < tufts; t++)
                             {

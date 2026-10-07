@@ -213,6 +213,51 @@ namespace Shadowfall
             if (UISkin.Btn(new Rect(r.center.x - 80, r.yMax - 62, 160, 42), "Cancel", UISkin.Button)) chooseDungeon = -1;
         }
 
+        // ---- waystones
+
+        Waystone waystoneOpen;
+
+        public void OpenWaystone(Waystone w) => waystoneOpen = w;
+
+        /// <summary>Every town's waystone: attuned ones take you there, the rest say where to find them.</summary>
+        void DrawWaystone(Player p)
+        {
+            var here = waystoneOpen;
+            if (here == null || p.IsDead || Dungeon.Active || Factory.FlatDistance(p.transform.position, here.Position) > 5f) { waystoneOpen = null; return; }
+            const float w = 460;
+            float h = 128 + Waystone.Stones.Count * 58;
+            var r = new Rect((VW - w) / 2, (VH - h) / 2, w, h);
+            if (UISkin.Window(r, "Waystone of " + here.Town.Name)) { waystoneOpen = null; return; }
+            Block(r);
+            float x = r.x + 26, y = r.y + 56;
+            UISkin.Shadowed(new Rect(x, y, w - 52, 22), "Travel to any waystone you have attuned to.", UISkin.Small, UISkin.Muted);
+            y += 30;
+            foreach (var s in Waystone.Stones)
+            {
+                bool known = Waystone.Known(s.Town), current = s == here;
+                GUI.enabled = known && !current;
+                if (UISkin.Btn(new Rect(x, y, 200, 46), s.Town.Name, UISkin.V(UISkin.Button, fontSize: 16)))
+                {
+                    waystoneOpen = null;
+                    GUI.enabled = true;
+                    Waystone.Travel(p, s);
+                    return;
+                }
+                GUI.enabled = true;
+                string note = current ? "You are here." : known ? Mathf.RoundToInt(Factory.FlatDistance(p.transform.position, s.Position)) + " paces away"
+                    : "Not attuned yet: walk up to it first. " + Compass(s.Position - p.transform.position) + ".";
+                GUI.Label(new Rect(x + 212, y + 2, w - 52 - 212, 44), note, UISkin.V(UISkin.RichSmall, wordWrap: true));
+                y += 58;
+            }
+        }
+
+        static string Compass(Vector3 d)
+        {
+            float a = Mathf.Atan2(d.x, d.z) * Mathf.Rad2Deg;
+            string[] names = { "north", "north-east", "east", "south-east", "south", "south-west", "west", "north-west" };
+            return "Far to the " + names[Mathf.RoundToInt(((a % 360f) + 360f) % 360f / 45f) % 8];
+        }
+
         /// <summary>A checkbox drawn from the slot and gold textures; returns true when clicked.</summary>
         bool Toggle(Rect r, bool on, string text)
         {

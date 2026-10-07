@@ -37,6 +37,7 @@ Shader "Shadowfall/Terrain"
         // weather globals
         sampler2D _SfSnowMask;   // r: 1 = shoveled to the ground, ~0.5 = trodden, 0 = untouched
         float4 _SfSnow;          // x = snow in the north, y = in the south, z = where the north begins (world z), w = blend width
+        float4 _SfSnow2;         // x = year-round snow in the far north, y = where that begins (z), z = its east edge / the badlands' west edge (x), w = the badlands' north edge (z)
         float _SfWet, _SfLeaves;
 
         float Hash(float2 p) { return frac(sin(dot(p, float2(127.1, 311.7))) * 43758.5453); }
@@ -100,7 +101,11 @@ Shader "Shadowfall/Terrain"
 
             // Snow: deeper where untouched, a grey trodden slush, dark damp ground where shoveled.
             float region = saturate((IN.worldPos.z - _SfSnow.z) / max(_SfSnow.w, 0.01) + 0.5);
-            float cover = lerp(_SfSnow.y, _SfSnow.x, region);
+            // No northern snow in the badlands (east of _SfSnow2.z, south of _SfSnow2.w); the far north (Frostpeak,
+            // north of _SfSnow2.y and west of _SfSnow2.z) keeps _SfSnow2.x of snow all year.
+            region *= 1.0 - saturate((IN.worldPos.x - _SfSnow2.z) / 24.0 + 0.5) * saturate((_SfSnow2.w - IN.worldPos.z) / 24.0 + 0.5);
+            float perm = _SfSnow2.x * saturate((IN.worldPos.z - _SfSnow2.y) / 30.0 + 0.5) * saturate((_SfSnow2.z - IN.worldPos.x) / 30.0 + 0.5);
+            float cover = max(lerp(_SfSnow.y, _SfSnow.x, region), perm);
             float cleared = tex2D(_SfSnowMask, cuv).r;
             float sn = VNoise(wp * 0.6) * 0.55 + VNoise(wp * 2.7) * 0.3 + VNoise(wp * 11.0) * 0.15;
             float depth = cover * (1.0 - cleared);

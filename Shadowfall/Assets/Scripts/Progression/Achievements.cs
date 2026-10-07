@@ -43,7 +43,11 @@ namespace Shadowfall
             new AchievementDef { Id = "boss_bandit_lord", Name = "Hideout Raided", Description = "Defeat the Bandit Lord in his hideout.", Category = AchievementCategory.Bosses, Icon = "ach_bandit", Points = 10, Stat = "boss.Bandit Lord", Goal = 1 },
             new AchievementDef { Id = "boss_goblin_king", Name = "Regicide", Description = "Defeat the Goblin King in the Warrens.", Category = AchievementCategory.Bosses, Icon = "ach_boss", Points = 10, Stat = "boss.Goblin King", Goal = 1 },
             new AchievementDef { Id = "boss_colossus", Name = "Colossus Toppled", Description = "Defeat the Stone Colossus in Ironvein Deep.", Category = AchievementCategory.Bosses, Icon = "ach_golem", Points = 10, Stat = "boss.Stone Colossus", Goal = 1 },
-            new AchievementDef { Id = "boss_all", Name = "Kingslayer", Description = "Defeat all six bosses.", Category = AchievementCategory.Bosses, Icon = "ach_boss", Points = 50, Stat = "boss", Goal = 6, Title = "Kingslayer" },
+            new AchievementDef { Id = "boss_all", Name = "Kingslayer", Description = "Defeat six different bosses.", Category = AchievementCategory.Bosses, Icon = "ach_boss", Points = 50, Stat = "boss", Goal = 6, Title = "Kingslayer" },
+            new AchievementDef { Id = "boss_jarl", Name = "Giant Slayer", Description = "Defeat Jarl Frostborn in his high camp in the Frostpeak Wilds.", Category = AchievementCategory.Bosses, Icon = "ach_boss", Points = 25, Stat = "boss.Jarl Frostborn", Goal = 1 },
+            new AchievementDef { Id = "boss_warlord", Name = "Warlord Down", Description = "Defeat the Raider Warlord in the Sunscar Badlands.", Category = AchievementCategory.Bosses, Icon = "ach_bandit", Points = 25, Stat = "boss.Raider Warlord", Goal = 1 },
+            new AchievementDef { Id = "boss_ashen", Name = "Ashes to Ashes", Description = "Defeat the Ashen King in the heart of the Ashen Reach.", Category = AchievementCategory.Bosses, Icon = "ach_lich", Points = 50, Stat = "boss.The Ashen King", Goal = 1, Title = "the Unburnt" },
+            new AchievementDef { Id = "boss_nine", Name = "Crownbreaker", Description = "Defeat all nine bosses, the outer lands' three included.", Category = AchievementCategory.Bosses, Icon = "ach_boss", Points = 100, Stat = "boss", Goal = 9, Title = "Crownbreaker" },
 
             // ---- dungeons
             new AchievementDef { Id = "dungeon_first", Name = "Into the Dark", Description = "Enter a dungeon.", Category = AchievementCategory.Dungeons, Icon = "ach_dungeon", Points = 5, Stat = "dungeon", Goal = 1 },
@@ -58,6 +62,9 @@ namespace Shadowfall
             new AchievementDef { Id = "explore_25", Name = "Pathfinder", Description = "Explore a quarter of the world.", Category = AchievementCategory.Exploration, Icon = "ach_footprint", Points = 10, Stat = "explored", Goal = 25 },
             new AchievementDef { Id = "explore_75", Name = "Cartographer", Description = "Explore three quarters of the world.", Category = AchievementCategory.Exploration, Icon = "ach_explore", Points = 25, Stat = "explored", Goal = 75, Title = "Cartographer" },
             new AchievementDef { Id = "zones_all", Name = "Wanderer", Description = "Visit Hollowmere, Whisperwood, the Goblin Encampment, the Forsaken Graveyard, Ironvein Quarry and the Crypt of the Lich.", Category = AchievementCategory.Exploration, Icon = "ach_compass", Points = 25, Stat = "zone", Goal = 6, Title = "the Wanderer" },
+            new AchievementDef { Id = "zones_outer", Name = "World Walker", Description = "Visit every zone and town, the outer lands included: Frostpeak, the Sunscar Badlands, the Ashen Reach, Pinecrest, Frosthaven, Saltreach and Emberwatch.", Category = AchievementCategory.Exploration, Icon = "ach_explore", Points = 50, Stat = "zone", Goal = 13, Title = "the World Walker" },
+            new AchievementDef { Id = "waystones_all", Name = "Attuned", Description = "Attune to the waystones of Pinecrest, Frosthaven, Saltreach and Emberwatch.", Category = AchievementCategory.Exploration, Icon = "ach_compass", Points = 25, Stat = "waystone", Goal = 4 },
+            new AchievementDef { Id = "waystone_trips", Name = "Frequent Traveller", Description = "Travel by waystone 25 times.", Category = AchievementCategory.Exploration, Icon = "ach_footprint", Points = 10, Stat = "waystone_trips", Goal = 25 },
 
             // ---- the hero
             new AchievementDef { Id = "level_5", Name = "Adventurer", Description = "Reach level 5.", Category = AchievementCategory.Hero, Icon = "ach_level", Points = 5, Stat = "level", Goal = 5 },
@@ -113,11 +120,11 @@ namespace Shadowfall
         {
             switch (monster)
             {
-                case "Dire Wolf": return "slain.wolves";
+                case "Dire Wolf": case "Frost Wolf": return "slain.wolves";
                 case "Goblin": case "Goblin Shaman": case "Goblin Warchief": case "Goblin King": return "slain.goblins";
-                case "Skeleton": case "Skeleton Archer": case "Zombie": return "slain.undead";
-                case "Bandit": case "Bandit Lord": return "slain.bandits";
-                case "Rock Golem": return "slain.golems";
+                case "Skeleton": case "Skeleton Archer": case "Zombie": case "Ice Wraith": case "Ash Ghoul": case "Ember Skeleton": case "Ash Wraith": return "slain.undead";
+                case "Bandit": case "Bandit Lord": case "Desert Raider": case "Raider Marksman": case "Raider Warlord": return "slain.bandits";
+                case "Rock Golem": case "Sand Golem": case "Cinder Golem": return "slain.golems";
                 default: return null;
             }
         }

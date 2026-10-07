@@ -48,7 +48,7 @@ namespace Shadowfall
             var p = Player.I;
             if (p == null || built != Weather.Season) return;
             // Announce the festival the first time the hero is in town for it.
-            if (!announced && WorldGenerator.InTown(p.transform.position) && !Dungeon.Active)
+            if (!announced && WorldGenerator.InHollowmere(p.transform.position) && !Dungeon.Active)
             {
                 announced = true;
                 p.Achievements.Once("season", Weather.Season.ToString());
@@ -377,7 +377,7 @@ namespace Shadowfall
         {
             if (ps == null) return;
             var p = Player.I;
-            bool show = p != null && WorldGenerator.InTown(p.transform.position) && !Dungeon.Active;
+            bool show = p != null && WorldGenerator.InHollowmere(p.transform.position) && !Dungeon.Active;
             if (show) ps.transform.position = p.transform.position + Vector3.up * 6f;
             var em = ps.emission;
             em.enabled = show;

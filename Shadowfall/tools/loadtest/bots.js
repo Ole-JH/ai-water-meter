@@ -17,8 +17,8 @@ const METRICS = args.metrics || "";
 const RUN = Math.random().toString(36).slice(2, 7);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-// A flat 288x288 test world with a wall round the edge (only used if the server has no map yet).
-const W = 288, H = 288;
+// A flat 576x576 test world with a wall round the edge (only used if the server has no map yet).
+const W = 576, H = 576;
 const cells = Buffer.alloc((W * H) / 8);
 for (let y = 0; y < H; y++)
   for (let x = 0; x < W; x++)

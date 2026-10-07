@@ -172,7 +172,8 @@ namespace Shadowfall
                 if (GameInput.Down(GKey.Y)) showAchievements = !showAchievements;
                 if (GameInput.Down(GKey.Escape))
                 {
-                    if (chooseDungeon >= 0) chooseDungeon = -1;
+                    if (waystoneOpen != null) waystoneOpen = null;
+                    else if (chooseDungeon >= 0) chooseDungeon = -1;
                     else if (dialogNpc != null || craftStation != null) { dialogNpc = null; craftStation = null; }
                     else if (tradeOpen) NetClient.I?.CancelTrade();
                     else if (menu != MenuPage.None) menu = menu == MenuPage.Main ? MenuPage.None : MenuPage.Main;
@@ -254,6 +255,7 @@ namespace Shadowfall
             if (tradeOpen) DrawTrade(p);
             if (showAdmin) DrawAdmin(p);
             if (chooseDungeon >= 0) DrawDifficultyPicker(p);
+            if (waystoneOpen != null) DrawWaystone(p);
             else tradeGoldFocused = false;
             if (dialogNpc != null) DrawDialog(p);
             if (craftStation != null) DrawCrafting(p);
@@ -1546,18 +1548,31 @@ namespace Shadowfall
             }
             else
             {
-                string[] zones = { "Whisperwood", "Goblin Encampment", "Forsaken Graveyard", "Ironvein Quarry", "Hollowmere", "Crypt of the Lich" };
+                string[] zones = { "Whisperwood", "Goblin Encampment", "Forsaken Graveyard", "Ironvein Quarry", "Hollowmere", "Crypt of the Lich",
+                                   WorldGenerator.Frostpeak, WorldGenerator.Badlands, WorldGenerator.Ashen };
                 Vector3[] centers =
                 {
                     WorldGenerator.Map(new Vector3(80, 0, 128)), WorldGenerator.Map(new Vector3(130, 0, 80)), WorldGenerator.Map(new Vector3(80, 0, 42)),
                     WorldGenerator.Map(new Vector3(30, 0, 80)), WorldGenerator.Map(new Vector3(80, 0, 80)), new Vector3(144.5f, 0, 18),
+                    new Vector3(70, 0, 420), new Vector3(420, 0, 60), new Vector3(380, 0, 400),
                 };
                 for (int i = 0; i < zones.Length; i++)
                 {
-                    if (!ZoneKnown(centers[i], 30f)) continue; // names appear once you've been nearby
+                    // names appear once you've been nearby (or anywhere in the zone)
+                    if (!ZoneKnown(centers[i], 30f) && (Player.I == null || Player.I.Achievements.Get("zone." + zones[i]) == 0)) continue;
                     var c = toMap(centers[i]);
                     UISkin.Shadowed(new Rect(c.x - 120, c.y - 12, 240, 26), zones[i], UISkin.HeadingCenter, new Color(1f, 0.92f, 0.75f), 2);
                 }
+                // The outer towns (Hollowmere is labelled above) and the waystones
+                for (int i = 1; i < WorldGenerator.Towns.Length; i++)
+                {
+                    var t = WorldGenerator.Towns[i];
+                    if (!ZoneKnown(t.Center, 20f)) continue;
+                    var c = toMap(t.Center);
+                    UISkin.Shadowed(new Rect(c.x - 100, c.y - 10, 200, 22), t.Name, UISkin.SmallCenter, new Color(0.75f, 1f, 0.75f), 2);
+                }
+                foreach (var w in Waystone.Stones)
+                    if (Waystone.Known(w.Town)) mark(w.Position, w.LabelColor, 9);
                 if (AdminTools.ShowDungeons)
                     foreach (var def in DungeonDef.All)
                     {

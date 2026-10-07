@@ -14,6 +14,8 @@
 | `Core/ColorGrade.cs` | Full-screen color grade (darker, grittier palette) |
 | `Core/Util.cs` | Material cache (`Mat`), primitive builder (`Factory`), pulse/burst effects (`FxPulse`) |
 | `World/WorldGenerator.cs` | Seeded world: ground texture, village, zones, trees, rocks, lakes, NPCs |
+| `World/WorldGenerator.Regions.cs` | The outer lands (north, east, north-east of the original world): the towns list, the ridge, Frostpeak, the Sunscar Badlands, the Ashen Reach, their towns and NPCs |
+| `World/Waystone.cs` | Town waystones: attuning and fast travel |
 | `World/GroundSurface.cs` | Splat control maps, curving roads, ground mesh with lake beds, water, grass blades |
 | `World/Dungeon.cs` | Dungeons on the client: builds the server's layout (walls, floors, torches, campfires, boss braziers, props), portals, stairs, chests |
 | `World/TownLife.cs` | Strolling villagers, patrolling guards, the village hound |
@@ -24,7 +26,7 @@
 | `Combat/Gore.cs` | Blood and gore: directional hit sprays, death bursts, gibs, and ground splats/pools drawn as one decal mesh (`Shadowfall/Decal` shader, procedurally generated splat atlas) that dry and fade; per-monster kinds (blood, goblin ichor, rot, bone, stone) and the Gore setting |
 | `World/PropFire.cs` | Animated fire on a prop (campfires, gate torches, braziers, dungeon torches): flames, embers, smoke, a wobbling glow core and a flickering light; pauses when the hero is far away |
 | `World/Weather.cs` | Seasons and weather from the server: clouds, rain, snow, fog, lightning, wet ground, frozen lakes; snow cover per region; shader globals |
-| `World/SnowField.cs` | Where the snow has been shoveled or trodden (a mask the terrain and grass shaders read), snow depth for slow walking |
+| `World/SnowField.cs` | Where the snow has been shoveled or trodden (a mask the terrain and grass shaders read), snow depth for slow walking; town streets never fill past a light layer |
 | `World/SeasonalTown.cs` | The festival decorations for each season, autumn and winter tree colours, the maypole, petals, the summer bonfire |
 | `World/SnowElves.cs` | Winterfest's elves who shovel the streets clear, and the snow piles they leave |
 | `World/LeafPiles.cs` | Autumn leaf piles that burst when you run through them, and the villagers who rake them (and chase you) |

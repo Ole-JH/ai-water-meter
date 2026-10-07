@@ -1,6 +1,6 @@
 # The world
 
-The map is 288 × 288 tiles, with the walled village of **Hollowmere** (57 × 57 tiles) at its centre. Cobbled cross streets lead from the four gates to the central plaza with the well. Each quarter is its own district:
+The map is 576 × 576 tiles. The original lands fill its south-west quarter, with the walled village of **Hollowmere** (57 × 57 tiles) at their centre; the [outer lands](#the-outer-lands) lie north and east of them. Cobbled cross streets lead from the four gates to the central plaza with the well. Each quarter is its own district:
 
 - **North-west:** the Prancing Boar tavern (Innkeeper Rosie), the windmill, and Forester Wren by the north gate.
 - **North-east:** the church with Sister Mae, Jenkins, and Captain Aldric at the north gate; the fountain sits on the north street.
@@ -9,7 +9,7 @@ The map is 288 × 288 tiles, with the walled village of **Hollowmere** (57 × 57
 
 The stash chest stands by the plaza. A long road leaves each gate. Monsters never follow you inside the walls. Press ++r++ to recall to the village from anywhere.
 
-The four zones start a short walk outside the walls and stretch about 115 tiles to the mountains at the edge of the world, getting tougher the farther out you go. Five lakes have fishing spots.
+The four zones start a short walk outside the walls and stretch about 115 tiles, to mountains in the south and west and to a broken ridge in the north and east, getting tougher the farther out you go. Five lakes have fishing spots.
 
 | Zone | Direction | Monsters (level) | Resources |
 | --- | --- | --- | --- |
@@ -19,6 +19,23 @@ The four zones start a short walk outside the walls and stretch about 115 tiles 
 | **Ironvein Quarry** | West | Bandit (3–9), Rock Golem (8–16) | Copper → Iron → Mithril rocks further west |
 | **Forsaken Graveyard** | South | Skeleton, Skeleton Archer, Zombie (6–12) | A murky mere in the south-east |
 | **Crypt of the Lich** | Far south | Skeletons (11–13), **Lich King** (16, raid boss) | — |
+
+## The outer lands
+
+Where the old world's north and east edges were, a broken ridge of rock runs with passes in it (the roads always get through). Beyond it the world is three times bigger again, for heroes of level 12 and up:
+
+| Zone | Where | Monsters (level) | Town |
+| --- | --- | --- | --- |
+| **Frostpeak Wilds** | North | Frost Wolf (12–17), Ice Wraith (13–17), Frost Giant (15–17) in the highlands, **Jarl Frostborn** (18, boss) in his camp in the far north-west | **Pinecrest** (hamlet on the north road), **Frosthaven** |
+| **Sunscar Badlands** | East | Desert Raider, Raider Marksman (13–18) and their camps, Sand Golem (15–18), **Raider Warlord** (19, boss) in his camp in the south-east | **Saltreach**, by the oasis |
+| **Ashen Reach** | North-east | Ash Ghoul (17–19), Ember Skeleton, Ash Wraith (18–23) among the ruins, Cinder Golem (20–22), **The Ashen King** (24, boss) on his throne in the heart of the Reach | **Emberwatch**, the last outpost |
+
+- **Roads:** Hollowmere's north road runs on through Pinecrest to Frosthaven, its east road to Saltreach; roads join Frosthaven and Saltreach to Emberwatch.
+- **Towns:** each has merchants, a healer and a quest giver (Woodsman Garrick, Jarl Sigrun, Caravan Master Rahim, Commander Varek); the walled towns have an anvil, a campfire and a **stash chest** (all chests open the same stash). Monsters never follow you into any town, and ++r++ counts any town as home.
+- **Waystones:** every town has one by its square. Walk up to it to attune to it (the world map marks the ones you know), then click any waystone to travel to an attuned one. Not while you're fighting.
+- **Snow:** Frostpeak north of Frosthaven keeps snow all year (more in winter); the badlands only see snow in winter.
+- **Loot:** the Ashen Reach counts as a deep place, like dungeons and the crypt (see [Progression](progression.md)).
+- **Resources:** yew trees in the Frostpeak forests, mithril and iron in the badlands and the Reach, fish in the tarns and the oasis.
 
 ## NPCs
 

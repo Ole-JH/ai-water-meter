@@ -49,6 +49,7 @@ namespace Shadowfall
             TownLife.Spawn(null);                  // visual only: after the hash, so it can never affect it
             DungeonEntrance.SpawnAll();
             StashChest.Spawn();
+            Waystone.SpawnAll();
             gameObject.AddComponent<Ambience>();
             Music.Ensure();
             Weather.Ensure();

@@ -28,7 +28,7 @@ Weapon attacks scale with the class's main attribute (+2% per point); spells wit
 
 ## Talents
 
-You get **one talent point per level** from level 2. Open the talent window with ++t++. Each class has six talents with 3–5 ranks: three general passives (life, armor, damage, crit, mana regeneration, movement speed) and three that improve specific abilities (longer stuns, bigger Consecration, extra Multishot arrows, shorter Teleport cooldown and so on). Talents can be reset in Hollowmere for 25 gold per level.
+You get **one talent point per level** from level 2. Open the talent window with ++t++. Each class has six talents with 3–5 ranks: three general passives (life, armor, damage, crit, mana regeneration, movement speed) and three that improve specific abilities (longer stuns, bigger Consecration, extra Multishot arrows, shorter Teleport cooldown and so on). Talents can be reset in any town for 25 gold per level.
 
 ## Buffs
 
@@ -57,8 +57,8 @@ Loot is scarce, and where it comes from matters more than how much you kill:
 | Source | Gear | Best it can be |
 | --- | --- | --- |
 | Ordinary monsters in the open world | about 1 kill in 14 | Magic |
-| Ordinary monsters in dungeons and the Crypt of the Lich | about 1 kill in 8 (more on harder difficulties) | anything, but legendaries are very rare |
-| Elites | 1–2 pieces, magic or better | Rare in the open world; anything in dungeons and the Crypt |
+| Ordinary monsters in dungeons, the Crypt of the Lich and the Ashen Reach | about 1 kill in 8 (more on harder difficulties) | anything, but legendaries are very rare |
+| Elites | 1–2 pieces, magic or better | Rare in the open world; anything in dungeons, the Crypt and the Ashen Reach |
 | Dungeon treasure chests | 1–2 pieces, magic or better, often rare | anything |
 | Bosses | 2–4 pieces, at least one rare | the best chance at legendaries and set pieces |
 
@@ -140,7 +140,7 @@ Professions use RuneScape's experience curve: level 2 needs 83 XP, level 99 need
 | Woodcutting | Whisperwood trees | Oak (1), Willow (8), Yew (15) |
 | Mining | Ironvein Quarry rocks | Copper (1), Iron (8), Mithril (15) |
 | Fishing | Whisperwood lakes | Trout (1), Salmon (8) |
-| Smithing | Anvil in Hollowmere | 3 ore → a random piece of gear. Higher Smithing level makes better gear |
+| Smithing | Anvil in Hollowmere, Frosthaven or Emberwatch | 3 ore → a random piece of gear. Higher Smithing level makes better gear |
 | Cooking | Campfires | Raw fish → healing food. Higher Cooking level burns less |
 
 Your success chance per attempt grows as your level climbs above the node's requirement. Trees and rocks are used up after a few harvests and grow back after 10–20 seconds.

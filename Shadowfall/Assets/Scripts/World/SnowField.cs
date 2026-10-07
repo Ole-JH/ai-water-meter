@@ -6,14 +6,18 @@ namespace Shadowfall
     /// Where the snow has been cleared: a mask over the overworld (two cells per tile), 1 where it was shoveled down to
     /// the ground, about 0.55 where feet have packed it down, 0 where it's untouched. The terrain and grass shaders read
     /// it as _SfSnowMask; snow depth at a point is the weather's snow cover there times (1 - cleared).
-    /// Fresh snowfall fills cleared paths back in, so the elves never run out of work. Local to each player.
+    /// Fresh snowfall fills cleared paths back in, so the elves never run out of work, but never past
+    /// <see cref="StreetFloor"/> on town streets: the village keeps its streets passable even when the shovelers fall
+    /// behind (their work clears the rest). Local to each player.
     /// </summary>
     public static class SnowField
     {
         public const int Res = 2;
         const byte Packed = 140;
+        /// <summary>Town streets never get deeper than about a quarter of the snow around them (no caked boots there).</summary>
+        const byte StreetFloor = 190;
 
-        static byte[] mask;
+        static byte[] mask, floor;
         static Texture2D tex;
         static int w, h;
         static bool dirty;
@@ -26,6 +30,10 @@ namespace Shadowfall
             w = WorldGenerator.W * Res;
             h = WorldGenerator.H * Res;
             mask = new byte[w * h];
+            floor = new byte[w * h];
+            for (int y = 0; y < h; y++)
+                for (int x = 0; x < w; x++)
+                    if (WorldGenerator.IsTownStreet(x / Res, y / Res)) floor[y * w + x] = mask[y * w + x] = StreetFloor;
             tex = new Texture2D(w, h, TextureFormat.R8, false, true) { name = "SnowMask", wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Bilinear };
             tex.LoadRawTextureData(mask);
             tex.Apply(false);
@@ -95,16 +103,16 @@ namespace Shadowfall
                     int y0 = Weather.Season == Season.Winter || bare ? 0 : Mathf.Clamp(Mathf.FloorToInt((Weather.NorthLine - Weather.NorthBlend / 2f) * Res), 0, h);
                     for (int i = y0 * w; i < mask.Length; i++)
                     {
-                        int v = mask[i];
-                        if (v == 0) continue;
-                        mask[i] = (byte)Mathf.Max(0, v - fill);
+                        int v = mask[i], f = floor[i];
+                        if (v <= f) continue;
+                        mask[i] = (byte)Mathf.Max(f, v - fill);
                         dirty = true;
                     }
                 }
             }
             if (dirty && Time.time >= nextUpload)
             {
-                nextUpload = Time.time + 0.2f;
+                nextUpload = Time.time + 0.25f;
                 dirty = false;
                 tex.LoadRawTextureData(mask);
                 tex.Apply(false);

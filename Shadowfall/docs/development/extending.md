@@ -76,7 +76,7 @@ Add an entry at the **top** of `Changelog.Entries` in `Assets/Scripts/Progressio
 
 ## Change the world
 
-Everything is in `World/WorldGenerator.cs`. The seed is `WorldGenerator.Seed`. Any change to walls, trees, rocks, water or blocking NPC positions changes the walkability map; the first client on the new build hands the server the new map (see [Operations](../deployment/operations.md#updating-the-game)).
+Everything is in `World/WorldGenerator.cs` (the original lands) and `World/WorldGenerator.Regions.cs` (the outer lands; towns are listed there and in `TOWNS` in `server/content.js`). The seed is `WorldGenerator.Seed`. Any change to walls, trees, rocks, water or blocking NPC positions changes the walkability map; the first client on the new build hands the server the new map (see [Operations](../deployment/operations.md#updating-the-game)).
 
 !!! warning "Layout randomness"
     Placement that affects walkability must use the layout helpers `LR`, `LRI` and `LV` (a private `System.Random`); purely visual

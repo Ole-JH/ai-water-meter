@@ -38,6 +38,25 @@ namespace Shadowfall
             new EnemyDef { Name = "Stone Colossus", Shape = EnemyShape.Golem, Color = new Color(0.45f, 0.5f, 0.62f), Secondary = new Color(0.3f, 0.35f, 0.45f), Scale = 2.1f, Boss = true },
             new EnemyDef { Name = "Lich King", Color = new Color(0.55f, 0.75f, 0.85f), Secondary = new Color(0.3f, 0.12f, 0.45f), Scale = 1.8f,
                 Ranged = true, Boss = true, Robe = true, ProjectileColor = new Color(0.4f, 0.9f, 1f) },
+            // Frostpeak Wilds
+            new EnemyDef { Name = "Frost Wolf", Shape = EnemyShape.Beast, Color = new Color(0.85f, 0.88f, 0.95f), Secondary = new Color(0.65f, 0.7f, 0.8f), Scale = 0.95f },
+            new EnemyDef { Name = "Ice Wraith", Color = new Color(0.65f, 0.85f, 1f), Secondary = new Color(0.3f, 0.45f, 0.7f), Ranged = true, Robe = true, Weapon = false,
+                ProjectileColor = new Color(0.6f, 0.9f, 1f) },
+            new EnemyDef { Name = "Frost Giant", Color = new Color(0.6f, 0.7f, 0.85f), Secondary = new Color(0.4f, 0.45f, 0.6f), Scale = 1.5f },
+            new EnemyDef { Name = "Jarl Frostborn", Color = new Color(0.65f, 0.8f, 1f), Secondary = new Color(0.3f, 0.4f, 0.7f), Scale = 1.9f, Boss = true },
+            // Sunscar Badlands
+            new EnemyDef { Name = "Desert Raider", Color = new Color(0.9f, 0.75f, 0.55f), Secondary = new Color(0.75f, 0.45f, 0.2f) },
+            new EnemyDef { Name = "Raider Marksman", Color = new Color(0.9f, 0.75f, 0.55f), Secondary = new Color(0.6f, 0.4f, 0.2f), Ranged = true, Weapon = false,
+                ProjectileColor = new Color(0.95f, 0.85f, 0.6f) },
+            new EnemyDef { Name = "Sand Golem", Shape = EnemyShape.Golem, Color = new Color(0.78f, 0.66f, 0.45f), Secondary = new Color(0.6f, 0.5f, 0.32f), Scale = 1.3f },
+            new EnemyDef { Name = "Raider Warlord", Color = new Color(0.85f, 0.6f, 0.4f), Secondary = new Color(0.6f, 0.2f, 0.1f), Scale = 1.5f, Boss = true },
+            // Ashen Reach
+            new EnemyDef { Name = "Ash Ghoul", Color = new Color(0.45f, 0.43f, 0.42f), Secondary = new Color(0.28f, 0.25f, 0.24f), Scale = 1.05f, Weapon = false },
+            new EnemyDef { Name = "Ember Skeleton", Color = new Color(0.8f, 0.5f, 0.38f), Secondary = new Color(0.4f, 0.15f, 0.08f) },
+            new EnemyDef { Name = "Ash Wraith", Color = new Color(0.85f, 0.55f, 0.4f), Secondary = new Color(0.35f, 0.15f, 0.1f), Ranged = true, Robe = true, Weapon = false,
+                ProjectileColor = new Color(1f, 0.55f, 0.2f) },
+            new EnemyDef { Name = "Cinder Golem", Shape = EnemyShape.Golem, Color = new Color(0.35f, 0.25f, 0.22f), Secondary = new Color(0.7f, 0.3f, 0.1f), Scale = 1.35f },
+            new EnemyDef { Name = "The Ashen King", Color = new Color(0.75f, 0.45f, 0.35f), Secondary = new Color(0.5f, 0.12f, 0.05f), Scale = 2f, Boss = true },
         };
 
         public static EnemyDef ByName(string name)
@@ -322,6 +341,15 @@ namespace Shadowfall
                 case "Bandit Lord": return what == "attack" ? "swing_heavy" : what == "die" ? "scream" : "hit_flesh";
                 case "Goblin King": return what == "attack" ? "brute" : what == "die" ? "roar" : "hit_flesh";
                 case "Stone Colossus": return what == "attack" ? "boom" : what == "die" ? "rubble" : "hit_stone";
+                case "Frost Wolf": return Voice(EnemyDef.ByName("Dire Wolf"), what);
+                case "Ice Wraith": case "Ash Wraith": return what == "attack" ? "undead" : what == "die" ? "rubble" : "hit_bone";
+                case "Ember Skeleton": return Voice(EnemyDef.ByName("Skeleton"), what);
+                case "Ash Ghoul": return Voice(EnemyDef.ByName("Zombie"), what);
+                case "Desert Raider": case "Raider Marksman": return Voice(EnemyDef.ByName("Bandit"), what);
+                case "Sand Golem": case "Cinder Golem": return Voice(EnemyDef.ByName("Rock Golem"), what);
+                case "Frost Giant": case "Jarl Frostborn": return what == "attack" ? "brute" : what == "die" ? "roar" : "hit_flesh";
+                case "Raider Warlord": return Voice(EnemyDef.ByName("Bandit Lord"), what);
+                case "The Ashen King": return Voice(EnemyDef.ByName("Crypt Lord"), what);
                 default: return what == "hit" ? "hit_flesh" : null;
             }
         }

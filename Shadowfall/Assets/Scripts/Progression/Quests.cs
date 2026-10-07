@@ -373,6 +373,123 @@ namespace Shadowfall
                     },
                 }
             },
+            // ---- the outer lands
+            {
+                "Woodsman Garrick", new[]
+                {
+                    new QuestDef
+                    {
+                        Id = "pine_wolves", Title = "White Fangs", Type = QuestType.Kill, Target = "Frost Wolf", Count = 10, MinLevel = 12,
+                        Description = "Frost wolves have come down from the high snow and taken two of my mules. They'll take a woodsman next. Thin the pack in the pines north of here.",
+                        Objective = "Slay 10 Frost Wolves in the Frostpeak Wilds.",
+                        CompletionText = "Ten pelts. The mules thank you. The ones that are left.",
+                        RewardXp = 1600, RewardGold = 220, RewardItemLevel = 14, RewardRarity = Rarity.Magic
+                    },
+                    new QuestDef
+                    {
+                        Id = "pine_yew", Title = "Old Growth", Type = QuestType.Collect, Target = "Yew Logs", Count = 6, MinLevel = 12,
+                        Description = "The yews up here are older than Hollowmere and twice as stubborn. Fell me a few; Frosthaven pays well for bow staves.",
+                        Objective = "Bring 6 Yew Logs to Woodsman Garrick.",
+                        CompletionText = "Good straight grain. You've an eye for timber.",
+                        RewardXp = 1400, RewardGold = 200, RewardItemLevel = 14, RewardRarity = Rarity.Magic
+                    },
+                }
+            },
+            {
+                "Jarl Sigrun", new[]
+                {
+                    new QuestDef
+                    {
+                        Id = "frost_wraiths", Title = "Cold Light", Type = QuestType.Kill, Target = "Ice Wraith", Count = 8, MinLevel = 14,
+                        Description = "Blue lights drift between the pines at night, and whoever follows them is found frozen at dawn. They are wraiths, bound to the ice. Break them.",
+                        Objective = "Destroy 8 Ice Wraiths in the Frostpeak Wilds.",
+                        CompletionText = "The nights are darker now. That is a kindness, up here.",
+                        RewardXp = 2200, RewardGold = 300, RewardItemLevel = 16, RewardRarity = Rarity.Magic
+                    },
+                    new QuestDef
+                    {
+                        Id = "frost_giants", Title = "Bigger Than My Hall", Type = QuestType.Kill, Target = "Frost Giant", Count = 4, MinLevel = 15,
+                        Description = "Giants walk the highlands north and west of here, and they have started walking toward us. Show them the way back.",
+                        Objective = "Slay 4 Frost Giants in the Frostpeak highlands.",
+                        CompletionText = "Four! The skalds will need a longer song.",
+                        RewardXp = 3000, RewardGold = 420, RewardItemLevel = 17, RewardRarity = Rarity.Rare
+                    },
+                    new QuestDef
+                    {
+                        Id = "frost_jarl", Title = "The Frostborn", Type = QuestType.Kill, Target = "Jarl Frostborn", Count = 1, MinLevel = 17,
+                        Description = "Their chieftain calls himself Jarl, as if he had a hall and a people. He has a camp in the far north-west and a hunger that never ends. End it.",
+                        Objective = "Defeat Jarl Frostborn at his camp in the far north-west of the Frostpeak Wilds.",
+                        CompletionText = "There is only one Jarl in the north now. Frosthaven owes you its spring.",
+                        RewardXp = 6000, RewardGold = 900, RewardItemLevel = 20, RewardRarity = Rarity.Legendary
+                    },
+                }
+            },
+            {
+                "Caravan Master Rahim", new[]
+                {
+                    new QuestDef
+                    {
+                        Id = "salt_raiders", Title = "Bandits of the Sun", Type = QuestType.Kill, Target = "Desert Raider", Count = 10, MinLevel = 13,
+                        Description = "Raiders ride out from camps deep in the Badlands and fall on every caravan. My drivers won't leave the walls. Give them a reason to.",
+                        Objective = "Slay 10 Desert Raiders in the Sunscar Badlands.",
+                        CompletionText = "My drivers are packing the camels. They're even smiling.",
+                        RewardXp = 2000, RewardGold = 280, RewardItemLevel = 15, RewardRarity = Rarity.Magic
+                    },
+                    new QuestDef
+                    {
+                        Id = "salt_golems", Title = "Walking Dunes", Type = QuestType.Kill, Target = "Sand Golem", Count = 5, MinLevel = 15,
+                        Description = "Some of the dunes get up and walk. Sand golems, the old women call them, and they crush anything on the road. Five of them would make the salt route safe.",
+                        Objective = "Destroy 5 Sand Golems in the Sunscar Badlands.",
+                        CompletionText = "The road is clear and my salt moves again. You have my gratitude, and a share.",
+                        RewardXp = 2800, RewardGold = 400, RewardItemLevel = 17, RewardRarity = Rarity.Rare
+                    },
+                    new QuestDef
+                    {
+                        Id = "salt_warlord", Title = "The Warlord", Type = QuestType.Kill, Target = "Raider Warlord", Count = 1, MinLevel = 17,
+                        Description = "Every raider answers to one man, a warlord who camps in the far south-east of the Badlands. Cut off the head and the body will scatter.",
+                        Objective = "Defeat the Raider Warlord at his camp in the south-east of the Sunscar Badlands.",
+                        CompletionText = "Saltreach will remember your name. The camels too.",
+                        RewardXp = 6000, RewardGold = 900, RewardItemLevel = 20, RewardRarity = Rarity.Legendary
+                    },
+                }
+            },
+            {
+                "Commander Varek", new[]
+                {
+                    new QuestDef
+                    {
+                        Id = "ash_ghouls", Title = "Smouldering Dead", Type = QuestType.Kill, Target = "Ash Ghoul", Count = 12, MinLevel = 17,
+                        Description = "The ash dead crawl out of the ruins every night and scratch at our gate until dawn. Every one you put down is one less at the wall.",
+                        Objective = "Destroy 12 Ash Ghouls in the Ashen Reach.",
+                        CompletionText = "The gate gets to rest tonight. So do my soldiers.",
+                        RewardXp = 3200, RewardGold = 450, RewardItemLevel = 19, RewardRarity = Rarity.Magic
+                    },
+                    new QuestDef
+                    {
+                        Id = "ash_skeletons", Title = "Embers", Type = QuestType.Kill, Target = "Ember Skeleton", Count = 10, MinLevel = 18,
+                        Description = "Skeletons that burn and never burn out. They guard the old ruins as if the kingdom never fell. Show them it did.",
+                        Objective = "Destroy 10 Ember Skeletons in the Ashen Reach.",
+                        CompletionText = "Good. The ruins are quieter. Not quiet. Quieter.",
+                        RewardXp = 3800, RewardGold = 520, RewardItemLevel = 20, RewardRarity = Rarity.Rare
+                    },
+                    new QuestDef
+                    {
+                        Id = "ash_golems", Title = "Cinders", Type = QuestType.Kill, Target = "Cinder Golem", Count = 5, MinLevel = 19,
+                        Description = "Cinder golems carry the heat of whatever burned this land. They're slow. They're also nearly impossible to kill. Nearly.",
+                        Objective = "Destroy 5 Cinder Golems in the Ashen Reach.",
+                        CompletionText = "Five! I'd have bet on none. I'd have lost.",
+                        RewardXp = 4500, RewardGold = 600, RewardItemLevel = 21, RewardRarity = Rarity.Rare
+                    },
+                    new QuestDef
+                    {
+                        Id = "ash_king", Title = "The Ashen King", Type = QuestType.Kill, Target = "The Ashen King", Count = 1, MinLevel = 21,
+                        Description = "In the heart of the Reach, a king still sits on a throne of ash and gives orders to the dead. As long as he does, the Reach will never cool. Unseat him.",
+                        Objective = "Defeat the Ashen King in the heart of the Ashen Reach.",
+                        CompletionText = "The ash is settling. For the first time since I came here, I can see the stars. Thank you.",
+                        RewardXp = 9000, RewardGold = 1500, RewardItemLevel = 24, RewardRarity = Rarity.Legendary
+                    },
+                }
+            },
         };
     }
 }

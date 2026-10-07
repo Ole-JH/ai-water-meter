@@ -24,6 +24,19 @@ namespace Shadowfall
         {
             new Entry
             {
+                Id = 24, Date = "2026-10-07", Title = "The outer lands",
+                Items = new[]
+                {
+                    "The world is four times bigger. Beyond a broken ridge north and east of the old lands lie the Frostpeak Wilds (snow all year), the Sunscar Badlands and the Ashen Reach, for heroes of level 12 and up.",
+                    "New towns: Frosthaven in the north, Saltreach by the badlands oasis, Emberwatch, the last outpost in the Reach, and the woodcutters' hamlet Pinecrest on the north road. Each has merchants, a healer and quests; the walled towns have a stash chest.",
+                    "Waystones: walk up to a town's waystone to attune to it, then use any waystone to travel there.",
+                    "Thirteen new monsters, three new bosses (Jarl Frostborn, the Raider Warlord and the Ashen King), twelve new quests and seven new achievements. The Ashen Reach counts as a deep place for loot.",
+                    "Town streets no longer get buried in snow: the elves keep shovelling, but the paths stay walkable when they fall behind.",
+                    "Press Enter on the login screens to log in, even while typing in a field.",
+                },
+            },
+            new Entry
+            {
                 Id = 23, Date = "2026-10-07", Title = "A day in Hollowmere, and harder loot",
                 Items = new[]
                 {

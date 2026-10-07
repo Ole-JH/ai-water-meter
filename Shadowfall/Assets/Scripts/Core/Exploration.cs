@@ -34,11 +34,12 @@ namespace Shadowfall
         {
             var w = World;
             var grid = WorldGrid.Instance;
+            if (grid == null || Dungeon.Active) return 0;
             int seen = 0, total = 0;
             for (int y = 0; y < WorldGenerator.H; y++)
                 for (int x = 0; x < WorldGenerator.W; x++)
                 {
-                    if (!grid.IsWalkable(new Vector3(x + 0.5f, 0f, y + 0.5f))) continue;
+                    if (grid.IsBlocked(x, y)) continue;
                     total++;
                     if (w[y * WorldGenerator.W + x] > 128) seen++;
                 }
@@ -115,14 +116,33 @@ namespace Shadowfall
 
         public static bool Seen(Vector3 p) => At(p) > 0.5f;
 
-        // ---- saving the overworld map with the character (1 bit per tile, base64)
+        // ---- saving the overworld map with the character
+        // "r:" + base64 of run lengths (varints, alternating unseen / seen, starting with unseen) over the tiles in row
+        // order: the explored part is a few blobs, so this stays small on the 576-tile world. Older saves are a plain
+        // bitmap (1 bit per tile, base64); a 288x288 one is from before the world grew and is copied into its corner.
 
         public static string Save()
         {
             var map = World;
-            var bits = new byte[(map.Length + 7) / 8];
-            for (int i = 0; i < map.Length; i++) if (map[i] >= 128) bits[i >> 3] |= (byte)(1 << (i & 7));
-            return System.Convert.ToBase64String(bits);
+            var o = new System.Collections.Generic.List<byte>(256);
+            bool cur = false;
+            int run = 0;
+            for (int i = 0; i < map.Length; i++)
+            {
+                bool seen = map[i] >= 128;
+                if (seen == cur) { run++; continue; }
+                Varint(o, run);
+                cur = seen;
+                run = 1;
+            }
+            Varint(o, run);
+            return "r:" + System.Convert.ToBase64String(o.ToArray());
+        }
+
+        static void Varint(System.Collections.Generic.List<byte> o, int v)
+        {
+            while (v >= 0x80) { o.Add((byte)(v | 0x80)); v >>= 7; }
+            o.Add((byte)v);
         }
 
         public static void Load(string data)
@@ -131,9 +151,29 @@ namespace Shadowfall
             if (string.IsNullOrEmpty(data)) return;
             try
             {
+                if (data.StartsWith("r:"))
+                {
+                    var b = System.Convert.FromBase64String(data.Substring(2));
+                    int i = 0, k = 0;
+                    bool seen = false;
+                    while (k < b.Length && i < world.Length)
+                    {
+                        int v = 0, shift = 0;
+                        while (k < b.Length) { byte c = b[k++]; v |= (c & 0x7f) << shift; shift += 7; if ((c & 0x80) == 0 || shift > 28) break; }
+                        int end = Mathf.Min(world.Length, i + v);
+                        if (seen) for (int j = i; j < end; j++) world[j] = 255;
+                        i = end;
+                        seen = !seen;
+                    }
+                    Version++;
+                    return;
+                }
                 var bits = System.Convert.FromBase64String(data);
-                if (bits.Length * 8 < world.Length) return; // saved on a different world size: start over
-                for (int i = 0; i < world.Length; i++) if ((bits[i >> 3] >> (i & 7) & 1) == 1) world[i] = 255;
+                int w = WorldGenerator.W;
+                if (bits.Length == (WorldGenerator.OldSize * WorldGenerator.OldSize + 7) / 8) w = WorldGenerator.OldSize; // from the smaller world
+                else if (bits.Length * 8 < world.Length) return; // some other size: start over
+                for (int i = 0; i < w * w; i++)
+                    if ((bits[i >> 3] >> (i & 7) & 1) == 1) world[(i / w) * WorldGenerator.W + i % w] = 255;
                 Version++;
             }
             catch (System.FormatException) { }

@@ -35,14 +35,30 @@ namespace Shadowfall
         public const float NorthLine = 190f, NorthBlend = 24f;
 
         public static float SecondsUntilNextSeason => Mathf.Max(0f, seasonEndsAt - Time.time);
-        public static bool ColdAt(Vector3 p) => Season == Season.Winter || (Season != Season.Summer && p.z > NorthLine);
-        public static float SnowCoverAt(Vector3 p) => Dungeon.Contains(p) ? 0f : Mathf.Lerp(SnowSouth, SnowNorth, Mathf.Clamp01((p.z - NorthLine) / NorthBlend + 0.5f));
+        /// <summary>
+        /// Frostpeak, north of <see cref="PermLine"/> and west of <see cref="EastEdge"/>, keeps snow all year (<see cref="SnowPerm"/>).
+        /// The Sunscar Badlands (east of EastEdge, south of <see cref="BadlandsNorth"/>) only get snow in winter, like the south.
+        /// </summary>
+        public const float PermLine = 400f, EastEdge = 300f, BadlandsNorth = WorldGenerator.OldSize;
+        public static float SnowPerm { get; private set; } = 0.75f;
+
+        static bool InBadlands(Vector3 p) => p.x > EastEdge && p.z < BadlandsNorth;
+        static bool InFrostpeak(Vector3 p) => p.z > PermLine && p.x < EastEdge;
+        public static bool ColdAt(Vector3 p) => Season == Season.Winter || InFrostpeak(p) || (Season != Season.Summer && p.z > NorthLine && !InBadlands(p));
+        public static float SnowCoverAt(Vector3 p)
+        {
+            if (Dungeon.Contains(p)) return 0f;
+            float region = Mathf.Clamp01((p.z - NorthLine) / NorthBlend + 0.5f)
+                         * (1f - Mathf.Clamp01((p.x - EastEdge) / 24f + 0.5f) * Mathf.Clamp01((BadlandsNorth - p.z) / 24f + 0.5f));
+            float perm = SnowPerm * Mathf.Clamp01((p.z - PermLine) / 30f + 0.5f) * Mathf.Clamp01((EastEdge - p.x) / 30f + 0.5f);
+            return Mathf.Max(Mathf.Lerp(SnowSouth, SnowNorth, region), perm);
+        }
         public static bool SnowingAt(Vector3 p) => Precip > 0.15f && ColdAt(p);
         public static bool RainingAt(Vector3 p) => Precip > 0.15f && !ColdAt(p);
         public static string SeasonName => Season.ToString();
 
         static readonly int SnowId = Shader.PropertyToID("_SfSnow"), WetId = Shader.PropertyToID("_SfWet"), LeavesId = Shader.PropertyToID("_SfLeaves"),
-            FrostId = Shader.PropertyToID("_SfFrost"), WorldId = Shader.PropertyToID("_SfWorld");
+            FrostId = Shader.PropertyToID("_SfFrost"), WorldId = Shader.PropertyToID("_SfWorld"), Snow2Id = Shader.PropertyToID("_SfSnow2");
 
         ParticleSystem rain, splash, snow;
         AudioSource rainLoop;
@@ -117,6 +133,8 @@ namespace Shadowfall
             bool coldNorth = Season != Season.Summer, coldSouth = Season == Season.Winter;
             SnowNorth = Accumulate(SnowNorth, coldNorth, Season == Season.Winter ? 0.6f : 0f, dt);
             SnowSouth = Accumulate(SnowSouth, coldSouth, Season == Season.Winter ? 0.45f : 0f, dt);
+            float permTarget = Season == Season.Winter ? 1f : Season == Season.Autumn ? 0.8f : Season == Season.Spring ? 0.7f : 0.5f;
+            SnowPerm = Mathf.MoveTowards(SnowPerm, permTarget, dt / 120f);
 
             // Rain soaks the ground; it dries out slowly afterwards.
             bool raining = p != null ? RainingAt(p.transform.position) : Precip > 0.15f && Season != Season.Winter;
@@ -143,6 +161,7 @@ namespace Shadowfall
         void Push()
         {
             Shader.SetGlobalVector(SnowId, new Vector4(SnowNorth, SnowSouth, NorthLine, NorthBlend));
+            Shader.SetGlobalVector(Snow2Id, new Vector4(SnowPerm, PermLine, EastEdge, BadlandsNorth));
             Shader.SetGlobalFloat(WetId, inDungeon ? 0f : Wet);
             Shader.SetGlobalFloat(LeavesId, leaves);
             Shader.SetGlobalFloat(FrostId, frost);

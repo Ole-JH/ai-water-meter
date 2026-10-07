@@ -240,6 +240,126 @@
    "xp": 700,
    "itemLevel": 12,
    "rarity": 2
+  },
+  "pine_wolves": {
+   "type": "Kill",
+   "target": "Frost Wolf",
+   "count": 10,
+   "minLevel": 12,
+   "gold": 220,
+   "xp": 1600,
+   "itemLevel": 14,
+   "rarity": 1
+  },
+  "pine_yew": {
+   "type": "Collect",
+   "target": "Yew Logs",
+   "count": 6,
+   "minLevel": 12,
+   "gold": 200,
+   "xp": 1400,
+   "itemLevel": 14,
+   "rarity": 1
+  },
+  "frost_wraiths": {
+   "type": "Kill",
+   "target": "Ice Wraith",
+   "count": 8,
+   "minLevel": 14,
+   "gold": 300,
+   "xp": 2200,
+   "itemLevel": 16,
+   "rarity": 1
+  },
+  "frost_giants": {
+   "type": "Kill",
+   "target": "Frost Giant",
+   "count": 4,
+   "minLevel": 15,
+   "gold": 420,
+   "xp": 3000,
+   "itemLevel": 17,
+   "rarity": 2
+  },
+  "frost_jarl": {
+   "type": "Kill",
+   "target": "Jarl Frostborn",
+   "count": 1,
+   "minLevel": 17,
+   "gold": 900,
+   "xp": 6000,
+   "itemLevel": 20,
+   "rarity": 3
+  },
+  "salt_raiders": {
+   "type": "Kill",
+   "target": "Desert Raider",
+   "count": 10,
+   "minLevel": 13,
+   "gold": 280,
+   "xp": 2000,
+   "itemLevel": 15,
+   "rarity": 1
+  },
+  "salt_golems": {
+   "type": "Kill",
+   "target": "Sand Golem",
+   "count": 5,
+   "minLevel": 15,
+   "gold": 400,
+   "xp": 2800,
+   "itemLevel": 17,
+   "rarity": 2
+  },
+  "salt_warlord": {
+   "type": "Kill",
+   "target": "Raider Warlord",
+   "count": 1,
+   "minLevel": 17,
+   "gold": 900,
+   "xp": 6000,
+   "itemLevel": 20,
+   "rarity": 3
+  },
+  "ash_ghouls": {
+   "type": "Kill",
+   "target": "Ash Ghoul",
+   "count": 12,
+   "minLevel": 17,
+   "gold": 450,
+   "xp": 3200,
+   "itemLevel": 19,
+   "rarity": 1
+  },
+  "ash_skeletons": {
+   "type": "Kill",
+   "target": "Ember Skeleton",
+   "count": 10,
+   "minLevel": 18,
+   "gold": 520,
+   "xp": 3800,
+   "itemLevel": 20,
+   "rarity": 2
+  },
+  "ash_golems": {
+   "type": "Kill",
+   "target": "Cinder Golem",
+   "count": 5,
+   "minLevel": 19,
+   "gold": 600,
+   "xp": 4500,
+   "itemLevel": 21,
+   "rarity": 2
+  },
+  "ash_king": {
+   "type": "Kill",
+   "target": "The Ashen King",
+   "count": 1,
+   "minLevel": 21,
+   "gold": 1500,
+   "xp": 9000,
+   "itemLevel": 24,
+   "rarity": 3
   }
  },
  "companions": {
@@ -341,6 +461,22 @@
    "name": "Kingslayer",
    "title": "Kingslayer"
   },
+  "boss_jarl": {
+   "name": "Giant Slayer",
+   "title": ""
+  },
+  "boss_warlord": {
+   "name": "Warlord Down",
+   "title": ""
+  },
+  "boss_ashen": {
+   "name": "Ashes to Ashes",
+   "title": "the Unburnt"
+  },
+  "boss_nine": {
+   "name": "Crownbreaker",
+   "title": "Crownbreaker"
+  },
   "dungeon_first": {
    "name": "Into the Dark",
    "title": ""
@@ -380,6 +516,18 @@
   "zones_all": {
    "name": "Wanderer",
    "title": "the Wanderer"
+  },
+  "zones_outer": {
+   "name": "World Walker",
+   "title": "the World Walker"
+  },
+  "waystones_all": {
+   "name": "Attuned",
+   "title": ""
+  },
+  "waystone_trips": {
+   "name": "Frequent Traveller",
+   "title": ""
   },
   "level_5": {
    "name": "Adventurer",

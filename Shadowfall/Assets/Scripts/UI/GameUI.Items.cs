@@ -155,7 +155,7 @@ namespace Shadowfall
 
         void DrawStash(Player p)
         {
-            var chest = StashChest.I;
+            var chest = StashChest.Nearest(p.transform.position);
             if (chest == null || Factory.FlatDistance(p.transform.position, chest.Position) > 6f) { showStash = false; return; }
             const int cols = 8, rows = 5;
             const float cell = 50, gap = 4;

@@ -334,7 +334,7 @@ namespace Shadowfall
                 case State.Chasing:
                     if (Time.time < actionAt) { view?.UpdateLocomotion(0f); break; } // still shouting
                     if (p == null || p.IsDead || Time.time > stateUntil || Factory.FlatDistance(p.transform.position, transform.position) > 30f
-                        || !WorldGenerator.InTown(p.transform.position) || Dungeon.Active)
+                        || !WorldGenerator.InHollowmere(p.transform.position) || Dungeon.Active)
                     {
                         Speech.Say(transform, 2.4f, giveUp[Random.Range(0, giveUp.Length)]);
                         state = State.Returning;

@@ -18,6 +18,8 @@ namespace Shadowfall
         {
             "Dire Wolf", "Goblin", "Goblin Shaman", "Bandit", "Skeleton", "Skeleton Archer", "Zombie", "Rock Golem",
             "Goblin Warchief", "Bandit Lord", "Goblin King", "Crypt Lord", "Stone Colossus", "Lich King",
+            "Frost Wolf", "Ice Wraith", "Frost Giant", "Desert Raider", "Raider Marksman", "Sand Golem", "Ash Ghoul", "Ember Skeleton",
+            "Ash Wraith", "Cinder Golem", "Jarl Frostborn", "Raider Warlord", "The Ashen King",
         };
 
         void AdminKeys()

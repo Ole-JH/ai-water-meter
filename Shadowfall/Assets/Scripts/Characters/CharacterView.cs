@@ -77,6 +77,20 @@ namespace Shadowfall
             { "Goblin King", new CharacterLook { Model = "Monsters/Warchief", Height = 3.6f, Anims = AnimSet.Big, RunSpeed = 5f, Tint = new Color(1.1f, 1f, 0.7f), Light = new Color(1f, 0.8f, 0.3f) } },
             { "Stone Colossus", new CharacterLook { Model = "Monsters/Golem", Height = 4.4f, Anims = AnimSet.Big, RunSpeed = 4f, Tint = new Color(0.6f, 0.68f, 0.85f), Light = new Color(0.4f, 0.75f, 1f) } },
             { "Lich King", new CharacterLook { Model = "Characters/SkeletonMage", Height = 3.4f, Anims = AnimSet.Skeleton, Tint = new Color(0.7f, 0.9f, 1.15f), Light = new Color(0.4f, 0.8f, 1f) } },
+            // the outer lands: tinted versions of the models above
+            { "Frost Wolf", new CharacterLook { Model = "Monsters/Wolf", Height = 1.35f, Anims = AnimSet.Wolf, RunSpeed = 6f, Tint = new Color(1.25f, 1.3f, 1.45f) } },
+            { "Ice Wraith", new CharacterLook { Model = "Characters/SkeletonMage", Height = 1.95f, Anims = AnimSet.Skeleton, Tint = new Color(0.7f, 0.95f, 1.3f) } },
+            { "Frost Giant", new CharacterLook { Model = "Monsters/Warchief", Height = 3.3f, Anims = AnimSet.Big, RunSpeed = 5f, Tint = new Color(0.7f, 0.85f, 1.15f) } },
+            { "Jarl Frostborn", new CharacterLook { Model = "Monsters/Warchief", Height = 4.3f, Anims = AnimSet.Big, RunSpeed = 5f, Tint = new Color(0.8f, 0.95f, 1.3f), Light = new Color(0.5f, 0.8f, 1f) } },
+            { "Desert Raider", new CharacterLook { Model = "Characters/Rogue", Height = 1.9f, Tint = new Color(1.15f, 0.95f, 0.75f), Weapon = "sword" } },
+            { "Raider Marksman", new CharacterLook { Model = "Characters/RogueHooded", Height = 1.9f, Tint = new Color(1.1f, 0.92f, 0.72f), Weapon = "crossbow" } },
+            { "Sand Golem", new CharacterLook { Model = "Monsters/Golem", Height = 2.9f, Anims = AnimSet.Big, RunSpeed = 4f, Tint = new Color(1.1f, 0.92f, 0.62f) } },
+            { "Raider Warlord", new CharacterLook { Model = "Characters/Barbarian", Height = 3f, Tint = new Color(1.1f, 0.85f, 0.65f), Weapon = "axe", Light = new Color(1f, 0.6f, 0.2f) } },
+            { "Ash Ghoul", new CharacterLook { Model = "Characters/Zombie", Height = 1.95f, Anims = AnimSet.Kenney, RunSpeed = 4f, Tint = new Color(0.62f, 0.6f, 0.58f) } },
+            { "Ember Skeleton", new CharacterLook { Model = "Characters/SkeletonWarrior", Height = 1.95f, Anims = AnimSet.Skeleton, Tint = new Color(1.15f, 0.62f, 0.45f) } },
+            { "Ash Wraith", new CharacterLook { Model = "Characters/SkeletonMage", Height = 1.95f, Anims = AnimSet.Skeleton, Tint = new Color(1.15f, 0.65f, 0.45f) } },
+            { "Cinder Golem", new CharacterLook { Model = "Monsters/Golem", Height = 3f, Anims = AnimSet.Big, RunSpeed = 4f, Tint = new Color(0.6f, 0.38f, 0.32f) } },
+            { "The Ashen King", new CharacterLook { Model = "Characters/SkeletonWarrior", Height = 4.2f, Anims = AnimSet.Skeleton, Tint = new Color(1.05f, 0.55f, 0.4f), Light = new Color(1f, 0.35f, 0.1f) } },
         };
 
         public static CharacterLook ForMonster(string name) => monsters.TryGetValue(name, out var l) ? l : null;
@@ -103,6 +117,23 @@ namespace Shadowfall
             { "Innkeeper Rosie", new CharacterLook { Model = "Characters/Keeper", Height = 1.8f, Anims = AnimSet.Kenney, Tint = new Color(1.1f, 0.95f, 0.9f) } },
             { "Curio Dealer Vex", new CharacterLook { Model = "Characters/RogueHooded", Height = 1.85f, Tint = new Color(0.8f, 0.7f, 1f) } },
             { "Beastmaster Orla", new CharacterLook { Model = "Characters/Barbarian", Height = 1.9f, Tint = new Color(0.95f, 0.85f, 0.7f), Weapon = "axe" } },
+            // ---- the outer towns
+            { "Jarl Sigrun", new CharacterLook { Model = "Characters/Knight", Height = 2.1f, Tint = new Color(0.85f, 0.9f, 1.05f), Weapon = "axe" } },
+            { "Trader Olaf", new CharacterLook { Model = "Characters/Keeper", Height = 1.85f, Anims = AnimSet.Kenney, Tint = new Color(0.9f, 0.85f, 0.8f) } },
+            { "Runesmith Halvard", new CharacterLook { Model = "Characters/Barbarian", Height = 2.0f, Tint = new Color(0.8f, 0.85f, 0.95f), Weapon = "mace" } },
+            { "Furrier Eska", new CharacterLook { Model = "Characters/RogueHooded", Height = 1.85f, Tint = new Color(1.05f, 1f, 0.95f) } },
+            { "Healer Ingrid", new CharacterLook { Model = "Characters/Mage", Height = 1.9f, Tint = new Color(0.95f, 1.05f, 1.15f) } },
+            { "Caravan Master Rahim", new CharacterLook { Model = "Characters/Rogue", Height = 1.95f, Tint = new Color(1.1f, 0.95f, 0.75f) } },
+            { "Spice Trader Nadia", new CharacterLook { Model = "Characters/Mage", Height = 1.85f, Tint = new Color(1.15f, 0.85f, 0.7f) } },
+            { "Gemcutter Zafir", new CharacterLook { Model = "Characters/RogueHooded", Height = 1.85f, Tint = new Color(0.8f, 0.85f, 1.15f) } },
+            { "Sandsmith Tariq", new CharacterLook { Model = "Characters/Barbarian", Height = 1.95f, Tint = new Color(1.1f, 0.95f, 0.75f), Weapon = "sword" } },
+            { "Healer Amara", new CharacterLook { Model = "Characters/Mage", Height = 1.85f, Tint = new Color(1.1f, 1.05f, 0.9f) } },
+            { "Commander Varek", new CharacterLook { Model = "Characters/Knight", Height = 2.1f, Tint = new Color(0.75f, 0.65f, 0.65f), Weapon = "sword" } },
+            { "Quartermaster Bryn", new CharacterLook { Model = "Characters/Knight", Height = 1.95f, Tint = new Color(0.85f, 0.85f, 0.85f) } },
+            { "Smuggler Kett", new CharacterLook { Model = "Characters/Rogue", Height = 1.85f, Tint = new Color(0.7f, 0.7f, 0.72f), Weapon = "dagger" } },
+            { "Ashwarden Lyra", new CharacterLook { Model = "Characters/Mage", Height = 1.9f, Tint = new Color(1.1f, 0.9f, 0.8f) } },
+            { "Woodsman Garrick", new CharacterLook { Model = "Characters/Barbarian", Height = 1.95f, Tint = new Color(0.9f, 1f, 0.85f), Weapon = "axe" } },
+            { "Old Martha", new CharacterLook { Model = "Characters/Keeper", Height = 1.75f, Anims = AnimSet.Kenney, Tint = new Color(1.05f, 0.95f, 0.95f) } },
         };
 
         public static CharacterLook ForNpc(string name) => npcs.TryGetValue(name, out var l) ? l : null;

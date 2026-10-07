@@ -30,10 +30,11 @@ namespace Shadowfall
         /// <summary>The kind of gore a monster makes, by name.</summary>
         public static Kind KindOf(string monster)
         {
-            if (monster.StartsWith("Skeleton") || monster == "Lich King" || monster == "Crypt Lord") return Kind.Bone;
-            if (monster == "Rock Golem" || monster == "Stone Colossus") return Kind.Stone;
+            if (monster.StartsWith("Skeleton") || monster == "Lich King" || monster == "Crypt Lord" || monster.EndsWith("Wraith")
+                || monster == "Ember Skeleton" || monster == "The Ashen King") return Kind.Bone;
+            if (monster.EndsWith("Golem") || monster == "Stone Colossus") return Kind.Stone;
             if (monster.StartsWith("Goblin")) return Kind.Ichor;
-            if (monster == "Zombie") return Kind.Rot;
+            if (monster == "Zombie" || monster == "Ash Ghoul") return Kind.Rot;
             return Kind.Flesh;
         }
 

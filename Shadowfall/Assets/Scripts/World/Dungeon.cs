@@ -11,7 +11,7 @@ namespace Shadowfall
     /// </summary>
     public static class Dungeon
     {
-        public static readonly Vector3 Origin = new Vector3(1000f, 0f, 1000f);
+        public static readonly Vector3 Origin = new Vector3(3000f, 0f, 3000f);
         /// <summary>Which dungeon we are in (index into <see cref="DungeonDef.All"/>) and how many levels it has.</summary>
         public static int Index { get; private set; }
         public static DungeonDef Def => DungeonDef.Get(Index);
@@ -30,7 +30,7 @@ namespace Shadowfall
         static GameObject root;
         static WorldGrid grid, overworld;
 
-        public static bool Contains(Vector3 p) => p.x > 500f;
+        public static bool Contains(Vector3 p) => p.x > 1500f; // the overworld is 576 tiles a side
         public static Vector3 ToWorld(float x, float z) => new Vector3(x + Origin.x, 0f, z + Origin.z);
 
         // =====================================================================================

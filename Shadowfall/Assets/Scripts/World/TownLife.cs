@@ -416,7 +416,7 @@ namespace Shadowfall
             Walker follow = null;
             foreach (var o in all) if (o != this && !o.hidden && o.kind != Kind.Dog && rng.NextDouble() < 0.3) { follow = o; break; }
             var p = Player.I;
-            Vector3 goal = p != null && WorldGenerator.InTown(p.transform.position) && rng.NextDouble() < 0.3
+            Vector3 goal = p != null && WorldGenerator.InHollowmere(p.transform.position) && rng.NextDouble() < 0.3
                 ? p.transform.position + new Vector3((float)rng.NextDouble() * 2f - 1f, 0, (float)rng.NextDouble() * 2f - 1f) * 1.5f // come say hi
                 : follow != null ? follow.transform.position : TownLife.RandomSquarePoint(rng);
             Go(goal, Doing.Nothing);

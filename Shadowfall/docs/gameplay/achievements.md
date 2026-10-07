@@ -47,7 +47,11 @@ exploration count from the day achievements arrived.
 | **Hideout Raided** | Defeat the Bandit Lord in his hideout. | 10 |  |
 | **Regicide** | Defeat the Goblin King in the Warrens. | 10 |  |
 | **Colossus Toppled** | Defeat the Stone Colossus in Ironvein Deep. | 10 |  |
-| **Kingslayer** | Defeat all six bosses. | 50 | Kingslayer |
+| **Kingslayer** | Defeat six different bosses. | 50 | Kingslayer |
+| **Giant Slayer** | Defeat Jarl Frostborn in his high camp in the Frostpeak Wilds. | 25 |  |
+| **Warlord Down** | Defeat the Raider Warlord in the Sunscar Badlands. | 25 |  |
+| **Ashes to Ashes** | Defeat the Ashen King in the heart of the Ashen Reach. | 50 | the Unburnt |
+| **Crownbreaker** | Defeat all nine bosses, the outer lands' three included. | 100 | Crownbreaker |
 
 ### Dungeons
 
@@ -68,6 +72,9 @@ exploration count from the day achievements arrived.
 | **Pathfinder** | Explore a quarter of the world. | 10 |  |
 | **Cartographer** | Explore three quarters of the world. | 25 | Cartographer |
 | **Wanderer** | Visit Hollowmere, Whisperwood, the Goblin Encampment, the Forsaken Graveyard, Ironvein Quarry and the Crypt of the Lich. | 25 | the Wanderer |
+| **World Walker** | Visit every zone and town, the outer lands included: Frostpeak, the Sunscar Badlands, the Ashen Reach, Pinecrest, Frosthaven, Saltreach and Emberwatch. | 50 | the World Walker |
+| **Attuned** | Attune to the waystones of Pinecrest, Frosthaven, Saltreach and Emberwatch. | 25 |  |
+| **Frequent Traveller** | Travel by waystone 25 times. | 10 |  |
 
 ### Hero
 

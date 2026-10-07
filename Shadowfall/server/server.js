@@ -9,7 +9,7 @@ const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
 const { WebSocketServer } = require("ws");
-const { MONSTERS, SPAWNERS, TOWN, SPAWN, DUNGEONS, BALANCE, DIFFICULTIES, EMOTES, map: designToWorld } = require("./content");
+const { MONSTERS, SPAWNERS, TOWNS, OLD_SIZE, SPAWN, DUNGEONS, BALANCE, DIFFICULTIES, EMOTES, map: designToWorld } = require("./content");
 const dungeonGen = require("./dungeon");
 const metrics = require("./metrics");
 const { createStore, Taken } = require("./store");
@@ -52,8 +52,8 @@ const dist = (ax, az, bx, bz) => Math.hypot(ax - bx, az - bz);
 const r2 = (v) => Math.round(v * 100) / 100;
 // The Crypt of the Lich (world cells, as WorldGenerator.Crypt): its monsters drop like a dungeon's.
 const CRYPT = { x0: 132, z0: 9, x1: 157, z1: 28 };
-const lootSource = (m) => (m.inst || (m.x >= CRYPT.x0 && m.x < CRYPT.x1 && m.z >= CRYPT.z0 && m.z < CRYPT.z1) ? "deep" : "surface");
-const inTown = (x, z) => x >= TOWN.x0 && x < TOWN.x1 && z >= TOWN.z0 && z < TOWN.z1;
+const lootSource = (m) => (m.inst || (m.x >= CRYPT.x0 && m.x < CRYPT.x1 && m.z >= CRYPT.z0 && m.z < CRYPT.z1) || (m.x >= OLD_SIZE && m.z >= OLD_SIZE) ? "deep" : "surface");
+const inTown = (x, z) => TOWNS.some((t) => x >= t.x0 && x < t.x1 && z >= t.z0 && z < t.z1);
 const now = () => Date.now() / 1000;
 
 // =====================================================================================
@@ -1720,7 +1720,7 @@ const itemOps = {
   stash(s, m) {
     const it = bagItem(s, m.i);
     if (!it) return false;
-    if (!inTownNow(s)) return ierr(s, "stash", "Your stash is in Hollowmere.");
+    if (!inTownNow(s)) return ierr(s, "stash", "Your stash is in town.");
     if (I.addItem(s.ledger.stash, it) > 0) return ierr(s, "stash", "Your stash is full.");
     s.ledger.bag[m.i] = null;
     return true;
@@ -1728,7 +1728,7 @@ const itemOps = {
   unstash(s, m) {
     const i = m.i | 0, it = s.ledger.stash[i];
     if (!it) return false;
-    if (!inTownNow(s)) return ierr(s, "unstash", "Your stash is in Hollowmere.");
+    if (!inTownNow(s)) return ierr(s, "unstash", "Your stash is in town.");
     if (I.addItem(s.ledger.bag, it) > 0) return ierr(s, "unstash", "Your bags are full.");
     s.ledger.stash[i] = null;
     return true;
@@ -1748,7 +1748,7 @@ const itemOps = {
   },
   /** Vex fuses three gems of a kind into one of the next quality. */
   fuse(s) {
-    if (!inTownNow(s)) return ierr(s, "fuse", "Vex is in Hollowmere.");
+    if (!inTownNow(s)) return ierr(s, "fuse", "Find a curio dealer in town.");
     for (let tier = 0; tier < 2; tier++)
       for (const type of I.GEM_TYPES) {
         const name = `${I.GEM_TIERS[tier]} ${type}`;
@@ -1767,7 +1767,7 @@ const itemOps = {
   sell(s, m) {
     const it = bagItem(s, m.i);
     if (!it) return false;
-    if (!inTownNow(s)) return ierr(s, "sell", "Find a merchant in Hollowmere to sell.");
+    if (!inTownNow(s)) return ierr(s, "sell", "Find a merchant in town to sell.");
     const value = it.Value * Math.max(1, it.Count);
     s.ledger.bag[m.i] = null;
     s.ledger.gold += value;
@@ -1776,7 +1776,7 @@ const itemOps = {
   },
   /** Sells every common item and material in the bags. */
   sellcommon(s) {
-    if (!inTownNow(s)) return ierr(s, "sell", "Find a merchant in Hollowmere to sell.");
+    if (!inTownNow(s)) return ierr(s, "sell", "Find a merchant in town to sell.");
     let gold = 0, n = 0;
     s.ledger.bag.forEach((it, i) => {
       if (!it || it.Kind === I.Kind.Consumable || it.Kind === I.Kind.Gem) return;
@@ -1800,7 +1800,7 @@ const itemOps = {
   buy(s, m) {
     const kind = String(m.k || "");
     if (!I.VENDOR_KINDS.includes(kind)) return false;
-    if (!inTownNow(s)) return ierr(s, "buy", "The merchants are in Hollowmere.");
+    if (!inTownNow(s)) return ierr(s, "buy", "The merchants are in town.");
     const v = vendorFor(s, kind), it = v.items[m.i | 0];
     if (!it || (m.name && it.Name !== m.name)) {
       safeSend(s, JSON.stringify({ t: "stock", k: kind, stock: v.items, restock: Math.max(0, Math.round(v.restockAt - now())) }));
@@ -1872,7 +1872,7 @@ const itemOps = {
   },
   /** Resetting talents costs 25 gold per level (the talents themselves are the client's). */
   respec(s) {
-    if (!inTownNow(s)) return ierr(s, "respec", "You can only reset your talents in Hollowmere.");
+    if (!inTownNow(s)) return ierr(s, "respec", "You can only reset your talents in town.");
     const cost = 25 * s.lvl;
     if (s.ledger.gold < cost) return ierr(s, "respec", `Resetting your talents costs ${cost} gold.`);
     s.ledger.gold -= cost;

@@ -23,8 +23,8 @@ fs.writeFileSync(path.join(PUBLIC_DIR, "index.html"), "<!doctype html><title>Sha
 const BUILD_A = "2026.10.07-090000", BUILD_B = "2026.10.08-120000", BUILD_C = "2026.10.09-080000";
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-// A fake 288x288 world (the real size): open field with a 4-cell wall around the edge.
-const W = 288, H = 288;
+// A fake 576x576 world (the real size): open field with a 4-cell wall around the edge.
+const W = 576, H = 576;
 const bytes = Buffer.alloc((W * H) / 8);
 for (let y = 0; y < H; y++)
   for (let x = 0; x < W; x++)
@@ -296,7 +296,7 @@ async function economyTests(a, b) {
 
   // Trading with merchants only works in town.
   await iop("buy", { k: "General", i: 0 });
-  assert.match(lastErr()?.msg || "", /Hollowmere/, "merchants only trade in town");
+  assert.match(lastErr()?.msg || "", /in town/, "merchants only trade in town");
   a.ws.send(JSON.stringify({ t: "adm", c: "give", what: "gold", n: 500 }));
   b.ws.send(JSON.stringify({ t: "adm", c: "give", what: "gold", n: 500 }));
   await sleep(200);
@@ -332,6 +332,35 @@ async function economyTests(a, b) {
   await iop("quest", { k: "wolves" });
   assert.strictEqual(inv().gold, before + 40, "but only once");
 
+  // The outer towns are towns too: merchants and the stash work there, not in the wilds between.
+  state(a, 144.5, 464.5); // Frosthaven
+  await sleep(150);
+  const goldBefore = inv().gold;
+  await iop("buy", { k: "General", i: hp, n: 1 });
+  assert.ok(inv().gold < goldBefore, "Frosthaven's merchants trade");
+  state(a, 300, 300); // the wilds at the old world's corner
+  await sleep(150);
+  await iop("stash", { i: slotOf("Health Potion") });
+  assert.match(lastErr()?.msg || "", /stash is in town/, "the stash only opens in a town");
+  state(a, 464.5, 464.5); // Emberwatch
+  await sleep(150);
+  await iop("stash", { i: slotOf("Health Potion") });
+  assert.ok((inv().stash || []).some((x) => x && x.Name === "Health Potion"), "Emberwatch has a stash chest");
+
+  state(a, 144, 187);
+  await sleep(150);
+}
+
+/** The outer lands have their own monsters: a hero at a spawner there sees them. */
+async function outerLandsTests(a) {
+  const seen = new Set();
+  for (const [x, z, want] of [[330, 400, ["Ember Skeleton", "Ash Wraith"]], [110, 306, ["Frost Wolf"]], [320, 136, ["Desert Raider"]]]) {
+    const from = a.msgs.length;
+    state(a, x, z);
+    await sleep(700);
+    for (const snap of a.msgs.slice(from).filter((m) => m.t === "snap")) for (const m of snap.m || []) if (m.n) seen.add(m.n);
+    assert.ok(want.some((n) => seen.has(n)), `${want.join(" / ")} roam near ${x}, ${z} (saw ${[...seen].join(", ") || "nothing"})`);
+  }
   state(a, 144, 187);
   await sleep(150);
 }
@@ -403,6 +432,7 @@ async function main() {
     assert.ok(b.find("welcome").now > 0, "welcome carries the server clock");
 
     await economyTests(a, b);
+    await outerLandsTests(a);
 
     // ---- parties
     const d = await connect("Dana", "secret4");

@@ -123,7 +123,7 @@ namespace Shadowfall
             if (Dungeon.Active) return "dungeon";
             if (WorldGenerator.InTown(p.transform.position)) return "town";
             string zone = WorldGenerator.ZoneAt(p.transform.position);
-            if (zone.Contains("Graveyard") || zone.Contains("Crypt")) return "graveyard";
+            if (zone.Contains("Graveyard") || zone.Contains("Crypt") || zone == WorldGenerator.Ashen) return "graveyard";
             return "wilds";
         }
 

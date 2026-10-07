@@ -6,10 +6,15 @@ namespace Shadowfall
     /// Builds the whole world procedurally from a fixed seed: ground texture, town, zones,
     /// gathering nodes and NPCs. Monsters are spawned and simulated by the server (see /server).
     /// </summary>
-    public class WorldGenerator
+    public partial class WorldGenerator
     {
-        public const int W = 288, H = 288;
-        /// <summary>The world's centre (the middle of Hollowmere's plaza).</summary>
+        public const int W = 576, H = 576;
+        /// <summary>
+        /// The original world, Hollowmere and its four zones, fills the south-west corner (0..OldSize on both axes).
+        /// The rest (north, east and north-east of it) is the outer lands: see WorldGenerator.Regions.cs.
+        /// </summary>
+        public const int OldSize = 288;
+        /// <summary>The middle of Hollowmere's plaza (the old world's centre).</summary>
         public const float Center = 144f;
         /// <summary>
         /// The zones were designed on the original 160-tile map centred on 80. <see cref="Map(float)"/> turns those
@@ -42,6 +47,7 @@ namespace Shadowfall
         WorldGrid grid;
         Color[] pixels;
         bool[] reserved; // no trees / rocks here (roads, town, water)
+        bool[] road;     // road tiles (the ridge leaves passes around them)
         Transform root, nodes, npcs, deco;
         GroundSurface surface;    // splat-mapped ground, grass and water (visual only)
         bool fancyGround;         // terrain shaders available
@@ -69,7 +75,11 @@ namespace Shadowfall
         /// <summary>How grassy the ground is at a point (0..1), for ambient critters.</summary>
         public float GrassAt(Vector3 p) => fancyGround ? surface.GrassAmount(p.x, p.z) : 0.5f;
 
-        public static bool InTown(Vector3 p) =>
+        /// <summary>In any town or hamlet (safe from monsters, town music, recall counts as home).</summary>
+        public static bool InTown(Vector3 p) => TownAt(p) != null;
+
+        /// <summary>Inside Hollowmere's walls (its festivals, townsfolk and leaf piles).</summary>
+        public static bool InHollowmere(Vector3 p) =>
             p.x >= Town.xMin && p.x < Town.xMax && p.z >= Town.yMin && p.z < Town.yMax;
 
         public static bool InCrypt(Vector3 p) =>
@@ -78,8 +88,10 @@ namespace Shadowfall
         public static string ZoneAt(Vector3 p)
         {
             if (Dungeon.Contains(p)) return Dungeon.ZoneName;
-            if (InTown(p)) return "Hollowmere Village";
+            var town = TownAt(p);
+            if (town != null) return town.Name;
             if (InCrypt(p)) return "Crypt of the Lich";
+            if (p.x >= OldSize || p.z >= OldSize) return p.x < OldSize ? Frostpeak : p.z < OldSize ? Badlands : Ashen;
             float dx = p.x - Center, dz = p.z - Center;
             if (Mathf.Abs(dz) > Mathf.Abs(dx)) return dz > 0 ? "Whisperwood" : "Forsaken Graveyard";
             return dx > 0 ? "Goblin Encampment" : "Ironvein Quarry";
@@ -96,12 +108,13 @@ namespace Shadowfall
             grid = new WorldGrid(W, H);
             pixels = new Color[W * H];
             reserved = new bool[W * H];
+            road = new bool[W * H];
             root = new GameObject("World").transform;
             nodes = Factory.Empty("Resources", root, Vector3.zero);
             npcs = Factory.Empty("NPCs", root, Vector3.zero);
             deco = Factory.Empty("Decoration", root, Vector3.zero);
             surface = new GroundSurface(W, H);
-            surface.ExcludeRoads(Town);
+            foreach (var t in Towns) if (t.Walled) surface.ExcludeRoads(t.Rect);
             fancyGround = GroundSurface.Supported;
 
             PaintBase();
@@ -111,6 +124,7 @@ namespace Shadowfall
             BuildLake(new Vector2(Map(140), Map(122)), 8f, 1);   // north-east woods
             BuildLake(new Vector2(Map(28), Map(130)), 8f, 1);    // north-west, by the quarry
             BuildLake(new Vector2(Map(132), Map(40)), 7f, 0);    // south-east, a murky graveyard mere
+            BuildRegionLakes();
             BuildBorder();
             BuildTown();
             BuildForest();
@@ -118,6 +132,8 @@ namespace Shadowfall
             BuildGraveyard();
             BuildCrypt();
             BuildQuarry();
+            BuildOuterTowns();
+            BuildRegions();
             surface.Bake();
             ScatterDetail();
             BuildGround();
@@ -146,15 +162,20 @@ namespace Shadowfall
             for (int y = 0; y < H; y++)
                 for (int x = 0; x < W; x++)
                 {
-                    float dx = (x - Center) / Stretch, dz = (y - Center) / Stretch;
+                    // Inside the old world the zone colours come from the direction to Hollowmere (clamped, so the
+                    // north and east zones carry on to the old edge); the outer regions fade in across it.
+                    float dx = (Mathf.Min(x, OldSize) - Center) / Stretch, dz = (Mathf.Min(y, OldSize) - Center) / Stretch;
                     float wn = Mathf.Pow(Mathf.Max(0, dz), 3), ws = Mathf.Pow(Mathf.Max(0, -dz), 3);
                     float we = Mathf.Pow(Mathf.Max(0, dx), 3), ww = Mathf.Pow(Mathf.Max(0, -dx), 3);
                     float sum = wn + ws + we + ww + 0.0001f;
                     Color c = (forestC * wn + graveC * ws + steppeC * we + quarryC * ww) / sum;
                     if (sum < 1f) c = Color.Lerp(new Color(0.3f, 0.42f, 0.2f), c, sum);
+                    RegionWeights(x, y, out float rOld, out float rFrost, out float rBad, out float rAsh);
+                    c = c * rOld + frostC * rFrost + badlandsC * rBad + ashC * rAsh;
                     float n = Mathf.PerlinNoise(x * 0.15f, y * 0.15f) * 0.25f + Mathf.PerlinNoise(x * 0.6f, y * 0.6f) * 0.1f;
                     pixels[Idx(x, y)] = c * (0.85f + n);
                     BaseSurface(x, y, wn / sum, ws / sum, we / sum, ww / sum);
+                    if (rOld < 0.999f) RegionSurface(x, y, rOld, rFrost, rBad, rAsh);
                 }
 
             // The village: cobbled cross streets and central square, grassy yards with trodden dirt elsewhere.
@@ -162,7 +183,7 @@ namespace Shadowfall
                 for (int x = Town.xMin; x < Town.xMax; x++)
                 {
                     Reserve(x, y);
-                    if (IsTownStreet(x, y))
+                    if (IsHollowmereStreet(x, y))
                     {
                         float n = Mathf.PerlinNoise(x * 0.9f, y * 0.9f) * 0.15f;
                         Paint(x, y, cobbleC * (0.9f + n));
@@ -181,7 +202,7 @@ namespace Shadowfall
         }
 
         /// <summary>Cobbled parts of the village: the two cross streets between the gates and the central square.</summary>
-        static bool IsTownStreet(int x, int y)
+        static bool IsHollowmereStreet(int x, int y)
         {
             bool cross = (x >= 142 && x <= 146) || (y >= 142 && y <= 146);
             bool square = x >= 136 && x <= 152 && y >= 136 && y <= 152;
@@ -224,21 +245,39 @@ namespace Shadowfall
         void PaintRoads()
         {
             // Smooth centerlines for the ground shader (the tiles below stay the walkable/reserved road).
-            var n = new System.Collections.Generic.List<Vector2>();
-            for (int i = Town.yMax - 1; i < H - 6; i++) n.Add(new Vector2(Mathf.Round(Center + Mathf.Sin(i * 0.05f) * 6f) + 0.5f, i + 0.5f));
-            var so = new System.Collections.Generic.List<Vector2>();
-            for (int i = Town.yMin; i > 6; i--) so.Add(new Vector2(Mathf.Round(Center + Mathf.Sin(i * 0.06f) * 5f) + 0.5f, i + 0.5f));
-            var e = new System.Collections.Generic.List<Vector2>();
-            for (int i = Town.xMax - 1; i < W - 6; i++) e.Add(new Vector2(i + 0.5f, Mathf.Round(Center + Mathf.Sin(i * 0.055f) * 6f) + 0.5f));
-            var wst = new System.Collections.Generic.List<Vector2>();
-            for (int i = Town.xMin; i > 6; i--) wst.Add(new Vector2(i + 0.5f, Mathf.Round(Center + Mathf.Sin(i * 0.045f) * 6f) + 0.5f));
-            foreach (var line in new[] { n, so, e, wst }) surface.AddRoad(Smooth(line));
+            // Four roads leading out of Hollowmere's gates, gently meandering: north on to Frosthaven, east on to
+            // Saltreach, south and west to the old edge of the world. Then the road between Frosthaven and Emberwatch
+            // and the one between Saltreach and Emberwatch. Each road runs straight into a town's gate.
+            var frost = TownNamed("Frosthaven").Rect; var salt = TownNamed("Saltreach").Rect; var ember = TownNamed("Emberwatch").Rect;
+            Road(true, Center, 0.05f, 6f, Town.yMax - 1, frost.yMin, Town.yMax, frost.yMin);                       // north
+            Road(true, Center, 0.06f, 5f, Town.yMin, 6, Town.yMin, -999);                                         // south
+            Road(false, Center, 0.055f, 6f, Town.xMax - 1, salt.xMin, Town.xMax, salt.xMin);                       // east
+            Road(false, Center, 0.045f, 6f, Town.xMin, 6, Town.xMin, -999);                                       // west
+            Road(false, frost.center.y - 0.5f, 0.05f, 7f, frost.xMax - 1, ember.xMin, frost.xMax, ember.xMin);     // Frosthaven - Emberwatch
+            Road(true, salt.center.x - 0.5f, 0.045f, 7f, salt.yMax - 1, ember.yMin, salt.yMax, ember.yMin);        // Saltreach - Emberwatch
+        }
 
-            // Four roads leading out of the gates, gently meandering.
-            for (int i = Town.yMax; i < H - 6; i++) RoadDot(Center + Mathf.Sin(i * 0.05f) * 6f, i);         // north
-            for (int i = Town.yMin; i > 6; i--) RoadDot(Center + Mathf.Sin(i * 0.06f) * 5f, i);              // south
-            for (int i = Town.xMax; i < W - 6; i++) RoadDot(i, Center + Mathf.Sin(i * 0.055f) * 6f);         // east
-            for (int i = Town.xMin; i > 6; i--) RoadDot(i, Center + Mathf.Sin(i * 0.045f) * 6f);             // west
+        /// <summary>
+        /// A road along one axis from <paramref name="from"/> to <paramref name="to"/> (either direction), meandering
+        /// around <paramref name="line"/> but straightening out within 18 tiles of the gates at <paramref name="gateA"/>
+        /// and <paramref name="gateB"/> (-999: no gate at that end). Paints the smooth centreline for the ground shader
+        /// and the walkable, reserved road tiles.
+        /// </summary>
+        void Road(bool northSouth, float line, float freq, float amp, int from, int to, int gateA, int gateB)
+        {
+            float Calm(float i) => Mathf.Min(gateA == -999 ? 1f : Mathf.Clamp01(Mathf.Abs(i - gateA) / 18f),
+                                             gateB == -999 ? 1f : Mathf.Clamp01(Mathf.Abs(i - gateB) / 18f));
+            float At(float i) => line + Mathf.Sin(i * freq) * amp * Calm(i);
+            int step = to >= from ? 1 : -1;
+            var pts = new System.Collections.Generic.List<Vector2>();
+            for (int i = from; i != to; i += step)
+            {
+                float c = Mathf.Round(At(i)) + 0.5f;
+                pts.Add(northSouth ? new Vector2(c, i + 0.5f) : new Vector2(i + 0.5f, c));
+            }
+            surface.AddRoad(Smooth(pts));
+            for (int i = from + step; i != to; i += step)
+                if (northSouth) RoadDot(At(i), i); else RoadDot(i, At(i));
         }
 
         /// <summary>Averages neighbouring points so the rounded tile steps become a smooth curve.</summary>
@@ -260,10 +299,11 @@ namespace Shadowfall
                 for (int x = -2; x <= 2; x++)
                 {
                     int px = Mathf.RoundToInt(cx) + x, py = Mathf.RoundToInt(cy) + y;
-                    if (px < 0 || py < 0 || px >= W || py >= H || InTown(new Vector3(px, 0, py))) continue;
+                    if (px < 0 || py < 0 || px >= W || py >= H || InWalledTown(px, py)) continue;
                     float n = Mathf.PerlinNoise(px * 0.7f, py * 0.7f) * 0.2f;
                     Paint(px, py, dirtC * (0.9f + n));
                     Reserve(px, py);
+                    road[Idx(px, py)] = true;
                 }
         }
 
@@ -324,6 +364,7 @@ namespace Shadowfall
 
         void BuildBorder()
         {
+            BuildOldRidge();
             var mountain = new Color(0.32f, 0.3f, 0.28f);
             for (int y = 0; y < H; y++)
                 for (int x = 0; x < W; x++)
@@ -542,11 +583,12 @@ namespace Shadowfall
                 }
         }
 
-        void Palisade(int x, int y, Color wood)
+        void Palisade(int x, int y, Color wood) => Palisade(x, y, wood, y == Town.yMin || y == Town.yMax - 1);
+
+        void Palisade(int x, int y, Color wood, bool alongX)
         {
             float shade = LR(0.85f, 1.05f);
             grid.SetBlocked(x, y, true);
-            bool alongX = y == Town.yMin || y == Town.yMax - 1;
             // Town/wall-wood is a 1-unit wall piece running along Z.
             if (ArtBox("Town/wall-wood", new Vector3(x + 0.5f, 0, y + 0.5f), new Vector3(0.45f, 2.6f, 1.04f), alongX ? 90f : 0f) != null) return;
             Factory.Prim(PrimitiveType.Cube, deco, new Vector3(x + 0.5f, 1.4f, y + 0.5f), new Vector3(0.9f, 2.8f, 0.9f), wood * shade);
@@ -586,8 +628,8 @@ namespace Shadowfall
         void BuildForest()
         {
             int forestFrom = MapI(96);
-            for (int y = forestFrom; y < H - 5; y++)
-                for (int x = 5; x < W - 5; x++)
+            for (int y = forestFrom; y < OldSize - 5; y++)
+                for (int x = 5; x < OldSize - 5; x++)
                 {
                     float dx = x - Center, dz = y - Center;
                     if (Mathf.Abs(dz) < Mathf.Abs(dx) * 0.8f) continue;
@@ -601,7 +643,7 @@ namespace Shadowfall
             // Scattered decorative pines elsewhere
             for (int i = 0; i < 700; i++)
             {
-                int x = LRI(6, W - 6), y = LRI(6, forestFrom);
+                int x = LRI(6, OldSize - 6), y = LRI(6, forestFrom);
                 if (!Free(x, y) || !SpacedFrom(x, y, 2) || InCrypt(new Vector3(x, 0, y))) continue;
                 if (ZoneAt(new Vector3(x, 0, y)) == "Ironvein Quarry" && LV < 0.7f) continue;
                 Pine(new Vector3(x + 0.5f, 0, y + 0.5f), ZoneAt(new Vector3(x, 0, y)) == "Forsaken Graveyard");
@@ -777,7 +819,7 @@ namespace Shadowfall
 
         void BuildQuarry()
         {
-            for (int y = 8; y < H - 8; y++)
+            for (int y = 8; y < OldSize - 8; y++)
                 for (int x = 6; x < MapI(64); x++)
                 {
                     float dx = x - Center, dz = y - Center;
@@ -851,8 +893,8 @@ namespace Shadowfall
                 {
                     if (!Free(x, y)) continue;
                     // The world is big: thin out the small props far from the village to keep the object count sane.
-                    float far = Mathf.Max(Mathf.Abs(x - Center), Mathf.Abs(y - Center));
-                    if (far > 60f && vr.NextDouble() < Mathf.Lerp(0.35f, 0.6f, (far - 60f) / 80f)) continue;
+                    float far = FarFromTowns(x, y);
+                    if (far > 60f && vr.NextDouble() < Mathf.Lerp(0.35f, 0.7f, (far - 60f) / 80f)) continue;
                     var p = new Vector3(x + (float)vr.NextDouble(), 0, y + (float)vr.NextDouble());
                     string zone = ZoneAt(p);
                     double r = vr.NextDouble();
@@ -884,6 +926,9 @@ namespace Shadowfall
                             if (r < 0.04) Art(Pick("Nature/grass_leafsLarge", "Nature/grass"), p, VR(0.4f, 0.7f), ArtLibrary.Fit.Height, VR(0, 360), false);
                             else if (r < 0.048) Art("Plants/Mushrooms", p, VR(0.3f, 0.45f), ArtLibrary.Fit.Height, VR(0, 360), false);
                             break;
+                        default:
+                            ScatterRegionDetail(zone, p, r);
+                            break;
                     }
                 }
         }
@@ -897,6 +942,9 @@ namespace Shadowfall
                 case "Goblin Encampment": return r < 0.05;
                 case "Ironvein Quarry": return r >= 0.04 && r < 0.06;
                 case "Forsaken Graveyard": return r < 0.04;
+                case Frostpeak: return r < 0.05;
+                case Badlands: return r < 0.02;
+                case Ashen: return r < 0.02;
                 default: return false;
             }
         }

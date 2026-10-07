@@ -18,9 +18,25 @@ const MONSTERS = {
   "Bandit Lord":     { hp: 700,  dmg: 18, speed: 4.8, range: 1.8, cd: 1.1, xp: 900,  aggro: 13, armor: 20, boss: true },
   "Goblin King":     { hp: 950,  dmg: 22, speed: 4.4, range: 2.4, cd: 1.4, xp: 1500, aggro: 13, armor: 30, boss: true },
   "Stone Colossus":  { hp: 1800, dmg: 32, speed: 3.0, range: 2.8, cd: 2.0, xp: 3200, aggro: 13, armor: 60, boss: true },
+  // The outer lands (levels 12-24)
+  "Frost Wolf":      { hp: 70,   dmg: 13, speed: 5.8, range: 1.6, cd: 1.1, xp: 70,   aggro: 11, armor: 5 },
+  "Ice Wraith":      { hp: 65,   dmg: 15, speed: 4.0, range: 10,  cd: 1.9, xp: 85,   aggro: 12, armor: 5,  ranged: true },
+  "Frost Giant":     { hp: 340,  dmg: 27, speed: 3.8, range: 2.4, cd: 1.8, xp: 240,  aggro: 10, armor: 30 },
+  "Jarl Frostborn":  { hp: 2400, dmg: 34, speed: 4.2, range: 2.6, cd: 1.5, xp: 4200, aggro: 14, armor: 50, boss: true },
+  "Desert Raider":   { hp: 90,   dmg: 15, speed: 4.9, range: 1.6, cd: 1.15, xp: 80,  aggro: 10, armor: 12 },
+  "Raider Marksman": { hp: 65,   dmg: 16, speed: 4.4, range: 11,  cd: 1.8, xp: 85,   aggro: 13, armor: 5,  ranged: true },
+  "Sand Golem":      { hp: 280,  dmg: 26, speed: 3.0, range: 2.2, cd: 2.0, xp: 190,  aggro: 8,  armor: 50 },
+  "Raider Warlord":  { hp: 2300, dmg: 34, speed: 4.8, range: 2.0, cd: 1.1, xp: 4000, aggro: 14, armor: 40, boss: true },
+  "Ash Ghoul":       { hp: 160,  dmg: 22, speed: 3.4, range: 1.6, cd: 1.5, xp: 120,  aggro: 9,  armor: 5 },
+  "Ember Skeleton":  { hp: 130,  dmg: 24, speed: 4.4, range: 1.6, cd: 1.2, xp: 130,  aggro: 10, armor: 25 },
+  "Ash Wraith":      { hp: 110,  dmg: 25, speed: 4.0, range: 10,  cd: 1.8, xp: 140,  aggro: 12, armor: 10, ranged: true },
+  "Cinder Golem":    { hp: 340,  dmg: 32, speed: 3.0, range: 2.3, cd: 2.0, xp: 260,  aggro: 8,  armor: 60 },
+  "The Ashen King":  { hp: 3600, dmg: 42, speed: 3.8, range: 2.6, cd: 1.5, xp: 6000, aggro: 15, armor: 60, boss: true },
 };
 
-// The world is 288 x 288 tiles. Zones were laid out on the original 160-tile map centred on 80; map() turns those
+// The world is 576 x 576 tiles. The original world (Hollowmere and its four zones) fills the south-west corner,
+// 0..288 on both axes; the outer lands (Frostpeak north, the Sunscar Badlands east, the Ashen Reach north-east) are
+// listed in world coordinates below (see WorldGenerator.Regions.cs). Zones of the original world were laid out on the original 160-tile map centred on 80; map() turns those
 // design coordinates into world coordinates exactly like WorldGenerator.Map on the client: the town moves with the
 // centre (144) and everything farther out is spread 2.25x as far.
 const CENTER = 144, INNER = 29, STRETCH = 2.25;
@@ -77,6 +93,27 @@ const SPAWNERS = [
   [138, 19, 4, 11, 13, ["Skeleton", "Skeleton Archer"]],
   [151, 19, 4, 11, 13, ["Skeleton", "Skeleton Archer"]],
   [144.5, 14.5, 1, 16, 16, ["Lich King"], 0.5, 180],
+
+  // ---- the outer lands (world coordinates, radius 7)
+  // Frostpeak Wilds (north): wolves by Pinecrest, wraiths and giants further north, the Jarl's camp in the far north-west
+  [110, 310, 5, 12, 14, ["Frost Wolf"], 7], [180, 318, 5, 12, 14, ["Frost Wolf"], 7], [90, 362, 5, 13, 15, ["Frost Wolf"], 7],
+  [30, 362, 5, 14, 16, ["Frost Wolf"], 7], [200, 405, 5, 13, 15, ["Frost Wolf", "Ice Wraith"], 7], [60, 440, 5, 14, 16, ["Ice Wraith"], 7],
+  [235, 450, 5, 14, 16, ["Frost Wolf", "Ice Wraith"], 7], [250, 500, 5, 15, 17, ["Ice Wraith", "Frost Wolf"], 7],
+  [100, 525, 4, 15, 17, ["Frost Giant"], 7], [200, 545, 4, 15, 17, ["Frost Giant", "Ice Wraith"], 7],
+  [70, 470, 5, 15, 17, ["Frost Giant", "Frost Wolf"], 8], [70.5, 470.5, 1, 18, 18, ["Jarl Frostborn"], 1, 300],
+  // Sunscar Badlands (east): raiders and their camps, sand golems in the dunes, the Warlord's camp in the south-east
+  [320, 140, 5, 13, 15, ["Desert Raider"], 7], [360, 200, 5, 13, 15, ["Desert Raider", "Raider Marksman"], 7],
+  [330, 40, 5, 14, 16, ["Desert Raider", "Raider Marksman"], 7], [410, 84, 6, 15, 17, ["Desert Raider", "Desert Raider", "Raider Marksman"], 8],
+  [520, 250, 6, 15, 17, ["Desert Raider", "Raider Marksman"], 8], [380, 262, 4, 15, 17, ["Sand Golem"], 7],
+  [470, 40, 4, 16, 18, ["Sand Golem"], 7], [550, 165, 4, 16, 18, ["Sand Golem", "Desert Raider"], 7],
+  [440, 222, 5, 15, 17, ["Sand Golem", "Raider Marksman"], 7], [505, 72, 5, 16, 18, ["Desert Raider", "Raider Marksman"], 8],
+  [505.5, 72.5, 1, 19, 19, ["Raider Warlord"], 1, 300],
+  // Ashen Reach (north-east): ghouls, burning skeletons and wraiths among the ruins, cinder golems, the Ashen King's throne
+  [320, 320, 5, 17, 19, ["Ash Ghoul"], 7], [385, 330, 5, 17, 19, ["Ash Ghoul", "Ember Skeleton"], 7],
+  [330, 405, 5, 18, 20, ["Ember Skeleton", "Ash Wraith"], 7], [420, 345, 5, 18, 20, ["Ash Ghoul", "Ash Wraith"], 7],
+  [520, 320, 5, 18, 20, ["Ash Ghoul", "Ash Wraith"], 7], [540, 525, 4, 20, 22, ["Cinder Golem"], 7],
+  [430, 540, 4, 20, 22, ["Cinder Golem", "Ember Skeleton"], 7], [320, 480, 5, 19, 21, ["Ash Wraith", "Ember Skeleton"], 7],
+  [373.5, 373.5, 5, 21, 23, ["Ember Skeleton", "Ash Wraith"], 6], [373.5, 375.5, 1, 24, 24, ["The Ashen King"], 1, 420],
 ];
 
 // Dungeons: each has an entrance in the overworld (design coordinates, resolved on the world map to the nearest
@@ -105,12 +142,23 @@ const DIFFICULTIES = [
   { name: "Hell",      hp: 4.5, dmg: 2.6, elite: 0.35, xp: 3.2, loot: 0.8 },
 ];
 
-// Safe zone: monsters never follow players inside the village walls (cells 116..172).
+// Safe zones: monsters never follow players into a town (Hollowmere, cells 116..172, first). Must match
+// WorldGenerator.Towns on the client. Pinecrest is a hamlet on the north road.
 const TOWN = { x0: 116, z0: 116, x1: 173, z1: 173 };
+const pinecrestX = Math.round(144 + Math.sin((336 + 11) * 0.05) * 6);
+const TOWNS = [
+  { name: "Hollowmere Village", ...TOWN },
+  { name: "Frosthaven", x0: 126, z0: 446, x1: 163, z1: 483 },
+  { name: "Saltreach", x0: 446, z0: 126, x1: 483, z1: 163 },
+  { name: "Emberwatch", x0: 446, z0: 446, x1: 483, z1: 483 },
+  { name: "Pinecrest", x0: pinecrestX - 14, z0: 336, x1: pinecrestX + 15, z1: 358 },
+];
+// The original world's size: the Ashen Reach (north-east of it) counts as a deep place for loot.
+const OLD_SIZE = 288;
 // Where new heroes start and dead ones wake up (the plaza, matches WorldGenerator.SpawnPoint).
 const SPAWN = { x: 144.5, z: 141.5 };
 
 // Emote ids players may broadcast (Characters/Emotes.cs EmoteDef.All).
 const EMOTES = ["wave", "dance", "bow", "cheer", "clap", "point", "flex", "sit", "sleep", "jump", "kick", "shadowbox", "guard"];
 
-module.exports = { MONSTERS, SPAWNERS, TOWN, SPAWN, DUNGEONS, BALANCE, DIFFICULTIES, EMOTES, map };
+module.exports = { MONSTERS, SPAWNERS, TOWN, TOWNS, OLD_SIZE, SPAWN, DUNGEONS, BALANCE, DIFFICULTIES, EMOTES, map };
