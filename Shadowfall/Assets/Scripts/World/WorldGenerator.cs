@@ -28,8 +28,12 @@ namespace Shadowfall
         static int MapI(float v) => Mathf.RoundToInt(Map(v));
         public const int Seed = 20261006;
         public static readonly RectInt Town = new RectInt(116, 116, 57, 57); // cells 116..172
-        /// <summary>Bumped whenever the walkable layout changes; lets an updated client hand the server the new world map.</summary>
-        public const int LayoutVersion = 4; // 4: undoes a map shift from fires drawing on the layout RNG
+        /// <summary>
+        /// Only used to convert saves from older maps (positions saved before version 3 are remapped). It no longer needs
+        /// bumping when the map changes: the server takes a changed map from the newest game build (see the server's
+        /// "Game versions" section). 4: the layout moved to its own random generator.
+        /// </summary>
+        public const int LayoutVersion = 4;
         public static readonly RectInt Crypt = new RectInt(132, 9, 25, 19);  // cells 132..156, 9..27
 
         public Texture2D MapTexture { get; private set; }
@@ -46,6 +50,14 @@ namespace Shadowfall
                                   // walkability grid (and the server's world hash) stays the same
 
         float VR(float a, float b) => a + (float)vr.NextDouble() * (b - a);
+
+        // Layout randomness (where trees, rocks, graves go): a private generator, so nothing else that draws random
+        // numbers while the world is built (effects, art, particles) can ever shift the map. Visual-only code paths
+        // that skip a layout draw must still consume it ("keep in step") so art and primitive worlds match.
+        System.Random lr;
+        float LR(float a, float b) => a + (float)lr.NextDouble() * (b - a);
+        int LRI(int a, int b) => lr.Next(a, b);
+        float LV => (float)lr.NextDouble();
         string Pick(params string[] options) => options[vr.Next(options.Length)];
 
         GameObject Art(string path, Vector3 pos, float size, ArtLibrary.Fit fit = ArtLibrary.Fit.Height, float yaw = 0f, bool shadows = true) =>
@@ -79,6 +91,7 @@ namespace Shadowfall
             Random.InitState(Seed);
             art = ArtLibrary.Available;
             vr = new System.Random(Seed ^ 0x5eed);
+            lr = new System.Random(Seed);
 
             grid = new WorldGrid(W, H);
             pixels = new Color[W * H];
@@ -292,7 +305,7 @@ namespace Shadowfall
             int placed = 0;
             for (int a = 0; a < 360 && placed < 4; a += 23)
             {
-                var dir = Quaternion.Euler(0, a + Random.Range(0, 15), 0) * Vector3.forward;
+                var dir = Quaternion.Euler(0, a + LRI(0, 15), 0) * Vector3.forward;
                 for (float d = radius + 2f; d > 1f; d -= 0.5f)
                 {
                     var p = new Vector3(center.x, 0, center.y) + dir * d;
@@ -336,8 +349,8 @@ namespace Shadowfall
 
         void Cliff(Vector3 p)
         {
-            float h = Random.Range(3f, 7f);
-            float sx = Random.Range(3.5f, 5f), sz = Random.Range(3.5f, 5f), shade = Random.Range(0.85f, 1.1f), rot = Random.Range(0, 90f);
+            float h = LR(3f, 7f);
+            float sx = LR(3.5f, 5f), sz = LR(3.5f, 5f), shade = LR(0.85f, 1.1f), rot = LR(0, 90f);
             if (Art(Pick("Nature/rock_tallA", "Nature/rock_tallC", "Nature/rock_tallF"), p, h, ArtLibrary.Fit.Height, VR(0, 360)) != null)
             {
                 Art(Pick("Nature/rock_largeA", "Nature/rock_largeB", "Nature/rock_largeC", "Nature/rock_largeD"), p, Mathf.Max(sx, sz) * 1.2f,
@@ -531,7 +544,7 @@ namespace Shadowfall
 
         void Palisade(int x, int y, Color wood)
         {
-            float shade = Random.Range(0.85f, 1.05f);
+            float shade = LR(0.85f, 1.05f);
             grid.SetBlocked(x, y, true);
             bool alongX = y == Town.yMin || y == Town.yMax - 1;
             // Town/wall-wood is a 1-unit wall piece running along Z.
@@ -579,8 +592,8 @@ namespace Shadowfall
                     float dx = x - Center, dz = y - Center;
                     if (Mathf.Abs(dz) < Mathf.Abs(dx) * 0.8f) continue;
                     float density = 0.05f + Mathf.PerlinNoise(x * 0.08f, y * 0.08f) * 0.08f;
-                    if (Random.value > density || !Free(x, y) || !SpacedFrom(x, y, 1)) continue;
-                    int tier = y < Map(115) ? 0 : y < Map(136) ? (Random.value < 0.7f ? 1 : 0) : (Random.value < 0.6f ? 2 : 1);
+                    if (LV > density || !Free(x, y) || !SpacedFrom(x, y, 1)) continue;
+                    int tier = y < Map(115) ? 0 : y < Map(136) ? (LV < 0.7f ? 1 : 0) : (LV < 0.6f ? 2 : 1);
                     ResourceNode.Create(ResourceKind.Tree, tier, new Vector3(x + 0.5f, 0, y + 0.5f), nodes);
                     Paint(x, y, pixels[Idx(x, y)] * 0.7f);
                     surface.Set(x, y, GroundSurface.Forest, 0.6f);
@@ -588,9 +601,9 @@ namespace Shadowfall
             // Scattered decorative pines elsewhere
             for (int i = 0; i < 700; i++)
             {
-                int x = Random.Range(6, W - 6), y = Random.Range(6, forestFrom);
+                int x = LRI(6, W - 6), y = LRI(6, forestFrom);
                 if (!Free(x, y) || !SpacedFrom(x, y, 2) || InCrypt(new Vector3(x, 0, y))) continue;
-                if (ZoneAt(new Vector3(x, 0, y)) == "Ironvein Quarry" && Random.value < 0.7f) continue;
+                if (ZoneAt(new Vector3(x, 0, y)) == "Ironvein Quarry" && LV < 0.7f) continue;
                 Pine(new Vector3(x + 0.5f, 0, y + 0.5f), ZoneAt(new Vector3(x, 0, y)) == "Forsaken Graveyard");
                 grid.SetBlocked(x, y, true);
             }
@@ -608,7 +621,7 @@ namespace Shadowfall
         {
             if (art)
             {
-                Random.Range(0f, dead ? 180f : 1f); // keep the layout RNG in step with the primitive version
+                LR(0f, dead ? 180f : 1f); // keep the layout RNG in step with the primitive version
                 if (dead) Art(Pick("Graveyard/pine-crooked", "Graveyard/pine-fall-crooked"), p, VR(3.2f, 4.6f), ArtLibrary.Fit.Height, VR(0, 360));
                 else Art(Pick("Nature/tree_pineRoundC", "Nature/tree_pineTallB", "Nature/tree_cone_dark", "Nature/tree_tall"), p, VR(4f, 6f), ArtLibrary.Fit.Height, VR(0, 360));
                 return;
@@ -618,10 +631,10 @@ namespace Shadowfall
             if (dead)
             {
                 Factory.Prim(PrimitiveType.Cube, deco, p + new Vector3(0.3f, 1.8f, 0), new Vector3(0.8f, 0.1f, 0.1f), new Color(0.2f, 0.18f, 0.16f))
-                    .transform.rotation = Quaternion.Euler(0, Random.Range(0, 180f), 30);
+                    .transform.rotation = Quaternion.Euler(0, LR(0, 180f), 30);
                 return;
             }
-            var leaf = new Color(0.15f, 0.32f, 0.18f) * Random.Range(0.85f, 1.15f);
+            var leaf = new Color(0.15f, 0.32f, 0.18f) * LR(0.85f, 1.15f);
             for (int i = 0; i < 3; i++)
                 Factory.Prim(PrimitiveType.Cube, deco, p + Vector3.up * (1.6f + i * 0.7f), new Vector3(1.6f - i * 0.45f, 0.7f, 1.6f - i * 0.45f), leaf)
                     .transform.rotation = Quaternion.Euler(0, i * 30f, 0);
@@ -641,7 +654,7 @@ namespace Shadowfall
                 var p = center + Quaternion.Euler(0, i * (360f / 7f) + 10f, 0) * Vector3.forward * 9f;
                 var c = grid.WorldToCell(p);
                 if (grid.IsBlocked(c)) continue;
-                float shade = Random.Range(0.8f, 1.1f);
+                float shade = LR(0.8f, 1.1f);
                 grid.BlockRect(c.x - 1, c.y - 1, c.x + 1, c.y + 1);
                 float face = Quaternion.LookRotation(center - p).eulerAngles.y;
                 if (Art(Pick("Nature/tent_detailedOpen", "Nature/tent_detailedClosed", "Nature/tent_smallClosed"), grid.CellToWorld(c), 3.2f, ArtLibrary.Fit.Width, face) != null)
@@ -660,7 +673,7 @@ namespace Shadowfall
                 var c = grid.WorldToCell(p);
                 if (grid.IsBlocked(c) || reserved[Idx(c.x, c.y)]) continue;
                 Factory.Prim(PrimitiveType.Cube, deco, grid.CellToWorld(c) + Vector3.up * 0.8f, new Vector3(0.25f, 1.8f, 0.25f), new Color(0.35f, 0.25f, 0.15f))
-                    .transform.rotation = Quaternion.Euler(Random.Range(-20f, 20f), 0, Random.Range(-20f, 20f));
+                    .transform.rotation = Quaternion.Euler(LR(-20f, 20f), 0, LR(-20f, 20f));
                 grid.SetBlocked(c.x, c.y, true);
             }
             CraftingStation.Create(SkillType.Cooking, center + new Vector3(0, 0, 3f), root);
@@ -682,13 +695,13 @@ namespace Shadowfall
                 for (int col = 0; col < 18; col++)
                 {
                     if (col == 8 || col == 9) continue; // aisle for the road
-                    int x = gx + col * 3 + Random.Range(0, 2), y = gy + row * 4 + Random.Range(0, 2);
+                    int x = gx + col * 3 + LRI(0, 2), y = gy + row * 4 + LRI(0, 2);
                     if (!Free(x, y)) continue;
                     var p = new Vector3(x + 0.5f, 0, y + 0.5f);
-                    bool cross = Random.value < 0.3f;
+                    bool cross = LV < 0.3f;
                     if (art)
                     {
-                        if (!cross) { Random.Range(0.8f, 1.1f); Random.Range(-8f, 8f); Random.Range(-8f, 8f); } // keep RNG in step
+                        if (!cross) { LR(0.8f, 1.1f); LR(-8f, 8f); LR(-8f, 8f); } // keep RNG in step
                         Art(cross ? "Graveyard/gravestone-cross" : Pick("Graveyard/gravestone-round", "Graveyard/gravestone-bevel", "Graveyard/gravestone-broken", "Graveyard/gravestone-decorative"),
                             p, VR(1.1f, 1.5f), ArtLibrary.Fit.Height, 180f + VR(-12f, 12f));
                         Art("Graveyard/grave", p + new Vector3(0, 0, -0.9f), 1.1f, ArtLibrary.Fit.Width, 180f, false);
@@ -700,8 +713,8 @@ namespace Shadowfall
                         Factory.Prim(PrimitiveType.Cube, deco, p + Vector3.up * 1.1f, new Vector3(0.8f, 0.2f, 0.2f), stone);
                     }
                     else
-                        Factory.Prim(PrimitiveType.Cube, deco, p + Vector3.up * 0.5f, new Vector3(0.8f, 1f, 0.25f), stone * Random.Range(0.8f, 1.1f))
-                            .transform.rotation = Quaternion.Euler(Random.Range(-8f, 8f), 0, Random.Range(-8f, 8f));
+                        Factory.Prim(PrimitiveType.Cube, deco, p + Vector3.up * 0.5f, new Vector3(0.8f, 1f, 0.25f), stone * LR(0.8f, 1.1f))
+                            .transform.rotation = Quaternion.Euler(LR(-8f, 8f), 0, LR(-8f, 8f));
                     Paint(x, y - 1, new Color(0.25f, 0.2f, 0.15f));
                     surface.Set(x, y - 1, GroundSurface.Dirt, 0.8f);
                     surface.Tint(x, y - 1, new Color(0.8f, 0.78f, 0.75f));
@@ -722,7 +735,7 @@ namespace Shadowfall
                     bool edge = x == Crypt.xMin || x == Crypt.xMax - 1 || y == Crypt.yMin || y == Crypt.yMax - 1;
                     if (!edge || (y == Crypt.yMax - 1 && x >= 142 && x <= 146)) continue;
                     grid.SetBlocked(x, y, true);
-                    float shade = (x + y) % 2 == 0 ? Random.Range(0.85f, 1.1f) : 1f;
+                    float shade = (x + y) % 2 == 0 ? LR(0.85f, 1.1f) : 1f;
                     bool sideX = y == Crypt.yMin || y == Crypt.yMax - 1;
                     // Graveyard/stone-wall is a 1-unit wall piece running along X.
                     if (ArtBox("Graveyard/stone-wall", new Vector3(x + 0.5f, 0, y + 0.5f), new Vector3(1.05f, 2.6f, 0.7f), sideX ? 0f : 90f) != null) continue;
@@ -769,18 +782,18 @@ namespace Shadowfall
                 {
                     float dx = x - Center, dz = y - Center;
                     if (Mathf.Abs(dx) < Mathf.Abs(dz) * 0.9f) continue;
-                    if (Random.value > 0.035f || !Free(x, y) || !SpacedFrom(x, y, 1)) continue;
-                    int tier = x > Map(42) ? 0 : x > Map(22) ? (Random.value < 0.75f ? 1 : 0) : (Random.value < 0.6f ? 2 : 1);
+                    if (LV > 0.035f || !Free(x, y) || !SpacedFrom(x, y, 1)) continue;
+                    int tier = x > Map(42) ? 0 : x > Map(22) ? (LV < 0.75f ? 1 : 0) : (LV < 0.6f ? 2 : 1);
                     ResourceNode.Create(ResourceKind.Rock, tier, new Vector3(x + 0.5f, 0, y + 0.5f), nodes);
                 }
             // Big boulders
             for (int i = 0; i < 110; i++)
             {
-                int x = Random.Range(8, MapI(60)), y = Random.Range(MapI(40), MapI(120));
+                int x = LRI(8, MapI(60)), y = LRI(MapI(40), MapI(120));
                 if (ZoneAt(new Vector3(x, 0, y)) != "Ironvein Quarry" || !Free(x, y) || !SpacedFrom(x, y, 2)) continue;
-                float s = Random.Range(1.5f, 2.6f);
-                float shade = Random.Range(0.85f, 1.1f);
-                var rot = Random.rotation;
+                float s = LR(1.5f, 2.6f);
+                float shade = LR(0.85f, 1.1f);
+                var rot = Quaternion.Euler(LR(0f, 360f), LR(0f, 360f), LR(0f, 360f));
                 grid.BlockRect(x - 1, y - 1, x + 1, y + 1);
                 if (Art(Pick("Nature/rock_largeC", "Nature/rock_largeD", "Nature/rock_tallF", "Nature/rock_largeA"), new Vector3(x + 0.5f, 0, y + 0.5f), s * 1.5f, ArtLibrary.Fit.Width, VR(0, 360)) != null)
                     continue;

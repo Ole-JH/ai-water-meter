@@ -25,13 +25,16 @@ sequenceDiagram
     S->>C: account {user, email, mail, chars[], rc?, rcWhy?}
   end
   C->>S: play {name} / create {name, look}
-  alt server has no world yet, or wv is newer and nobody is in the world
+  alt no world yet, or a newer build with a different map
     S->>C: needworld
     C->>S: world {hash, w, h, cells(base64 bitmap)}
+  else same build, different map
+    S->>C: grid {w, h, cells, hash}
+    C->>S: world {hash}
+  else older build
+    S->>C: error {err, reload: build}
   end
-  alt world hash mismatch
-    S->>C: error {err} / autherr {err}
-  else ok
+  alt ok
     S->>C: welcome {id, name, look, hasSave, save, now, admin}
     S-->>C: sys "X has entered the world."
     loop every 100 ms
@@ -52,7 +55,7 @@ others only while logged in.
 
 | `t` | Fields | Purpose | Answer |
 | --- | --- | --- | --- |
-| `hello` | `hash`, `ver`, `wv` | Version check. `hash` = the client's world map hash, `wv` = `WorldGenerator.LayoutVersion`; a client with a newer layout may replace the stored world map (see [Operations](../deployment/operations.md#updating-the-game)) | `hi` or `error` |
+| `hello` | `hash`, `build`, `ver`, `wv` | Version check. `hash` = the client's world map hash, `build` = the game's build stamp (`Application.version`; decides whose map wins, see [Operations](../deployment/operations.md#updating-the-game)), `wv` = `WorldGenerator.LayoutVersion` (only used for converting old saves). A client older than the served build gets `error` with `reload` | `hi`, or `error` |
 | `login` | `user`, `pass` | Log in to an account. Logs out any other session of the account | `account` or `autherr` |
 | `register` | `user`, `pass`, `email` (optional) | Create an account and log in | `account` with `rc`, or `autherr` |
 | `forgot` | `user` (account name or email) | Email a reset code. Same answer whether or not the account exists | `authok`, or `autherr` (no SMTP, too many requests) |
@@ -110,7 +113,8 @@ Server → client:
 | `t` | Fields | Purpose |
 | --- | --- | --- |
 | `needworld` | — | Ask this client to upload the world map |
-| `error` | `err` | Fatal error; the socket is closed afterwards |
+| `grid` | `w`, `h`, `cells`, `hash` | Use the server's map (this client built a different one within the same build); reply with `world {hash}` |
+| `error` | `err`, `reload` | Fatal error; the socket is closed afterwards. With `reload` (a build stamp), a newer game is out and the page reloads into it |
 | `welcome` | `id`, `name`, `look`, `hasSave`, `save`, `now`, `admin` | Entered the world: your session id, the character's name, class and save, and the server clock (ms, drives the day/night cycle) |
 | `snap` | `l` (online count), `m[]`, `p[]` | Nearby monsters `{id,n,l,x,z,ry,hp,mhp,ar,sl,st}` (`sl` slowed, `st` stunned) (elites also `el` name, `af` comma-separated affixes, `sh` shield up) and players `{id,name,x,z,ry,hp,mhp,lvl,mv,atk,dead,body,legs,weapon,helm,mdl,wk,cp}` |
 | `matk` | `mid`, `tid`, `dmg`, `k`, `x`, `z` | Monster attack: `k` = `melee`, `shot`, `nova`, `summon`, `blink` (elite teleports to `x`,`z` from `tx`,`tz`) or `explode` (Fire Enchanted death, area damage at `x`,`z`); `tid` = target session (−1 for area effects) |

@@ -16,6 +16,11 @@ const PORT = 18000 + Math.floor(Math.random() * 1000);
 const URL = `ws://localhost:${PORT}/ws`;
 const METRICS_PORT = PORT + 2000;
 const DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), "shadowfall-test-"));
+// A throwaway copy of the web folder (the tests write build.json into it).
+const PUBLIC_DIR = fs.mkdtempSync(path.join(os.tmpdir(), "shadowfall-public-"));
+fs.writeFileSync(path.join(PUBLIC_DIR, "index.html"), "<!doctype html><title>Shadowfall</title>");
+// Game build stamps (they sort by time).
+const BUILD_A = "2026.10.07-090000", BUILD_B = "2026.10.08-120000", BUILD_C = "2026.10.09-080000";
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // A fake 288x288 world (the real size): open field with a 4-cell wall around the edge.
@@ -35,11 +40,11 @@ function worldHash(buf) {
 }
 
 /** Connects, logs in to the account `name` (creating it, with a character of the same name, if needed) and plays. */
-function connect(name, pass, hash = HASH, cells = bytes, wv = 1) {
+function connect(name, pass, hash = HASH, cells = bytes, build = BUILD_A) {
   return new Promise((resolve, reject) => {
     const ws = new WebSocket(URL);
     const c = { ws, msgs: [], find: (t) => c.msgs.find((m) => m.t === t), all: (t) => c.msgs.filter((m) => m.t === t) };
-    ws.on("open", () => ws.send(JSON.stringify({ t: "hello", hash, ver: 5, wv })));
+    ws.on("open", () => ws.send(JSON.stringify({ t: "hello", hash, ver: 5, wv: 4, build })));
     ws.on("error", reject);
     ws.on("message", (d) => {
       const m = JSON.parse(d);
@@ -50,6 +55,7 @@ function connect(name, pass, hash = HASH, cells = bytes, wv = 1) {
         const mine = m.chars.find((ch) => ch.name.toLowerCase() === name.toLowerCase());
         ws.send(JSON.stringify(mine ? { t: "play", name: mine.name } : { t: "create", name, look: "Knight" }));
       } else if (m.t === "needworld") ws.send(JSON.stringify({ t: "world", hash, w: W, h: H, cells: cells.toString("base64") }));
+      else if (m.t === "grid") ws.send(JSON.stringify({ t: "world", hash: m.hash, w: m.w, h: m.h, cells: "" })); // adopt the server's map
       if (m.t === "welcome" || m.t === "error" || (m.t === "autherr" && !/No account/.test(m.err))) resolve(c);
     });
   });
@@ -74,7 +80,17 @@ function rawClient() {
       else c.msgs.push(m);
     });
     ws.on("error", reject);
-    ws.on("open", async () => { c.send({ t: "hello", hash: HASH, ver: 5, wv: 1 }); await c.next("hi"); resolve(c); });
+    ws.on("open", async () => { c.send({ t: "hello", hash: HASH, ver: 5, wv: 4, build: BUILD_A }); await c.next("hi"); resolve(c); });
+  });
+}
+
+/** Sends hello with a build stamp and returns the first reply. */
+function rawHello(build) {
+  return new Promise((resolve, reject) => {
+    const ws = new WebSocket(URL);
+    ws.on("open", () => ws.send(JSON.stringify({ t: "hello", hash: HASH, ver: 5, wv: 4, build })));
+    ws.on("message", (d) => { resolve(JSON.parse(d)); ws.close(); });
+    ws.on("error", reject);
   });
 }
 
@@ -221,7 +237,7 @@ async function main() {
   if (db.url) console.log("Testing against PostgreSQL");
   writeLegacyCharacter("Oldtimer", "oldpass", { level: 7, gold: 99, look: "Mage", x: 144, z: 150 });
   const server = spawn(process.execPath, [path.join(__dirname, "..", "server.js")], {
-    env: { ...process.env, PORT: String(PORT), DATA_DIR, PUBLIC_DIR: path.join(__dirname, "..", "public"), ELITE_CHANCE: "0", ADMINS: "alice", METRICS_PORT: String(METRICS_PORT), DATABASE_URL: db.url },
+    env: { ...process.env, PORT: String(PORT), DATA_DIR, PUBLIC_DIR, ELITE_CHANCE: "0", ADMINS: "alice", METRICS_PORT: String(METRICS_PORT), DATABASE_URL: db.url },
     stdio: ["ignore", "pipe", "pipe"],
   });
   let serverLog = "";
@@ -439,8 +455,9 @@ async function main() {
     assert.strictEqual(w.hasSave, true, "character was saved");
     assert.strictEqual(w.save.gold, 55, "save data round-trips");
 
-    const mismatch = await connect("Carl", "secret3", "288x288-deadbeef", bytes, 2);
-    assert.match(errOf(mismatch), /previous version of the world/, "a changed world is refused while others play on the old one");
+    // Same build, different map (a determinism bug): the player isn't locked out but plays on the server's map.
+    const mismatch = await connect("Carl", "secret3", "288x288-deadbeef", bytes, BUILD_A);
+    assert.ok(mismatch.find("grid") && mismatch.find("grid").hash === HASH && mismatch.find("welcome"), "a client with a different map in the same build adopts the server's");
     mismatch.ws.close();
 
     await accountTests(again);
@@ -449,30 +466,43 @@ async function main() {
     b.ws.close();
     await sleep(300);
 
-    // Once nobody is online, an updated client's new world replaces the old one (monsters respawn on it).
+    // A newer game build with a changed map replaces the stored map; players still on the old game are saved
+    // and told to reload; old clients (stale caches) are told to reload too.
     const bytes2 = Buffer.from(bytes);
     bytes2[(80 * W + 90) >> 3] |= 1 << ((80 * W + 90) & 7); // one more blocked cell
     const hash2 = worldHash(bytes2);
-    const stale = await connect("Carl", "secret3", hash2, bytes2, 1);
-    assert.match(errOf(stale), /different world map than this server has, at the same version/, "a different world at the same layout version can't replace the stored one");
-    const updated = await connect("Carl", "secret3", hash2, bytes2, 2);
-    assert.ok(updated.find("needworld") && updated.find("welcome"), "the updated client uploads the new world and logs in");
-    const old = await connect("Dana", "secret4");
-    assert.match(errOf(old), /older than this server's world/, "old clients are refused after the world changed");
+    const oldTimer = await connect("Dana", "secret4");
+    assert.ok(oldTimer.find("welcome"), "a player on the old build is in the world");
+    const updated = await connect("Carl", "secret3", hash2, bytes2, BUILD_B);
+    assert.ok(updated.find("needworld") && updated.find("welcome"), "the newer build uploads its map and logs in, even with others online");
+    await sleep(200);
+    assert.strictEqual(oldTimer.find("error")?.reload, BUILD_B, "players on the old build are told to reload");
+    const stale = await connect("Dana", "secret4");
+    assert.strictEqual(stale.find("error")?.reload, BUILD_B, "a stale client is told to reload into the current build");
+    const same = await connect("Erin", "secret5", hash2, bytes2, BUILD_B);
+    assert.ok(same.find("welcome") && !same.find("needworld"), "clients of the current build play on the stored map");
+    same.ws.close();
+
+    // The build being served (public/build.json): older clients reload before they even log in.
+    fs.writeFileSync(path.join(PUBLIC_DIR, "build.json"), JSON.stringify({ build: BUILD_C }));
+    const behind = await rawHello(BUILD_B);
+    assert.strictEqual(behind.reload, BUILD_C, "clients older than the served build reload right away");
+    fs.rmSync(path.join(PUBLIC_DIR, "build.json"));
     updated.ws.close();
-    old.ws.close();
+    oldTimer.ws.close();
+    stale.ws.close();
 
     // ---- elites: a second server where every monster is a champion
     server.kill("SIGTERM");
     await sleep(300);
     const elite = spawn(process.execPath, [path.join(__dirname, "..", "server.js")], {
-      env: { ...process.env, PORT: String(PORT), DATA_DIR, PUBLIC_DIR: path.join(__dirname, "..", "public"), ELITE_CHANCE: "1", DATABASE_URL: db.url },
+      env: { ...process.env, PORT: String(PORT), DATA_DIR, PUBLIC_DIR, ELITE_CHANCE: "1", DATABASE_URL: db.url },
       stdio: ["ignore", "pipe", "pipe"],
     });
     elite.stdout.on("data", (d) => (serverLog += d));
     await sleep(700);
     try {
-      const e = await connect("Erin", "secret5", hash2, bytes2, 2); // the world was replaced above
+      const e = await connect("Erin", "secret5", hash2, bytes2, BUILD_B); // the world was replaced above
       state(e, 144, 187);
       await sleep(1200);
       const champ = e.all("snap").at(-1).m.find((m) => m.el);
@@ -499,6 +529,7 @@ async function main() {
     server.kill("SIGTERM");
     await sleep(200);
     fs.rmSync(DATA_DIR, { recursive: true, force: true });
+    fs.rmSync(PUBLIC_DIR, { recursive: true, force: true });
     await db.drop().catch((e) => console.error("could not drop the test database:", e.message));
     process.exit(ok ? 0 : 1);
   }

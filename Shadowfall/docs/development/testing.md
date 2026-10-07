@@ -24,7 +24,7 @@ task server:test:pg # the same against PostgreSQL
 - logout notifications;
 - that saves persist across logins;
 - accounts: name and password rules, unique account and character names, several characters per account, character select and back, a helpful error for logging in with a character name, no email resets without SMTP, changing the password, logging out the old session, recovery codes (work once and are replaced), admin reset codes (`resetpw`, by character name too, work once), deleting characters, locking an account after 5 wrong passwords, and importing an old-format character file with its password and progress;
-- that wrong passwords are rejected, and world updates: a changed world is refused while others play, an older layout version can't replace it, and a newer one uploads the new map.
+- that wrong passwords are rejected, and world updates: a newer build replaces the map and reloads players on the old one, older and stale clients are told to reload (also by the served `build.json`), and a different map within the same build adopts the server's.
 
 ### Against PostgreSQL
 

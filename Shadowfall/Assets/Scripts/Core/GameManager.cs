@@ -24,6 +24,16 @@ namespace Shadowfall
         public Vector3 SpawnPoint => World.SpawnPoint;
         public string GridHash { get; private set; }
 
+        /// <summary>Uses the server's walkability map instead of the one generated here (see NetClient "grid").</summary>
+        public void AdoptServerGrid(int w, int h, string cells, string hash)
+        {
+            var grid = WorldGrid.Instance;
+            if (grid == null || grid.Width != w || grid.Height != h || string.IsNullOrEmpty(cells)) return;
+            grid.Unpack(System.Convert.FromBase64String(cells));
+            GridHash = hash;
+            Debug.LogWarning("[Shadowfall] This client generated a different world map than the server's; using the server's (" + hash + ").");
+        }
+
         void Awake()
         {
             I = this;

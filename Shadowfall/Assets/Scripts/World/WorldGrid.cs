@@ -61,6 +61,13 @@ namespace Shadowfall
             return bytes;
         }
 
+        /// <summary>Replaces the walkability with a packed bitmap (the server's map; see <see cref="Pack"/>).</summary>
+        public void Unpack(byte[] bytes)
+        {
+            for (int i = 0; i < blocked.Length && (i >> 3) < bytes.Length; i++)
+                blocked[i] = (bytes[i >> 3] & (1 << (i & 7))) != 0;
+        }
+
         /// <summary>FNV-1a hash of the packed grid; identical clients produce identical hashes.</summary>
         public string Hash()
         {

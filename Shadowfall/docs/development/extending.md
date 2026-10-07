@@ -43,7 +43,7 @@ new QuestDef
 
 Call `Npc.Create(...)` in `WorldGenerator.BuildTown()`. Roles are `QuestGiver`, `Vendor` and `Healer`. A quest giver offers the chain in `QuestDatabase.Chains[npcName]`.
 
-Pass `blocksTile: false` (all of Hollowmere's NPCs do), so adding or moving an NPC doesn't change the walkable map. If you do change the map (buildings, walls, the town size), bump `WorldGenerator.LayoutVersion`; the server takes the new map from the first updated client.
+Pass `blocksTile: false` (all of Hollowmere's NPCs do), so adding or moving an NPC doesn't change the walkable map. If you do change the map (buildings, walls, the town size), just rebuild: the server takes the new map from the first client on the new build.
 
 ## Add an ability
 
@@ -64,6 +64,12 @@ Add an entry at the **top** of `Changelog.Entries` in `Assets/Scripts/Progressio
 
 ## Change the world
 
-Everything is in `World/WorldGenerator.cs`. The seed is `WorldGenerator.Seed`. Any change to walls, trees, rocks, water or blocking NPC positions changes the walkability map, so bump `WorldGenerator.LayoutVersion`: the first updated client to log in while nobody is online uploads the new map (see [Operations](../deployment/operations.md#updating-the-game)). `task world:reset` still forces a fresh upload.
+Everything is in `World/WorldGenerator.cs`. The seed is `WorldGenerator.Seed`. Any change to walls, trees, rocks, water or blocking NPC positions changes the walkability map; the first client on the new build hands the server the new map (see [Operations](../deployment/operations.md#updating-the-game)).
+
+!!! warning "Layout randomness"
+    Placement that affects walkability must use the layout helpers `LR`, `LRI` and `LV` (a private `System.Random`); purely visual
+    variety uses `VR`/`Pick`. Never use `UnityEngine.Random` in world generation. If an art and a primitive code path differ in how
+    many layout numbers they draw, make them draw the same count ("keep in step"), or players with and without the art packs
+    would build different maps.
 
 To put a burning fire on a new prop, use `PropFire.Add` (see [Art & UI → Fires on props](art.md#fires-on-props)).

@@ -24,6 +24,10 @@ namespace Shadowfall
         [DllImport("__Internal")] static extern void SFWS_Send(string msg);
         [DllImport("__Internal")] static extern void SFWS_Close();
         [DllImport("__Internal")] static extern string SFWS_Poll();
+        [DllImport("__Internal")] static extern int SFWS_Reload(string build);
+
+        /// <summary>Reloads the page for a new build; false if that was already tried.</summary>
+        public static bool ReloadPage(string build) => SFWS_Reload(build ?? "") == 1;
 
         /// <param name="url">Empty = same host that served the page, path /ws.</param>
         public void Connect(string url) => SFWS_Connect(url ?? "");
@@ -36,6 +40,9 @@ namespace Shadowfall
             return msg != null;
         }
 #else
+        /// <summary>Only the browser can reload; the editor and desktop builds just show the message.</summary>
+        public static bool ReloadPage(string build) => false;
+
         ClientWebSocket ws;
         CancellationTokenSource cts;
         readonly ConcurrentQueue<string> inbox = new ConcurrentQueue<string>();

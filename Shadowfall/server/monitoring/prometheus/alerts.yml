@@ -33,6 +33,12 @@ groups:
         annotations:
           summary: Many failed logins in the last 15 minutes
           description: Someone may be guessing passwords. Accounts lock briefly after 5 wrong tries; see the account events.
+      - alert: ShadowfallWorldMismatch
+        expr: sum(increase(shadowfall_world_mismatches_total[1h])) > 0
+        labels: { severity: warning }
+        annotations:
+          summary: A game client built a different world map than the server's within the same build
+          description: "The world generator isn't deterministic (players still get in, on the server's map). Look for 'World mismatch within build' in the log."
       - alert: ShadowfallSaveErrors
         expr: sum(increase(shadowfall_character_saves_total{result="error"}[10m])) > 0
         labels: { severity: critical }

@@ -42,6 +42,8 @@ namespace Shadowfall
         // accounts: "account" (user, email, mail, chars, rc + rcWhy when a recovery code must be shown), "rcode" (rc),
         // "welcome" (name, look of the character entering the world), "hi" (mail = the server can send reset emails)
         public string user, email, look, rc, rcWhy;
+        public string reload;   // "error": a newer game build is out, reload the page for it
+        public string hash;     // "grid": the server's map hash
         public bool mail;
         public NetCharacter[] chars;
         public float x, z, tx, tz, dmg;
@@ -67,7 +69,7 @@ namespace Shadowfall
 
     // ---------------------------------------------------------------- client -> server
 
-    [Serializable] public class HelloMsg { public string t = "hello"; public string hash; public int ver, wv; }
+    [Serializable] public class HelloMsg { public string t = "hello"; public string hash, build; public int ver, wv; }
     /// <summary>Every account request (login, register, forgot, reset, chpass, setemail, newcode, play, create, delchar, leave).</summary>
     [Serializable] public class AuthMsg { public string t, user, pass, email, code, old, name, look; }
     [Serializable] public class NetCharacter { public string name, look; public int lvl; }

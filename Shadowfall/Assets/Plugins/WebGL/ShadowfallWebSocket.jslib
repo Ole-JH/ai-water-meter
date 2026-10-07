@@ -34,6 +34,20 @@ var ShadowfallWebSocket = {
     sfws.queue = [];
   },
 
+  // Reloads the page for a new game build, bypassing cached files (?v=<build>). Returns 0 when the page was
+  // already reloaded for that build (the browser still serves an old copy), so the game can explain instead.
+  SFWS_Reload: function (buildPtr) {
+    var build = UTF8ToString(buildPtr);
+    try {
+      var url = new URL(window.location.href);
+      if (url.searchParams.get("v") === build) return 0;
+      url.searchParams.set("v", build);
+      url.searchParams.delete("reset");
+      window.location.replace(url.toString());
+      return 1;
+    } catch (e) { return 0; }
+  },
+
   SFWS_Poll: function () {
     if (sfws.queue.length === 0) return 0;
     var str = sfws.queue.shift();

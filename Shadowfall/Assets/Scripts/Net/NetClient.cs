@@ -385,7 +385,7 @@ namespace Shadowfall
             if (raw == "__open")
             {
                 Status = "Logging in...";
-                Send(new HelloMsg { hash = GameManager.I.GridHash, ver = ProtocolVersion, wv = WorldGenerator.LayoutVersion });
+                Send(new HelloMsg { hash = GameManager.I.GridHash, build = Application.version, ver = ProtocolVersion, wv = WorldGenerator.LayoutVersion });
                 return;
             }
             if (raw.StartsWith("__close:") || raw.StartsWith("__error:"))
@@ -411,7 +411,22 @@ namespace Shadowfall
                     break;
 
                 case "error":
+                    if (!string.IsNullOrEmpty(m.reload))
+                    {
+                        // A newer game is out: reload into it (the browser fetches the new files).
+                        if (WebSocketConnection.ReloadPage(m.reload)) { Disconnect("A new version of Shadowfall is out. Loading it..."); break; }
+                        Disconnect(Application.platform == RuntimePlatform.WebGLPlayer
+                            ? "A new version of Shadowfall is out, but your browser keeps loading the old one. Clear the cache for this site and reload."
+                            : "The server runs a newer build (" + m.reload + ") than this client (" + Application.version + "). Rebuild or update the client.");
+                        break;
+                    }
                     Disconnect(m.err);
+                    break;
+
+                case "grid":
+                    // The server's map differs from ours within the same build (it shouldn't): play on the server's.
+                    GameManager.I.AdoptServerGrid(m.w, m.h, m.cells, m.hash);
+                    Send(new WorldMsg { hash = m.hash, w = m.w, h = m.h, cells = "" });
                     break;
 
                 // ---- accounts

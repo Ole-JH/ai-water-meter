@@ -33,7 +33,10 @@ namespace Shadowfall.EditorTools
             PlayerSettings.WebGL.decompressionFallback = false;
             PlayerSettings.WebGL.template = "PROJECT:Shadowfall";
             PlayerSettings.WebGL.nameFilesAsHashes = true;  // new file names per build: browsers can't mix old and new
-            PlayerSettings.bundleVersion = System.DateTime.UtcNow.ToString("yyyy.MM.dd-HHmm"); // shown on the login screen
+            // The build stamp: shown on the login screen and sent to the server, which uses it to tell newer games
+            // (their map replaces the stored one) from stale browser caches (told to reload). Sorts by time.
+            string build = System.DateTime.UtcNow.ToString("yyyy.MM.dd-HHmmss");
+            PlayerSettings.bundleVersion = build;
 
             var report = BuildPipeline.BuildPlayer(new BuildPlayerOptions
             {
@@ -45,6 +48,8 @@ namespace Shadowfall.EditorTools
 
             if (report.summary.result == UnityEditor.Build.Reporting.BuildResult.Succeeded)
             {
+                // The server reads this to know which build it serves (stale clients reload before logging in).
+                File.WriteAllText(Path.Combine(outDir, "build.json"), "{\"build\": \"" + build + "\"}\n");
                 Debug.Log("Shadowfall WebGL build written to " + outDir + ". Start (or restart) the server: task up");
                 if (!Application.isBatchMode) EditorUtility.RevealInFinder(outDir);
             }

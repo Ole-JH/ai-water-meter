@@ -245,7 +245,7 @@ tasks:
   # ---------------------------------------------------------------- data
 
   world:reset:
-    desc: Forget the uploaded world map (do this after changing world generation)
+    desc: Forget the stored world map (rarely needed - a new build's map replaces it automatically)
     prompt: This deletes server/data/world.json. Characters are kept. Continue?
     cmds:
       - rm -f {{.SERVER_DIR}}/data/world.json

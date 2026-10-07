@@ -3,8 +3,9 @@
 ??? question "The browser shows *“the game client hasn't been built yet”*"
     `server/public` only contains the placeholder page. Build the client with `task client:build` (Docker; see [Building the client in Docker](deployment/docker-client-build.md)) or **Shadowfall → Build WebGL** in Unity, then refresh. With Docker Compose the folder is mounted, so you don't need to restart.
 
-??? question "*“Your game client doesn't match this server's world”*"
-    The world generation changed since the server stored its map, or your browser cached an old build. Hard-refresh the page (++ctrl+shift+r++). After an update that changes the world, the server switches to the new map when the first updated player logs in while nobody else is online; if it says it is still running the previous version, wait until everyone has logged out (or run `task world:reset` and restart the server).
+??? question "*“A new version of Shadowfall is out”* (or the page reloads by itself)"
+    Your browser had an older build than the server serves, so the page reloads into the new one; that's normal after an update.
+    If it then says *"your browser keeps loading the old one"*, clear the site's cached files (or hard-refresh with ++ctrl+shift+r++).
 
 ??? question "*“Could not connect: could not reach the game server”*"
     - In the editor, check the **Server** field on the login screen (default `ws://localhost:7341/ws`).
@@ -15,7 +16,9 @@
     The build must be served with `Content-Encoding: gzip`. `server.js` does this. If another web server or CDN sits in front, make sure it doesn't strip or double-apply the encoding for `/Build/*.gz`.
 
 ??? question "Monsters walk through walls, or get stuck"
-    The server paths monsters on the uploaded grid. If the client's world changed but `world.json` wasn't reset, the two disagree. Run `task world:reset`.
+    The server paths monsters on its stored map. If the server log says *"World mismatch within build"*, a client built a different
+    map than the server's (a determinism bug in the world generator); that player plays on the server's map. `task world:reset` and a
+    restart make the next player's map the stored one.
 
 ??? question "Pink / magenta objects"
     You switched render pipelines after materials were created. Restart Play mode. Materials are always cloned from the active pipeline's default material.
