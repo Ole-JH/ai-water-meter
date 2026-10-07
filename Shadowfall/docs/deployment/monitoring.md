@@ -143,7 +143,7 @@ Set these in `server/.env` or the environment:
 | `GRAFANA_PORT` | `3000` | Host port for Grafana |
 | `GRAFANA_BIND` | `0.0.0.0` | Interface Grafana listens on (`127.0.0.1` = this machine only) |
 | `GRAFANA_ADMIN_USER` / `GRAFANA_ADMIN_PASSWORD` | `admin` / `admin` | Grafana's first admin account |
-| `PROMETHEUS_PORT` / `ALERTMANAGER_PORT` | `9090` / `9093` | Host ports, bound to `127.0.0.1` |
+| `PROMETHEUS_PORT` / `ALERTMANAGER_PORT` | `9090` / `9093` | Host ports, bound to `127.0.0.1`. If `task up` fails with *Bind for 0.0.0.0:9090 failed: port is already allocated*, something else (often Cockpit, the web console of many Linux servers) has the port: set e.g. `PROMETHEUS_PORT=9091` in `server/.env` |
 | `PROMETHEUS_RETENTION` | `30d` | How long metrics are kept |
 | `DISCORD_WEBHOOK_URL` | (empty) | Send alerts to this Discord channel webhook |
 | `PUSHOVER_USER_KEY` / `PUSHOVER_TOKEN` | (empty) | Send alerts to Pushover (both needed) |

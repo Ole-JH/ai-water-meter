@@ -302,17 +302,20 @@ tasks:
     desc: Send a test alert through Alertmanager (to Discord / Pushover, if configured in server/.env)
     dir: "{{.SERVER_DIR}}"
     cmds:
+      # From inside the container, so it works whatever host port Alertmanager is published on.
       - |
-        curl -fsS -X POST -H 'Content-Type: application/json' http://localhost:{{.ALERTMANAGER_PORT | default "9093"}}/api/v2/alerts \
-          -d '[{"labels":{"alertname":"ShadowfallTestAlert","severity":"critical"},"annotations":{"summary":"Test alert from task monitoring:test-alert","description":"If you can read this, alerts reach you."}}]'
+        docker compose exec -T alertmanager wget -qO- --header 'Content-Type: application/json' \
+          --post-data '[{"labels":{"alertname":"ShadowfallTestAlert","severity":"critical"},"annotations":{"summary":"Test alert from task monitoring:test-alert","description":"If you can read this, alerts reach you."}}]' \
+          http://localhost:9093/api/v2/alerts
       - echo "Sent. It should arrive within a few seconds (and a resolved message about 5 minutes later)."
 
   monitoring:reload:
     desc: Reload Prometheus and Alertmanager after editing server/monitoring (no restart needed)
     dir: "{{.SERVER_DIR}}"
     cmds:
-      - curl -fsS -X POST http://localhost:{{.PROMETHEUS_PORT | default "9090"}}/-/reload
-      - curl -fsS -X POST http://localhost:{{.ALERTMANAGER_PORT | default "9093"}}/-/reload
+      # From inside the containers, so it works whatever host ports they are published on.
+      - docker compose exec -T prometheus wget -qO- --post-data '' http://localhost:9090/-/reload
+      - docker compose exec -T alertmanager wget -qO- --post-data '' http://localhost:9093/-/reload
       - echo "Reloaded. Grafana picks up dashboard file changes by itself within a minute."
 
   monitoring:dashboard:
