@@ -378,7 +378,8 @@ namespace Shadowfall
                 if (Art("Buildings/building_tower_A_blue", new Vector3(g.x + 0.5f, 0, g.y + 0.5f), 5.2f, ArtLibrary.Fit.Height, VR(0, 4) * 90f) != null) continue;
                 Factory.Prim(PrimitiveType.Cube, deco, new Vector3(g.x + 0.5f, 2f, g.y + 0.5f), new Vector3(1.4f, 4f, 1.4f), wood * 0.85f);
                 var torchC = new Color(1f, 0.6f, 0.2f);
-                Factory.Prim(PrimitiveType.Sphere, deco, new Vector3(g.x + 0.5f, 4.3f, g.y + 0.5f), Vector3.one * 0.4f, torchC, false, Mat.Glow(torchC));
+                var tc = Factory.Prim(PrimitiveType.Sphere, deco, new Vector3(g.x + 0.5f, 4.3f, g.y + 0.5f), Vector3.one * 0.3f, torchC, false, Mat.Glow(torchC));
+                PropFire.Add(deco, new Vector3(g.x + 0.5f, 4.2f, g.y + 0.5f), torchC, 0.45f, true, null, tc.transform);
             }
 
             // ---- buildings
@@ -735,7 +736,7 @@ namespace Shadowfall
                 if (Art("Graveyard/pillar-large", p, 3f, ArtLibrary.Fit.Height) != null)
                     Art("Graveyard/fire-basket", p + Vector3.up * 3f, 0.7f, ArtLibrary.Fit.Height, 0f, false);
                 else Factory.Prim(PrimitiveType.Cylinder, deco, p + Vector3.up * 1.5f, new Vector3(0.9f, 1.5f, 0.9f), wall);
-                Factory.Prim(PrimitiveType.Sphere, deco, p + Vector3.up * 3.6f, Vector3.one * 0.45f, fire, false, Mat.Glow(fire));
+                var bc = Factory.Prim(PrimitiveType.Sphere, deco, p + Vector3.up * 3.45f, Vector3.one * 0.32f, fire, false, Mat.Glow(fire));
                 var l = new GameObject("Brazier").AddComponent<Light>();
                 l.transform.SetParent(deco, false);
                 l.transform.position = p + Vector3.up * 3.5f;
@@ -744,6 +745,7 @@ namespace Shadowfall
                 l.range = 9f;
                 l.intensity = 1.5f;
                 NightLight.Add(l, 1f, 1.1f);
+                PropFire.Add(deco, p + Vector3.up * 3.3f, fire, 0.65f, true, l, bc.transform);
                 Sfx.LoopAt("fire_loop", p + Vector3.up * 3f, 0.6f, 10f);
                 grid.SetBlocked((int)p.x, (int)p.z, true);
             }

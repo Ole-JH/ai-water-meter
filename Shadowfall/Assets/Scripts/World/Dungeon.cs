@@ -198,8 +198,9 @@ namespace Shadowfall
                         var c = ToWorld(x + 0.5f, y + 0.5f);
                         var face = new Vector3(d.x, 0f, d.y);
                         var torchPos = c + face * 0.42f;
+                        Transform torchCore = null;
                         if (def.Id == "mine")
-                            Factory.Prim(PrimitiveType.Sphere, root.transform, torchPos + Vector3.up * 1.7f, Vector3.one * 0.22f, def.TorchColor, false, Mat.Glow(def.TorchColor));
+                            torchCore = Factory.Prim(PrimitiveType.Sphere, root.transform, torchPos + Vector3.up * 1.7f, Vector3.one * 0.22f, def.TorchColor, false, Mat.Glow(def.TorchColor)).transform;
                         else Art("Props/torch_mounted", torchPos + Vector3.up * 1.2f, 0.9f, Quaternion.LookRotation(-face).eulerAngles.y, ArtLibrary.Fit.Height, false);
                         var l = new GameObject("Torch").AddComponent<Light>();
                         l.transform.SetParent(root.transform, false);
@@ -209,6 +210,7 @@ namespace Shadowfall
                         l.range = 7.5f;
                         l.intensity = 1.6f;
                         l.gameObject.AddComponent<Flicker>();
+                        PropFire.Add(root.transform, torchPos + Vector3.up * (def.Id == "mine" ? 1.62f : 1.72f), def.TorchColor, 0.3f, false, null, torchCore);
                         if (lights % 4 == 0)
                         {
                             var crackle = Sfx.LoopAt("fire_loop", l.transform.position, 0.35f, 8f);
@@ -230,6 +232,20 @@ namespace Shadowfall
                         var at = ToWorld(r.x + R(1.2f, r.width - 1.2f), r.y + R(1.2f, r.height - 1.2f));
                         if (!WorldGrid.Instance.IsWalkable(at)) continue;
                         string prop = def.RoomProps[rng.Next(def.RoomProps.Length)];
+                        if (prop.Contains("campfire"))
+                        {
+                            var ember = new Color(1f, 0.55f, 0.15f);
+                            ArtLibrary.Spawn("Nature/campfire_logs", root.transform, at, 0.75f, ArtLibrary.Fit.Width, R(0, 360), true, true, true);
+                            PropFire.Add(root.transform, at + Vector3.up * 0.12f, ember, 0.85f);
+                            var cl = new GameObject("Campfire").AddComponent<Light>();
+                            cl.transform.SetParent(root.transform, false);
+                            cl.transform.position = at + Vector3.up * 1.1f;
+                            cl.type = LightType.Point;
+                            cl.color = ember;
+                            cl.range = 6f;
+                            cl.intensity = 1.4f;
+                            cl.gameObject.AddComponent<Flicker>();
+                        }
                         Art(prop, at, prop.Contains("rock_large") || prop.Contains("tent") ? 1.8f : prop.Contains("rock") ? 0.8f : 1.1f, R(0, 360));
                     }
                     if (def.Id == "mine" && rng.NextDouble() < 0.6)
@@ -274,6 +290,7 @@ namespace Shadowfall
                     l.range = 8f;
                     l.intensity = 2f;
                     l.gameObject.AddComponent<Flicker>();
+                    PropFire.Add(root.transform, p + Vector3.up * (def.Id == "mine" ? 1.25f : 1.05f), def.BossFire, 0.8f);
                 }
             }
         }

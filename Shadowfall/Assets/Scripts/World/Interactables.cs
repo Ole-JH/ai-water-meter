@@ -461,8 +461,9 @@ namespace Shadowfall
                         .transform.localRotation = Quaternion.Euler(0, -30, 90);
                 }
                 var flame = new Color(1f, 0.55f, 0.1f);
-                Factory.Prim(PrimitiveType.Sphere, go.transform, new Vector3(0, 0.45f, 0), new Vector3(0.45f, 0.65f, 0.45f), flame, false, Mat.Glow(flame))
-                    .GetComponent<Renderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                var core = Factory.Prim(PrimitiveType.Sphere, go.transform, new Vector3(0, 0.4f, 0), new Vector3(0.35f, 0.5f, 0.35f), flame, false, Mat.Glow(flame));
+                core.GetComponent<Renderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                PropFire.Add(go.transform, pos + Vector3.up * 0.15f, flame, 1f, true, null, core.transform);
                 var lightGo = new GameObject("FireLight");
                 lightGo.transform.SetParent(go.transform, false);
                 lightGo.transform.localPosition = new Vector3(0, 1.2f, 0);
