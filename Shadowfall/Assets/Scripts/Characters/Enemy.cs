@@ -62,6 +62,11 @@ namespace Shadowfall
                 Ranged = true, Robe = true, Weapon = false, ProjectileColor = new Color(0.55f, 0.9f, 1f) },
             new EnemyDef { Name = "The Sand Colossus", Shape = EnemyShape.Golem, Color = new Color(0.82f, 0.7f, 0.48f), Secondary = new Color(0.65f, 0.52f, 0.32f), Scale = 2.1f, Boss = true },
             new EnemyDef { Name = "The Cinder Lord", Color = new Color(0.55f, 0.3f, 0.22f), Secondary = new Color(0.8f, 0.3f, 0.1f), Scale = 1.9f, Boss = true },
+            // world bosses (WorldBoss.cs)
+            new EnemyDef { Name = "Old Bramblehide", Shape = EnemyShape.Beast, Color = new Color(0.35f, 0.3f, 0.22f), Secondary = new Color(0.25f, 0.4f, 0.15f), Scale = 2.4f, Boss = true },
+            new EnemyDef { Name = "Hrimgar the Mountain", Color = new Color(0.7f, 0.85f, 1f), Secondary = new Color(0.3f, 0.4f, 0.65f), Scale = 2.8f, Boss = true },
+            new EnemyDef { Name = "Gorvash the Dune Reaver", Color = new Color(0.9f, 0.7f, 0.45f), Secondary = new Color(0.55f, 0.2f, 0.1f), Scale = 2.4f, Boss = true },
+            new EnemyDef { Name = "The Pyre Colossus", Shape = EnemyShape.Golem, Color = new Color(0.4f, 0.22f, 0.18f), Secondary = new Color(1f, 0.4f, 0.1f), Scale = 2.9f, Boss = true },
         };
 
         public static EnemyDef ByName(string name)
@@ -358,6 +363,10 @@ namespace Shadowfall
                 case "The Frost Witch": return Voice(EnemyDef.ByName("Lich King"), what);
                 case "The Sand Colossus": return Voice(EnemyDef.ByName("Stone Colossus"), what);
                 case "The Cinder Lord": return Voice(EnemyDef.ByName("Goblin King"), what);
+                case "Old Bramblehide": return what == "attack" ? "wolf_attack" : what == "die" ? "wolf_howl" : "hit_flesh";
+                case "Hrimgar the Mountain": return what == "attack" ? "brute" : what == "die" ? "roar" : "hit_flesh";
+                case "Gorvash the Dune Reaver": return what == "attack" ? "swing_heavy" : what == "die" ? "roar" : "hit_armor";
+                case "The Pyre Colossus": return what == "attack" ? "boom" : what == "die" ? "rubble" : "hit_stone";
                 default: return what == "hit" ? "hit_flesh" : null;
             }
         }

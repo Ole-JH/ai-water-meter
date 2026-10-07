@@ -1010,6 +1010,16 @@ namespace Shadowfall
                 PartyMarker(r, toMap(at), (near ? mrp.transform.eulerAngles.y : m.ry) - camYaw, m, Factory.FlatDistance(at, pp));
             }
 
+            // A world boss: an orange marker where it is (on the rim when it's off the map)
+            if (WorldBoss.Up && !Dungeon.Active)
+            {
+                var bp = toMap(WorldBoss.Position);
+                var c = r.center;
+                float rad = r.width / 2f - 8f;
+                if ((bp - c).magnitude > rad) bp = c + (bp - c).normalized * rad;
+                DotAt(bp, WorldBoss.Color, 11f);
+            }
+
             // A town under attack: a pulsing marker at the gate (on the rim when it's off the map)
             if (Invasion.Active && !Dungeon.Active)
             {
@@ -1147,9 +1157,25 @@ namespace Shadowfall
             return y - 342 + 12;
         }
 
+        /// <summary>The world boss that is up: who, its health, how far. Returns the height it took.</summary>
+        float DrawWorldBossTracker(float y0)
+        {
+            var wb = WorldBoss.Current;
+            if (wb == null || Dungeon.Active) return 0f;
+            float x = VW - 330, y = y0;
+            UISkin.Shadowed(new Rect(x, y, 300, 26), "World boss: " + wb.name, UISkin.Heading, WorldBoss.Color);
+            y += 28;
+            UISkin.Bar(new Rect(x + 12, y + 2, 230, 13), wb.hp / 100f, "Red", wb.hp + "%", new Color(0.8f, 0.2f, 0.1f));
+            y += 20;
+            UISkin.Shadowed(new Rect(x + 12, y, 300, 20), WorldBoss.Status, UISkin.Small, UISkin.Cream);
+            y += 30;
+            return y - y0;
+        }
+
         void DrawQuestTracker(Player p)
         {
             float top = DrawInvasionTracker();
+            top += DrawWorldBossTracker(342 + top);
             if (p.Quests.Active.Count == 0) return;
             float x = VW - 330, y = 342 + top;
             UISkin.Shadowed(new Rect(x, y, 300, 26), "Quests", UISkin.Heading, UISkin.Gold);
@@ -1625,6 +1651,12 @@ namespace Shadowfall
                 var mc = m.dead ? new Color(0.55f, 0.5f, 0.5f) : MemberColor(m.id);
                 DotAt(mp, mc, 12);
                 UISkin.Shadowed(new Rect(mp.x - 90, mp.y + 7, 180, 20), m.name + (m.dead ? " (dead)" : ""), UISkin.SmallCenter, mc, 2);
+            }
+            if (WorldBoss.Up && !Dungeon.Active)
+            {
+                mark(WorldBoss.Position, WorldBoss.Color, 14f);
+                var bp = toMap(WorldBoss.Position);
+                if (r.Contains(bp)) UISkin.Shadowed(new Rect(bp.x - 130, bp.y + 9, 260, 20), WorldBoss.Current.name, UISkin.SmallCenter, WorldBoss.Color, 2);
             }
             if (Invasion.Active && !Dungeon.Active)
             {

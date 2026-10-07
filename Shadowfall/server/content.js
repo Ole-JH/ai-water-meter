@@ -32,6 +32,11 @@ const MONSTERS = {
   "Ash Wraith":      { hp: 110,  dmg: 25, speed: 4.0, range: 10,  cd: 1.8, xp: 140,  aggro: 12, armor: 10, ranged: true },
   "Cinder Golem":    { hp: 340,  dmg: 32, speed: 3.0, range: 2.3, cd: 2.0, xp: 260,  aggro: 8,  armor: 60 },
   "The Ashen King":  { hp: 3600, dmg: 42, speed: 3.8, range: 2.6, cd: 1.5, xp: 6000, aggro: 15, armor: 60, boss: true },
+  // World bosses (worldboss.js): rise now and then, for everyone around to fight together
+  "Old Bramblehide":         { hp: 1400, dmg: 16, speed: 5.4, range: 2.4, cd: 1.3, xp: 2500, aggro: 12, armor: 20, boss: true, world: true },
+  "Hrimgar the Mountain":    { hp: 3200, dmg: 36, speed: 4.2, range: 3.0, cd: 1.7, xp: 7000, aggro: 14, armor: 55, boss: true, world: true },
+  "Gorvash the Dune Reaver": { hp: 3000, dmg: 34, speed: 5.0, range: 2.6, cd: 1.2, xp: 7000, aggro: 14, armor: 45, boss: true, world: true },
+  "The Pyre Colossus":       { hp: 4200, dmg: 44, speed: 3.4, range: 3.2, cd: 2.0, xp: 9000, aggro: 14, armor: 70, boss: true, world: true },
   // The outer lands' dungeon bosses
   "The Frost Witch":   { hp: 2000, dmg: 34, speed: 3.8, range: 11,  cd: 1.6, xp: 4500, aggro: 14, armor: 35, ranged: true, boss: true },
   "The Sand Colossus": { hp: 2600, dmg: 38, speed: 3.0, range: 2.8, cd: 2.0, xp: 5000, aggro: 13, armor: 65, boss: true },

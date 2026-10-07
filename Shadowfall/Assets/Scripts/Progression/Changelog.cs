@@ -24,6 +24,17 @@ namespace Shadowfall
         {
             new Entry
             {
+                Id = 28, Date = "2026-10-08", Title = "World bosses",
+                Items = new[]
+                {
+                    "Four giants sleep in the wilds: Old Bramblehide in Whisperwood, Hrimgar the Mountain in Frostpeak, Gorvash the Dune Reaver in the badlands and the Pyre Colossus in the Ashen Reach. Every hour and a half or so one rises, and everyone is told where.",
+                    "They grow tougher with every hero who joins the fight. Watch for the red ring: step out before the slam lands. They call for help as they weaken, and rage at the end.",
+                    "Everyone who fought gets the kill and better loot than any dungeon boss. Two new achievements, one with the title \"the Giantsbane\".",
+                    "The tracker and markers on the minimap and world map show where the world boss and any town under attack are.",
+                },
+            },
+            new Entry
+            {
                 Id = 27, Date = "2026-10-08", Title = "Town invasions",
                 Items = new[]
                 {

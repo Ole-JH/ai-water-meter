@@ -18,6 +18,8 @@ services:
       SEASON_MINUTES: ${SEASON_MINUTES:-120}
       # About how often monsters attack a walled town (minutes; 0 = never, admins can still start one).
       INVASION_MINUTES: ${INVASION_MINUTES:-45}
+      # About how often a world boss rises (minutes; 0 = never, admins can still raise one).
+      WORLD_BOSS_MINUTES: ${WORLD_BOSS_MINUTES:-90}
       # Prometheus metrics on a private port (only reachable from the monitoring containers).
       METRICS_PORT: "9464"
       # Accounts and characters (see docs/deployment/accounts.md). Characters in ./data from older versions are

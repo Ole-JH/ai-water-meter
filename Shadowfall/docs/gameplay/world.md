@@ -128,6 +128,28 @@ About one in eight monsters in the open world spawns as an **elite champion** (d
 | Mighty | Hits much harder |
 | Extra Health | Much more health |
 
+## World bosses
+
+Every hour and a half or so (the server's `WORLD_BOSS_MINUTES`) a giant rises at its lair, usually the one that suits the
+heroes online, and everyone is told where. It shows on the minimap and the world map (an orange marker), and a tracker
+under the minimap shows its health, how many heroes are fighting it and which way to go.
+
+| World boss | Where | Level | Calls for |
+| --- | --- | --- | --- |
+| **Old Bramblehide**, a wolf the size of a cart | Whisperwood | 10 | Dire Wolves |
+| **Hrimgar the Mountain** | the Frostpeak Wilds | 19 | Frost Wolves, Ice Wraiths |
+| **Gorvash the Dune Reaver** | the Sunscar Badlands | 20 | Desert Raiders, Raider Marksmen |
+| **The Pyre Colossus** | the Ashen Reach | 24 | Ember Skeletons, Ash Wraiths |
+
+- They are made for many: each hero who joins the fight adds a third of its health.
+- **The slam**: every ten seconds or so it stops, a red ring spreads on the ground around it, and a moment and a half later
+  it slams everything inside for heavy damage. Step out of the ring.
+- At two thirds and at one third of its health it calls for help; at a quarter it becomes **enraged**, hitting harder and
+  moving faster.
+- Everyone who hurt it gets the kill: a boss's loot with a bonus on top (better than a dungeon boss on Nightmare), and the
+  experience of a boss. Two [achievements](achievements.md#bosses), one with the title *the Giantsbane*.
+- If you run, it walks back to its lair and recovers fully. Left alone for 25 minutes it goes back to sleep.
+
 ## Town invasions
 
 Every 45 minutes or so (the server's `INVASION_MINUTES`), monsters from the surrounding lands gather outside a gate of

@@ -17,6 +17,7 @@ const I = require("./items");
 const { Weather, SEASONS, KINDS: WEATHER_KINDS } = require("./weather");
 const A = require("./accounts");
 const createInvasions = require("./invasion");
+const createWorldBosses = require("./worldboss");
 
 const PORT = parseInt(process.env.PORT || "7341", 10);
 // Behind a reverse proxy, take the client's address from X-Forwarded-For (for login rate limits).
@@ -104,7 +105,7 @@ const server = http.createServer((req, res) => {
     for (const o of sessions.values()) if (o.inWorld) { online++; if (o.inst) dungeons++; }
     // players: open connections; online: heroes in the world (dungeons: of them, underground). Read by the Homepage dashboard.
     return res.end(JSON.stringify({ ok: true, players: sessions.size, online, dungeons, monsters: monsters.size, world: !!world,
-      build: latestBuild() || "none", invasion: invasions.active(), uptime: Math.round(process.uptime()) }));
+      build: latestBuild() || "none", invasion: invasions.active(), worldBoss: worldBosses.active(), uptime: Math.round(process.uptime()) }));
   }
 
   let rel = decodeURIComponent(url.pathname);
@@ -475,6 +476,7 @@ function updateMonster(m, t) {
       const d = dist(m.x, m.z, s.x, s.z);
       if (m.type === "Lich King" || m.type === "Crypt Lord") lichAbilities(m, s, d, t);
       if (m.elite) eliteAbilities(m, s, d, t);
+      if (m.worldBoss && worldBosses.abilities(m, s, d, t)) break; // winding up a slam
 
       const canHit = d <= m.def.range + 0.45 && (!m.def.ranged || lineOfSight(m.x, m.z, s.x, s.z, 0.1));
       if (canHit) {
@@ -500,7 +502,7 @@ function updateMonster(m, t) {
       if (m.invasion) { m.state = "idle"; m.path = []; break; } // back to the siege, without healing
       m.hp = Math.min(m.maxHp, m.hp + m.maxHp * 0.25 * TICK);
       if (!m.path.length) {
-        if (dist(m.x, m.z, m.homeX, m.homeZ) < 1.5) { m.state = "idle"; m.hp = m.maxHp; m.threat.clear(); break; }
+        if (dist(m.x, m.z, m.homeX, m.homeZ) < 1.5) { m.state = "idle"; if (m.worldBoss) worldBosses.reset(m); m.hp = m.maxHp; m.threat.clear(); break; }
         m.path = findPath(m.x, m.z, m.homeX, m.homeZ, 6000);
         if (!m.path.length) { m.x = m.homeX; m.z = m.homeZ; }
       }
@@ -545,6 +547,7 @@ function damageMonster(m, s, dmg) {
   m.hp -= dmg;
   m.threat.set(s.id, (m.threat.get(s.id) || 0) + dmg);
   if (m.invasion) invasions.onDamage(m, s);
+  if (m.worldBoss) worldBosses.onDamage(m, s);
   if (m.state !== "chase") { aggro(m, s.id); alertNearby(m, s.id); }
   if (m.hp <= 0) killMonster(m);
 }
@@ -671,6 +674,7 @@ function completeLogin(s) {
   sendInv(s);
   safeSend(s, JSON.stringify(weather.message()));
   invasions.sendTo(s);
+  worldBosses.sendTo(s);
   broadcast({ t: "sys", msg: `${ch.name} has entered the world.` });
   log(`${ch.name} entered the world (${sessions.size} connected)`);
 }
@@ -1198,7 +1202,7 @@ async function adminResetPassword(s, name) {
     `They choose "Forgot password?" > "I have a code" and enter it with their account name.`;
 }
 
-const ADMIN_COMMANDS = new Set(["tp", "tpto", "summon", "dungeon", "regen", "spawn", "killall", "time", "elites", "announce", "kick", "who", "resetpw", "give", "weather", "season", "invasion"]);
+const ADMIN_COMMANDS = new Set(["tp", "tpto", "summon", "dungeon", "regen", "spawn", "killall", "time", "elites", "announce", "kick", "who", "resetpw", "give", "weather", "season", "invasion", "worldboss"]);
 
 function runAdmin(s, c, a) {
   a = a || {};
@@ -1297,6 +1301,8 @@ function runAdmin(s, c, a) {
     }
     case "invasion":
       return a.stop ? invasions.stop() : invasions.start(a.town || "", a.gate);
+    case "worldboss":
+      return a.stop ? worldBosses.stop() : worldBosses.start(a.name || "");
     case "elites": {
       const v = Number(a.chance);
       if (!Number.isFinite(v)) return `Elite chance is ${ELITE_CHANCE}.`;
@@ -1365,11 +1371,12 @@ function adminFromChat(s, line) {
     case "who": return runAdmin(s, "who");
     case "resetpw": return runAdmin(s, "resetpw", { name: w[0] });
     case "give": return runAdmin(s, "give", { what: w[0], n: w[1] });
+    case "worldboss": return runAdmin(s, "worldboss", w[0] === "stop" ? { stop: true } : { name: rest });
     case "invasion": {
       const gate = ["north", "south", "east", "west"].includes((w[w.length - 1] || "").toLowerCase()) ? w.pop().toLowerCase() : undefined;
       return runAdmin(s, "invasion", w[0] === "stop" ? { stop: true } : { town: w.join(" "), gate });
     }
-    default: return "Admin commands: tp x z, tpto name, summon name, dungeon <id|0-6> [depth], regen, spawn <type> [level] [count] [elite], killall [radius], time dawn|day|dusk|night, elites <0-1>, announce text, kick name, who, resetpw <account or character>, give gold [n]|legendary|set|gems|potions, weather clear|cloudy|rain|storm|fog [minutes], season spring|summer|autumn|winter, invasion [town] [north|south|east|west] | invasion stop";
+    default: return "Admin commands: tp x z, tpto name, summon name, dungeon <id|0-6> [depth], regen, spawn <type> [level] [count] [elite], killall [radius], time dawn|day|dusk|night, elites <0-1>, announce text, kick name, who, resetpw <account or character>, give gold [n]|legendary|set|gems|potions, weather clear|cloudy|rain|storm|fog [minutes], season spring|summer|autumn|winter, invasion [town] [north|south|east|west] | invasion stop, worldboss [name] | worldboss stop";
   }
 }
 
@@ -2235,6 +2242,12 @@ const invasions = createInvasions({
   deep: (x, z) => x >= OLD_SIZE && z >= OLD_SIZE,
 });
 
+// World bosses (worldboss.js): a giant rises at its lair now and then, for everyone to fight together.
+const worldBosses = createWorldBosses({
+  map: designToWorld, monsters, sessions, spawnMonster, nearestWalkable, walkable, aggro, monsterAttack, sendNear, broadcast, safeSend,
+  log, now, rand, dist, r2,
+});
+
 function tick() {
   if (!world) return;
   const t = now();
@@ -2252,6 +2265,7 @@ function tick() {
   useGrid(0);
   updateSpawners(t);
   invasions.tick(t);
+  worldBosses.tick(t);
   if (tickCount % 50 === 0) cleanupInstances(t);
 
   sendSnapshots(t);
@@ -2280,6 +2294,8 @@ function sendSnapshots(t) {
         flags({ sl: t < m.slowUntil, st: t < m.stunUntil, sh: m.elite && t < m.shieldUntil });
       const stat = `"n":${jstr(m.type)},"l":${m.level},"mhp":${m.maxHp},"ar":${m.armor}` +
         (m.elite ? `,"el":${jstr(m.elite.name)},"af":${jstr(m.elite.affixes.join(","))}` : "");
+      // Details that change (a world boss growing with every hero who joins) get a new version: viewers get them again.
+      if (stat !== m.snapStat) { m.snapStat = stat; m.snapVer = (m.snapVer || 0) + 1; }
       e = { part: part + "}", full: part + "," + stat + "}" };
       mon.set(m.id, e);
     }
@@ -2307,11 +2323,12 @@ function sendSnapshots(t) {
       const d = dist(m.x, m.z, s.x, s.z);
       if (d > MONSTER_VIEW) continue;
       const last = sentMon.get(m.id);
-      const stale = last === undefined || tk - last >= FULL_EVERY;
-      if (!stale && d > FAR_MONSTER && (tk + m.id) % 2) continue;
       const e = monEntry(m);
+      const stale = !last || last.ver !== m.snapVer || tk - last.tick >= FULL_EVERY;
+      if (!stale && d > FAR_MONSTER && (tk + m.id) % 2) continue;
       ms.push(stale ? e.full : e.part);
-      sentMon.set(m.id, tk);
+      if (stale) sentMon.set(m.id, { ver: m.snapVer, tick: tk });
+      else last.tick = tk;
     }
     const ps = [];
     for (const o of online) {
@@ -2328,7 +2345,7 @@ function sendSnapshots(t) {
     safeSend(s, `{"t":"snap","l":${online.length},"m":[${ms.join(",")}],"p":[${ps.join(",")}]}`);
     // Forget what's long gone (monsters that died, players who left).
     if (tk % 100 === 0) {
-      for (const [id, last] of sentMon) if (tk - last > 200) sentMon.delete(id);
+      for (const [id, last] of sentMon) if (tk - last.tick > 200) sentMon.delete(id);
       for (const [id, last] of sentPly) if (tk - last.tick > 600 || !sessions.has(id)) sentPly.delete(id);
     }
   }

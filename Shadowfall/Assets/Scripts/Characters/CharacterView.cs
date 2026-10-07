@@ -100,6 +100,11 @@ namespace Shadowfall
             { "The Ashen King", new CharacterLook { Model = "Characters/SkeletonWarrior", Height = 4.2f, Anims = AnimSet.Skeleton, Tint = new Color(1.05f, 0.55f, 0.4f), Light = new Color(1f, 0.35f, 0.1f) } },
             { "The Frost Witch", new CharacterLook { Model = "Characters/Mage", Height = 3.4f, Tint = new Color(0.8f, 0.95f, 1.3f), Weapon = "staff", Light = new Color(0.5f, 0.85f, 1f) } },
             { "The Sand Colossus", new CharacterLook { Model = "Monsters/Golem", Height = 4.6f, Anims = AnimSet.Big, RunSpeed = 4f, Tint = new Color(1.15f, 0.95f, 0.62f), Light = new Color(1f, 0.75f, 0.35f) } },
+            // world bosses: giants of the models above
+            { "Old Bramblehide", new CharacterLook { Model = "Monsters/Wolf", Height = 3.4f, Anims = AnimSet.Wolf, RunSpeed = 6f, Tint = new Color(0.7f, 0.62f, 0.5f), Light = new Color(0.6f, 0.9f, 0.3f) } },
+            { "Hrimgar the Mountain", new CharacterLook { Model = "Monsters/Warchief", Height = 6.2f, Anims = AnimSet.Big, RunSpeed = 5f, Tint = new Color(0.75f, 0.9f, 1.35f), Light = new Color(0.45f, 0.75f, 1f) } },
+            { "Gorvash the Dune Reaver", new CharacterLook { Model = "Characters/Barbarian", Height = 5.2f, Tint = new Color(1.15f, 0.85f, 0.6f), Weapon = "axe", Light = new Color(1f, 0.6f, 0.2f) } },
+            { "The Pyre Colossus", new CharacterLook { Model = "Monsters/Golem", Height = 6.6f, Anims = AnimSet.Big, RunSpeed = 4f, Tint = new Color(0.7f, 0.4f, 0.32f), Light = new Color(1f, 0.4f, 0.1f) } },
             { "The Cinder Lord", new CharacterLook { Model = "Monsters/Warchief", Height = 4.2f, Anims = AnimSet.Big, RunSpeed = 5f, Tint = new Color(0.75f, 0.45f, 0.38f), Light = new Color(1f, 0.35f, 0.1f) } },
         };
 

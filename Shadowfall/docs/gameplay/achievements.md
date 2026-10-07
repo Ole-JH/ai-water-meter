@@ -45,6 +45,8 @@ exploration count from the day achievements arrived.
 | Achievement | How | Points | Title |
 | --- | --- | --- | --- |
 | **Warchief's End** | Defeat the Goblin Warchief in his camp. | 10 |  |
+| **Giant Slayer** | Help slay a [world boss](world.md#world-bosses). | 10 |  |
+| **Bane of Giants** | Help slay all four world bosses. | 50 | the Giantsbane |
 | **Lichbane** | Defeat the Lich King in his crypt. | 25 | Lichbane |
 | **Rest in Pieces** | Defeat the Crypt Lord at the bottom of the Catacombs. | 10 |  |
 | **Hideout Raided** | Defeat the Bandit Lord in his hideout. | 10 |  |

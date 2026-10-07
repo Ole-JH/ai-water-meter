@@ -20,6 +20,7 @@ namespace Shadowfall
             "Goblin Warchief", "Bandit Lord", "Goblin King", "Crypt Lord", "Stone Colossus", "Lich King",
             "Frost Wolf", "Ice Wraith", "Frost Giant", "Desert Raider", "Raider Marksman", "Sand Golem", "Ash Ghoul", "Ember Skeleton",
             "Ash Wraith", "Cinder Golem", "Jarl Frostborn", "Raider Warlord", "The Ashen King", "The Frost Witch", "The Sand Colossus", "The Cinder Lord",
+            "Old Bramblehide", "Hrimgar the Mountain", "Gorvash the Dune Reaver", "The Pyre Colossus",
         };
 
         void AdminKeys()

@@ -437,6 +437,52 @@ async function invasionTests(a, b) {
   await sleep(150);
 }
 
+async function worldBossTests(a, b) {
+  a.ws.send(JSON.stringify({ t: "adm", c: "worldboss", name: "bramble" }));
+  await sleep(300);
+  assert.ok(b.all("sys").some((m) => /Old Bramblehide has risen in Whisperwood/.test(m.msg)), "a world boss rising is announced to everyone");
+  const wb = b.all("wboss").at(-1)?.wb;
+  assert.ok(wb && wb.phase === "up" && wb.name === "Old Bramblehide" && wb.l === 10 && wb.hp === 100 && wb.x > 0, "everyone gets where it is and how it fares");
+  a.ws.send(JSON.stringify({ t: "adm", c: "worldboss", name: "pyre" }));
+  await sleep(150);
+  assert.ok(a.all("sys").some((m) => /already up/.test(m.msg)), "one world boss at a time");
+
+  // Alice and Bob fight it: it gets tougher with the second hero, slams (after a warning ring), and drops for both.
+  state(a, wb.x + 2, wb.z);
+  state(b, wb.x - 2, wb.z);
+  await sleep(400);
+  const boss = () => view(a).m.find((x) => x.n === "Old Bramblehide");
+  assert.ok(boss(), "the world boss is out there");
+  const hp0 = boss().mhp;
+  a.ws.send(JSON.stringify({ t: "hit", mid: boss().id, dmg: 50 }));
+  b.ws.send(JSON.stringify({ t: "hit", mid: boss().id, dmg: 50 }));
+  let slammed = false;
+  for (let i = 0; i < 40 && !slammed; i++) { await sleep(100); slammed = a.all("matk").some((m) => m.k === "slam"); }
+  const warn = a.all("matk").find((m) => m.k === "warn"), slam = a.all("matk").find((m) => m.k === "slam");
+  assert.ok(warn && slam && Math.abs(warn.x - slam.x) < 0.01 && slam.dmg > 0, "it warns with a ring, then slams the same spot");
+  assert.ok(a.msgs.indexOf(warn) < a.msgs.indexOf(slam), "the warning comes first");
+  await sleep(300); // the next snapshot carries the new maximum
+  assert.ok(boss().mhp > hp0, `a second hero makes it tougher (${hp0} -> ${boss().mhp})`);
+  assert.strictEqual(b.all("wboss").at(-1).wb.n, 2, "the tracker counts the heroes fighting it");
+  a.ws.send(JSON.stringify({ t: "adm", c: "killall", r: 15 }));
+  await sleep(500);
+  const ka = a.all("kill").find((k) => k.name === "Old Bramblehide"), kb = b.all("kill").find((k) => k.name === "Old Bramblehide");
+  assert.ok(ka && kb && ka.lb > 0 && ka.drops.length >= 3, "everyone who fought it gets the kill, with a boss's loot and a bonus");
+  assert.strictEqual(b.all("wboss").at(-1).wb.phase, "none", "the tracker ends when it dies");
+
+  // Admins can put one back to sleep.
+  a.ws.send(JSON.stringify({ t: "adm", c: "worldboss", name: "Hrimgar" }));
+  await sleep(200);
+  assert.strictEqual(b.all("wboss").at(-1).wb.name, "Hrimgar the Mountain", "admins raise a world boss by name");
+  a.ws.send(JSON.stringify({ t: "adm", c: "worldboss", stop: true }));
+  await sleep(200);
+  assert.strictEqual(b.all("wboss").at(-1).wb.phase, "none", "and put it back to sleep");
+  assert.ok(b.all("sys").some((m) => /Hrimgar the Mountain returns to its slumber/.test(m.msg)), "which everyone hears");
+  state(a, 144, 150);
+  state(b, 145, 187);
+  await sleep(200);
+}
+
 async function main() {
   checkDockerfile();
   checkGamedata();
@@ -444,7 +490,7 @@ async function main() {
   if (db.url) console.log("Testing against PostgreSQL");
   writeLegacyCharacter("Oldtimer", "oldpass", { level: 7, gold: 99, look: "Mage", x: 144, z: 150 });
   const server = spawn(process.execPath, [path.join(__dirname, "..", "server.js")], {
-    env: { ...process.env, PORT: String(PORT), DATA_DIR, PUBLIC_DIR, ELITE_CHANCE: "0", INVASION_MINUTES: "0", INVASION_GATHER_S: "1", INVASION_SIEGE_RATE: "15", ADMINS: "alice", METRICS_PORT: String(METRICS_PORT), DATABASE_URL: db.url },
+    env: { ...process.env, PORT: String(PORT), DATA_DIR, PUBLIC_DIR, ELITE_CHANCE: "0", INVASION_MINUTES: "0", INVASION_GATHER_S: "1", INVASION_SIEGE_RATE: "15", WORLD_BOSS_MINUTES: "0", WORLD_BOSS_SLAM_S: "1", ADMINS: "alice", METRICS_PORT: String(METRICS_PORT), DATABASE_URL: db.url },
     stdio: ["ignore", "pipe", "pipe"],
   });
   let serverLog = "";
@@ -661,6 +707,7 @@ async function main() {
     await sleep(150);
     assert.ok(a.find("admwho").items.some((x) => x.includes("|Bob|")), "admins can list players");
     await invasionTests(a, b);
+    await worldBossTests(a, b);
 
     const danaId = d.find("welcome").id;
     d.ws.send(JSON.stringify({ t: "vanish", dur: 3 }));

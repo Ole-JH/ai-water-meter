@@ -551,6 +551,7 @@ namespace Shadowfall
                     GameUI.Log(m.msg, new Color(1f, 0.85f, 0.4f));
                     break;
                 case "invasion": Invasion.Set(m.iv); break;
+                case "wboss": WorldBoss.Set(m.wb); break;
                 case "invwin":
                     Invasion.Won(m.k, m.xp);
                     SpawnDrops(m.drops);
@@ -677,6 +678,7 @@ namespace Shadowfall
                 if (def.Boss)
                 {
                     ach.Once("boss", def.Name);
+                    if (WorldBoss.Is(def.Name)) ach.Once("world_boss", def.Name);
                     if (Dungeon.Active) ach.Max("hardest_boss", Dungeon.Difficulty);
                 }
                 if (!string.IsNullOrEmpty(m.el))
@@ -751,8 +753,29 @@ namespace Shadowfall
 
                 case "summon":
                     Sfx.Play2D("roar", 0.8f, 0.8f);
-                    GameUI.Banner("Lich King: \"Rise, my servants!\"", new Color(0.6f, 0.85f, 1f));
+                    if (e != null && WorldBoss.Is(e.Def.Name)) GameUI.Banner(e.Def.Name + " calls for aid!", WorldBoss.Color);
+                    else GameUI.Banner("Lich King: \"Rise, my servants!\"", new Color(0.6f, 0.85f, 1f));
                     break;
+
+                case "warn": // a world boss winds up a slam: a red ring on the ground, get out of it
+                {
+                    var at = new Vector3(m.x, 0.05f, m.z);
+                    SpellFx.Ring(at, new Color(1f, 0.15f, 0.05f), WorldBoss.SlamRadius, WorldBoss.SlamWindup);
+                    SpellFx.Ring(at, new Color(1f, 0.45f, 0.1f), WorldBoss.SlamRadius * 0.6f, WorldBoss.SlamWindup);
+                    Sfx.Play("roar", at, 1f, 0.05f, 60f);
+                    break;
+                }
+
+                case "slam":
+                {
+                    var at = new Vector3(m.x, 0f, m.z);
+                    SpellFx.Shockwave(at, new Color(1f, 0.6f, 0.3f), WorldBoss.SlamRadius);
+                    SpellFx.Dust(at, WorldBoss.SlamRadius);
+                    Sfx.Play("boom", at, 1f, 0.05f, 60f);
+                    if (p != null && Factory.FlatDistance(p.transform.position, at) < 25f) CameraRig.Shake(0.35f);
+                    if (p != null && !p.IsDead && Factory.FlatDistance(p.transform.position, at) < WorldBoss.SlamRadius + 0.3f) p.TakeDamage(m.dmg, e);
+                    break;
+                }
             }
         }
 

@@ -81,7 +81,17 @@ namespace Shadowfall
         public float i;
         public NetMonster[] m;
         public NetPlayer[] p;
+        public NetWorldBoss wb;        // "wboss": the world boss that is up (see WorldBoss.cs)
         public NetInvasion iv;         // "invasion": a town under attack (see Invasion.cs); "invwin": k = town, xp, drops
+    }
+
+    /// <summary>A world boss (server/worldboss.js): phase none | up; hp in percent; n = heroes fighting it.</summary>
+    [Serializable]
+    public class NetWorldBoss
+    {
+        public string name, region, phase;
+        public float x, z;
+        public int l, hp, n;
     }
 
     /// <summary>A town invasion (server/invasion.js): phase none | gather | wave | won | lost.</summary>

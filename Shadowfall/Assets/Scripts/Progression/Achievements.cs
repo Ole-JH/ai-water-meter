@@ -53,6 +53,10 @@ namespace Shadowfall
             new AchievementDef { Id = "boss_nine", Name = "Crownbreaker", Description = "Defeat nine different bosses.", Category = AchievementCategory.Bosses, Icon = "ach_boss", Points = 100, Stat = "boss", Goal = 9, Title = "Crownbreaker" },
             new AchievementDef { Id = "boss_twelve", Name = "Nothing Left Standing", Description = "Defeat all twelve bosses.", Category = AchievementCategory.Bosses, Icon = "ach_boss", Points = 150, Stat = "boss", Goal = 12, Title = "the Undefeated" },
 
+            // ---- world bosses
+            new AchievementDef { Id = "worldboss_first", Name = "Giant Slayer", Description = "Help slay a world boss.", Category = AchievementCategory.Bosses, Icon = "ach_boss", Points = 10, Stat = "world_boss", Goal = 1 },
+            new AchievementDef { Id = "worldboss_all", Name = "Bane of Giants", Description = "Help slay Old Bramblehide, Hrimgar the Mountain, Gorvash the Dune Reaver and the Pyre Colossus.", Category = AchievementCategory.Bosses, Icon = "ach_boss", Points = 50, Stat = "world_boss", Goal = 4, Title = "the Giantsbane" },
+
             // ---- town invasions
             new AchievementDef { Id = "defend_first", Name = "Hold the Gate", Description = "Help beat off an invasion of a town.", Category = AchievementCategory.Combat, Icon = "ach_castle", Points = 10, Stat = "defended", Goal = 1 },
             new AchievementDef { Id = "defend_10", Name = "Shield of the Realm", Description = "Help beat off ten invasions.", Category = AchievementCategory.Combat, Icon = "ach_castle", Points = 25, Stat = "defended", Goal = 10, Title = "the Defender" },
