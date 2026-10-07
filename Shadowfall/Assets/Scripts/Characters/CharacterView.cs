@@ -91,6 +91,9 @@ namespace Shadowfall
             { "Ash Wraith", new CharacterLook { Model = "Characters/SkeletonMage", Height = 1.95f, Anims = AnimSet.Skeleton, Tint = new Color(1.15f, 0.65f, 0.45f) } },
             { "Cinder Golem", new CharacterLook { Model = "Monsters/Golem", Height = 3f, Anims = AnimSet.Big, RunSpeed = 4f, Tint = new Color(0.6f, 0.38f, 0.32f) } },
             { "The Ashen King", new CharacterLook { Model = "Characters/SkeletonWarrior", Height = 4.2f, Anims = AnimSet.Skeleton, Tint = new Color(1.05f, 0.55f, 0.4f), Light = new Color(1f, 0.35f, 0.1f) } },
+            { "The Frost Witch", new CharacterLook { Model = "Characters/Mage", Height = 3.4f, Tint = new Color(0.8f, 0.95f, 1.3f), Weapon = "staff", Light = new Color(0.5f, 0.85f, 1f) } },
+            { "The Sand Colossus", new CharacterLook { Model = "Monsters/Golem", Height = 4.6f, Anims = AnimSet.Big, RunSpeed = 4f, Tint = new Color(1.15f, 0.95f, 0.62f), Light = new Color(1f, 0.75f, 0.35f) } },
+            { "The Cinder Lord", new CharacterLook { Model = "Monsters/Warchief", Height = 4.2f, Anims = AnimSet.Big, RunSpeed = 5f, Tint = new Color(0.75f, 0.45f, 0.38f), Light = new Color(1f, 0.35f, 0.1f) } },
         };
 
         public static CharacterLook ForMonster(string name) => monsters.TryGetValue(name, out var l) ? l : null;

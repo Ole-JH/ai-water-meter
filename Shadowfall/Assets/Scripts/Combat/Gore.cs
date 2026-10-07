@@ -32,7 +32,7 @@ namespace Shadowfall
         {
             if (monster.StartsWith("Skeleton") || monster == "Lich King" || monster == "Crypt Lord" || monster.EndsWith("Wraith")
                 || monster == "Ember Skeleton" || monster == "The Ashen King") return Kind.Bone;
-            if (monster.EndsWith("Golem") || monster == "Stone Colossus") return Kind.Stone;
+            if (monster.EndsWith("Golem") || monster.EndsWith("Colossus")) return Kind.Stone;
             if (monster.StartsWith("Goblin")) return Kind.Ichor;
             if (monster == "Zombie" || monster == "Ash Ghoul") return Kind.Rot;
             return Kind.Flesh;

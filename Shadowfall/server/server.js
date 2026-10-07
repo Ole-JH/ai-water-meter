@@ -978,10 +978,11 @@ function resolveEntrance(x, z) {
 let entrancesFor = null;
 /** Entrance positions (world coordinates), computed once per world map. */
 function entrances() {
-  if (!world) return DUNGEONS.map((d) => [designToWorld(d.at[0]), designToWorld(d.at[1])]);
+  const at = (d) => (d.world ? d.at : [designToWorld(d.at[0]), designToWorld(d.at[1])]);
+  if (!world) return DUNGEONS.map(at);
   if (entrancesFor !== world) {
     useGrid(0);
-    for (const d of DUNGEONS) d.entrance = resolveEntrance(designToWorld(d.at[0]), designToWorld(d.at[1]));
+    for (const d of DUNGEONS) d.entrance = resolveEntrance(...at(d));
     entrancesFor = world;
   }
   return DUNGEONS.map((d) => d.entrance);
@@ -1321,7 +1322,7 @@ function adminFromChat(s, line) {
     case "who": return runAdmin(s, "who");
     case "resetpw": return runAdmin(s, "resetpw", { name: w[0] });
     case "give": return runAdmin(s, "give", { what: w[0], n: w[1] });
-    default: return "Admin commands: tp x z, tpto name, summon name, dungeon <id|0-3> [depth], regen, spawn <type> [level] [count] [elite], killall [radius], time dawn|day|dusk|night, elites <0-1>, announce text, kick name, who, resetpw <account or character>, give gold [n]|legendary|set|gems|potions, weather clear|cloudy|rain|storm|fog [minutes], season spring|summer|autumn|winter";
+    default: return "Admin commands: tp x z, tpto name, summon name, dungeon <id|0-6> [depth], regen, spawn <type> [level] [count] [elite], killall [radius], time dawn|day|dusk|night, elites <0-1>, announce text, kick name, who, resetpw <account or character>, give gold [n]|legendary|set|gems|potions, weather clear|cloudy|rain|storm|fog [minutes], season spring|summer|autumn|winter";
   }
 }
 

@@ -76,7 +76,7 @@ Right-click another player (anywhere on their character, or click the name above
 
 ## Dungeons
 
-Four dungeons lie hidden in the wilds. They are **not marked on the map**: find their entrances by exploring.
+Seven dungeons lie hidden in the wilds, three of them in the [outer lands](#the-outer-lands). They are **not marked on the map**: find their entrances by exploring.
 
 | Dungeon | Where | Levels | Style | Monsters | Boss |
 | --- | --- | --- | --- | --- | --- |
@@ -84,6 +84,9 @@ Four dungeons lie hidden in the wilds. They are **not marked on the map**: find 
 | **Goblin Warrens** (level 4+) | East of the goblin encampment: a cave mouth with a goblin banner | 3 | Caves | Goblins, goblin shamans | **Goblin King** |
 | **The Catacombs** (level 6+) | South-east of the Forsaken Graveyard: an old crypt | 3 | Crypt halls | Skeletons, skeleton archers, zombies | **Crypt Lord** |
 | **Ironvein Deep** (level 10+) | In the western quarry: a timbered mine adit | 3 | Caves, lit by glowing ore | Rock golems, skeletons, zombies | **Stone Colossus** |
+| **The Frozen Barrow** (level 15+) | In the Frostpeak pines between Pinecrest and Frosthaven: a crypt door in a boulder mound | 3 | Ice caves | Frost wolves, ice wraiths, frost giants | **The Frost Witch** |
+| **The Sunken Temple** (level 16+) | North of Saltreach in the badlands: two pillars sticking out of the sand | 3 | Temple halls | Desert raiders, marksmen, sand golems | **The Sand Colossus** |
+| **The Ashen Citadel** (level 20+) | In the north of the Ashen Reach: a black gatehouse between fire baskets | 3 | Fortress halls | Ash ghouls, ember skeletons, ash wraiths, cinder golems | **The Cinder Lord** |
 
 - **Difficulty:** clicking an entrance lets you choose **Normal**, **Veteran**, **Nightmare** or **Hell**. Harder tiers give monsters more life (×1.7 / ×2.8 / ×4.5) and damage (×1.4 / ×1.9 / ×2.6) and more elites, and in return more XP (+50% / +120% / +220%) and better loot (more items, higher rarity, more legendaries from bosses). Whoever opens the dungeon for the party picks; party members who follow join at that difficulty, and the stairs keep it.
 - **Generated for your party:** every party (or solo hero) gets its own copy of each level, with a fresh layout each time. Halls and corridors in the crypts and cellars, natural caverns in the warrens and the mine. Party members who walk in join the same copy, so friends explore together. An empty dungeon closes two minutes after the last player leaves.

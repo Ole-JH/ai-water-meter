@@ -473,9 +473,25 @@
    "name": "Ashes to Ashes",
    "title": "the Unburnt"
   },
+  "boss_frost_witch": {
+   "name": "Thaw",
+   "title": ""
+  },
+  "boss_sand_colossus": {
+   "name": "Sand in the Gears",
+   "title": ""
+  },
+  "boss_cinder_lord": {
+   "name": "Snuffed Out",
+   "title": "the Fireproof"
+  },
   "boss_nine": {
    "name": "Crownbreaker",
    "title": "Crownbreaker"
+  },
+  "boss_twelve": {
+   "name": "Nothing Left Standing",
+   "title": "the Undefeated"
   },
   "dungeon_first": {
    "name": "Into the Dark",
@@ -483,6 +499,10 @@
   },
   "dungeon_all": {
    "name": "Delver",
+   "title": ""
+  },
+  "dungeon_seven": {
+   "name": "Underworld Tourist",
    "title": ""
   },
   "dungeon_bottom": {

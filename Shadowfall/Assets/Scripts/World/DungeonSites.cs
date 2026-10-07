@@ -10,7 +10,8 @@ namespace Shadowfall
     public class DungeonDef
     {
         public string Id, Name, Blurb, Boss;
-        public Vector2 Design;          // entrance in design coordinates (see WorldGenerator.Map)
+        public Vector2 Design;          // entrance in design coordinates (see WorldGenerator.Map), or world coordinates if World
+        public bool World;              // the outer lands' dungeons give their entrance in world coordinates
         public int Depths, MinLevel;
         // Look inside
         public string FloorTex, WallTex;
@@ -52,6 +53,31 @@ namespace Shadowfall
                 TorchColor = new Color(0.7f, 0.85f, 1f), BossFire = new Color(0.4f, 0.75f, 1f),
                 RoomProps = new[] { "Rocks/Boulder_1", "Rocks/Boulder_3", "Town/cart", "Rocks/Pebble_2", "Props/crates_stacked" },
             },
+            // ---- the outer lands
+            new DungeonDef
+            {
+                Id = "barrow", Name = "The Frozen Barrow", Boss = "The Frost Witch", Blurb = "Ice caves under the Frostpeak pines, where the Frost Witch keeps the dead from thawing.",
+                Design = new Vector2(210f, 428f), World = true, Depths = 3, MinLevel = 15, Caves = true,
+                FloorTex = "Ground/gravel", WallTex = "Ground/gravel", FloorTint = new Color(0.7f, 0.78f, 0.88f), WallTint = new Color(0.62f, 0.72f, 0.85f),
+                TorchColor = new Color(0.55f, 0.85f, 1f), BossFire = new Color(0.45f, 0.8f, 1f),
+                RoomProps = new[] { "Rocks/Boulder_2", "Rocks/Pebble_1", "Graveyard/coffin", "Nature/log_large", "Graveyard/gravestone-broken" },
+            },
+            new DungeonDef
+            {
+                Id = "temple", Name = "The Sunken Temple", Boss = "The Sand Colossus", Blurb = "A sun temple the dunes swallowed. Raiders loot its halls; something older guards the altar.",
+                Design = new Vector2(470f, 236f), World = true, Depths = 3, MinLevel = 16,
+                FloorTex = "Ground/sand", WallTex = "Ground/dry", FloorTint = new Color(0.85f, 0.75f, 0.55f), WallTint = new Color(0.7f, 0.58f, 0.4f),
+                TorchColor = new Color(1f, 0.75f, 0.35f), BossFire = new Color(1f, 0.65f, 0.2f),
+                RoomProps = new[] { "Graveyard/pillar-large", "Props/chest", "Rocks/Pebble_3", "Graveyard/stone-wall-column", "Props/barrel_large" },
+            },
+            new DungeonDef
+            {
+                Id = "citadel", Name = "The Ashen Citadel", Boss = "The Cinder Lord", Blurb = "The fortress the Reach burned down around. Its lord is still in there, and still burning.",
+                Design = new Vector2(400f, 502f), World = true, Depths = 3, MinLevel = 20,
+                FloorTex = "Ground/cobble", WallTex = "Ground/gravel", FloorTint = new Color(0.45f, 0.4f, 0.4f), WallTint = new Color(0.4f, 0.32f, 0.3f),
+                TorchColor = new Color(1f, 0.45f, 0.2f), BossFire = new Color(1f, 0.3f, 0.1f),
+                RoomProps = new[] { "Graveyard/coffin", "Graveyard/gravestone-broken", "Graveyard/stone-wall-column", "Graveyard/candle-multiple", "Graveyard/trunk" },
+            },
         };
 
         public static DungeonDef Get(int index) => All[Mathf.Clamp(index, 0, All.Length - 1)];
@@ -66,7 +92,7 @@ namespace Shadowfall
             {
                 if (entrance.HasValue) return entrance.Value;
                 var grid = WorldGrid.Instance;
-                int cx = Mathf.FloorToInt(WorldGenerator.Map(Design.x)), cz = Mathf.FloorToInt(WorldGenerator.Map(Design.y));
+                int cx = Mathf.FloorToInt(World ? Design.x : WorldGenerator.Map(Design.x)), cz = Mathf.FloorToInt(World ? Design.y : WorldGenerator.Map(Design.y));
                 bool Clear(int px, int pz)
                 {
                     for (int j = -2; j <= 2; j++)
@@ -135,6 +161,28 @@ namespace Shadowfall
                     ArtLibrary.Spawn("Rocks/Boulder_3", t, new Vector3(0f, 0f, 2.8f), 3.2f, ArtLibrary.Fit.Height, 0f);
                     ArtLibrary.Spawn("Town/banner-red", t, new Vector3(-1.6f, 0f, -0.4f), 2.6f, ArtLibrary.Fit.Height, 0f);
                     Factory.Prim(PrimitiveType.Cylinder, t, new Vector3(0f, 0.02f, 0.6f), new Vector3(2.2f, 0.02f, 1.6f), new Color(0.03f, 0.02f, 0.02f));
+                    break;
+                case "barrow":
+                    // A barrow mound of frosted boulders around a crypt door.
+                    ArtLibrary.Spawn("Graveyard/crypt", t, new Vector3(0f, 0f, 2.2f), 4f, ArtLibrary.Fit.Width, 180f);
+                    ArtLibrary.Spawn("Rocks/Boulder_1", t, new Vector3(-2.8f, 0f, 2.4f), 3f, ArtLibrary.Fit.Width, 0f);
+                    ArtLibrary.Spawn("Rocks/Boulder_2", t, new Vector3(2.8f, 0f, 2.4f), 3f, ArtLibrary.Fit.Width, 120f);
+                    ArtLibrary.Spawn("Graveyard/gravestone-broken", t, new Vector3(-1.8f, 0f, -0.6f), 1.2f, ArtLibrary.Fit.Height, 20f);
+                    break;
+                case "temple":
+                    // Two pillars and a broken lintel sticking out of the sand.
+                    ArtLibrary.Spawn("Graveyard/pillar-large", t, new Vector3(-1.5f, 0f, 1.4f), 3.4f, ArtLibrary.Fit.Height, 0f);
+                    ArtLibrary.Spawn("Graveyard/pillar-large", t, new Vector3(1.5f, 0f, 1.4f), 2.6f, ArtLibrary.Fit.Height, 0f);
+                    Factory.Prim(PrimitiveType.Cube, t, new Vector3(-0.3f, 3.1f, 1.4f), new Vector3(3.2f, 0.4f, 0.6f), new Color(0.7f, 0.6f, 0.42f))
+                        .transform.localRotation = Quaternion.Euler(0f, 0f, -8f);
+                    ArtLibrary.Spawn("Graveyard/stone-wall-column", t, new Vector3(2.8f, 0f, 0.2f), 1.6f, ArtLibrary.Fit.Height, 30f);
+                    Factory.Prim(PrimitiveType.Cube, t, new Vector3(0f, 1.1f, 1.6f), new Vector3(2.2f, 2.2f, 0.1f), new Color(0.03f, 0.02f, 0.02f));
+                    break;
+                case "citadel":
+                    // A gatehouse of black stone flanked by fire baskets.
+                    ArtLibrary.Spawn("Graveyard/crypt-large", t, new Vector3(0f, 0f, 2.6f), 5f, ArtLibrary.Fit.Width, 180f);
+                    ArtLibrary.Spawn("Graveyard/fire-basket", t, new Vector3(-2.4f, 0f, 0.4f), 1.4f, ArtLibrary.Fit.Height, 0f);
+                    ArtLibrary.Spawn("Graveyard/fire-basket", t, new Vector3(2.4f, 0f, 0.4f), 1.4f, ArtLibrary.Fit.Height, 0f);
                     break;
                 default:
                     // A timbered mine adit with a cart.

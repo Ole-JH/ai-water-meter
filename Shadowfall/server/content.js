@@ -32,6 +32,10 @@ const MONSTERS = {
   "Ash Wraith":      { hp: 110,  dmg: 25, speed: 4.0, range: 10,  cd: 1.8, xp: 140,  aggro: 12, armor: 10, ranged: true },
   "Cinder Golem":    { hp: 340,  dmg: 32, speed: 3.0, range: 2.3, cd: 2.0, xp: 260,  aggro: 8,  armor: 60 },
   "The Ashen King":  { hp: 3600, dmg: 42, speed: 3.8, range: 2.6, cd: 1.5, xp: 6000, aggro: 15, armor: 60, boss: true },
+  // The outer lands' dungeon bosses
+  "The Frost Witch":   { hp: 2000, dmg: 34, speed: 3.8, range: 11,  cd: 1.6, xp: 4500, aggro: 14, armor: 35, ranged: true, boss: true },
+  "The Sand Colossus": { hp: 2600, dmg: 38, speed: 3.0, range: 2.8, cd: 2.0, xp: 5000, aggro: 13, armor: 65, boss: true },
+  "The Cinder Lord":   { hp: 3200, dmg: 44, speed: 4.4, range: 2.6, cd: 1.4, xp: 6500, aggro: 14, armor: 55, boss: true },
 };
 
 // The world is 576 x 576 tiles. The original world (Hollowmere and its four zones) fills the south-west corner,
@@ -128,6 +132,13 @@ const DUNGEONS = [
     types: [["Goblin", "Goblin", "Goblin Shaman"], ["Goblin", "Goblin Shaman"], ["Goblin", "Goblin Shaman", "Goblin Shaman"]] },
   { id: "mine", name: "Ironvein Deep", at: [26, 96], depths: 3, style: "caves", minLevel: 10, boss: "Stone Colossus",
     types: [["Rock Golem", "Skeleton"], ["Rock Golem", "Zombie", "Skeleton"], ["Rock Golem", "Skeleton Archer", "Zombie"]] },
+  // The outer lands: entrances in world coordinates (world: true)
+  { id: "barrow", name: "The Frozen Barrow", at: [210, 428], world: true, depths: 3, style: "caves", minLevel: 15, boss: "The Frost Witch",
+    types: [["Frost Wolf", "Ice Wraith"], ["Ice Wraith", "Frost Wolf", "Frost Giant"], ["Frost Giant", "Ice Wraith", "Ice Wraith"]] },
+  { id: "temple", name: "The Sunken Temple", at: [470, 236], world: true, depths: 3, style: "rooms", minLevel: 16, boss: "The Sand Colossus",
+    types: [["Desert Raider", "Raider Marksman"], ["Sand Golem", "Desert Raider", "Raider Marksman"], ["Sand Golem", "Raider Marksman", "Sand Golem"]] },
+  { id: "citadel", name: "The Ashen Citadel", at: [400, 502], world: true, depths: 3, style: "rooms", minLevel: 20, boss: "The Cinder Lord",
+    types: [["Ash Ghoul", "Ember Skeleton"], ["Ember Skeleton", "Ash Wraith", "Ash Ghoul"], ["Cinder Golem", "Ember Skeleton", "Ash Wraith"]] },
 ];
 
 // Global balance: every monster's base health and damage are multiplied by these (the game was too easy).

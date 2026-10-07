@@ -620,6 +620,12 @@ async function main() {
     await sleep(300);
     const war = a.all("dungeon").at(-1);
     assert.ok(war.d === 2 && war.l === 2, "admins can enter any dungeon at any depth");
+    a.ws.send(JSON.stringify({ t: "adm", c: "dungeon", d: "citadel", l: 3 }));
+    await sleep(300);
+    const cit = a.all("dungeon").at(-1);
+    assert.ok(cit.d === 6 && cit.k === "The Ashen Citadel" && cit.boss.length === 2, "the outer lands' dungeons have a boss at the bottom");
+    a.ws.send(JSON.stringify({ t: "adm", c: "dungeon", d: "warrens", l: 2 }));
+    await sleep(300);
     a.ws.send(JSON.stringify({ t: "adm", c: "regen" }));
     await sleep(300);
     assert.notStrictEqual(a.all("dungeon").at(-1).seed, war.seed, "admins can regenerate a level");

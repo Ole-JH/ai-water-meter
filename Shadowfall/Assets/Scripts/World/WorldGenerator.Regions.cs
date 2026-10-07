@@ -218,6 +218,14 @@ namespace Shadowfall
             // The Ashen King's throne: the biggest ruin, in the heart of the Reach (server spawners at 373.5, 373.5).
             if (Ruin(366, 366, 15, true))
                 Art("Graveyard/altar-stone", new Vector3(373.5f, 0, 378.6f), 4f, ArtLibrary.Fit.Width, 180f);
+            // A clearing at each outer-land dungeon entrance.
+            foreach (var d in DungeonDef.All)
+            {
+                if (!d.World) continue;
+                for (int j = -6; j <= 6; j++)
+                    for (int i = -6; i <= 6; i++)
+                        if (i * i + j * j <= 36) Reserve(Mathf.FloorToInt(d.Design.x) + i, Mathf.FloorToInt(d.Design.y) + j);
+            }
             // The camps go up before the trees, rocks and ruins, which keep clear of them.
             foreach (var camp in Camps) GoblinCamp(camp);
 

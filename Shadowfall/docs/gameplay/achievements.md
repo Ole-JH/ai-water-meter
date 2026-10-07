@@ -51,14 +51,19 @@ exploration count from the day achievements arrived.
 | **Giant Slayer** | Defeat Jarl Frostborn in his high camp in the Frostpeak Wilds. | 25 |  |
 | **Warlord Down** | Defeat the Raider Warlord in the Sunscar Badlands. | 25 |  |
 | **Ashes to Ashes** | Defeat the Ashen King in the heart of the Ashen Reach. | 50 | the Unburnt |
-| **Crownbreaker** | Defeat all nine bosses, the outer lands' three included. | 100 | Crownbreaker |
+| **Thaw** | Defeat the Frost Witch at the bottom of the Frozen Barrow. | 25 |  |
+| **Sand in the Gears** | Defeat the Sand Colossus in the Sunken Temple. | 25 |  |
+| **Snuffed Out** | Defeat the Cinder Lord in the Ashen Citadel. | 50 | the Fireproof |
+| **Crownbreaker** | Defeat nine different bosses. | 100 | Crownbreaker |
+| **Nothing Left Standing** | Defeat all twelve bosses. | 150 | the Undefeated |
 
 ### Dungeons
 
 | Achievement | How | Points | Title |
 | --- | --- | --- | --- |
 | **Into the Dark** | Enter a dungeon. | 5 |  |
-| **Delver** | Enter all four dungeons. | 10 |  |
+| **Delver** | Enter four different dungeons. | 10 |  |
+| **Underworld Tourist** | Enter all seven dungeons, the Frozen Barrow, the Sunken Temple and the Ashen Citadel included. | 25 |  |
 | **Rock Bottom** | Reach the deepest level of a dungeon. | 10 |  |
 | **Veteran** | Defeat a dungeon boss on Veteran or harder. | 10 |  |
 | **Nightmare Walker** | Defeat a dungeon boss on Nightmare or harder. | 25 | Nightmare Walker |
