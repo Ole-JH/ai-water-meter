@@ -45,8 +45,9 @@ namespace Shadowfall
         public override float Armor => ArmorValue;
         /// <summary>The attribute that powers this class's weapon attacks.</summary>
         public int PrimaryStat => Look == "Rogue" ? TotDex : Look == "Mage" ? TotInt : TotStr;
-        public float MeleeMultiplier => (1f + PrimaryStat / 50f) * (1f + 0.06f * Tal("brute")) * BuffDamage;
-        public float SpellMultiplier => (1f + TotInt / 40f) * (1f + (Level - 1) * 0.06f) * (1f + 0.06f * Tal("arcane")) * BuffDamage;
+        public readonly ParagonBoard Paragon = new ParagonBoard();
+        public float MeleeMultiplier => (1f + PrimaryStat / 50f) * (1f + 0.06f * Tal("brute")) * BuffDamage * Paragon.Damage;
+        public float SpellMultiplier => (1f + TotInt / 40f) * (1f + (Level - 1) * 0.06f) * (1f + 0.06f * Tal("arcane")) * BuffDamage * Paragon.Damage;
         public bool Whirling => Time.time < whirlUntil;
         public float AttackRange = 1.8f;
         public int XpToNext => Mathf.RoundToInt(100f * Mathf.Pow(Level, 1.55f));
@@ -256,7 +257,7 @@ namespace Shadowfall
             TotInt = Intelligence + ItemStat(Stat.Intelligence);
             TotVit = Vitality + ItemStat(Stat.Vitality);
 
-            MaxHealth = (60 + TotVit * 6 + Level * 8 + ItemStat(Stat.Health)) * (1f + 0.05f * (Tal("toughness") + Tal("thickskin")));
+            MaxHealth = (60 + TotVit * 6 + Level * 8 + ItemStat(Stat.Health)) * (1f + 0.05f * (Tal("toughness") + Tal("thickskin"))) * Paragon.Life;
             MaxMana = 40 + TotInt * 3 + Level * 3 + ItemStat(Stat.Mana);
 
             int armor = ItemStat(Stat.Armor);
@@ -265,13 +266,13 @@ namespace Shadowfall
             foreach (var b in Buffs) armorMul *= b.ArmorMul;
             ArmorValue = (armor + TotDex * 0.25f) * armorMul;
 
-            CritChance = Mathf.Min(75f, 5f + TotDex * 0.15f + ItemStat(Stat.CritChance) + 2f * (Tal("focus") + Tal("precision")));
+            CritChance = Mathf.Min(75f, 5f + TotDex * 0.15f + ItemStat(Stat.CritChance) + 2f * (Tal("focus") + Tal("precision")) + Paragon.Crit);
             var weapon = Inventory.GetEquipped(EquipSlot.Weapon);
             float baseAps = weapon != null ? weapon.AttacksPerSecond : 1.4f;
             MinDamage = weapon != null ? weapon.MinDamage : 1;
             MaxDamage = weapon != null ? weapon.MaxDamage : 3;
-            AttackSpeed = baseAps * (1f + ItemStat(Stat.AttackSpeed) / 100f);
-            MoveSpeed = 6.2f * (1f + ItemStat(Stat.MoveSpeed) / 100f + 0.04f * Tal("swiftness")) * (AdminTools.Fast ? 2.2f : 1f);
+            AttackSpeed = baseAps * (1f + ItemStat(Stat.AttackSpeed) / 100f) * Paragon.Speed;
+            MoveSpeed = 6.2f * (1f + ItemStat(Stat.MoveSpeed) / 100f + 0.04f * Tal("swiftness")) * Paragon.Speed * (AdminTools.Fast ? 2.2f : 1f);
             LifeOnHit = ItemStat(Stat.LifeOnHit);
             HealthRegen = 0.6f + Level * 0.12f + ItemStat(Stat.HealthRegen);
             ManaRegen = (2f + TotInt * 0.06f + ItemStat(Stat.ManaRegen)) * (1f + 0.12f * Tal("manafont"));
@@ -342,9 +343,10 @@ namespace Shadowfall
         public void AddXp(int amount)
         {
             if (amount <= 0) return;
-            Xp += amount;
             GameUI.Float(transform.position + Vector3.up * 2.9f, "+" + amount + " XP", new Color(0.75f, 0.5f, 1f), 0.9f);
-            while (Xp >= XpToNext)
+            if (Level >= ParagonBoard.MaxLevel) { AddParagonXp(amount); return; }
+            Xp += amount;
+            while (Xp >= XpToNext && Level < ParagonBoard.MaxLevel)
             {
                 Xp -= XpToNext;
                 Level++;
@@ -363,6 +365,42 @@ namespace Shadowfall
                 NetClient.I?.SendFx("levelup", transform.position, transform.position);
                 NetClient.I?.SaveNow();
             }
+            if (Level >= ParagonBoard.MaxLevel && Xp > 0)
+            {
+                // The level cap: what's left over starts the paragon levels.
+                int rest = Xp;
+                Xp = 0;
+                GameUI.Log("You have reached the highest level. From now on experience earns paragon levels (C).", ParagonBoard.Color);
+                AddParagonXp(rest);
+            }
+        }
+
+        void AddParagonXp(int amount)
+        {
+            int gained = Paragon.Add(amount);
+            if (gained <= 0) return;
+            Achievements.Max("paragon", Paragon.Level);
+            GameUI.Banner("PARAGON LEVEL " + Paragon.Level, ParagonBoard.Color);
+            Sfx.Play2D("levelup", 0.8f, 1.15f);
+            SpellFx.LevelUp(transform.position);
+            GameUI.Log("Paragon level " + Paragon.Level + "! You have " + Paragon.Free + " paragon point" + (Paragon.Free == 1 ? "" : "s") + " to spend (C).", ParagonBoard.Color);
+            NetClient.I?.SendFx("levelup", transform.position, transform.position);
+            NetClient.I?.SaveNow();
+        }
+
+        /// <summary>Puts a paragon point into Might, Toughness, Precision or Swiftness.</summary>
+        public void SpendParagon(int index)
+        {
+            if (!Paragon.Spend(index)) return;
+            RecalculateStats();
+            NetClient.I?.SaveSoon();
+        }
+
+        public void ResetParagon()
+        {
+            Paragon.Reset();
+            RecalculateStats();
+            NetClient.I?.SaveSoon();
         }
 
         bool ledgerLoaded;
@@ -784,7 +822,7 @@ namespace Shadowfall
         float BuffDamage { get { float m = 1f; foreach (var b in Buffs) m *= b.DamageMul; return m; } }
 
         /// <summary>Holy power for the Knight's spells (Strength and Intelligence both count).</summary>
-        public float HolyMultiplier => (1f + (TotStr + TotInt) / 80f) * (1f + (Level - 1) * 0.06f) * (1f + 0.06f * Tal("righteous")) * BuffDamage * (HasPower("set_lightbringer") ? 1.4f : 1f);
+        public float HolyMultiplier => (1f + (TotStr + TotInt) / 80f) * (1f + (Level - 1) * 0.06f) * (1f + 0.06f * Tal("righteous")) * BuffDamage * Paragon.Damage * (HasPower("set_lightbringer") ? 1.4f : 1f);
 
         float WeaponHit(float mul) => Random.Range(MinDamage, MaxDamage) * MeleeMultiplier * mul;
 
@@ -1671,6 +1709,7 @@ namespace Shadowfall
             return new SaveData
             {
                 level = Level, xp = Xp, look = Look,
+                paragon = Paragon.Level, paragonXp = Paragon.Xp, paragonPts = (int[])Paragon.Points.Clone(),
                 talents = SaveTalents(),
                 companion = ActiveCompanion ?? "", mount = ChosenMount ?? "", wv = WorldGenerator.LayoutVersion,
                 fog = Exploration.Save(),
@@ -1700,6 +1739,7 @@ namespace Shadowfall
             Xp = s.xp;
             Gold = s.gold;
             Strength = s.str; Dexterity = s.dex; Intelligence = s.intel; Vitality = s.vit;
+            Paragon.Load(s.paragon, s.paragonXp, s.paragonPts);
             StatPoints = s.statPoints;
             OwnedCompanions.Clear();
             if (s.companions != null)

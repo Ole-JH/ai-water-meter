@@ -25,7 +25,7 @@ namespace Shadowfall
         public int id;
         public string name;
         public float x, z, ry, hp, mhp;
-        public int lvl;
+        public int lvl, pl;    // pl: paragon level
         public bool mv, atk, dead;
         public string body, legs, weapon, helm, mdl, wk; // wk = weapon model kind
         public string cp;      // companion following them (id, empty = none)
@@ -127,7 +127,7 @@ namespace Shadowfall
     {
         public string t = "state";
         public float x, z, ry, hp, mhp, mp, mmp;
-        public int lvl;
+        public int lvl, pl;    // pl: paragon level
         public bool mv, atk, dead;
         public string body, legs, weapon, helm, mdl, wk; // wk = weapon model kind
         public string cp;      // active companion id
@@ -173,6 +173,8 @@ namespace Shadowfall
     public class SaveData
     {
         public int level, xp, gold, str, dex, intel, vit, statPoints;
+        public int paragon, paragonXp;  // paragon level and its experience (past ParagonBoard.MaxLevel)
+        public int[] paragonPts;        // points in Might, Toughness, Precision, Swiftness
         public string look;
         public string mount;       // the mount V calls
         public string[] talents;   // "id:rank"

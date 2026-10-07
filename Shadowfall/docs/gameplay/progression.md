@@ -13,6 +13,23 @@ Monsters and quests give XP. Each level grants **5 attribute points** (spend the
 
 Armor reduces incoming damage by `armor / (100 + armor)`.
 
+### Paragon levels
+
+**Level 30 is the highest.** From there on, experience fills **paragon levels** instead (the experience bar turns blue
+and shows them; 12,000 XP for the first, 300 more for each after). Each paragon level gives a **paragon point** to
+spend in the character window (++c++):
+
+| Paragon stat | Each point | Most points |
+| --- | --- | --- |
+| Might | +1% damage (weapon, spells and holy power) | 50 |
+| Toughness | +1% maximum life | 50 |
+| Precision | +0.25% critical hit chance | 50 |
+| Swiftness | +0.3% attack and movement speed | 50 |
+
+**Reset points** takes them all back, for free. Other players see your paragon level next to your level on your
+nameplate, for example *Ayla 30 (12)*. Three [achievements](achievements.md#hero), the last with the title *the Paragon*.
+Heroes who got past level 30 before the cap keep their level, and earn paragon levels from now on.
+
 ## Classes and abilities
 
 Your class is picked on the login screen when the character is **created** and stays with it. Each class has its own five abilities on ++1++–++5++; the right mouse button casts ability 2. Abilities unlock at levels 1, 1, 3, 5 and 8.

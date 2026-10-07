@@ -614,7 +614,7 @@ namespace Shadowfall
                 if (rp == null) continue;
                 if (!WorldToGui(rp.transform.position + Vector3.up * 2.45f, out var g)) continue;
                 bool mate = NetClient.I.IsPartyMember(rp.Id);
-                string plate = rp.Name + "  " + rp.Level + (rp.Dead ? "  (dead)" : "");
+                string plate = rp.Name + "  " + rp.Level + (rp.Paragon > 0 ? " (" + rp.Paragon + ")" : "") + (rp.Dead ? "  (dead)" : "");
                 UISkin.Shadowed(new Rect(g.x - 140, g.y - 22, 280, 22), plate, UISkin.SmallCenter,
                     mate ? new Color(0.45f, 1f, 0.5f) : new Color(0.5f, 0.78f, 1f));
                 if (!string.IsNullOrEmpty(rp.Title))
@@ -857,8 +857,12 @@ namespace Shadowfall
                 UISkin.Bar(new Rect(VW / 2 - 140, y0 - 96, 280, 18), p.RecallProgress, "Blue", "Recalling...", new Color(0.4f, 0.6f, 1f));
 
             // XP bar inside the action bar frame
-            UISkin.Bar(new Rect(x0, y0 + slot + 10, barW - 24, 16), (float)p.Xp / p.XpToNext, "Purple",
-                "Level " + p.Level + "   " + p.Xp + " / " + p.XpToNext + " XP", new Color(0.6f, 0.35f, 0.9f));
+            if (p.Level >= ParagonBoard.MaxLevel)
+                UISkin.Bar(new Rect(x0, y0 + slot + 10, barW - 24, 16), (float)p.Paragon.Xp / p.Paragon.XpToNext, "Blue",
+                    "Level " + p.Level + "  -  Paragon " + p.Paragon.Level + "   " + p.Paragon.Xp + " / " + p.Paragon.XpToNext + " XP", new Color(0.35f, 0.6f, 0.95f));
+            else
+                UISkin.Bar(new Rect(x0, y0 + slot + 10, barW - 24, 16), (float)p.Xp / p.XpToNext, "Purple",
+                    "Level " + p.Level + "   " + p.Xp + " / " + p.XpToNext + " XP", new Color(0.6f, 0.35f, 0.9f));
 
             // Gathering progress
             if (p.GatherNode != null)
@@ -1455,8 +1459,9 @@ namespace Shadowfall
 
         void DrawCharacter(Player p)
         {
-            var r = new Rect(14, 140, 470, 600);
-            if (UISkin.Window(r, p.DisplayName + "  -  Level " + p.Level + " " + p.Look)) showChar = false;
+            bool paragon = p.Level >= ParagonBoard.MaxLevel;
+            var r = new Rect(14, paragon ? 100 : 140, 470, paragon ? 790 : 600);
+            if (UISkin.Window(r, p.DisplayName + "  -  Level " + p.Level + (paragon ? " (Paragon " + p.Paragon.Level + ")" : "") + " " + p.Look)) showChar = false;
             Block(r);
 
             const float cell = 58;
@@ -1508,6 +1513,27 @@ namespace Shadowfall
                            "\nMove speed  <b>" + p.MoveSpeed.ToString("0.0") + "</b>";
             GUI.Label(new Rect(r.x + 28, y, 200, 100), left, UISkin.RichSmall);
             GUI.Label(new Rect(r.x + 240, y, 210, 100), right, UISkin.RichSmall);
+            if (paragon) DrawParagon(p, r, y + 104);
+        }
+
+        /// <summary>Paragon points (past the level cap): four rows with a + each, and a free reset.</summary>
+        void DrawParagon(Player p, Rect r, float y)
+        {
+            var pb = p.Paragon;
+            UISkin.Box(new Rect(r.x + 18, y - 6, r.width - 36, 176), UISkin.Inset);
+            UISkin.Shadowed(new Rect(r.x + 32, y, 300, 24), "Paragon " + pb.Level, UISkin.Heading, ParagonBoard.Color);
+            UISkin.Shadowed(new Rect(r.x + 180, y + 3, 260, 22), pb.Free > 0 ? "<b>" + pb.Free + "</b> point" + (pb.Free == 1 ? "" : "s") + " to spend" : "",
+                UISkin.V(UISkin.Small, alignment: TextAnchor.UpperRight), UISkin.Gold);
+            y += 30;
+            for (int i = 0; i < pb.Points.Length; i++)
+            {
+                UISkin.Shadowed(new Rect(r.x + 32, y + 2, 120, 26), ParagonBoard.Names[i], UISkin.Label, UISkin.Cream);
+                UISkin.Shadowed(new Rect(r.x + 140, y + 2, 70, 26), "<b>" + pb.Points[i] + "</b> / " + ParagonBoard.Cap, UISkin.Label, UISkin.Gold);
+                UISkin.Shadowed(new Rect(r.x + 216, y + 4, 180, 26), ParagonBoard.Effects[i] + " each", UISkin.Small, UISkin.Muted);
+                if (pb.Free > 0 && pb.Points[i] < ParagonBoard.Cap && UISkin.Btn(new Rect(r.xMax - 66, y, 34, 30), "+", UISkin.SquareButton)) p.SpendParagon(i);
+                y += 30;
+            }
+            if (pb.Spent > 0 && UISkin.Btn(new Rect(r.x + 32, y + 4, 130, 26), "Reset points", UISkin.Button)) p.ResetParagon();
         }
 
         void DrawEquipSlot(Player p, Rect r, EquipSlot slot, bool labelLeft)

@@ -2132,6 +2132,7 @@ const handlers = {
     s.mp = Math.max(0, Number(m.mp) || 0);
     s.mmp = Math.max(0, Number(m.mmp) || 0);
     s.lvl = Math.max(1, Math.min(100, parseInt(m.lvl, 10) || 1));
+    s.pl = Math.max(0, Math.min(100000, parseInt(m.pl, 10) || 0)); // paragon level
     if (m.dead && !s.dead) { M.deaths.inc(); deathPenalty(s); }
     s.mv = !!m.mv; s.atk = !!m.atk; s.dead = !!m.dead;
     s.look = { body: String(m.body || "").slice(0, 6), legs: String(m.legs || "").slice(0, 6), weapon: String(m.weapon || "").slice(0, 6), helm: String(m.helm || "").slice(0, 6),
@@ -2354,7 +2355,7 @@ function sendSnapshots(t) {
   // Players: the rarely-changing part gets a version; viewers get it again when it changes.
   for (const o of online) {
     const look = o.look || {};
-    const stat = `"name":${jstr(o.name)},"lvl":${o.lvl},"mhp":${Math.ceil(o.mhp || 1)},"body":${jstr(look.body || "")},"legs":${jstr(look.legs || "")},` +
+    const stat = `"name":${jstr(o.name)},"lvl":${o.lvl},"pl":${o.pl || 0},"mhp":${Math.ceil(o.mhp || 1)},"body":${jstr(look.body || "")},"legs":${jstr(look.legs || "")},` +
       `"weapon":${jstr(look.weapon || "")},"helm":${jstr(look.helm || "")},"mdl":${jstr(look.mdl || "Knight")},"wk":${jstr(look.wk || "")},` +
       `"cp":${jstr(look.cp || "")},"mt":${jstr(look.mt || "")},"ti":${jstr(look.ti || "")}`;
     if (stat !== o.snapStat) { o.snapStat = stat; o.snapVer = (o.snapVer || 0) + 1; }

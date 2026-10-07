@@ -364,12 +364,18 @@ async function economyTests(a, b) {
   assert.ok(inv().comp.includes("mount:horse"), "Orla sells mounts");
   state(a, 464.5, 464.5, { lvl: 10, mt: "horse" });
   assert.strictEqual(await seenMount(), "horse", "other players see the mount");
+  // Paragon levels (past the level cap) show on nameplates too.
+  const from = b.msgs.length;
+  state(a, 464.5, 464.5, { lvl: 30, pl: 7 });
+  await sleep(500);
+  const seenPl = b.msgs.slice(from).filter((m) => m.t === "snap").flatMap((m) => m.p || []).filter((x) => x.id === aId && "pl" in x).at(-1);
+  assert.ok(seenPl && seenPl.pl === 7 && seenPl.lvl === 30, "other players see the paragon level");
   state(b, 146, 187);
 
   // The forge: salvage gear into materials (gems come back), reforge one property for materials and gold.
   for (let i = 0; i < 3; i++) a.ws.send(JSON.stringify({ t: "adm", c: "give", what: "legendary" }));
   a.ws.send(JSON.stringify({ t: "adm", c: "give", what: "gems" }));
-  a.ws.send(JSON.stringify({ t: "adm", c: "give", what: "gold", n: 5000 }));
+  a.ws.send(JSON.stringify({ t: "adm", c: "give", what: "gold", n: 50000 }));
   await sleep(300);
   const legs = () => inv().bag.map((x, i) => [x, i]).filter(([x]) => x.Kind === 0 && x.Rarity === 3);
   assert.strictEqual(legs().length, 3, "three legendaries to work with");

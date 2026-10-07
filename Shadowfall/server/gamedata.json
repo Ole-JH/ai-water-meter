@@ -617,6 +617,18 @@
    "name": "Living Legend",
    "title": "the Legendary"
   },
+  "paragon_1": {
+   "name": "Beyond the Peak",
+   "title": ""
+  },
+  "paragon_25": {
+   "name": "Ascendant",
+   "title": ""
+  },
+  "paragon_100": {
+   "name": "Paragon",
+   "title": "the Paragon"
+  },
   "quests_10": {
    "name": "Helping Hand",
    "title": ""

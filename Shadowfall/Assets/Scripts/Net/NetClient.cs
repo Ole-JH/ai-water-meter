@@ -370,7 +370,7 @@ namespace Shadowfall
             Send(new StateMsg
             {
                 x = p.transform.position.x - Offset.x, z = p.transform.position.z - Offset.z, ry = p.transform.eulerAngles.y,
-                hp = p.Health, mhp = p.MaxHealth, mp = p.Mana, mmp = p.MaxMana, lvl = p.Level, mv = p.IsMoving, atk = p.IsAttacking, dead = p.IsDead,
+                hp = p.Health, mhp = p.MaxHealth, mp = p.Mana, mmp = p.MaxMana, lvl = p.Level, pl = p.Paragon.Level, mv = p.IsMoving, atk = p.IsAttacking, dead = p.IsDead,
                 body = p.BodyHex, legs = p.LegsHex, weapon = p.WeaponHex, helm = p.HelmHex, mdl = p.Look, wk = p.WeaponKind ?? "", cp = p.ActiveCompanion ?? "", mt = p.Riding != null ? p.Riding.Id : "", ti = p.Achievements.Title != null ? p.Achievements.TitleFrom : "",
             });
         }

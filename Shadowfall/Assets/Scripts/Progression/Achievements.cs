@@ -92,6 +92,9 @@ namespace Shadowfall
             new AchievementDef { Id = "level_10", Name = "Seasoned", Description = "Reach level 10.", Category = AchievementCategory.Hero, Icon = "ach_level", Points = 10, Stat = "level", Goal = 10 },
             new AchievementDef { Id = "level_20", Name = "Veteran Hero", Description = "Reach level 20.", Category = AchievementCategory.Hero, Icon = "ach_level", Points = 25, Stat = "level", Goal = 20 },
             new AchievementDef { Id = "level_30", Name = "Living Legend", Description = "Reach level 30.", Category = AchievementCategory.Hero, Icon = "ach_level", Points = 50, Stat = "level", Goal = 30, Title = "the Legendary" },
+            new AchievementDef { Id = "paragon_1", Name = "Beyond the Peak", Description = "Reach paragon level 1.", Category = AchievementCategory.Hero, Icon = "ach_level", Points = 10, Stat = "paragon", Goal = 1 },
+            new AchievementDef { Id = "paragon_25", Name = "Ascendant", Description = "Reach paragon level 25.", Category = AchievementCategory.Hero, Icon = "ach_level", Points = 25, Stat = "paragon", Goal = 25 },
+            new AchievementDef { Id = "paragon_100", Name = "Paragon", Description = "Reach paragon level 100.", Category = AchievementCategory.Hero, Icon = "ach_level", Points = 50, Stat = "paragon", Goal = 100, Title = "the Paragon" },
             new AchievementDef { Id = "quests_10", Name = "Helping Hand", Description = "Complete 10 quests.", Category = AchievementCategory.Hero, Icon = "ach_quest", Points = 10, Stat = "quests", Goal = 10 },
             new AchievementDef { Id = "quests_all", Name = "Hero of Hollowmere", Description = "Complete 24 quests.", Category = AchievementCategory.Hero, Icon = "ach_quest", Points = 25, Stat = "quests", Goal = 24, Title = "Hero of Hollowmere" },
             new AchievementDef { Id = "gold_1000", Name = "Well-Off", Description = "Have 1,000 gold.", Category = AchievementCategory.Hero, Icon = "ach_wealth", Points = 10, Stat = "gold", Goal = 1000 },
@@ -231,6 +234,7 @@ namespace Shadowfall
             int before = Earned.Count;
             quiet = !announce;
             Max("level", p.Level);
+            Max("paragon", p.Paragon.Level);
             foreach (SkillType s in System.Enum.GetValues(typeof(SkillType))) Max("skill." + s, p.Skills.Level(s));
             Max("quests", p.Quests.Completed.Count);
             Max("companions", p.OwnedCompanions.Count);

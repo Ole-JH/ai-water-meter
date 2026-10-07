@@ -24,6 +24,15 @@ namespace Shadowfall
         {
             new Entry
             {
+                Id = 30, Date = "2026-10-08", Title = "Paragon levels",
+                Items = new[]
+                {
+                    "Level 30 is now the highest level. Past it, experience earns paragon levels, each with a point for Might (damage), Toughness (life), Precision (critical hits) or Swiftness (attack and movement speed). Spend them in the character window (C); resetting them is free.",
+                    "Your paragon level shows next to your level on your nameplate. Three new achievements, the last with the title \"the Paragon\".",
+                },
+            },
+            new Entry
+            {
                 Id = 29, Date = "2026-10-08", Title = "Salvage & reforge",
                 Items = new[]
                 {

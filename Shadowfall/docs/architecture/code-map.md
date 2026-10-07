@@ -51,6 +51,7 @@
 | `World/DungeonSites.cs` | The four dungeons (`DungeonDef`: entrance, look, depths) and their entrances (`DungeonEntrance`) |
 | `World/WorldBoss.cs` | The client side of world bosses: which is up and where, the banner, the slam's numbers (tracker and map markers in `GameUI`) |
 | `World/Invasion.cs` | The client side of town invasions: state from the server, banners, the reward and achievements (tracker and map markers in `GameUI`) |
+| `Characters/Paragon.cs` | Paragon levels past the level cap: the points and what they give (Player uses them, the character window spends them) |
 | `Items/Forge.cs`, `UI/GameUI.Forge.cs` | Salvage & reforge at the blacksmiths: what it costs and gives (the server's `items.js` decides), and the window |
 | `Core/ErrorReporter.cs` | Sends the game's exceptions and errors to the server (`Plugins/WebGL/ShadowfallReport.jslib`, the page's `sfReport`) |
 | `Core/GameCheck.cs` | With `?sfcheck=1` only: the game plays a scripted session by itself for the [browser check](../development/testing.md#browser-check) |

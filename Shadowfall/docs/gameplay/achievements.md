@@ -96,6 +96,9 @@ exploration count from the day achievements arrived.
 | **Seasoned** | Reach level 10. | 10 |  |
 | **Veteran Hero** | Reach level 20. | 25 |  |
 | **Living Legend** | Reach level 30. | 50 | the Legendary |
+| **Beyond the Peak** | Reach paragon level 1. | 10 |  |
+| **Ascendant** | Reach paragon level 25. | 25 |  |
+| **Paragon** | Reach paragon level 100. | 50 | the Paragon |
 | **Helping Hand** | Complete 10 quests. | 10 |  |
 | **Hero of Hollowmere** | Complete 24 quests. | 25 | Hero of Hollowmere |
 | **Well-Off** | Have 1,000 gold. | 10 |  |
