@@ -633,7 +633,7 @@ namespace Shadowfall
                 {
                     seenMonsters.Add(nm.id);
                     if (Enemy.ById.TryGetValue(nm.id, out var e) && e != null) { if (!e.IsDead) e.ApplySnapshot(nm); }
-                    else Enemy.Spawn(nm);
+                    else if (!string.IsNullOrEmpty(nm.n)) Enemy.Spawn(nm); // (a partial entry for one we don't know: wait for the full one)
                 }
             // Remove monsters that left our area of interest (but let dying ones finish their animation).
             stale.Clear();
@@ -643,7 +643,11 @@ namespace Shadowfall
 
             if (m.p != null)
                 foreach (var np in m.p)
-                    if (np.id != MyId) RemotePlayer.Get(np).Apply(np);
+                {
+                    if (np.id == MyId) continue;
+                    if (RemotePlayer.ById.TryGetValue(np.id, out var known) && known != null) known.Apply(np);
+                    else if (!string.IsNullOrEmpty(np.name)) RemotePlayer.Get(np).Apply(np);
+                }
         }
 
         void HandleKill(NetMsg m)

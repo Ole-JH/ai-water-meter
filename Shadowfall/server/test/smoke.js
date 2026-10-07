@@ -61,6 +61,21 @@ function connect(name, pass, hash = HASH, cells = bytes, build = BUILD_A) {
   });
 }
 
+/**
+ * What a client knows from its snapshots, the way the game does it: full entries carry everything, later partial
+ * entries only what changes (position, health, flags), merged into the last full one. Returns the latest view.
+ */
+function view(c) {
+  const m = new Map(), p = new Map();
+  for (const snap of c.all("snap")) {
+    const seenM = new Set(), seenP = new Set();
+    for (const e of snap.m) { m.set(e.id, { ...(m.get(e.id) || {}), sl: false, st: false, sh: false, ...e }); seenM.add(e.id); }
+    for (const e of snap.p) { p.set(e.id, { ...(p.get(e.id) || {}), mv: false, atk: false, dead: false, ...e }); seenP.add(e.id); }
+  }
+  const last = c.all("snap").at(-1) || { m: [], p: [] };
+  return { m: last.m.map((e) => m.get(e.id)), p: last.p.map((e) => p.get(e.id)), allP: [...p.values()] };
+}
+
 /** A raw connection for the account tests: send() and wait for the next message of a type. */
 function rawClient() {
   return new Promise((resolve, reject) => {
@@ -355,9 +370,11 @@ async function main() {
     state(a, 144, 187);
     state(b, 145, 187);
     await sleep(1500);
-    const snap = a.all("snap").at(-1);
+    const snap = view(a);
     assert.ok(snap.m.length > 0, "snapshot contains monsters");
     assert.ok(snap.p.some((p) => p.name === "Bob"), "snapshot contains the other player");
+    const raw = a.all("snap").at(-1);
+    assert.ok(raw.m.every((x) => !("n" in x) || x.n) && raw.m.some((x) => !("n" in x)), "monsters seen recently come as partial entries (no type)");
     assert.ok(a.all("matk").length > 0, "monsters attack players");
 
     const wolf = snap.m.slice().sort((p, q) => Math.hypot(p.x - 144, p.z - 187) - Math.hypot(q.x - 144, q.z - 187))[0];
@@ -411,26 +428,44 @@ async function main() {
     assert.strictEqual(d.all("chat").find((m) => m.ch === "p")?.msg, "group up", "party chat reaches members");
     assert.strictEqual(d.find("qshare")?.k, "wolves", "quests can be shared with the party");
 
+    // ---- achievements: announced to the party once, and titles only for what you've earned
+    b.ws.send(JSON.stringify({ t: "ach", id: "first_blood" }));
+    b.ws.send(JSON.stringify({ t: "ach", id: "made_up_achievement" }));
+    await sleep(400);
+    b.ws.send(JSON.stringify({ t: "ach", id: "first_blood" }));
+    await sleep(200);
+    const achs = d.all("ach");
+    assert.ok(achs.length === 1 && achs[0].name === "Bob" && achs[0].k === "First Blood", "achievements are announced to the party, once, by name");
+    state(b, 145, 187, { ti: "boss_lich" });
+    await sleep(300);
+    assert.strictEqual(view(a).allP.find((x) => x.name === "Bob")?.ti, "", "titles you haven't earned are not shown");
+    b.ws.send(JSON.stringify({ t: "ach", id: "boss_lich" }));
+    await sleep(400);
+    state(b, 145, 187, { ti: "boss_lich" });
+    await sleep(300);
+    assert.strictEqual(view(a).allP.find((x) => x.name === "Bob")?.ti, "Lichbane", "an earned title is shown to everyone (the details are resent when they change)");
+    state(b, 145, 187);
+
     // Dana never hits the wolf but is nearby and in the party: she shares the kill.
-    const snap2 = b.all("snap").at(-1);
+    const snap2 = view(b);
     const wolf2 = snap2.m.filter((x) => x.id !== wolf.id).sort((p, q) => Math.hypot(p.x - 144, p.z - 187) - Math.hypot(q.x - 144, q.z - 187))[0];
     b.ws.send(JSON.stringify({ t: "hit", mid: wolf2.id, dmg: 999999 }));
     await sleep(300);
     assert.ok(d.all("kill").some((k) => k.mid === wolf2.id), "nearby party member shares kill credit");
 
     // ---- class abilities: stun (Shield Bash, Judgement) and vanish (Smoke Bomb)
-    const wolf3 = b.all("snap").at(-1).m.find((x) => x.id !== wolf.id && x.id !== wolf2.id);
+    const wolf3 = view(b).m.find((x) => x.id !== wolf.id && x.id !== wolf2.id);
     if (wolf3) {
       a.ws.send(JSON.stringify({ t: "stun", mid: wolf3.id, dur: 2 }));
       await sleep(250);
-      assert.ok(a.all("snap").at(-1).m.find((x) => x.id === wolf3.id)?.st, "stunned monsters are flagged in snapshots");
+      assert.ok(view(a).m.find((x) => x.id === wolf3.id)?.st, "stunned monsters are flagged in snapshots");
     }
     // ---- companions are shown to other players (unknown ids are dropped)
     state(a, 144, 187, { cp: "hound" });
     state(b, 145, 187, { cp: "dragon" });
     await sleep(300);
-    assert.strictEqual(b.all("snap").at(-1).p.find((x) => x.name === "Alice")?.cp, "hound", "companions are relayed");
-    assert.strictEqual(a.all("snap").at(-1).p.find((x) => x.name === "Bob")?.cp, "", "unknown companions are rejected");
+    assert.strictEqual(view(b).allP.find((x) => x.name === "Alice")?.cp, "hound", "companions are relayed");
+    assert.strictEqual(view(a).allP.find((x) => x.name === "Bob")?.cp, "", "unknown companions are rejected");
 
     // ---- trading between Alice and Bob (standing next to each other)
     const aliceId = a.find("welcome").id, bobId = b.find("welcome").id;
@@ -487,7 +522,7 @@ async function main() {
     a.ws.send(JSON.stringify({ t: "chat", msg: "/a spawn Goblin 7 3 elite" }));
     await sleep(300);
     assert.ok(a.all("sys").some((m) => /Spawned 3 Goblin \(level 7, elite\)/.test(m.msg)), "admins can spawn monsters from chat");
-    assert.ok(a.all("snap").at(-1).m.filter((x) => x.n === "Goblin" && x.el).length >= 3, "spawned elites show up");
+    assert.ok(view(a).m.filter((x) => x.n === "Goblin" && x.el).length >= 3, "spawned elites show up");
     a.ws.send(JSON.stringify({ t: "adm", c: "killall", r: 15 }));
     await sleep(300);
     assert.ok(a.all("kill").some((k) => k.name === "Goblin"), "killall gives kills");
@@ -532,7 +567,7 @@ async function main() {
     assert.ok(dg.rooms.length >= 4 * 4 && dg.start.length === 2, "the layout has rooms and a start");
     state(b, dg.start[0], dg.start[1]);
     await sleep(500);
-    const inside = b.all("snap").at(-1);
+    const inside = view(b);
     assert.match(a.all("party").at(-1).pm.find((x) => x.name === "Bob")?.dn || "", /^The Catacombs, level 1$/, "the party sees which dungeon a member is in");
     assert.ok(!inside.p.some((p) => p.name === "Alice"), "players in a dungeon don't see the overworld");
     b.ws.send(JSON.stringify({ t: "dleave" }));
@@ -628,7 +663,7 @@ async function main() {
       const e = await connect("Erin", "secret5", hash2, bytes2, BUILD_B); // the world was replaced above
       state(e, 144, 187);
       await sleep(1200);
-      const champ = e.all("snap").at(-1).m.find((m) => m.el);
+      const champ = view(e).m.find((m) => m.el);
       assert.ok(champ, "elite monsters appear in snapshots");
       assert.ok(champ.af.split(",").length >= 1, "elites have affixes");
       e.ws.send(JSON.stringify({ t: "hit", mid: champ.id, dmg: 999999 }));

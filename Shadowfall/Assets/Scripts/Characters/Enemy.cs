@@ -149,9 +149,12 @@ namespace Shadowfall
         public void ApplySnapshot(NetMonster m, bool snap = false)
         {
             LastSeen = Time.time;
-            Level = m.l;
-            armor = m.ar;
-            MaxHealth = m.mhp;
+            if (!string.IsNullOrEmpty(m.n)) // full entry (partial ones only carry what changes: position, health, flags)
+            {
+                Level = m.l;
+                armor = m.ar;
+                MaxHealth = m.mhp;
+            }
             // Keep our locally-predicted damage for a moment so health bars don't flicker back up.
             Health = Time.time - LastDamagedTime < 0.4f ? Mathf.Min(Health, m.hp) : m.hp;
             Slowed = m.sl;

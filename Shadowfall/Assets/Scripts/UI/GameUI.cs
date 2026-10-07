@@ -67,6 +67,8 @@ namespace Shadowfall
         void Awake()
         {
             I = this;
+            // Nothing here uses GUILayout: skip IMGUI's layout pass, which would run all of OnGUI once more per event.
+            useGUILayout = false;
             try
             {
                 loginName = PlayerPrefs.GetString("sf_name", "");
@@ -205,7 +207,7 @@ namespace Shadowfall
         void OnGUI()
         {
             UISkin.Init();
-            if (Event.current.type == EventType.Layout) blockRects.Clear();
+            if (Event.current.type == EventType.Repaint) blockRects.Clear(); // collected while painting, read by Update
             scale = Mathf.Max(0.4f, Screen.height / RefHeight * GameSettings.UiScale);
             VW = Screen.width / scale;
             VH = Screen.height / scale;
@@ -1812,7 +1814,10 @@ namespace Shadowfall
         // Helpers
         // =====================================================================================
 
-        void Block(Rect r) => blockRects.Add(r);
+        void Block(Rect r)
+        {
+            if (Event.current.type == EventType.Repaint) blockRects.Add(r);
+        }
 
         /// <summary>Returns the mouse button (0 = left, 1 = right) clicked inside r this event, or -1.</summary>
         int ClickedIn(Rect r)

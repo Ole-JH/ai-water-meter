@@ -569,7 +569,8 @@ const ADMIN_RESET_HOURS = 24;
 // block that address for 15 minutes. Registrations: 10 per address per hour.
 const accountLimit = new A.Limiter({ max: 5, windowMs: 10 * 60000, lockMs: 2 * 60000 });
 const ipLimit = new A.Limiter({ max: 25, windowMs: 15 * 60000, lockMs: 15 * 60000 });
-const registerLimit = new A.Limiter({ max: 10, windowMs: 60 * 60000, lockMs: 60 * 60000 });
+// New accounts per address per hour (REGISTER_LIMIT; raise it for a local load test).
+const registerLimit = new A.Limiter({ max: Number(process.env.REGISTER_LIMIT) || 10, windowMs: 60 * 60000, lockMs: 60 * 60000 });
 const forgotLimit = new A.Limiter({ max: 5, windowMs: 60 * 60000, lockMs: 60 * 60000 });
 setInterval(() => { for (const l of [accountLimit, ipLimit, registerLimit, forgotLimit]) l.prune(); }, 5 * 60000);
 
@@ -2192,32 +2193,83 @@ function tick() {
   updateSpawners(t);
   if (tickCount % 50 === 0) cleanupInstances(t);
 
-  const online = [...sessions.values()].filter((s) => s.inWorld);
-  // Each monster's snapshot entry is built once per tick and shared by every player who can see it.
-  const entries = new Map();
-  const entry = (m) => {
-    let e = entries.get(m.id);
+  sendSnapshots(t);
+}
+
+// Snapshots, 10 a second, are most of the server's work and traffic. To keep them small:
+//  - every entry is built once per tick as a JSON string and shared by everyone who can see it;
+//  - what rarely changes (a monster's type, level and armour; a player's name, level and looks) is only sent when it
+//    changed or when the viewer hasn't had that entry for FULL_EVERY ticks (it may have forgotten it), as a "full" entry;
+//  - things further away (FAR_MONSTER, FAR_PLAYER) are updated every other tick.
+// Clients keep the last full details and ignore partial entries for things they don't know yet.
+const FULL_EVERY = 8, FAR_MONSTER = 25, FAR_PLAYER = 30;
+const jstr = JSON.stringify;
+const flags = (o) => (o.sl ? ',"sl":true' : "") + (o.st ? ',"st":true' : "") + (o.sh ? ',"sh":true' : "") + (o.mv ? ',"mv":true' : "") +
+  (o.atk ? ',"atk":true' : "") + (o.dead ? ',"dead":true' : "");
+
+function sendSnapshots(t) {
+  const online = [];
+  for (const s of sessions.values()) if (s.inWorld) online.push(s);
+  const tk = tickCount;
+  const mon = new Map(); // id -> { part, full } JSON fragments
+  const monEntry = (m) => {
+    let e = mon.get(m.id);
     if (!e) {
-      e = { id: m.id, n: m.type, l: m.level, x: r2(m.x), z: r2(m.z), ry: Math.round(m.ry), hp: Math.ceil(m.hp), mhp: m.maxHp, ar: m.armor, sl: t < m.slowUntil, st: t < m.stunUntil,
-        ...(m.elite ? { el: m.elite.name, af: m.elite.affixes.join(","), sh: t < m.shieldUntil } : {}) };
-      entries.set(m.id, e);
+      const part = `{"id":${m.id},"x":${r2(m.x)},"z":${r2(m.z)},"ry":${Math.round(m.ry)},"hp":${Math.ceil(m.hp)}` +
+        flags({ sl: t < m.slowUntil, st: t < m.stunUntil, sh: m.elite && t < m.shieldUntil });
+      const stat = `"n":${jstr(m.type)},"l":${m.level},"mhp":${m.maxHp},"ar":${m.armor}` +
+        (m.elite ? `,"el":${jstr(m.elite.name)},"af":${jstr(m.elite.affixes.join(","))}` : "");
+      e = { part: part + "}", full: part + "," + stat + "}" };
+      mon.set(m.id, e);
     }
     return e;
   };
+  // Players: the rarely-changing part gets a version; viewers get it again when it changes.
+  for (const o of online) {
+    const look = o.look || {};
+    const stat = `"name":${jstr(o.name)},"lvl":${o.lvl},"mhp":${Math.ceil(o.mhp || 1)},"body":${jstr(look.body || "")},"legs":${jstr(look.legs || "")},` +
+      `"weapon":${jstr(look.weapon || "")},"helm":${jstr(look.helm || "")},"mdl":${jstr(look.mdl || "Knight")},"wk":${jstr(look.wk || "")},` +
+      `"cp":${jstr(look.cp || "")},"ti":${jstr(look.ti || "")}`;
+    if (stat !== o.snapStat) { o.snapStat = stat; o.snapVer = (o.snapVer || 0) + 1; }
+    const part = `{"id":${o.id},"x":${r2(o.x)},"z":${r2(o.z)},"ry":${Math.round(o.ry || 0)},"hp":${Math.ceil(o.hp || 0)}` + flags(o);
+    o.snapPart = part + "}";
+    o.snapFull = part + "," + stat + "}";
+  }
+
   for (const s of online) {
-    const ms = [];
     const inst = s.inst || 0;
+    if (s.snapInst !== inst || !s.sentMon) { s.snapInst = inst; s.sentMon = new Map(); s.sentPly = new Map(); } // a new space: everything anew
+    const sentMon = s.sentMon, sentPly = s.sentPly; // id -> tick last sent (players: and the details version)
+    const ms = [];
     for (const m of monsters.values()) {
-      if (m.inst !== inst || dist(m.x, m.z, s.x, s.z) > MONSTER_VIEW) continue;
-      ms.push(entry(m));
+      if (m.inst !== inst) continue;
+      const d = dist(m.x, m.z, s.x, s.z);
+      if (d > MONSTER_VIEW) continue;
+      const last = sentMon.get(m.id);
+      const stale = last === undefined || tk - last >= FULL_EVERY;
+      if (!stale && d > FAR_MONSTER && (tk + m.id) % 2) continue;
+      const e = monEntry(m);
+      ms.push(stale ? e.full : e.part);
+      sentMon.set(m.id, tk);
     }
     const ps = [];
     for (const o of online) {
-      if (o === s || (o.inst || 0) !== inst || dist(o.x, o.z, s.x, s.z) > PLAYER_VIEW) continue;
-      ps.push({ id: o.id, name: o.name, x: r2(o.x), z: r2(o.z), ry: Math.round(o.ry || 0), hp: Math.ceil(o.hp || 0), mhp: Math.ceil(o.mhp || 1),
-        lvl: o.lvl, mv: o.mv, atk: o.atk, dead: o.dead, ...(o.look || {}) });
+      if (o === s || (o.inst || 0) !== inst) continue;
+      const d = dist(o.x, o.z, s.x, s.z);
+      if (d > PLAYER_VIEW) continue;
+      const last = sentPly.get(o.id);
+      const stale = !last || last.ver !== o.snapVer || tk - last.tick >= FULL_EVERY;
+      if (!stale && d > FAR_PLAYER && (tk + o.id) % 2) continue;
+      ps.push(stale ? o.snapFull : o.snapPart);
+      if (stale) sentPly.set(o.id, { ver: o.snapVer, tick: tk });
+      else last.tick = tk;
     }
-    safeSend(s, JSON.stringify({ t: "snap", l: online.length, m: ms, p: ps }));
+    safeSend(s, `{"t":"snap","l":${online.length},"m":[${ms.join(",")}],"p":[${ps.join(",")}]}`);
+    // Forget what's long gone (monsters that died, players who left).
+    if (tk % 100 === 0) {
+      for (const [id, last] of sentMon) if (tk - last > 200) sentMon.delete(id);
+      for (const [id, last] of sentPly) if (tk - last.tick > 600 || !sessions.has(id)) sentPly.delete(id);
+    }
   }
 }
 

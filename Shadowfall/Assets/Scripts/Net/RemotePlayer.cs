@@ -61,18 +61,25 @@ namespace Shadowfall
         public void Apply(NetPlayer p)
         {
             LastSeen = Time.time;
-            Name = p.name;
-            Level = p.lvl;
-            Title = p.ti;
             Health = p.hp;
-            MaxHealth = Mathf.Max(1f, p.mhp);
             Dead = p.dead;
             moving = p.mv;
             netPos = new Vector3(p.x, 0, p.z);
             netRy = p.ry;
+            bool full = !string.IsNullOrEmpty(p.name); // partial entries carry only what changes every tick
+            if (full)
+            {
+                Name = p.name;
+                Level = p.lvl;
+                Title = p.ti;
+                MaxHealth = Mathf.Max(1f, p.mhp);
+            }
 
-            string mdl = string.IsNullOrEmpty(p.mdl) ? CharacterLook.HeroModels[0] : p.mdl;
-            if (mdl != modelName) BuildModel(mdl);
+            if (full)
+            {
+                string mdl = string.IsNullOrEmpty(p.mdl) ? CharacterLook.HeroModels[0] : p.mdl;
+                if (mdl != modelName) BuildModel(mdl);
+            }
 
             if (p.atk && !wasAttacking)
             {
@@ -85,6 +92,7 @@ namespace Shadowfall
             if (!Dead && wasDead) view?.Revive();
             wasDead = Dead;
 
+            if (!full) return;
             string cp = p.cp ?? "";
             if (cp != companionId)
             {
