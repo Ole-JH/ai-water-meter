@@ -30,6 +30,7 @@ SKELETON = ["Idle", "Idle_Combat", "Walking_A", "Running_A", "1H_Melee_Attack_Ch
 BLOB = ["Idle", "Walk", "Bite_Front", "HitRecieve", "Death"]
 BIG = ["Idle", "Walk", "Run", "Punch", "Weapon", "HitReact", "Death"]
 WOLF = ["Idle", "Walk", "Gallop", "Attack", "Death", "Idle_HitReact1"]
+MOUNT = ["Idle", "Walk", "Gallop", "Idle_HitReact1", "Eating"]
 KENNEY_CHAR = ["idle", "walk", "sprint", "attack-melee-right", "die", "interact-right", "emote-yes"]
 
 QN = "quaternius-nature"   # Quaternius Stylized Nature MegaKit (CC0), textures processed by nature.py
@@ -74,6 +75,10 @@ MODELS = [
     ("Monsters/GoblinShaman", "Wizard.gltf", "Blob", BLOB),
     ("Monsters/Warchief", "Orc.gltf", "Big", BIG),
     ("Monsters/Golem", "Yeti.gltf", "Big", BIG),
+    # --- Mounts (Quaternius Ultimate Animated Animals, CC0)
+    ("Mounts/Horse", "Horse.gltf", "Animated Animals", MOUNT),
+    ("Mounts/HorseWhite", "Horse_White.gltf", "Animated Animals", MOUNT),
+    ("Mounts/Stag", "Stag.gltf", "Animated Animals", MOUNT),
     # --- Weapons (KayKit)
     ("Weapons/Sword", "sword_1handed.gltf", "adventures", None),
     ("Weapons/Axe", "axe_1handed.gltf", "adventures", None),

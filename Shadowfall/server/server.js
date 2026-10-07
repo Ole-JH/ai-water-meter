@@ -1863,8 +1863,9 @@ const itemOps = {
   hire(s, m) {
     const id = String(m.k || ""), c = I.GAMEDATA.companions[id];
     if (!c || s.ledger.companions.includes(id)) return false;
+    const mount = id.startsWith("mount:");
     if (!inTownNow(s)) return ierr(s, "hire", "Beastmaster Orla is in Hollowmere.");
-    if (s.lvl < c.level) return ierr(s, "hire", `They won't follow anyone below level ${c.level}.`);
+    if (s.lvl < c.level) return ierr(s, "hire", mount ? `You need to be level ${c.level} to ride that.` : `They won't follow anyone below level ${c.level}.`);
     if (s.ledger.gold < c.price) return ierr(s, "hire", `You need ${c.price} gold.`);
     s.ledger.gold -= c.price;
     s.ledger.companions.push(id);
@@ -2033,6 +2034,7 @@ const handlers = {
       mdl: HERO_MODELS.includes(m.mdl) ? m.mdl : "Knight",
       wk: ["sword", "axe", "mace", "dagger", "staff"].includes(m.wk) ? m.wk : "",
       cp: COMPANIONS.includes(m.cp) ? m.cp : "",
+      mt: !s.inst && typeof m.mt === "string" && m.mt && s.ledger && s.ledger.companions.includes("mount:" + m.mt) ? m.mt : "", // only mounts they own
       ti: titleOf(s, m.ti) };
   },
 
@@ -2233,7 +2235,7 @@ function sendSnapshots(t) {
     const look = o.look || {};
     const stat = `"name":${jstr(o.name)},"lvl":${o.lvl},"mhp":${Math.ceil(o.mhp || 1)},"body":${jstr(look.body || "")},"legs":${jstr(look.legs || "")},` +
       `"weapon":${jstr(look.weapon || "")},"helm":${jstr(look.helm || "")},"mdl":${jstr(look.mdl || "Knight")},"wk":${jstr(look.wk || "")},` +
-      `"cp":${jstr(look.cp || "")},"ti":${jstr(look.ti || "")}`;
+      `"cp":${jstr(look.cp || "")},"mt":${jstr(look.mt || "")},"ti":${jstr(look.ti || "")}`;
     if (stat !== o.snapStat) { o.snapStat = stat; o.snapVer = (o.snapVer || 0) + 1; }
     const part = `{"id":${o.id},"x":${r2(o.x)},"z":${r2(o.z)},"ry":${Math.round(o.ry || 0)},"hp":${Math.ceil(o.hp || 0)}` + flags(o);
     o.snapPart = part + "}";

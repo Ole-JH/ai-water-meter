@@ -386,6 +386,18 @@
   "golem": {
    "price": 5000,
    "level": 15
+  },
+  "mount:horse": {
+   "price": 1500,
+   "level": 8
+  },
+  "mount:warhorse": {
+   "price": 6000,
+   "level": 15
+  },
+  "mount:stag": {
+   "price": 15000,
+   "level": 20
   }
  },
  "achievements": {
@@ -544,6 +556,14 @@
   "waystones_all": {
    "name": "Attuned",
    "title": ""
+  },
+  "mount_first": {
+   "name": "Saddled Up",
+   "title": ""
+  },
+  "mount_all": {
+   "name": "Stable Master",
+   "title": "the Rider"
   },
   "waystone_trips": {
    "name": "Frequent Traveller",

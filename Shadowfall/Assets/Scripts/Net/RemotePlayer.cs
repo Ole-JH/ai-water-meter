@@ -25,6 +25,8 @@ namespace Shadowfall
         CharacterView view;        // animated model
         Companion companion;       // cosmetic follower
         string companionId = "";
+        MountRig mount;            // the horse they ride, if any
+        string mountId = "";
 
         public static RemotePlayer Get(NetPlayer p)
         {
@@ -40,6 +42,7 @@ namespace Shadowfall
 
         void BuildModel(string mdl)
         {
+            SetMount("");          // the rig holds the old rider model
             modelName = mdl;
             appearance = null;
             if (view != null) Destroy(view.Root);
@@ -93,6 +96,7 @@ namespace Shadowfall
             wasDead = Dead;
 
             if (!full) return;
+            SetMount(Dead ? "" : p.mt ?? "");
             string cp = p.cp ?? "";
             if (cp != companionId)
             {
@@ -119,6 +123,15 @@ namespace Shadowfall
             if (!string.IsNullOrEmpty(p.helm)) model.HelmRenderer.sharedMaterial = Mat.Get(Parse(p.helm, Color.gray));
         }
 
+        void SetMount(string id)
+        {
+            if (id == mountId) return;
+            mountId = id;
+            mount?.Remove();
+            var def = MountDef.Get(id);
+            mount = def != null ? new MountRig(transform, view, def) : null;
+        }
+
         static Color Parse(string hex, Color fallback) =>
             !string.IsNullOrEmpty(hex) && ColorUtility.TryParseHtmlString("#" + hex, out var c) ? c : fallback;
 
@@ -138,7 +151,8 @@ namespace Shadowfall
 
             if (view != null)
             {
-                view.UpdateLocomotion(moveSpeed);
+                if (mount != null) mount.Tick(moveSpeed);
+                else view.UpdateLocomotion(moveSpeed);
                 return;
             }
             if (model == null) return;

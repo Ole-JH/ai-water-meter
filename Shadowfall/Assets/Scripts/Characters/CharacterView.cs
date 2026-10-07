@@ -41,6 +41,13 @@ namespace Shadowfall
             Cast = "Attack", Shoot = "Attack", Attacks = new[] { "Attack" }
         };
 
+        /// <summary>Quaternius horses and stag (the mounts).</summary>
+        public static readonly AnimSet Mount = new AnimSet
+        {
+            Idle = "Idle", Walk = "Walk", Run = "Gallop", Hit = "Idle_HitReact1", Interact = "Eating",
+            Cast = "Idle", Shoot = "Idle", Attacks = new[] { "Idle" }
+        };
+
         public static readonly AnimSet Kenney = new AnimSet
         {
             Idle = "idle", Walk = "walk", Run = "sprint", Death = "die", Interact = "interact-right", Cheer = "emote-yes",

@@ -121,6 +121,20 @@ Companions grow 12% stronger per hero level, follow you into dungeons, attack wh
 
 Each companion carries its own gear (the squire's helm and shield, the witch's hat and staff, the ranger's crossbow, the acolyte's wand and spellbook) and has its own look in a fight: fire in the witch's hand, light motes around the acolyte, glowing runes on the golem, and a different effect for every attack. See [Art & UI → Companions](../development/art.md#companions).
 
+## Mounts
+
+Orla also sells mounts, listed under her companions. Buy one once, then press ++v++ anywhere outside a dungeon to ride
+it (and again to get off). The one you picked last is the one ++v++ calls.
+
+| Mount | Price | Level | Speed |
+| --- | --- | --- | --- |
+| Riding Horse | 1500 | 8 | +60% |
+| White Charger | 6000 | 15 | +75% |
+| Frostpeak Stag | 15000 | 20 | +90% |
+
+You can't mount within 4 seconds of being hit. Attacking, casting, gathering, taking a hit or entering a dungeon throws
+you off. Other players see you riding (the server only shows a mount you own).
+
 ## Stash
 
 The stash chest by the village square holds 40 items and is saved with your character. Click it to open it; right-click items in your bags to store them and click stashed items to take them back.

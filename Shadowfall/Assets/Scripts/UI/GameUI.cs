@@ -1632,7 +1632,7 @@ namespace Shadowfall
             GUI.Label(new Rect(r.x + 28, r.y + 58, 544, r.height - 110),
                 "<b>Combat</b>\n" +
                 "Left-click the ground to move (hold to keep walking). Left-click a monster to attack it; Shift+click attacks in place.\n" +
-                "<b>1-5</b> your class's abilities (right-click casts ability 2),  <b>Q / E</b> health / mana potions,  <b>R</b> recall to town (and back),  " +
+                "<b>1-5</b> your class's abilities (right-click casts ability 2),  <b>Q / E</b> health / mana potions,  <b>R</b> recall to town (and back),  <b>V</b> mount / dismount,  " +
                 "<b>Alt</b> shows every item on the ground,  mouse wheel zooms.\n\n" +
                 "<b>Windows</b>\n" +
                 "<b>I</b> bags   <b>C</b> character   <b>T</b> talents   <b>K</b> skills   <b>L</b> quests   <b>Y</b> achievements   <b>M</b> map   <b>Enter</b> chat   <b>Esc</b> close / game menu\n" +
@@ -1684,7 +1684,7 @@ namespace Shadowfall
         void DrawDialog(Player p)
         {
             var npc = dialogNpc;
-            float height = npc.Role == NpcRole.Vendor && npc.Shop != null && npc.Shop.Kind == VendorKind.Companions ? 250 + CompanionDef.All.Length * 80
+            float height = npc.Role == NpcRole.Vendor && npc.Shop != null && npc.Shop.Kind == VendorKind.Companions ? 290 + CompanionDef.All.Length * 80 + MountDef.All.Length * 62
                 : npc.Role == NpcRole.Vendor && npc.Shop != null ? 330 + npc.Shop.Items.Count * 54 + (npc.Shop.Kind == VendorKind.Curios ? 54 : 0)
                 : npc.Role == NpcRole.QuestGiver ? QuestDialogHeight(npc) : 520;
             var r = new Rect(14, 120, 470, Mathf.Min(height, VH - 140));

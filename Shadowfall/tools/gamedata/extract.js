@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Extracts the game data the server needs (quest rewards, companion prices, achievement names and titles) from the C# sources into
+// Extracts the game data the server needs (quest rewards, companion and mount prices, achievement names and titles) from the C# sources into
 // server/gamedata.json, so the server and the client always agree.
 //   node tools/gamedata/extract.js          writes server/gamedata.json
 //   node tools/gamedata/extract.js --check  exits 1 if server/gamedata.json is out of date (the smoke test runs this)
@@ -43,6 +43,11 @@ function extract() {
   for (const b of blocks(read("Assets/Scripts/Characters/Companion.cs"), "CompanionDef")) {
     const id = str(b, "Id");
     if (id) companions[id] = { price: num(b, "Price"), level: num(b, "RequiredLevel", 1) };
+  }
+  // Mounts are bought the same way, under "mount:<id>".
+  for (const b of blocks(read("Assets/Scripts/Characters/Mount.cs"), "MountDef")) {
+    const id = str(b, "Id");
+    if (id) companions["mount:" + id] = { price: num(b, "Price"), level: num(b, "RequiredLevel", 1) };
   }
   const achievements = {};
   for (const b of blocks(read("Assets/Scripts/Progression/Achievements.cs"), "AchievementDef")) {

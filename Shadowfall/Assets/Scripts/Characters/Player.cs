@@ -29,6 +29,11 @@ namespace Shadowfall
         /// <summary>Companions hired from Beastmaster Orla (ids), and the one following us (null = none).</summary>
         public readonly List<string> OwnedCompanions = new List<string>();
         public string ActiveCompanion { get; private set; }
+        /// <summary>Mounts bought from Orla (ids), the one V calls, and the one ridden right now (null on foot).</summary>
+        public readonly List<string> OwnedMounts = new List<string>();
+        public string ChosenMount;
+        public MountDef Riding => mountRig?.Def;
+        MountRig mountRig;
         public Companion CompanionInstance { get; private set; }
         float whirlUntil, nextWhirlTick, leapT = -1f;
         ParticleSystem leapTrail;
@@ -95,6 +100,7 @@ namespace Shadowfall
         /// <summary>Builds (or rebuilds) the hero's model: an animated KayKit character, or primitives as a fallback.</summary>
         public void SetLook(string look)
         {
+            Dismount(); // the rider's model is about to be replaced
             Look = System.Array.IndexOf(CharacterLook.HeroModels, look) >= 0 ? look : CharacterLook.HeroModels[0];
             Kit = ClassKits.For(Look);
             var st = ClassKits.StartingStats(Look);
@@ -378,8 +384,14 @@ namespace Shadowfall
                 foreach (var it in worn)
                     if (Real(it) != null && it.Slot != EquipSlot.None) Inventory.Equipped[it.Slot] = it;
             OwnedCompanions.Clear();
+            OwnedMounts.Clear();
             if (companions != null)
-                foreach (var c in companions) if (CompanionDef.Get(c) != null && !OwnedCompanions.Contains(c)) OwnedCompanions.Add(c);
+                foreach (var c in companions)
+                {
+                    if (CompanionDef.Get(c) != null && !OwnedCompanions.Contains(c)) OwnedCompanions.Add(c);
+                    if (c.StartsWith("mount:") && MountDef.Get(c.Substring(6)) != null && !OwnedMounts.Contains(c.Substring(6))) OwnedMounts.Add(c.Substring(6));
+                }
+            if (Riding != null && !OwnedMounts.Contains(Riding.Id)) Dismount();
             Inventory.NotifyChanged(); // recalculates stats
             if (ledgerLoaded) { Achievements.Max("gold", Gold); Achievements.Max("companions", OwnedCompanions.Count); }
             else Achievements.CatchUp(this, false); // what an older hero already had counts, quietly
@@ -430,7 +442,9 @@ namespace Shadowfall
                 atk = attackAnim;
                 if (attackAnim >= 1f) attackAnim = -1f;
             }
-            if (view != null) view.UpdateLocomotion(currentSpeed);
+            if (mountRig != null && (Dungeon.Active || action == Action.Gather)) Dismount();
+            if (mountRig != null) mountRig.Tick(currentSpeed);
+            else if (view != null) view.UpdateLocomotion(currentSpeed);
             else model?.Animate(Mathf.Clamp01(currentSpeed / MoveSpeed), atk, dt);
             Footsteps(currentSpeed, dt);
             if (castAnim >= 0f)
@@ -533,6 +547,7 @@ namespace Shadowfall
             if (GameInput.Down(GKey.Alpha4)) CastAbility(3, MouseGround);
             if (GameInput.Down(GKey.Alpha5)) CastAbility(4, MouseGround);
             if (GameInput.Down(GKey.R)) Recall();
+            if (GameInput.Down(GKey.V)) ToggleMount();
             if (GameInput.Down(GKey.Q)) UseItemByName("Health Potion");
             if (GameInput.Down(GKey.E)) UseItemByName("Mana Potion");
         }
@@ -686,7 +701,8 @@ namespace Shadowfall
             if (path.Count == 0 || Time.time < castLockUntil) return;
             Vector3 target = path[0];
             Vector3 to = Factory.Flat(target - transform.position);
-            float step = MoveSpeed * SnowSlow * dt;
+            float mounted = Riding != null ? Riding.Speed : 1f;
+            float step = MoveSpeed * SnowSlow * mounted * dt;
             if (to.magnitude <= step)
             {
                 transform.position = new Vector3(target.x, 0f, target.z);
@@ -696,7 +712,7 @@ namespace Shadowfall
             {
                 transform.position += to.normalized * step;
             }
-            currentSpeed = MoveSpeed * SnowSlow;
+            currentSpeed = MoveSpeed * SnowSlow * mounted;
             if (to.sqrMagnitude > 0.0001f)
                 transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(to), dt * 15f);
         }
@@ -704,6 +720,7 @@ namespace Shadowfall
         void PerformAttack(Combatant target, Vector3 point)
         {
             if (Whirling) return; // the spin does the hitting
+            Dismount();
             nextAttackTime = Time.time + 1f / Mathf.Max(0.2f, AttackSpeed);
             AnimAttack();
             Factory.Face(transform, point);
@@ -843,6 +860,7 @@ namespace Shadowfall
                 return;
             }
             if (Time.time < CooldownEnd[index] || Time.time < globalCooldownEnd) return;
+            Dismount();
             if (Mana < a.ManaCost)
             {
                 if (!silent || Time.frameCount % 30 == 0) GameUI.Float(transform.position + Vector3.up * 2.5f, "Not enough mana", new Color(0.4f, 0.6f, 1f), 0.8f);
@@ -1348,6 +1366,56 @@ namespace Shadowfall
 
         public void ResetRecallCooldown() => recallReadyAt = 0f;
 
+        // =====================================================================================
+        // Mounts
+        // =====================================================================================
+
+        /// <summary>V: call your mount, or get off it. Not in dungeons, not mid-fight; attacking, casting, gathering or taking a hit dismounts.</summary>
+        public void ToggleMount()
+        {
+            if (mountRig != null) { Dismount(); return; }
+            if (IsDead) return;
+            string id = ChosenMount != null && OwnedMounts.Contains(ChosenMount) ? ChosenMount : OwnedMounts.Count > 0 ? OwnedMounts[OwnedMounts.Count - 1] : null;
+            string why = id == null ? "You have no mount. Beastmaster Orla in Hollowmere sells them."
+                : Dungeon.Active ? "You can't ride in here."
+                : Time.time - LastDamagedTime < 4f ? "Not while you're fighting."
+                : null;
+            if (why != null) { GameUI.Float(transform.position + Vector3.up * 2.5f, why, Color.gray, 0.85f); return; }
+            Mount(id);
+        }
+
+        public void Mount(string id)
+        {
+            var def = MountDef.Get(id);
+            if (def == null || !OwnedMounts.Contains(id) || Dungeon.Active || IsDead) return;
+            if (mountRig != null) mountRig.Remove();
+            StopGathering();
+            CancelRecall(null);
+            ChosenMount = id;
+            mountRig = new MountRig(transform, view, def);
+            Achievements.Once("mounted", id);
+            NetClient.I?.SendStateNow();
+        }
+
+        public void Dismount()
+        {
+            if (mountRig == null) return;
+            mountRig.Remove();
+            mountRig = null;
+            NetClient.I?.SendStateNow();
+        }
+
+        public bool OwnsMount(string id) => OwnedMounts.Contains(id);
+
+        public void BuyMount(MountDef def)
+        {
+            if (OwnsMount(def.Id)) return;
+            if (Level < def.RequiredLevel) { GameUI.Log(def.Name + " won't carry anyone below level " + def.RequiredLevel + ".", new Color(1f, 0.5f, 0.4f)); return; }
+            if (Gold < def.Price) { GameUI.Log("You need " + def.Price + " gold.", new Color(1f, 0.5f, 0.4f)); return; }
+            ChosenMount = def.Id;
+            NetClient.I?.Op("hire", k: def.LedgerId); // it's yours when the server takes the gold
+        }
+
         void CancelRecall(string why)
         {
             if (recallStart < 0f) return;
@@ -1603,7 +1671,7 @@ namespace Shadowfall
             {
                 level = Level, xp = Xp, look = Look,
                 talents = SaveTalents(),
-                companion = ActiveCompanion ?? "", wv = WorldGenerator.LayoutVersion,
+                companion = ActiveCompanion ?? "", mount = ChosenMount ?? "", wv = WorldGenerator.LayoutVersion,
                 fog = Exploration.Save(),
                 news = NewsSeen,
                 str = Strength, dex = Dexterity, intel = Intelligence, vit = Vitality, statPoints = StatPoints,
@@ -1681,6 +1749,7 @@ namespace Shadowfall
             Health = s.hp > 0 ? Mathf.Min(s.hp, MaxHealth) : MaxHealth;
             Mana = Mathf.Min(s.mana, MaxMana);
             if (!string.IsNullOrEmpty(s.companion) && OwnedCompanions.Contains(s.companion)) SummonCompanion(s.companion, true);
+            ChosenMount = string.IsNullOrEmpty(s.mount) ? null : s.mount;
         }
 
         // =====================================================================================
@@ -1716,6 +1785,11 @@ namespace Shadowfall
         protected override void OnDamaged(Combatant source, int amount)
         {
             CancelRecall("Recall interrupted");
+            if (mountRig != null && amount > 0)
+            {
+                Dismount();
+                GameUI.Float(transform.position + Vector3.up * 2.5f, "Knocked off your mount!", new Color(1f, 0.6f, 0.4f), 0.9f);
+            }
             if (action == Action.Gather) StopGathering();
             CameraRig.Shake(Mathf.Clamp(amount / MaxHealth, 0.05f, 0.3f));
             Sfx.Play(amount > MaxHealth * 0.12f ? "hit_heavy" : "hit_armor", transform.position + Vector3.up, 0.55f, 0.1f);
@@ -1727,6 +1801,7 @@ namespace Shadowfall
         protected override void Die(Combatant killer)
         {
             CancelRecall(null);
+            Dismount();
             path.Clear();
             action = Action.None;
             AttackTarget = null;

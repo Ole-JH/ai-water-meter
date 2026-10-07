@@ -80,6 +80,8 @@ exploration count from the day achievements arrived.
 | **World Walker** | Visit every zone and town, the outer lands included: Frostpeak, the Sunscar Badlands, the Ashen Reach, Pinecrest, Frosthaven, Saltreach and Emberwatch. | 50 | the World Walker |
 | **Attuned** | Attune to the waystones of Pinecrest, Frosthaven, Saltreach and Emberwatch. | 25 |  |
 | **Frequent Traveller** | Travel by waystone 25 times. | 10 |  |
+| **Saddled Up** | Ride a mount. | 10 |  |
+| **Stable Master** | Ride all three mounts: the Riding Horse, the White Charger and the Frostpeak Stag. | 25 | the Rider |
 
 ### Hero
 

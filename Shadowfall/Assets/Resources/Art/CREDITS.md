@@ -15,7 +15,7 @@ required, but these creators deserve it:
 | [Fantasy Town Kit](https://kenney.nl/assets/fantasy-town-kit) | Kenney | Market stalls, carts, fences, lanterns, fountain |
 | [Graveyard Kit](https://kenney.nl/assets/graveyard-kit) | Kenney | Gravestones, crypts, iron fences, zombie |
 | [Ultimate Monsters](https://quaternius.com/packs/ultimatemonsters.html) | Quaternius | Goblins, goblin shaman, warchief, golem |
-| [Ultimate Animated Animals](https://quaternius.com/packs/ultimateanimatedanimals.html) | Quaternius | Dire wolves |
+| [Ultimate Animated Animals](https://quaternius.com/packs/ultimateanimatedanimals.html) | Quaternius | Dire wolves; the mounts (horses, stag) |
 
 The files were repacked (unused animations removed, textures embedded and scaled down, foliage masks coloured) by
 `tools/art/build_art.py` and `tools/art/nature.py`.

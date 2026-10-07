@@ -52,7 +52,49 @@ namespace Shadowfall
                               "Hire once, then summon any of yours here for free. One at a time.</color>";
                 y += 80;
             }
+            y = DrawMountShop(p, r, y + 4);
             GUI.Label(new Rect(r.x + 26, y + 4, 420, 24), "You have <color=#f0c45a><b>" + p.Gold + " gold</b></color>.", UISkin.Ink14);
+        }
+
+        /// <summary>Orla's mounts: buy once, then press V anywhere outside dungeons to ride the one chosen here.</summary>
+        float DrawMountShop(Player p, Rect r, float y)
+        {
+            UISkin.Shadowed(new Rect(r.x + 26, y, 420, 28), "Mounts  <size=13><color=#b8a88c>press V to ride</color></size>", UISkin.Heading, UISkin.Gold);
+            y += 34;
+            foreach (var def in MountDef.All)
+            {
+                bool owned = p.OwnsMount(def.Id), chosen = owned && p.ChosenMount == def.Id, locked = p.Level < def.RequiredLevel;
+                var row = new Rect(r.x + 18, y, r.width - 36, 58);
+                if (chosen)
+                {
+                    GUI.color = new Color(0.95f, 0.8f, 0.5f, 0.15f);
+                    GUI.DrawTexture(row, UISkin.White);
+                    GUI.color = Color.white;
+                }
+                GUI.Label(new Rect(row.x + 8, row.y + 2, 300, 24), "<b>" + def.Name + "</b>  <size=13><color=#b8a88c>+" + Mathf.RoundToInt((def.Speed - 1f) * 100f) + "% speed</color></size>", UISkin.InkRich);
+                string sub = owned ? (chosen ? "<color=#7fe07a>Your mount</color>" : "<color=#8fb8ff>In your stable</color>")
+                    : locked ? "<color=#ff7a5c>Requires level " + def.RequiredLevel + "</color>"
+                    : "<color=#f0c45a><b>" + def.Price + "</b> gold</color>";
+                GUI.Label(new Rect(row.x + 8, row.y + 28, 300, 22), sub, UISkin.Ink14);
+                var b = new Rect(row.xMax - 100, row.y + 10, 96, 38);
+                if (owned)
+                {
+                    GUI.enabled = !chosen || p.Riding == null;
+                    if (UISkin.Btn(b, chosen ? "Ride" : "Choose", UISkin.Button)) { p.ChosenMount = def.Id; if (chosen || p.Riding != null) p.Mount(def.Id); }
+                    GUI.enabled = true;
+                }
+                else
+                {
+                    GUI.enabled = !locked && p.Gold >= def.Price;
+                    if (UISkin.Btn(b, "Buy", UISkin.Button)) p.BuyMount(def);
+                    GUI.enabled = true;
+                }
+                if (row.Contains(Event.current.mousePosition))
+                    tooltip = "<b>" + def.Name + "</b>\n" + def.Description +
+                              "\n\n<color=#999999>Press V to mount and dismount. Not in dungeons; attacking, casting, gathering or taking a hit throws you off.</color>";
+                y += 62;
+            }
+            return y;
         }
 
         /// <summary>A small portrait of the companion with its current target, under the hero frame.</summary>

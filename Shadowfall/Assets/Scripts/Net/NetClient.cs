@@ -360,6 +360,9 @@ namespace Shadowfall
             nextSave = Time.time + 20f;
         }
 
+        /// <summary>Sends our state right away (mounting shows to others without waiting for the next tick).</summary>
+        public void SendStateNow() { if (State == ConnState.InWorld) SendState(); }
+
         void SendState()
         {
             var p = Player.I;
@@ -368,7 +371,7 @@ namespace Shadowfall
             {
                 x = p.transform.position.x - Offset.x, z = p.transform.position.z - Offset.z, ry = p.transform.eulerAngles.y,
                 hp = p.Health, mhp = p.MaxHealth, mp = p.Mana, mmp = p.MaxMana, lvl = p.Level, mv = p.IsMoving, atk = p.IsAttacking, dead = p.IsDead,
-                body = p.BodyHex, legs = p.LegsHex, weapon = p.WeaponHex, helm = p.HelmHex, mdl = p.Look, wk = p.WeaponKind ?? "", cp = p.ActiveCompanion ?? "", ti = p.Achievements.Title != null ? p.Achievements.TitleFrom : "",
+                body = p.BodyHex, legs = p.LegsHex, weapon = p.WeaponHex, helm = p.HelmHex, mdl = p.Look, wk = p.WeaponKind ?? "", cp = p.ActiveCompanion ?? "", mt = p.Riding != null ? p.Riding.Id : "", ti = p.Achievements.Title != null ? p.Achievements.TitleFrom : "",
             });
         }
 

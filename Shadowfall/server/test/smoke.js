@@ -347,6 +347,25 @@ async function economyTests(a, b) {
   await iop("stash", { i: slotOf("Health Potion") });
   assert.ok((inv().stash || []).some((x) => x && x.Name === "Health Potion"), "Emberwatch has a stash chest");
 
+  // Mounts: bought like companions (as "mount:<id>"), and others only see a mount its rider owns.
+  const aId = a.find("welcome").id;
+  const seenMount = async () => {
+    const from = b.msgs.length;
+    await sleep(500);
+    const entries = b.msgs.slice(from).filter((m) => m.t === "snap").flatMap((m) => m.p || []).filter((x) => x.id === aId && "mt" in x);
+    return entries.length ? entries.at(-1).mt : undefined;
+  };
+  state(b, 466, 466);
+  state(a, 464.5, 464.5, { lvl: 10, mt: "horse" });
+  assert.strictEqual(await seenMount(), "", "nobody rides a mount they don't own");
+  a.ws.send(JSON.stringify({ t: "adm", c: "give", what: "gold", n: 2000 }));
+  await sleep(150);
+  await iop("hire", { k: "mount:horse" });
+  assert.ok(inv().comp.includes("mount:horse"), "Orla sells mounts");
+  state(a, 464.5, 464.5, { lvl: 10, mt: "horse" });
+  assert.strictEqual(await seenMount(), "horse", "other players see the mount");
+  state(b, 146, 187);
+
   state(a, 144, 187);
   await sleep(150);
 }
@@ -598,7 +617,9 @@ async function main() {
     state(b, dg.start[0], dg.start[1]);
     await sleep(500);
     const inside = view(b);
-    assert.match(a.all("party").at(-1).pm.find((x) => x.name === "Bob")?.dn || "", /^The Catacombs, level 1$/, "the party sees which dungeon a member is in");
+    const bobWhere = () => a.all("party").at(-1).pm.find((x) => x.name === "Bob")?.dn || "";
+    for (let i = 0; i < 15 && !bobWhere(); i++) await sleep(100); // party frames update once a second
+    assert.match(bobWhere(), /^The Catacombs, level 1$/, "the party sees which dungeon a member is in");
     assert.ok(!inside.p.some((p) => p.name === "Alice"), "players in a dungeon don't see the overworld");
     b.ws.send(JSON.stringify({ t: "dleave" }));
     await sleep(300);

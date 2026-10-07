@@ -29,6 +29,7 @@ namespace Shadowfall
         public bool mv, atk, dead;
         public string body, legs, weapon, helm, mdl, wk; // wk = weapon model kind
         public string cp;      // companion following them (id, empty = none)
+        public string mt;      // mount they ride (id, empty = on foot)
         public string ti;      // title worn under their name (empty = none)
     }
 
@@ -109,6 +110,7 @@ namespace Shadowfall
         public bool mv, atk, dead;
         public string body, legs, weapon, helm, mdl, wk; // wk = weapon model kind
         public string cp;      // active companion id
+        public string mt;      // mount ridden (id, empty = on foot; the server checks we own it)
         public string ti;      // the achievement whose title we wear (the server checks we earned it)
     }
 
@@ -151,6 +153,7 @@ namespace Shadowfall
     {
         public int level, xp, gold, str, dex, intel, vit, statPoints;
         public string look;
+        public string mount;       // the mount V calls
         public string[] talents;   // "id:rank"
         public float x, z, hp, mana;
         public int[] skillXp;

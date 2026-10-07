@@ -93,6 +93,17 @@ namespace Shadowfall
                     break;
                 case "hire":
                 {
+                    if (m.k != null && m.k.StartsWith("mount:"))
+                    {
+                        var md = MountDef.Get(m.k.Substring(6));
+                        if (md == null) break;
+                        if (!p.OwnedMounts.Contains(md.Id)) p.OwnedMounts.Add(md.Id);
+                        Sfx.Play2D("coins", 0.6f);
+                        GameUI.Log("The " + md.Name + " is yours. Press V to ride.", new Color(0.95f, 0.8f, 0.5f));
+                        p.Mount(md.Id);
+                        SaveNow();
+                        break;
+                    }
                     var def = CompanionDef.Get(m.k);
                     if (def == null) break;
                     if (!p.OwnedCompanions.Contains(def.Id)) p.OwnedCompanions.Add(def.Id); // the inventory update follows
