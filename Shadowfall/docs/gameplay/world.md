@@ -1,9 +1,9 @@
 # The world
 
-The map is 576 × 576 tiles. The original lands fill its south-west quarter, with the walled village of **Hollowmere** (57 × 57 tiles) at their centre; the [outer lands](#the-outer-lands) lie north and east of them. Cobbled cross streets lead from the four gates to the central plaza with the well. Each quarter is its own district:
+The map is 576 × 576 tiles. The original lands fill its south-west quarter, with the walled village of **Hollowmere** (57 × 57 tiles) at their centre; the [outer lands](#the-outer-lands) lie north and east of them. Cobbled cross streets lead from the four gates to the central plaza with its fountain (and the old well beside it). Each quarter is its own district:
 
 - **North-west:** the Prancing Boar tavern (Innkeeper Rosie), the windmill, and Forester Wren by the north gate.
-- **North-east:** the church with Sister Mae, Jenkins, and Captain Aldric at the north gate; the fountain sits on the north street.
+- **North-east:** the church with Sister Mae, Jenkins, and Captain Aldric at the north gate.
 - **South-west:** the market hall with Merchant Lysa and Curio Dealer Vex's stalls, and Thomas's fenced farm.
 - **South-east:** the smithy (Smith Gorrin, Weaponsmith Hilda, Armorer Brann), the training yard and Beastmaster Orla's animal pen.
 

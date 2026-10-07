@@ -285,7 +285,7 @@ namespace Shadowfall
                 Prop("lights-colored", 130.5f + i * 2f, 137.6f, 1.9f, 0f, ArtLibrary.Fit.Width, 2.2f);
                 Glow(new Vector3(130.5f + i * 2f, 2.2f, 137.8f), i % 2 == 0 ? new Color(1f, 0.4f, 0.35f) : new Color(0.4f, 1f, 0.5f), 3f, 0.9f, 0.2f);
             }
-            Prop("wreath-decorated", 144.5f, 160.5f, 0.9f, 0f, ArtLibrary.Fit.Height, 1.2f);
+            Prop("wreath-decorated", 144.5f, 144.5f, 0.9f, 0f, ArtLibrary.Fit.Height, 1.2f);
             // The elves who keep the streets clear.
             ElfCrew.Create(root);
         }
