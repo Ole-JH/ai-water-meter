@@ -74,6 +74,9 @@ Three dashboards are provisioned in the **Shadowfall** folder; the first is Graf
 - **Server health**: simulation tick time (p50/p95/p99), event loop lag, errors, memory, CPU, network, messages per second.
 - **Database**: PostgreSQL up, database size, connections, transactions per second (commits, rollbacks), rows inserted,
   updated and deleted per second (from postgres-exporter).
+- **World & combat** also has town invasions by town and result.
+- **Players' games**: errors players' browsers and games reported, per 10 minutes by kind, and the reports themselves (see
+  [client errors](#client-errors) below).
 - **Logs**: the game server's log, with a search box at the top. Server restarts are marked on every graph.
 
 **Node Exporter Full** ([grafana.com 1860](https://grafana.com/grafana/dashboards/1860)): everything about the host.
@@ -105,6 +108,8 @@ The game server exports these (all prefixed `shadowfall_`):
 | `messages_received_total` | counter | `type` (protocol message type) |
 | `messages_sent_total`, `sent_bytes_total`, `received_bytes_total` | counter | |
 | `handler_errors_total` | counter | `type` |
+| `client_errors_total` | counter | `kind` (load, js, exception, error: see [client errors](#client-errors)) |
+| `invasions_total` | counter | `town`, `result` (won, lost) |
 | `character_saves_total` | counter | `result` (ok, error) |
 | `tick_duration_seconds` | histogram | |
 
@@ -117,6 +122,22 @@ The metrics endpoint is off unless `METRICS_PORT` is set (Docker Compose sets it
 To add a metric, define it next to the others in `server.js` (`M.*` for counters and histograms, `metrics.gauge(...)` for values
 read at scrape time), then add a panel in the dashboard generator.
 
+## Client errors
+
+Players' browsers report what goes wrong on their side to the server (`POST /client-error`), which writes each report as
+one `client error [kind] ...` line in its log (so they are in Loki) and counts them in `shadowfall_client_errors_total`:
+
+| Kind | What |
+| --- | --- |
+| `load` | The loading screen showed an error: the game files are missing or didn't download, WebGL is off, Unity failed to start |
+| `js` | A script error or unhandled promise rejection in the page |
+| `exception` | The game threw an exception (C#), with its stack and where the hero was |
+| `error` | The game logged an error |
+
+Each line has the build, how long after the page loaded it happened, the message, the stack and the browser. A page reports
+each message once and at most 20 in all, and the server takes at most 30 reports a minute from one address. The browser
+check (`?sfcheck=1`) doesn't report: it fails the check instead.
+
 ## Alerts
 
 `server/monitoring/prometheus/alerts.yml` defines:
@@ -127,6 +148,7 @@ read at scrape time), then add a panel in the dashboard generator.
 | `ShadowfallSlowTick` | 95% of world ticks take more than 50 ms for 5 minutes |
 | `ShadowfallEventLoopLag` | The event loop is blocked for more than 100 ms (p99) for 5 minutes |
 | `ShadowfallHandlerErrors` | A client message caused an exception in the last 10 minutes |
+| `ShadowfallClientExceptions` | More than 10 load failures or game exceptions reported by players in 15 minutes |
 | `ShadowfallSaveErrors` | A character could not be saved (is the database down?) |
 | `ShadowfallLoginAttack` | More than 100 wrong passwords or locked-out attempts in 15 minutes (someone may be guessing passwords; see the [account events](accounts.md#sql)) |
 | `ShadowfallHighMemory` | The game server uses more than 1.5 GB for 10 minutes |

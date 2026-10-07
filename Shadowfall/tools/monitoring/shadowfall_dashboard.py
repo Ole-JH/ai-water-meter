@@ -151,6 +151,18 @@ ts("Rows written per second", [('rate(pg_stat_database_tup_inserted{datname="sha
                                ('rate(pg_stat_database_tup_deleted{datname="shadowfall"}[2m])', "deleted")], 16, w=8)
 y += 8
 
+# ---------------------------------------------------------------- players' games
+row("Players' games")
+ts("Client errors (per 10 min)", [("sum by (kind) (increase(shadowfall_client_errors_total[10m]))", "{{kind}}")], 0, w=8, bars=True,
+   desc="Errors players' browsers and games reported: load = the page couldn't start the game, js = browser script errors, exception = the game threw, error = the game logged an error. Each message counts once per page load.")
+panels.append({
+    "type": "logs", "title": "Client errors", "id": nid(), "datasource": LOKI,
+    "gridPos": {"h": 8, "w": 16, "x": 8, "y": y},
+    "targets": [{"refId": "A", "expr": '{service="shadowfall"} |= "client error" |~ "(?i)$search"', "datasource": LOKI}],
+    "options": {"showTime": True, "wrapLogMessage": True, "sortOrder": "Descending", "enableLogDetails": True},
+})
+y += 8
+
 # ---------------------------------------------------------------- logs
 row("Logs")
 panels.append({

@@ -2357,7 +2357,7 @@
   },
   {
    "type": "row",
-   "title": "Logs",
+   "title": "Players' games",
    "id": 45,
    "collapsed": false,
    "gridPos": {
@@ -2369,9 +2369,108 @@
    "panels": []
   },
   {
+   "type": "timeseries",
+   "title": "Client errors (per 10 min)",
+   "id": 46,
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "description": "Errors players' browsers and games reported: load = the page couldn't start the game, js = browser script errors, exception = the game threw, error = the game logged an error. Each message counts once per page load.",
+   "gridPos": {
+    "h": 8,
+    "w": 8,
+    "x": 0,
+    "y": 112
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "expr": "sum by (kind) (increase(shadowfall_client_errors_total[10m]))",
+     "legendFormat": "{{kind}}",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     }
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short",
+     "custom": {
+      "drawStyle": "bars",
+      "fillOpacity": 60,
+      "lineWidth": 2,
+      "showPoints": "never",
+      "stacking": {
+       "mode": "none",
+       "group": "A"
+      },
+      "gradientMode": "opacity"
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom",
+     "showLegend": true
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   }
+  },
+  {
+   "type": "logs",
+   "title": "Client errors",
+   "id": 47,
+   "datasource": {
+    "type": "loki",
+    "uid": "loki"
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 16,
+    "x": 8,
+    "y": 112
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "expr": "{service=\"shadowfall\"} |= \"client error\" |~ \"(?i)$search\"",
+     "datasource": {
+      "type": "loki",
+      "uid": "loki"
+     }
+    }
+   ],
+   "options": {
+    "showTime": true,
+    "wrapLogMessage": true,
+    "sortOrder": "Descending",
+    "enableLogDetails": true
+   }
+  },
+  {
+   "type": "row",
+   "title": "Logs",
+   "id": 48,
+   "collapsed": false,
+   "gridPos": {
+    "h": 1,
+    "w": 24,
+    "x": 0,
+    "y": 120
+   },
+   "panels": []
+  },
+  {
    "type": "logs",
    "title": "Server log",
-   "id": 46,
+   "id": 49,
    "datasource": {
     "type": "loki",
     "uid": "loki"
@@ -2380,7 +2479,7 @@
     "h": 12,
     "w": 24,
     "x": 0,
-    "y": 112
+    "y": 121
    },
    "targets": [
     {

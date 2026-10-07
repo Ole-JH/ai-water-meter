@@ -37,6 +37,7 @@ namespace Shadowfall
         void Awake()
         {
             I = this;
+            ErrorReporter.Install();               // players' exceptions to the server (logs, Grafana)
             Application.targetFrameRate = 60;
             Application.runInBackground = true; // keep the connection alive in a background tab/window
 

@@ -206,7 +206,26 @@
     }
     requestAnimationFrame(frame);
 
+    // Errors go to the server (POST /client-error), which logs and counts them (Grafana: Shadowfall dashboard).
+    // The game reports its own exceptions through this too (ShadowfallReport.jslib). Each message once per page,
+    // at most 20; the browser check (?sfcheck=1) doesn't report: it has its own report.
+    var started = Date.now(), reported = {}, reportCount = 0, checking = location.search.indexOf("sfcheck=1") >= 0;
+    window.sfReport = function (kind, msg, stack) {
+      try {
+        msg = String(msg || "").slice(0, 500);
+        if (checking || !msg || reported[kind + msg] || reportCount >= 20) return;
+        reported[kind + msg] = 1; reportCount++;
+        var body = JSON.stringify({ kind: kind, msg: msg, stack: String(stack || "").slice(0, 2000),
+          build: {{{ JSON.stringify(PRODUCT_VERSION) }}}, ua: navigator.userAgent.slice(0, 200), page: (Date.now() - started) / 1000 | 0 });
+        if (navigator.sendBeacon) navigator.sendBeacon("client-error", new Blob([body], { type: "application/json" }));
+        else fetch("client-error", { method: "POST", body: body, headers: { "Content-Type": "application/json" }, keepalive: true });
+      } catch (e) {}
+    };
+    window.addEventListener("error", function (e) { sfReport("js", e.message, e.error && e.error.stack ? e.error.stack : (e.filename || "") + ":" + (e.lineno || 0)); });
+    window.addEventListener("unhandledrejection", function (e) { var r = e.reason || {}; sfReport("js", r.message || String(r), r.stack); });
+
     function fail(message) {
+      sfReport("load", message);
       document.getElementById("panel").classList.add("loading-failed");
       document.getElementById("errmsg").textContent = message;
       clearInterval(tipTimer);

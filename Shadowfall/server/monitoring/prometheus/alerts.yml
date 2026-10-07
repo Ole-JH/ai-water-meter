@@ -27,6 +27,12 @@ groups:
         annotations:
           summary: The game server threw errors while handling client messages
           description: "Look for 'handler error' in the server logs (Grafana: Shadowfall dashboard, Server log panel)."
+      - alert: ShadowfallClientExceptions
+        expr: sum(increase(shadowfall_client_errors_total{kind=~"exception|load"}[15m])) > 10
+        labels: { severity: warning }
+        annotations:
+          summary: Players' games are failing to load or throwing exceptions
+          description: "Each message counts once per page load, so this is many players or many different errors. See the Client errors panel on the Shadowfall dashboard."
       - alert: ShadowfallLoginAttack
         expr: sum(increase(shadowfall_logins_total{result=~"bad_password|locked"}[15m])) > 100
         labels: { severity: warning }

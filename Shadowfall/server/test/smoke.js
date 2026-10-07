@@ -461,6 +461,15 @@ async function main() {
       "healthz reports players online, monsters and the build (the dashboard shows them)");
     const page = await fetch(`http://localhost:${PORT}/`);
     assert.strictEqual(page.status, 200, "index page served");
+    // Errors from players' games: logged and counted, at most 30 a minute from one address.
+    const report = (body) => fetch(`http://localhost:${PORT}/client-error`, { method: "POST", headers: { "Content-Type": "application/json" }, body });
+    assert.strictEqual((await report(JSON.stringify({ kind: "exception", msg: "NullReferenceException: boom\nsecond line", stack: "at Foo.Bar()", build: BUILD_A, ua: "test", page: 12 }))).status, 204, "client errors are accepted");
+    await report("not json");
+    await sleep(100);
+    assert.match(serverLog, /client error \[exception\] build 2026\.10\.07-090000, 12 s after loading: NullReferenceException: boom \| second line \|\| at Foo\.Bar\(\)/, "client errors are logged on one line");
+    let limited = 0;
+    for (let i = 0; i < 32; i++) if ((await report(JSON.stringify({ kind: "js", msg: "x" + i }))).status === 429) limited++;
+    assert.ok(limited >= 2, "client error reports are rate limited");
 
     const a = await connect("Alice", "secret1");
     assert.ok(a.find("needworld"), "first client is asked for the world");
@@ -611,6 +620,8 @@ async function main() {
     const metric = (name) => { const m = prom.match(new RegExp(`^${name} (\\S+)$`, "m")); return m ? Number(m[1]) : NaN; };
     assert.strictEqual(metric("shadowfall_players_online"), 3, "metrics count players online (Alice, Bob, Dana)");
     assert.strictEqual(metric("shadowfall_trades_completed_total"), 1, "metrics count completed trades");
+    assert.match(prom, /^shadowfall_client_errors_total\{kind="exception"\} 1$/m, "metrics count client errors by kind");
+    assert.match(prom, /^shadowfall_client_errors_total\{kind="load"\} 0$/m, "client error kinds start at zero");
     assert.match(prom, /^shadowfall_logins_total\{result="new"\} 3$/m, "metrics count new characters");
     assert.match(prom, /^shadowfall_messages_received_total\{type="hello"\} \d+$/m, "metrics count messages by type");
     assert.match(prom, /^shadowfall_tick_duration_seconds_count \d+$/m, "metrics time the simulation tick");

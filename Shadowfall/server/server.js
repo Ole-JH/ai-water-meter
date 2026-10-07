@@ -68,8 +68,36 @@ const MIME = {
   ".unityweb": "application/octet-stream", ".txt": "text/plain",
 };
 
+// Errors from players' browsers and games (index.html's sfReport, ErrorReporter.cs): logged as one line each
+// ("client error ..." in Loki) and counted by kind (load, js, exception, error). At most 30 a minute per address.
+const CLIENT_ERROR_KINDS = new Set(["load", "js", "exception", "error"]);
+const clientErrorBudget = new Map(); // ip -> { n, until }
+function clientError(req, res) {
+  const ip = String((TRUST_PROXY && req.headers["x-forwarded-for"]) || req.socket.remoteAddress || "").split(",")[0].trim();
+  const t = Date.now(), b = clientErrorBudget.get(ip);
+  if (!b || t > b.until) clientErrorBudget.set(ip, { n: 1, until: t + 60000 });
+  else if (++b.n > 30) { req.resume(); res.writeHead(429); return res.end(); }
+  if (clientErrorBudget.size > 5000) clientErrorBudget.clear();
+  let body = "";
+  req.setEncoding("utf8");
+  req.on("data", (d) => { body += d; if (body.length > 8192) req.destroy(); });
+  req.on("end", () => {
+    res.writeHead(204);
+    res.end();
+    let e;
+    try { e = JSON.parse(body); } catch { return; }
+    const kind = CLIENT_ERROR_KINDS.has(e && e.kind) ? e.kind : "other";
+    const clean = (v, n) => String(v || "").replace(/[\r\n]+/g, " | ").replace(/[^\x20-\x7e\u00a0-\uffff]/g, "").slice(0, n);
+    M.clientErrors.inc({ kind });
+    const page = Number.isFinite(e.page) ? `, ${Math.round(e.page)} s after loading` : "";
+    log(`client error [${kind}] build ${clean(e.build, 24) || "?"}${page}: ${clean(e.msg, 500)}` +
+      (e.stack ? ` || ${clean(e.stack, 1200)}` : "") + ` || ${clean(e.ua, 160)}`);
+  });
+}
+
 const server = http.createServer((req, res) => {
   const url = new URL(req.url, "http://localhost");
+  if (url.pathname === "/client-error" && req.method === "POST") return clientError(req, res);
   if (url.pathname === "/healthz") {
     res.writeHead(200, { "Content-Type": "application/json" });
     let online = 0, dungeons = 0;
@@ -700,11 +728,13 @@ const M = {
   dungeonEntries: metrics.counter("shadowfall_dungeon_entries_total", "Players entering a dungeon level, by dungeon and difficulty."),
   admin: metrics.counter("shadowfall_admin_commands_total", "Admin commands run, by command."),
   saves: metrics.counter("shadowfall_character_saves_total", "Character files written, by result."),
+  clientErrors: metrics.counter("shadowfall_client_errors_total", "Errors reported by players' browsers and games, by kind: load (the page couldn't start the game), js (browser script errors), exception (the game threw), error (the game logged an error)."),
   invasions: metrics.counter("shadowfall_invasions_total", "Town invasions that ended, by town and result (won = beaten off, lost = the town was sacked)."),
   tick: metrics.histogram("shadowfall_tick_duration_seconds", "Time spent in one simulation tick.", [0.001, 0.0025, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25]),
 };
 // Start at zero so dashboards show a flat line rather than "no data" until the first event.
 M.deaths.inc(undefined, 0);
+for (const kind of CLIENT_ERROR_KINDS) M.clientErrors.inc({ kind }, 0);
 M.trades.inc(undefined, 0);
 M.bytesIn.inc(undefined, 0);
 M.bytesOut.inc(undefined, 0);
