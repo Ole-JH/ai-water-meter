@@ -8,6 +8,7 @@
 | Stop | `task down` |
 | Logs | `task logs` |
 | Status and health | `task ps` |
+| Dashboards, metrics, logs, alerts | Grafana on <http://localhost:3000>, see [Monitoring](monitoring.md) |
 | Back up characters | `task backup` → `backups/shadowfall-data-<timestamp>.tar.gz` |
 | Release a new client build | `task deploy` (Unity build + container rebuild) |
 

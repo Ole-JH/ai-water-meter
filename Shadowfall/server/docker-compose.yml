@@ -14,7 +14,108 @@ services:
       # Comma-separated character names with admin rights (admin panel: F10 in game, or /a in chat).
       # Set it in server/.env, e.g.  ADMINS=Kissmypiss
       ADMINS: ${ADMINS:-}
+      # Prometheus metrics on a private port (only reachable from the monitoring containers).
+      METRICS_PORT: "9464"
+    expose:
+      - "9464"
     stop_grace_period: 10s
+
+  # ---------------------------------------------------------------- monitoring
+  # Grafana on http://localhost:3000 (GRAFANA_PORT), dashboards: Shadowfall, Node Exporter Full, cAdvisor.
+  # See docs/deployment/monitoring.md. Leave it out with:  docker compose up -d shadowfall
+
+  prometheus:
+    image: prom/prometheus:v3.13.4
+    container_name: shadowfall-prometheus
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=${PROMETHEUS_RETENTION:-30d}
+      - --web.enable-lifecycle
+    volumes:
+      - ./monitoring/prometheus:/etc/prometheus:ro
+      - prometheus-data:/prometheus
+    ports:
+      - "127.0.0.1:${PROMETHEUS_PORT:-9090}:9090"
+
+  alertmanager:
+    image: prom/alertmanager:v0.34.1
+    container_name: shadowfall-alertmanager
+    restart: unless-stopped
+    command: ["--config.file=/etc/alertmanager/alertmanager.yml", "--storage.path=/alertmanager"]
+    volumes:
+      - ./monitoring/alertmanager:/etc/alertmanager:ro
+      - alertmanager-data:/alertmanager
+    ports:
+      - "127.0.0.1:${ALERTMANAGER_PORT:-9093}:9093"
+
+  grafana:
+    image: grafana/grafana:13.2.3
+    container_name: shadowfall-grafana
+    restart: unless-stopped
+    depends_on: [prometheus, loki]
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /var/lib/grafana/dashboards/shadowfall.json
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    ports:
+      - "${GRAFANA_BIND:-0.0.0.0}:${GRAFANA_PORT:-3000}:3000"
+
+  loki:
+    image: grafana/loki:3.7.8
+    container_name: shadowfall-loki
+    restart: unless-stopped
+    command: ["-config.file=/etc/loki/loki.yml"]
+    volumes:
+      - ./monitoring/loki/loki.yml:/etc/loki/loki.yml:ro
+      - loki-data:/loki
+
+  alloy:
+    image: grafana/alloy:v1.20.1
+    container_name: shadowfall-alloy
+    restart: unless-stopped
+    depends_on: [loki]
+    command: ["run", "--storage.path=/var/lib/alloy/data", "/etc/alloy/config.alloy"]
+    volumes:
+      - ./monitoring/alloy/config.alloy:/etc/alloy/config.alloy:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+
+  node-exporter:
+    image: prom/node-exporter:v1
+    container_name: shadowfall-node-exporter
+    restart: unless-stopped
+    pid: host
+    command:
+      - --path.procfs=/host/proc
+      - --path.sysfs=/host/sys
+      - --path.rootfs=/host/root
+      - --collector.filesystem.mount-points-exclude=^/(dev|proc|sys|run|var/lib/docker/.+)($$|/)
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/host/root:ro,rslave
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.55.1
+    container_name: shadowfall-cadvisor
+    restart: unless-stopped
+    privileged: true
+    devices:
+      - /dev/kmsg
+    command: ["--docker_only=true", "--housekeeping_interval=15s", "--store_container_labels=true"]
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
 
   # Builds the Unity WebGL client in Docker and writes it to ./public (no local Unity needed).
   # Only runs on demand: task client:build   (or: docker compose --profile build run --rm client-builder)
@@ -55,3 +156,11 @@ services:
 volumes:
   unity-library:
     name: shadowfall-unity-library
+  prometheus-data:
+    name: shadowfall-prometheus-data
+  alertmanager-data:
+    name: shadowfall-alertmanager-data
+  grafana-data:
+    name: shadowfall-grafana-data
+  loki-data:
+    name: shadowfall-loki-data

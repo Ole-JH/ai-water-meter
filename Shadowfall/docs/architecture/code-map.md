@@ -68,8 +68,10 @@
 | `server.js` | Static file host, WebSocket sessions, accounts, world grid and A*, monster AI (slows, stuns, vanished heroes), elites, parties, trades, dungeon instances, admin commands, snapshots, persistence |
 | `content.js` | Monster stats, spawner table, dungeons (`DUNGEONS`), global `BALANCE`, dungeon `DIFFICULTIES`, town safe-zone rectangle, spawn point |
 | `dungeon.js` | Dungeon level generators: rooms and corridors (`generate`) and natural caverns (`generateCaves`), with start, stairs, boss, chests and packs |
+| `metrics.js` | Dependency-free Prometheus metrics (counters, histograms, scrape-time gauges, process metrics), served on `METRICS_PORT` |
 | `test/smoke.js` | End-to-end test with fake clients |
-| `Dockerfile`, `docker-compose.yml` | Container build and run |
+| `Dockerfile`, `docker-compose.yml` | Container build and run, plus the monitoring stack |
+| `monitoring/` | Prometheus (scrape config, alert rules), Alertmanager, Loki, Alloy and Grafana provisioning and dashboards ([Monitoring](../deployment/monitoring.md)) |
 
 ## Tools (`tools/`)
 
@@ -78,6 +80,7 @@
 | `compile-check/` | .NET project that compiles `Assets/Scripts` without Unity (`task client:check`) |
 | `docker-build-client.sh` | Entry point of the Docker WebGL build (`task client:build`) |
 | `license-helper/` | Unity Hub in a container for `task license:activate` |
+| `monitoring/shadowfall_dashboard.py` | Generates the Grafana "Shadowfall" dashboard (`task monitoring:dashboard`) |
 | `art/` | Fetch and repack the 3D models, generate ground textures |
 | `audio/` | Fetch and build the sound effects |
 | `ui/make_skin.py`, `ui/render_icons.js` | Generate the UI skin and render the icons |

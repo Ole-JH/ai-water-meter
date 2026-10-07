@@ -11,6 +11,7 @@ const crypto = require("crypto");
 const { WebSocketServer } = require("ws");
 const { MONSTERS, SPAWNERS, TOWN, SPAWN, DUNGEONS, BALANCE, DIFFICULTIES, map: designToWorld } = require("./content");
 const dungeonGen = require("./dungeon");
+const metrics = require("./metrics");
 
 const PORT = parseInt(process.env.PORT || "7341", 10);
 const DATA_DIR = path.resolve(process.env.DATA_DIR || path.join(__dirname, "data"));
@@ -474,6 +475,8 @@ function damageMonster(m, s, dmg) {
 
 function killMonster(m) {
   monsters.delete(m.id);
+  M.kills.inc({ monster: m.type, elite: m.elite ? "yes" : "no" });
+  if (m.def.boss) M.bossKills.inc({ boss: m.type });
   sendNear(m.x, m.z, PLAYER_VIEW + 10, { t: "mdie", mid: m.id }, m.inst);
   if (hasAffix(m, "Fire Enchanted")) monsterAttack(m, null, "explode", m.dmg * 1.6);
   // Everyone who fought it gets credit, plus their party members who are nearby (WoW-style shared kills).
@@ -527,8 +530,11 @@ function loadAccount(name) {
 function saveAccount(acc) {
   const file = charFile(acc.name), tmp = file + ".tmp";
   fs.writeFile(tmp, JSON.stringify(acc), (err) => {
-    if (err) return log("save failed", acc.name, err.message);
-    fs.rename(tmp, file, (e) => e && log("save rename failed", acc.name, e.message));
+    if (err) { M.saves.inc({ result: "error" }); return log("save failed", acc.name, err.message); }
+    fs.rename(tmp, file, (e) => {
+      M.saves.inc({ result: e ? "error" : "ok" });
+      if (e) log("save rename failed", acc.name, e.message);
+    });
   });
 }
 
@@ -547,7 +553,10 @@ const sessions = new Map();
 let nextSessionId = 1;
 
 function safeSend(s, data) {
-  if (s.ws.readyState === 1) s.ws.send(data);
+  if (s.ws.readyState !== 1) return;
+  s.ws.send(data);
+  M.msgOut.inc();
+  M.bytesOut.inc(undefined, data.length);
 }
 
 function broadcast(msg) {
@@ -566,11 +575,13 @@ function completeLogin(s) {
 
   let acc = loadAccount(name);
   if (acc) {
-    if (!checkPassword(acc, pass)) return fail(s, "Wrong password for that character.");
+    if (!checkPassword(acc, pass)) { M.logins.inc({ result: "bad_password" }); return fail(s, "Wrong password for that character."); }
+    M.logins.inc({ result: "ok" });
   } else {
     const salt = crypto.randomBytes(16).toString("hex");
     acc = { name, salt, hash: hashPassword(pass, salt), created: new Date().toISOString(), save: null };
     saveAccount(acc);
+    M.logins.inc({ result: "new" });
     log(`New character: ${name}`);
   }
 
@@ -610,6 +621,71 @@ function sys(s, msg) { safeSend(s, JSON.stringify({ t: "sys", msg })); }
 
 // ---- trading
 const trades = new Map(); // session id -> { a, b, offers: Map(id -> { items, gold }), ok: Set }
+
+// =====================================================================================
+// Metrics (Prometheus, on METRICS_PORT; see docs/deployment/monitoring.md)
+// =====================================================================================
+
+const M = {
+  msgIn: metrics.counter("shadowfall_messages_received_total", "Client messages received, by type."),
+  bytesIn: metrics.counter("shadowfall_received_bytes_total", "Bytes received from clients."),
+  msgOut: metrics.counter("shadowfall_messages_sent_total", "Messages sent to clients."),
+  bytesOut: metrics.counter("shadowfall_sent_bytes_total", "Bytes sent to clients."),
+  handlerErrors: metrics.counter("shadowfall_handler_errors_total", "Exceptions thrown while handling a client message, by type."),
+  logins: metrics.counter("shadowfall_logins_total", "Login attempts, by result (ok, new, bad_password, rejected)."),
+  kills: metrics.counter("shadowfall_monsters_killed_total", "Monsters killed, by monster type and whether it was an elite."),
+  bossKills: metrics.counter("shadowfall_bosses_killed_total", "Bosses killed, by boss."),
+  deaths: metrics.counter("shadowfall_player_deaths_total", "Player deaths."),
+  trades: metrics.counter("shadowfall_trades_completed_total", "Completed player trades."),
+  dungeonEntries: metrics.counter("shadowfall_dungeon_entries_total", "Players entering a dungeon level, by dungeon and difficulty."),
+  admin: metrics.counter("shadowfall_admin_commands_total", "Admin commands run, by command."),
+  saves: metrics.counter("shadowfall_character_saves_total", "Character files written, by result."),
+  tick: metrics.histogram("shadowfall_tick_duration_seconds", "Time spent in one simulation tick.", [0.001, 0.0025, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25]),
+};
+// Start at zero so dashboards show a flat line rather than "no data" until the first event.
+M.deaths.inc(undefined, 0);
+M.trades.inc(undefined, 0);
+M.bytesIn.inc(undefined, 0);
+M.bytesOut.inc(undefined, 0);
+M.msgOut.inc(undefined, 0);
+for (const result of ["ok", "error"]) M.saves.inc({ result }, 0);
+for (const result of ["ok", "new", "bad_password"]) M.logins.inc({ result }, 0);
+const inWorld = () => [...sessions.values()].filter((o) => o.inWorld);
+metrics.gauge("shadowfall_connections", "Open WebSocket connections (including the login screen).", () => sessions.size);
+metrics.gauge("shadowfall_players_online", "Players in the world.", () => inWorld().length);
+metrics.gauge("shadowfall_players_in_dungeons", "Players inside a dungeon instance.", () => inWorld().filter((o) => o.inst).length);
+metrics.gauge("shadowfall_players_by_class", "Players in the world, by class.", () => {
+  const by = {};
+  for (const o of inWorld()) { const c = (o.look && o.look.mdl) || "Knight"; by[c] = (by[c] || 0) + 1; }
+  return Object.entries(by).map(([c, n]) => [{ class: c }, n]);
+});
+metrics.gauge("shadowfall_players_by_level", "Players in the world, by level band.", () => {
+  const by = {};
+  for (const o of inWorld()) { const b = o.lvl >= 30 ? "30+" : `${Math.floor(o.lvl / 5) * 5}-${Math.floor(o.lvl / 5) * 5 + 4}`; by[b] = (by[b] || 0) + 1; }
+  return Object.entries(by).map(([b, n]) => [{ band: b }, n]);
+});
+metrics.gauge("shadowfall_monsters_alive", "Monsters alive, overworld vs dungeons.", () => {
+  let ow = 0, dg = 0;
+  for (const m of monsters.values()) if (m.inst) dg++; else ow++;
+  return [[{ zone: "overworld" }, ow], [{ zone: "dungeon" }, dg]];
+});
+metrics.gauge("shadowfall_elites_alive", "Elite monsters alive.", () => { let n = 0; for (const m of monsters.values()) if (m.elite) n++; return n; });
+metrics.gauge("shadowfall_dungeon_instances", "Open dungeon instances, by dungeon.", () => {
+  const by = Object.fromEntries(DUNGEONS.map((d) => [d.name, 0]));
+  for (const inst of instances.values()) by[DUNGEONS[inst.dIdx].name]++;
+  return Object.entries(by).map(([d, n]) => [{ dungeon: d }, n]);
+});
+metrics.gauge("shadowfall_parties", "Active parties.", () => parties.size);
+metrics.gauge("shadowfall_trades_open", "Trades in progress.", () => trades.size / 2);
+metrics.gauge("shadowfall_world_loaded", "1 when a world map is loaded.", () => (world ? 1 : 0));
+let accountCount = 0, accountCountAt = 0;
+metrics.gauge("shadowfall_accounts", "Characters on disk.", () => {
+  if (Date.now() - accountCountAt > 60000) {
+    accountCountAt = Date.now();
+    try { accountCount = fs.readdirSync(CHAR_DIR).filter((f) => f.endsWith(".json")).length; } catch { accountCount = 0; }
+  }
+  return accountCount;
+});
 const TRADE_SLOTS = 12, TRADE_RANGE = 10;
 const canTrade = (s, o) => !s.dead && !o.dead && (s.inst || 0) === (o.inst || 0) && dist(s.x, s.z, o.x, o.z) <= TRADE_RANGE;
 
@@ -740,6 +816,7 @@ const partyHandlers = {
       const got = tr.offers.get(them.id);
       safeSend(me, JSON.stringify({ t: "tdone", items: got.items, gold: got.gold, name: them.name }));
     }
+    M.trades.inc();
     log(`trade: ${s.name} <-> ${other.name}`);
   },
 
@@ -904,6 +981,7 @@ function enterInstance(s, inst) {
   if (trades.has(s.id)) closeTrade(trades.get(s.id), "The trade was cancelled.");
   s.inst = inst.id;
   [s.x, s.z] = inst.layout.start;
+  M.dungeonEntries.inc({ dungeon: DUNGEONS[inst.dIdx].name, difficulty: (DIFFICULTIES[inst.df] || DIFFICULTIES[0]).name });
   inst.lastActive = now();
   const L = inst.layout;
   safeSend(s, JSON.stringify({
@@ -978,8 +1056,11 @@ function teleport(s, x, z) {
 }
 
 /** Runs one admin command. Returns a short result line for the admin. */
+const ADMIN_COMMANDS = new Set(["tp", "tpto", "summon", "dungeon", "regen", "spawn", "killall", "time", "elites", "announce", "kick", "who"]);
+
 function runAdmin(s, c, a) {
   a = a || {};
+  if (ADMIN_COMMANDS.has(c)) M.admin.inc({ cmd: c });
   switch (c) {
     case "tp": {
       const x = Number(a.x), z = Number(a.z);
@@ -1181,6 +1262,7 @@ const handlers = {
     s.hp = Number(m.hp) || 0;
     s.mhp = Number(m.mhp) || 1;
     s.lvl = Math.max(1, Math.min(100, parseInt(m.lvl, 10) || 1));
+    if (m.dead && !s.dead) M.deaths.inc();
     s.mv = !!m.mv; s.atk = !!m.atk; s.dead = !!m.dead;
     s.look = { body: String(m.body || "").slice(0, 6), legs: String(m.legs || "").slice(0, 6), weapon: String(m.weapon || "").slice(0, 6), helm: String(m.helm || "").slice(0, 6),
       mdl: HERO_MODELS.includes(m.mdl) ? m.mdl : "Knight",
@@ -1375,7 +1457,9 @@ wss.on("connection", (ws, req) => {
     try { m = JSON.parse(data.toString()); } catch { return; }
     const handler = m && handlers[m.t];
     if (!handler) return;
-    try { handler(s, m); } catch (e) { log("handler error", m.t, e.stack); }
+    M.msgIn.inc({ type: m.t });
+    M.bytesIn.inc(undefined, data.length);
+    try { handler(s, m); } catch (e) { M.handlerErrors.inc({ type: m.t }); log("handler error", m.t, e.stack); }
   });
   ws.on("close", () => onDisconnect(s));
   ws.on("error", () => {});
@@ -1402,7 +1486,12 @@ loadWorld();
 if (world) initSpawners();
 else log("No world yet - it will be uploaded by the first client that connects.");
 
-setInterval(tick, TICK * 1000);
+setInterval(() => {
+  const t0 = process.hrtime.bigint();
+  tick();
+  M.tick.observe(Number(process.hrtime.bigint() - t0) / 1e9);
+}, TICK * 1000);
+metrics.serve(parseInt(process.env.METRICS_PORT || "0", 10), log);
 server.listen(PORT, () => log(`Shadowfall server listening on :${PORT}  (public: ${PUBLIC_DIR}, data: ${DATA_DIR})`));
 
 function shutdown() {

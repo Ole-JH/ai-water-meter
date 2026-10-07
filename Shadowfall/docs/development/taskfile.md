@@ -12,8 +12,12 @@ Common commands are defined in `Taskfile.yml` and run with [Task](https://taskfi
 | `task client:build:local` | Same, with a locally installed Unity editor (needs `UNITY_PATH`) |
 | `task client:clean-cache` | Delete the Docker build's Unity import cache |
 | `task license:activate` | Get a free Unity Personal license through Unity Hub in your browser (port 6080) |
-| `task up` / `task down` / `task restart` | Start, stop or restart the Docker container |
-| `task logs` / `task ps` | Follow logs; show status and health |
+| `task up` / `task down` / `task restart` | Start the game server and the monitoring stack, stop everything, or restart the game server |
+| `task logs` / `task ps` | Follow the game server's logs; show status and health |
+| `task monitoring:up` / `task monitoring:down` | Start or stop only the [monitoring stack](../deployment/monitoring.md) |
+| `task monitoring:reload` | Reload Prometheus and Alertmanager after editing `server/monitoring` |
+| `task monitoring:dashboard` | Regenerate the Shadowfall Grafana dashboard |
+| `task metrics` | Print the game server's current Prometheus metrics |
 | `task docker:build` | Build the server image only |
 | `task deploy` | `client:build` (Docker) followed by `up` |
 | `task update` | `git pull`, then `deploy`: the one command to update everything when the game and server run on the same machine |

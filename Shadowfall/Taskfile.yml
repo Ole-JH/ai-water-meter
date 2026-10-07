@@ -13,6 +13,8 @@ vars:
   DOCS_PORT: '{{.DOCS_PORT | default "8000"}}'
   # Host port for the game (Docker). Override: SHADOWFALL_PORT=9000 task up
   GAME_PORT: '{{.SHADOWFALL_PORT | default "7341"}}'
+  # Host port for Grafana (monitoring). Override: GRAFANA_PORT=3001 task up
+  GRAFANA_PORT: '{{.GRAFANA_PORT | default "3000"}}'
   # Unity version for the Docker build image, read from the project
   UNITY_VERSION:
     sh: "sed -n 's/^m_EditorVersion: *//p' ProjectSettings/ProjectVersion.txt | tr -d '\\r'"
@@ -144,13 +146,14 @@ tasks:
   # ---------------------------------------------------------------- docker
 
   up:
-    desc: Build and start the server container in the background (http://localhost:7341)
+    desc: Build and start the server and the monitoring stack in the background (game :7341, Grafana :3000)
     dir: "{{.SERVER_DIR}}"
     env:
       SHADOWFALL_PORT: "{{.GAME_PORT}}"
+      GRAFANA_PORT: "{{.GRAFANA_PORT}}"
     cmds:
-      - docker compose up -d --build
-      - echo "Shadowfall is running on http://localhost:{{.GAME_PORT}}"
+      - docker compose up -d --build --remove-orphans
+      - echo "Shadowfall is running on http://localhost:{{.GAME_PORT}}  -  monitoring (Grafana) on http://localhost:{{.GRAFANA_PORT}}"
 
   down:
     desc: Stop the server container
@@ -159,16 +162,16 @@ tasks:
       - docker compose down
 
   restart:
-    desc: Restart the server container (e.g. after a new WebGL build)
+    desc: Restart the game server container (e.g. after a new WebGL build)
     dir: "{{.SERVER_DIR}}"
     cmds:
-      - docker compose restart
+      - docker compose restart shadowfall
 
   logs:
-    desc: Follow the server logs
+    desc: Follow the game server logs
     dir: "{{.SERVER_DIR}}"
     cmds:
-      - docker compose logs -f --tail=100
+      - docker compose logs -f --tail=100 shadowfall
 
   ps:
     desc: Show container status and health
@@ -188,6 +191,42 @@ tasks:
     cmds:
       - task: client:build
       - task: up
+
+  # ---------------------------------------------------------------- monitoring
+
+  monitoring:up:
+    desc: Start (or update) only the monitoring stack - Prometheus, Grafana, Loki, Alloy, node-exporter, cAdvisor, Alertmanager
+    dir: "{{.SERVER_DIR}}"
+    env:
+      GRAFANA_PORT: "{{.GRAFANA_PORT}}"
+    cmds:
+      - docker compose up -d prometheus alertmanager grafana loki alloy node-exporter cadvisor
+      - echo "Grafana on http://localhost:{{.GRAFANA_PORT}} (first login admin / admin unless GRAFANA_ADMIN_PASSWORD is set)"
+
+  monitoring:down:
+    desc: Stop the monitoring stack (the game keeps running; collected data is kept)
+    dir: "{{.SERVER_DIR}}"
+    cmds:
+      - docker compose stop prometheus alertmanager grafana loki alloy node-exporter cadvisor
+
+  monitoring:reload:
+    desc: Reload Prometheus and Alertmanager after editing server/monitoring (no restart needed)
+    dir: "{{.SERVER_DIR}}"
+    cmds:
+      - curl -fsS -X POST http://localhost:{{.PROMETHEUS_PORT | default "9090"}}/-/reload
+      - curl -fsS -X POST http://localhost:{{.ALERTMANAGER_PORT | default "9093"}}/-/reload
+      - echo "Reloaded. Grafana picks up dashboard file changes by itself within a minute."
+
+  monitoring:dashboard:
+    desc: Regenerate the Shadowfall Grafana dashboard from tools/monitoring/shadowfall_dashboard.py
+    cmds:
+      - python3 tools/monitoring/shadowfall_dashboard.py
+
+  metrics:
+    desc: Print the game server's current Prometheus metrics
+    dir: "{{.SERVER_DIR}}"
+    cmds:
+      - docker compose exec shadowfall node -e "fetch('http://localhost:9464/metrics').then(r=>r.text()).then(t=>process.stdout.write(t))"
 
   # ---------------------------------------------------------------- data
 

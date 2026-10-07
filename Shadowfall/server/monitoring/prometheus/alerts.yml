@@ -1,0 +1,61 @@
+groups:
+  - name: shadowfall
+    rules:
+      - alert: ShadowfallDown
+        expr: up{job="shadowfall"} == 0
+        for: 2m
+        labels: { severity: critical }
+        annotations:
+          summary: The Shadowfall game server is not responding
+          description: Prometheus has not been able to scrape the game server for 2 minutes. Check `task logs`.
+      - alert: ShadowfallSlowTick
+        expr: histogram_quantile(0.95, sum by (le) (rate(shadowfall_tick_duration_seconds_bucket[5m]))) > 0.05
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: The world simulation is lagging
+          description: 95% of ticks take longer than 50 ms (a tick runs every 100 ms). Monsters will feel sluggish.
+      - alert: ShadowfallEventLoopLag
+        expr: nodejs_eventloop_lag_p99_seconds{job="shadowfall"} > 0.1
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: The game server's event loop is blocked for more than 100 ms
+      - alert: ShadowfallHandlerErrors
+        expr: sum(increase(shadowfall_handler_errors_total[10m])) > 0
+        labels: { severity: warning }
+        annotations:
+          summary: The game server threw errors while handling client messages
+          description: "Look for 'handler error' in the server logs (Grafana: Shadowfall dashboard, Server log panel)."
+      - alert: ShadowfallSaveErrors
+        expr: sum(increase(shadowfall_character_saves_total{result="error"}[10m])) > 0
+        labels: { severity: critical }
+        annotations:
+          summary: Characters could not be saved to disk
+          description: Check free disk space and the permissions of server/data.
+      - alert: ShadowfallHighMemory
+        expr: process_resident_memory_bytes{job="shadowfall"} > 1.5e9
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: The game server uses more than 1.5 GB of memory
+  - name: host
+    rules:
+      - alert: HostDiskAlmostFull
+        expr: (node_filesystem_avail_bytes{fstype!~"tmpfs|overlay|squashfs"} / node_filesystem_size_bytes{fstype!~"tmpfs|overlay|squashfs"}) < 0.1
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: "Less than 10% disk space left on {{ $labels.mountpoint }}"
+      - alert: HostHighCpu
+        expr: 1 - avg(rate(node_cpu_seconds_total{mode="idle"}[5m])) > 0.9
+        for: 15m
+        labels: { severity: warning }
+        annotations:
+          summary: The host's CPU has been above 90% for 15 minutes
+      - alert: HostLowMemory
+        expr: node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes < 0.1
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: Less than 10% of the host's memory is available

@@ -12,6 +12,7 @@ const WebSocket = require("ws");
 
 const PORT = 18000 + Math.floor(Math.random() * 1000);
 const URL = `ws://localhost:${PORT}/ws`;
+const METRICS_PORT = PORT + 2000;
 const DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), "shadowfall-test-"));
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -60,7 +61,7 @@ function checkDockerfile() {
 async function main() {
   checkDockerfile();
   const server = spawn(process.execPath, [path.join(__dirname, "..", "server.js")], {
-    env: { ...process.env, PORT: String(PORT), DATA_DIR, PUBLIC_DIR: path.join(__dirname, "..", "public"), ELITE_CHANCE: "0", ADMINS: "alice" },
+    env: { ...process.env, PORT: String(PORT), DATA_DIR, PUBLIC_DIR: path.join(__dirname, "..", "public"), ELITE_CHANCE: "0", ADMINS: "alice", METRICS_PORT: String(METRICS_PORT) },
     stdio: ["ignore", "pipe", "pipe"],
   });
   let serverLog = "";
@@ -172,6 +173,18 @@ async function main() {
     b.ws.send(JSON.stringify({ t: "tok" }));
     await sleep(200);
     assert.strictEqual(a.find("tdone")?.gold, 30, "Alice receives Bob's gold");
+
+    // Prometheus metrics: on their own port, not on the public game port.
+    assert.strictEqual((await fetch(`http://localhost:${PORT}/metrics`)).status, 404, "metrics are not on the game port");
+    const prom = await (await fetch(`http://localhost:${METRICS_PORT}/metrics`)).text();
+    const metric = (name) => { const m = prom.match(new RegExp(`^${name} (\\S+)$`, "m")); return m ? Number(m[1]) : NaN; };
+    assert.strictEqual(metric("shadowfall_players_online"), 3, "metrics count players online (Alice, Bob, Dana)");
+    assert.strictEqual(metric("shadowfall_trades_completed_total"), 1, "metrics count completed trades");
+    assert.match(prom, /^shadowfall_logins_total\{result="new"\} 3$/m, "metrics count new characters");
+    assert.match(prom, /^shadowfall_messages_received_total\{type="hello"\} \d+$/m, "metrics count messages by type");
+    assert.match(prom, /^shadowfall_tick_duration_seconds_count \d+$/m, "metrics time the simulation tick");
+    assert.match(prom, /^# TYPE shadowfall_tick_duration_seconds histogram$/m, "tick duration is a histogram");
+    assert.ok(metric("process_resident_memory_bytes") > 0, "process metrics are exported");
     assert.strictEqual(b.find("tdone")?.items[0], '{"Name":"Sword"}', "Bob receives Alice's item");
 
     // ---- admin module: Alice is an admin (ADMINS=alice), Bob is not
