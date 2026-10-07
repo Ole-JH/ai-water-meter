@@ -20,7 +20,10 @@ namespace Shadowfall.EditorTools
         {
             PrepareProject();
 
-            string outDir = Path.GetFullPath(Path.Combine(Application.dataPath, "..", "server", "public"));
+            // SF_BUILD_OUT (relative to the project folder) builds somewhere else: auto-deploy builds into server/public-next,
+            // checks it in a browser, and only then swaps it into server/public, which the live server serves.
+            string outEnv = System.Environment.GetEnvironmentVariable("SF_BUILD_OUT");
+            string outDir = Path.GetFullPath(Path.Combine(Application.dataPath, "..", string.IsNullOrEmpty(outEnv) ? Path.Combine("server", "public") : outEnv));
             Directory.CreateDirectory(outDir);
             // Start from a clean Build folder so stale files from older builds never get served.
             string buildDir = Path.Combine(outDir, "Build");

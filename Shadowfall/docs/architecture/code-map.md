@@ -49,6 +49,7 @@
 | `Items/ItemPowers.cs` | Legendary powers, the four class sets and their bonuses, gems (stats, colors, fusing), loot hooks |
 | `World/StashChest.cs` | The stash chest in Hollowmere |
 | `World/DungeonSites.cs` | The four dungeons (`DungeonDef`: entrance, look, depths) and their entrances (`DungeonEntrance`) |
+| `Core/GameCheck.cs` | With `?sfcheck=1` only: the game plays a scripted session by itself for the [browser check](../development/testing.md#browser-check) |
 | `Core/Exploration.cs` | Fog of war (revealed tiles, saved with the character) and the client side of the admin module (`AdminTools`) |
 | `UI/Minimap.cs` | Round minimap and fogged world map rendering |
 | `UI/GameUI.Admin.cs` | Admin panel (F10) |
@@ -103,6 +104,9 @@
 | `audio/build_music.py` | Downloads, trims, normalizes and encodes the music, and writes its playlist (`task music:build`) |
 | `gamedata/extract.js` | Writes `server/gamedata.json` from `Quests.cs`, `Companion.cs` and `Achievements.cs` (`task gamedata`; the smoke test fails if it is stale) |
 | `docker-build-client.sh` | Entry point of the Docker WebGL build (`task client:build`) |
+| `browser-check/` | Playwright runner of the pre-deploy browser check (`task check:browser`) |
+| `autodeploy.sh` | What the auto-deploy cron job runs: build, browser check, swap the build in, `task up` |
+| `port-of.sh` | Prints a Docker stack port and where it came from (environment, `server/.env` or default) |
 | `license-helper/` | Unity Hub in a container for `task license:activate` |
 | `art/emotes.py` | Authors the Wave, Dance, Bow, Point, Clap and Flex animations for the hero rig (and previews them as stick figures) |
 | `monitoring/shadowfall_dashboard.py` | Generates the Grafana "Shadowfall" dashboard (`task monitoring:dashboard`) |

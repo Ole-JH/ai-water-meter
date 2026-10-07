@@ -51,17 +51,25 @@ task autodeploy:install        # every 5 minutes; INTERVAL=2 task autodeploy:ins
 A cron job then checks `origin` for new commits on the branch the checkout is on. When there are some, it moves the
 checkout to them and:
 
-- **builds the client in Docker, then runs `task up`** when the commits touch the Unity project (`Assets/`, `Packages/`,
-  `ProjectSettings/`). This needs the Unity license on the host, like `task update`;
-- **only runs `task up`** for anything else (server, docs, monitoring);
-- does nothing for commits outside `Shadowfall/`.
+1. **builds the client in Docker into `server/public-next`** when the commits touch the Unity project (`Assets/`,
+   `Packages/`, `ProjectSettings/`). This needs the Unity license on the host, like `task update`. Players keep getting
+   the old build from `server/public` meanwhile;
+2. **plays it in a browser** ([the browser check](../development/testing.md#browser-check)): headless Chromium opens the
+   new build against a throwaway copy of the *new* server code, registers an account, creates a hero and walks to the well
+   and the waystone, taking screenshots. For a server-only change it plays the current build against the new server;
+3. **only if that passes**, copies the new build into `server/public` and runs `task up`.
 
-If the client build or `task up` fails, the running server is left as it was and that commit isn't tried again; the next push
-is. If local edits in the checkout are in the way, it stops and logs it instead of overwriting them. One run at a time, so a
-long client build is never started twice.
+Commits outside `Shadowfall/` deploy nothing.
 
-`task autodeploy:log` shows the log, `task autodeploy:uninstall` turns it off. With `DISCORD_WEBHOOK_URL` in `server/.env`
-(the same one the [alerts](monitoring.md) use) it also posts each deploy and each failure to Discord.
+If the build, the check or `task up` fails, the running server is left as it was and that commit isn't tried again; the
+next push is. If local edits in the checkout are in the way, it stops and logs it instead of overwriting them. One run at
+a time, so a long client build is never started twice.
+
+`task autodeploy:log` shows the log, `.autodeploy/check/` holds the last check's screenshots and `result.json`, and
+`task autodeploy:uninstall` turns it off. With `DISCORD_WEBHOOK_URL` in `server/.env` (the same one the
+[alerts](monitoring.md) use) each deploy is posted to Discord with the screenshots of the well and the waystone, and each
+failure with the reason and a screenshot of where it went wrong. To skip the browser check (not recommended), put
+`AUTODEPLOY_CHECK=0` in `.deploy.env`.
 
 With auto-deploy on you don't need `task update` or `task release` any more: push, and the host takes it from there.
 

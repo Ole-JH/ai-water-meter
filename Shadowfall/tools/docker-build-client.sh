@@ -106,8 +106,9 @@ EOF
   exit 1
 fi
 
-if [[ ! -d "$PROJECT/server/public/Build" ]]; then
-  log "Build finished but server/public/Build is missing - check the log above."
+OUT="${SF_BUILD_OUT:-server/public}"
+if [[ ! -d "$PROJECT/$OUT/Build" ]]; then
+  log "Build finished but $OUT/Build is missing - check the log above."
   exit 1
 fi
-log "Done. WebGL client written to server/public - refresh the game page."
+log "Done. WebGL client written to $OUT."

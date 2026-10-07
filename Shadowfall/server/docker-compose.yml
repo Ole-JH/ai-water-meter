@@ -287,9 +287,46 @@ services:
       UNITY_PASSWORD: ${UNITY_PASSWORD:-}
       HOST_UID: ${HOST_UID:-1000}
       HOST_GID: ${HOST_GID:-1000}
+      # Where the build goes, relative to Shadowfall/ (default server/public; auto-deploy uses server/public-next)
+      SF_BUILD_OUT: ${SF_BUILD_OUT:-}
     volumes:
       - ..:/project                          # the Unity project (Shadowfall/)
       - unity-library:/project/Library       # import cache: makes rebuilds much faster
+
+  # Pre-deploy browser check (task check:browser; auto-deploy runs it on every new client build before it goes live).
+  # Only runs on demand (profile "check"). check-server is a throwaway copy of the game server: the build in CHECK_PUBLIC
+  # (default public), accounts in JSON files on a tmpfs (no DATABASE_URL), no published port, gone after the check.
+  check-server:
+    profiles: ["check"]
+    build: .
+    volumes:
+      - ./${CHECK_PUBLIC:-public}:/app/public:ro
+    tmpfs:
+      - /data
+    environment:
+      DATA_DIR: /data
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:7341/healthz"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+  # Headless Chromium (Playwright) playing the build on check-server: tools/browser-check. Screenshots and result.json
+  # go to CHECK_OUT (default ../.autodeploy/check).
+  browser-check:
+    profiles: ["check"]
+    build: ../tools/browser-check
+    image: shadowfall-browser-check
+    depends_on:
+      check-server:
+        condition: service_healthy
+    environment:
+      CHECK_URL: http://check-server:7341/
+      OUT_DIR: /out
+      TIMEOUT_S: ${CHECK_TIMEOUT_S:-480}
+    user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
+    shm_size: "1gb"      # Chromium needs more shared memory than Docker's 64 MB default
+    volumes:
+      - ${CHECK_OUT:-../.autodeploy/check}:/out
 
   # One-time helper: Unity Hub in a container, shown in your browser via noVNC, to get a free
   # Unity Personal license file into ../unity-license. Run: task license:activate

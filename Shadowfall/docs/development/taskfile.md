@@ -27,6 +27,7 @@ Common commands are defined in `Taskfile.yml` and run with [Task](https://taskfi
 | `task update` | `git pull`, then `deploy`: the one command to update everything when the game and server run on the same machine |
 | `task release` | `git pull`, then build the WebGL client **on this machine**, then deploy it and the current commit to the server host (`DEPLOY_HOST`, default `docker2`); see [Docker](../deployment/docker.md#build-here-run-there). `CLIENT_BUILD=local task release` builds with a local Unity editor |
 | `task autodeploy:install` | On the server host: a cron job that deploys every new commit on its branch by itself (client build only when the Unity project changed); see [Operations](../deployment/operations.md#auto-deploy). `autodeploy:log`, `autodeploy:uninstall` |
+| `task check:browser` | Play the WebGL build in headless Chromium against a throwaway server and take screenshots; see [Testing](testing.md#browser-check). `CHECK_PUBLIC=public-next` checks another build folder |
 | `task deploy:remote` | Only the deploy half of `release`: ship the build already in `server/public` and restart the server host |
 | `task remote -- <task>` | Run any task on the server host, e.g. `task remote -- logs`, `task remote -- backup`, `task remote -- data:reset` |
 | `task data:reset` | **Wipe all game data** (every account, character and stash, and the world map) for a fresh start. Asks first and runs `task backup` before deleting anything |

@@ -1,0 +1,8 @@
+{
+  "name": "shadowfall-browser-check",
+  "private": true,
+  "description": "Plays a short scripted session of a new WebGL build in headless Chromium before it goes live (see docs/development/testing.md)",
+  "dependencies": {
+    "playwright": "1.56.1"
+  }
+}

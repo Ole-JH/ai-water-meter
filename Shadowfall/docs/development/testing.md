@@ -50,6 +50,33 @@ task client:check
 
 This builds `Assets/Scripts` with warnings treated as errors, against Unity's reference assemblies, without needing a Unity install.
 
+## Browser check
+
+```bash
+task check:browser                      # the build in server/public
+CHECK_PUBLIC=public-next task check:browser   # another build folder under server/
+```
+
+Plays a short session of the WebGL build in headless Chromium (Playwright, `tools/browser-check`) before players get it.
+[Auto-deploy](../deployment/operations.md#auto-deploy) runs it on every deploy. Two throwaway containers (profile
+`check` in `server/docker-compose.yml`, never started by `task up`):
+
+- **check-server**: the game server built from the current code, serving the build to check. No database: accounts go to
+  JSON files on a tmpfs, so nothing it does reaches the real game. No published port.
+- **browser-check**: Chromium with software WebGL (SwiftShader, no GPU needed) opens the game with `?sfcheck=1`.
+
+With `?sfcheck=1` the game drives itself (`GameCheck.cs`): it registers a random `check123456` account, creates a Knight,
+waits for the world, walks to the well in the middle of Hollowmere's square and then to the waystone, and reports every
+step to the page (`window.sfCheck`, `ShadowfallCheck.jslib`). The browser takes a screenshot at each stop. The check
+**fails** when the page shows a loading error, the game doesn't start within 5 minutes, registering or entering the world
+fails, the hero can't walk to a stop, or the game logs an exception; other logged errors are listed as warnings.
+
+Results go to `.autodeploy/check/`: `01-spawn.png`, `02-well.png`, `03-waystone.png` (and `NN-fail.png` on failure), plus
+`result.json` with the verdict, every step, the game's logged errors and the browser console. `CHECK_TIMEOUT_S` (default
+480) limits the whole run; software rendering is slow, so the frame rate it reports is no measure of a real machine.
+
+Run the runner without Docker against any server: `cd tools/browser-check && npm install && CHECK_URL=http://localhost:7341/ node check.js`.
+
 ## Playtesting multiplayer locally
 
 1. `task server:dev`

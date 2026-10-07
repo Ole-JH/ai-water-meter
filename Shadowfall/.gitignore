@@ -45,3 +45,6 @@ server/.env
 
 # Auto-deploy state and log (task autodeploy:install)
 /.autodeploy/
+/server/public-next/
+/tools/browser-check/node_modules/
+/tools/browser-check/out/

@@ -130,6 +130,29 @@ tasks:
       - git pull
       - task: deploy
 
+  check:browser:
+    desc: "Play the WebGL build in headless Chromium against a throwaway server: register, create a hero, walk to the well and the waystone (screenshots in .autodeploy/check)"
+    dir: "{{.SERVER_DIR}}"
+    env:
+      # Which build to check, relative to server/ (auto-deploy checks public-next before swapping it in)
+      CHECK_PUBLIC: '{{.CHECK_PUBLIC | default "public"}}'
+      HOST_UID:
+        sh: id -u
+      HOST_GID:
+        sh: id -g
+    preconditions:
+      - sh: test -f {{.CHECK_PUBLIC | default "public"}}/build.json
+        msg: "No WebGL build to check: build the client first (task client:build)."
+    cmds:
+      - mkdir -p ../.autodeploy/check
+      - docker compose --profile check build -q check-server browser-check
+      - |
+        rc=0
+        docker compose --profile check run --rm browser-check || rc=$?
+        docker compose --profile check rm -sf check-server >/dev/null 2>&1 || true
+        echo "Screenshots and result.json: .autodeploy/check/"
+        exit $rc
+
   # ---------------------------------------------------------------- auto-deploy (on the server host)
 
   autodeploy:

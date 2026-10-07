@@ -57,6 +57,7 @@ namespace Shadowfall
 
             gameObject.AddComponent<NetClient>();
             gameObject.AddComponent<GameUI>();
+            GameCheck.StartIfRequested(gameObject);  // only with ?sfcheck=1 (tools/browser-check)
         }
 
         void SetupCamera()
