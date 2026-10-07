@@ -1,6 +1,12 @@
 # Docker
 
-The server is a single container. It serves the WebGL build over HTTP and runs the game on the WebSocket path `/ws`, both on the same port.
+The game server is a single container. It serves the WebGL build over HTTP and runs the game on the WebSocket path `/ws`, both on the same port. `docker compose up` also starts this documentation site and the [monitoring stack](monitoring.md).
+
+| Service | URL | Port variable |
+| --- | --- | --- |
+| Game | <http://localhost:7341> | `SHADOWFALL_PORT` |
+| Documentation | <http://localhost:8000> | `DOCS_PORT` (and `DOCS_BIND`, e.g. `127.0.0.1`) |
+| Grafana | <http://localhost:3000> | `GRAFANA_PORT` |
 
 ## Run it
 
@@ -26,6 +32,9 @@ services:
     environment:
       ADMINS: ${ADMINS:-}         # admin character names, e.g. from server/.env
 ```
+
+The `docs` service runs the `squidfunk/mkdocs-material` image and serves `docs/` live with only the docs and `mkdocs.yml`
+mounted, read-only, so a `git pull` shows up without a restart. To run only the game: `docker compose up -d shadowfall`.
 
 (The file also defines the `client-builder` and `license-helper` services, which only run on demand; see [Building the client in Docker](docker-client-build.md).)
 
