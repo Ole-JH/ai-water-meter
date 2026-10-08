@@ -1983,7 +1983,9 @@ namespace Shadowfall
             Level = s.level;
             Xp = s.xp;
             Gold = s.gold;
-            Strength = s.str; Dexterity = s.dex; Intelligence = s.intel; Vitality = s.vit;
+            // A brand-new hero's first save is the server's (level, class and kit only) until the client's own one
+            // arrives: missing stats keep the class's starting values instead of becoming 0 for good.
+            if (s.str + s.dex + s.intel + s.vit > 0) { Strength = s.str; Dexterity = s.dex; Intelligence = s.intel; Vitality = s.vit; }
             Paragon.Load(s.paragon, s.paragonXp, s.paragonPts);
             StatPoints = s.statPoints;
             OwnedCompanions.Clear();

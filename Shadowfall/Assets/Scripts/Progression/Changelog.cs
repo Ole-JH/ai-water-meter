@@ -29,6 +29,8 @@ namespace Shadowfall
                 {
                     "Lantern light on the ground at night is smooth now, instead of blotchy patches that changed as you walked.",
                     "The Auctioneer has a nameplate like the other townsfolk, and a lamp on the podium at night.",
+                    "Marks left by spells are soft stains on the ground now (Consecration leaves a faint golden sheen), not solid discs.",
+                    "Fixed: a brand-new hero who got disconnected in their first seconds could come back with all their base stats at 0. Heroes it already happened to get their class's starting stats back.",
                 },
             },
             new Entry

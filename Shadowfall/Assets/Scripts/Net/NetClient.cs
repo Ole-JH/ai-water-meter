@@ -521,7 +521,7 @@ namespace Shadowfall
                     Busy = false;
                     Status = "";
                     Notice = "";
-                    nextSave = Time.time + 20f;
+                    nextSave = Time.time + 3f; // the first save soon: until then the server only has a bare one for a new hero
                     GameManager.I.EnterWorld(m.name, m.hasSave ? m.save : null, m.look);
                     break;
 

@@ -129,6 +129,7 @@ namespace Shadowfall
             if (save != null) player.LoadSave(save);
             Cam.GetComponent<CameraRig>().Target = player.transform;
 
+            if (NetClient.I != null && NetClient.I.Resuming) { GameUI.Log("Back in the world.", new Color(1f, 0.85f, 0.4f)); return; }
             GameUI.Log("Welcome to Shadowfall, " + characterName + "!", new Color(1f, 0.85f, 0.4f));
             if (save == null || save.level <= 1)
                 GameUI.Log("Talk to the villagers with a yellow '!' above their heads. Press F1 for controls, Enter to chat.", new Color(1f, 0.85f, 0.4f));

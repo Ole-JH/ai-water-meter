@@ -23,8 +23,8 @@ namespace Shadowfall
             switch (kind)
             {
                 case Kind.Scorch:
-                    Disc(root, radius, new Color(0.08f, 0.06f, 0.05f));
-                    Disc(root, radius * 0.6f, new Color(0.04f, 0.03f, 0.03f), 0.016f);
+                    Disc(root, radius, new Color(0.08f, 0.06f, 0.05f, 0.75f));
+                    Disc(root, radius * 0.55f, new Color(0.03f, 0.025f, 0.02f, 0.6f), 0.016f);
                     for (int i = 0; i < 6; i++) // embers still glowing in it
                     {
                         var e = Bit(root, radius * 0.7f, new Vector3(0.08f, 0.03f, 0.08f), new Color(1f, 0.4f, 0.08f), true);
@@ -32,7 +32,7 @@ namespace Shadowfall
                     }
                     break;
                 case Kind.Frost:
-                    Disc(root, radius, new Color(0.75f, 0.88f, 1f));
+                    Disc(root, radius, new Color(0.8f, 0.9f, 1f, 0.55f));
                     for (int i = 0; i < 10; i++)
                     {
                         var s = Bit(root, radius * 0.9f, new Vector3(0.06f, Random.Range(0.15f, 0.35f), 0.06f), new Color(0.7f, 0.9f, 1f), true);
@@ -41,7 +41,7 @@ namespace Shadowfall
                     }
                     break;
                 case Kind.Crack:
-                    Disc(root, radius * 0.5f, new Color(0.2f, 0.17f, 0.14f));
+                    Disc(root, radius * 0.6f, new Color(0.18f, 0.15f, 0.12f, 0.6f));
                     int n = Random.Range(6, 9);
                     for (int i = 0; i < n; i++)
                     {
@@ -55,10 +55,9 @@ namespace Shadowfall
                     break;
                 case Kind.Holy:
                 {
+                    // a faint golden sheen on the ground (no solid plate: it read as a big dark disc with a rim)
                     var gold = new Color(1f, 0.85f, 0.4f);
-                    var ring = Factory.Prim(PrimitiveType.Cylinder, root, new Vector3(0f, 0.015f, 0f), new Vector3(radius * 2f, 0.004f, radius * 2f), gold * 0.5f, false, Mat.Glow(gold * 0.45f));
-                    NoShadow(ring);
-                    Disc(root, radius * 0.9f, new Color(0.3f, 0.26f, 0.18f), 0.017f);
+                    Disc(root, radius, new Color(1f, 0.88f, 0.5f, 0.28f));
                     for (int i = 0; i < 8; i++) // runes round the edge
                     {
                         float a = i * Mathf.PI / 4f;
@@ -75,10 +74,65 @@ namespace Shadowfall
             while (marks.Count > Max) { var old = marks.Dequeue(); if (old != null) Object.Destroy(old); }
         }
 
+        static Material decal;
+        static Texture2D soft;
+
+        /// <summary>A soft stain on the ground: a round splotch with a ragged, faded edge, drawn with the ground-decal
+        /// shader (like blood), tinted and see-through by <paramref name="c"/>'s alpha.</summary>
         static void Disc(Transform root, float radius, Color c, float y = 0.012f)
         {
-            var d = Factory.Prim(PrimitiveType.Cylinder, root, new Vector3(0f, y, 0f), new Vector3(radius * 2f, 0.004f, radius * 2f * Random.Range(0.8f, 1f)), c);
-            NoShadow(d);
+            if (decal == null)
+            {
+                var shader = Resources.Load<Shader>("Shaders/ShadowfallDecal");
+                if (shader == null) shader = Shader.Find("Shadowfall/Decal");
+                decal = new Material(shader) { mainTexture = SoftTexture(), name = "ImpactMark" };
+                decal.SetFloat("_Wet", 0f);
+            }
+            float rx = radius, rz = radius * Random.Range(0.8f, 1f);
+            var mesh = new Mesh { name = "Mark" };
+            mesh.vertices = new[] { new Vector3(-rx, 0f, -rz), new Vector3(-rx, 0f, rz), new Vector3(rx, 0f, rz), new Vector3(rx, 0f, -rz) };
+            mesh.uv = new[] { new Vector2(0, 0), new Vector2(0, 1), new Vector2(1, 1), new Vector2(1, 0) };
+            mesh.colors = new[] { c, c, c, c };
+            mesh.normals = new[] { Vector3.up, Vector3.up, Vector3.up, Vector3.up };
+            mesh.triangles = new[] { 0, 1, 2, 0, 2, 3 };
+            var go = new GameObject("Stain");
+            go.transform.SetParent(root, false);
+            go.transform.localPosition = new Vector3(0f, y, 0f);
+            go.AddComponent<MeshFilter>().sharedMesh = mesh;
+            var r = go.AddComponent<MeshRenderer>();
+            r.sharedMaterial = decal;
+            r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            go.AddComponent<DestroyMesh>().Mesh = mesh;
+        }
+
+        /// <summary>White, with alpha falling off from the middle to a ragged edge (a little noise, so it's not a perfect circle).</summary>
+        static Texture2D SoftTexture()
+        {
+            if (soft != null) return soft;
+            const int n = 64;
+            soft = new Texture2D(n, n, TextureFormat.RGBA32, true) { name = "SoftMark", wrapMode = TextureWrapMode.Clamp };
+            var px = new Color32[n * n];
+            for (int y = 0; y < n; y++)
+                for (int x = 0; x < n; x++)
+                {
+                    float dx = (x + 0.5f) / n * 2f - 1f, dy = (y + 0.5f) / n * 2f - 1f;
+                    float ang = Mathf.Atan2(dy, dx);
+                    float edge = 0.82f + 0.1f * Mathf.Sin(ang * 5f + 1.3f) + 0.06f * Mathf.Sin(ang * 11f);
+                    float d = Mathf.Sqrt(dx * dx + dy * dy) / edge;
+                    float a = Mathf.Clamp01(1f - Mathf.SmoothStep(0.55f, 1f, d));
+                    a *= 0.85f + 0.15f * Mathf.PerlinNoise(x * 0.25f, y * 0.25f);
+                    px[y * n + x] = new Color32(255, 255, 255, (byte)(a * 255));
+                }
+            soft.SetPixels32(px);
+            soft.Apply(true);
+            return soft;
+        }
+
+        /// <summary>Frees a mark's own mesh along with it.</summary>
+        class DestroyMesh : MonoBehaviour
+        {
+            public Mesh Mesh;
+            void OnDestroy() { if (Mesh != null) Destroy(Mesh); }
         }
 
         static GameObject Bit(Transform root, float spread, Vector3 size, Color c, bool glow)
