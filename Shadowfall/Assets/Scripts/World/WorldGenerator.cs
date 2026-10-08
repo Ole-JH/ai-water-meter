@@ -66,6 +66,9 @@ namespace Shadowfall
         float LV => (float)lr.NextDouble();
         string Pick(params string[] options) => options[vr.Next(options.Length)];
 
+        /// <summary>The lakes: (centre x, radius, centre z).</summary>
+        public static readonly System.Collections.Generic.List<Vector3> Lakes = new System.Collections.Generic.List<Vector3>();
+
         /// <summary>The living trees of the wilds (lightning can strike them: WeatherDetail).</summary>
         public static readonly System.Collections.Generic.List<GameObject> Trees = new System.Collections.Generic.List<GameObject>();
 
@@ -335,6 +338,7 @@ namespace Shadowfall
                 }
 
             surface.AddLake(center, radius);
+            Lakes.Add(new Vector3(center.x, radius, center.y)); // x, radius, z (NatureLife's fish; no RNG)
             Sfx.LoopAt("water_loop", new Vector3(center.x, 0f, center.y), 0.35f, radius + 10f);
             // Water surface plane for a bit of shine (the water shader version is built with the ground)
             if (!fancyGround)

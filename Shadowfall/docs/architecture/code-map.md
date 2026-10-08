@@ -62,6 +62,8 @@
 | `World/DungeonFeatures.cs` | Dungeon traps (spike plates, pendulums) and the boss room's portcullises |
 | `Combat/HitFx.cs` | Hit feel: freeze-frames and slow motion (`HitFx.Stop`), the white flash and knock-back of a struck body (`HitFlash`), frost on slowed monsters (`FrostBite`) |
 | `Combat/ImpactMarks.cs` | Marks spells leave on the ground for a while: scorch, frost, cracks, holy runes |
+| `World/NatureLife.cs` | Fish leaping in the lakes (`WorldGenerator.Lakes`), waves at the shore, crows on the ground that scatter |
+| `Core/AmbientSounds.cs` | Occasional sounds of the place: howls at night, leaves, dungeon rumbles |
 | `World/Rampart.cs` | The attacked gate during an invasion (shuts, shows damage, loses pieces, breaks), the militia who put up ladders and a walkway, and the walkway heroes climb onto (`Player.ClimbWall`); the shut gate blocks cells with `WorldGrid.SetClosed`, never part of the map |
 | `Social/Auction.cs`, `UI/GameUI.Auction.cs` | The auction house as the server shows it, and its window |
 | `Progression/Bounties.cs` | Today's bounties as the server sends them, and the reward |

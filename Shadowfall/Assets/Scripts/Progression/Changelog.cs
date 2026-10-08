@@ -24,6 +24,15 @@ namespace Shadowfall
         {
             new Entry
             {
+                Id = 58, Date = "2026-10-08", Title = "The wild, alive",
+                Items = new[]
+                {
+                    "Fish leap out of the lakes with a splash, and little waves lap at the shore.",
+                    "Crows peck about on the ground by day, and burst up and away when you come near.",
+                },
+            },
+            new Entry
+            {
                 Id = 57, Date = "2026-10-08", Title = "Listen",
                 Items = new[]
                 {
