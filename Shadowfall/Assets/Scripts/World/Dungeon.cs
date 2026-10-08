@@ -73,6 +73,7 @@ namespace Shadowfall
             if (m.chests != null)
                 for (int i = 0; i + 1 < m.chests.Length; i += 2) DungeonChest.Create(root.transform, ToWorld(m.chests[i], m.chests[i + 1]), i / 2);
             DungeonFeatures.Build(root.transform, blocked, m.w, m.h, rooms, m.seed, m); // traps, the boss room's doors
+            DungeonAtmosphere.Build(root.transform, blocked, m.w, m.h, rooms, m.seed, Def.Id); // dust, drips, webs, bones
         }
 
         public static void Exit()
@@ -303,6 +304,8 @@ namespace Shadowfall
     {
         Light l;
         float baseIntensity, seed;
+        Vector3 home;
+        bool homeSet;
 
         void Start()
         {
@@ -313,7 +316,12 @@ namespace Shadowfall
 
         void Update()
         {
-            if (l != null) l.intensity = baseIntensity * (0.8f + Mathf.PerlinNoise(Time.time * 5f, seed) * 0.4f);
+            if (l == null) return;
+            float n = Mathf.PerlinNoise(Time.time * 5f, seed);
+            l.intensity = baseIntensity * (0.8f + n * 0.4f);
+            // the flame sways, so the shadows move a little with it
+            if (!homeSet) { home = transform.localPosition; homeSet = true; }
+            transform.localPosition = home + new Vector3(Mathf.PerlinNoise(Time.time * 2.3f, seed + 7f) - 0.5f, (n - 0.5f) * 0.5f, Mathf.PerlinNoise(seed + 3f, Time.time * 2.3f) - 0.5f) * 0.09f;
         }
     }
 

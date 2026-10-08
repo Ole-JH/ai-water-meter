@@ -24,6 +24,16 @@ namespace Shadowfall
         {
             new Entry
             {
+                Id = 67, Date = "2026-10-08", Title = "Down in the dark",
+                Items = new[]
+                {
+                    "Dust turns in the torchlight; water drips from the ceiling into puddles; cobwebs hang in the corners and old bones lie about.",
+                    "Every dungeon its own air: snow sifting down in the Frozen Barrow, sand trickling in the Sunken Temple, embers and glowing cracks in the Ashen Citadel.",
+                    "Torch flames sway, and the shadows move with them.",
+                },
+            },
+            new Entry
+            {
                 Id = 66, Date = "2026-10-08", Title = "Over here!",
                 Items = new[]
                 {

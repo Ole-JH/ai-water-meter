@@ -60,6 +60,8 @@
 | `World/BountyBoard.cs` | The bounty boards with today's notices (torn off when done) and the Bounty Cache falling from the sky |
 | `World/WeatherDetail.cs` | Puddles (and ice) around the hero, breath in the cold, and lightning striking trees (`WorldGenerator.Trees`) |
 | `World/DungeonFeatures.cs` | Dungeon traps (spike plates, pendulums) and the boss room's portcullises |
+| `World/DungeonAtmosphere.cs` | The air in a dungeon: dust, snow, sand or embers drifting about, ceiling drips into puddles, cobwebs, bones, and each dungeon's own floor (frost, sand drifts, glowing cracks) |
+| `UI/MapPing.cs` | Party map pings (Alt+click the world map or minimap): ripples on the maps and a pillar of light in the world |
 | `Combat/HitFx.cs` | Hit feel: freeze-frames and slow motion (`HitFx.Stop`), the white flash and knock-back of a struck body (`HitFlash`), frost on slowed monsters (`FrostBite`) |
 | `Combat/ImpactMarks.cs` | Marks spells leave on the ground for a while: scorch, frost, cracks, holy runes |
 | `World/NatureLife.cs` | Fish leaping in the lakes (`WorldGenerator.Lakes`), waves at the shore, crows on the ground that scatter |
