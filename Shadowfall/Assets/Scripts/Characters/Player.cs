@@ -110,7 +110,11 @@ namespace Shadowfall
         Light torch;
         float currentSpeed;
         static readonly List<Combatant> buffer = new List<Combatant>();
-        static readonly RaycastHit[] rayHits = new RaycastHit[32];
+        // room for every collider along the ray (walls, gates, towers, trees...): a full buffer returns an arbitrary
+        // subset, and what's under the mouse would come and go from frame to frame
+        static readonly RaycastHit[] rayHits = new RaycastHit[256];
+        Interactable lastHovered;
+        float lastHoveredAt;
         float nextGoldCheck;
 
         // ---- Networking helpers
@@ -588,6 +592,9 @@ namespace Shadowfall
                 var it = h.collider.GetComponentInParent<Interactable>();
                 if (it != null && it.CanInteract && h.distance < bestInter) { bestInter = h.distance; HoveredInteractable = it; }
             }
+            // a blink of nothing (the mouse on a seam between colliders) keeps what was under it, so its label doesn't flicker
+            if (HoveredInteractable != null) { lastHovered = HoveredInteractable; lastHoveredAt = Time.time; }
+            else if (HoveredEnemy == null && lastHovered != null && lastHovered.CanInteract && Time.time - lastHoveredAt < 0.2f) HoveredInteractable = lastHovered;
 
             // Generous fallback so small monsters are easy to click.
             if (HoveredEnemy == null)

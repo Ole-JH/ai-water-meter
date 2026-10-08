@@ -849,7 +849,15 @@ namespace Shadowfall
                 if (it == p.HoveredInteractable)
                 {
                     if (!WorldToGui(it.Position + Vector3.up * it.LabelHeight, out var g)) continue;
-                    UISkin.Shadowed(new Rect(g.x - 180, g.y - 11, 360, 22), it.HoverText, UISkin.SmallCenter, it.LabelColor);
+                    // sized to the text (names often have a second line), on a dark plate so it reads over anything
+                    var hc = new GUIContent(it.HoverText);
+                    var hs = UISkin.SmallCenter;
+                    float hw = Mathf.Min(420f, hs.CalcSize(hc).x + 24f), hh = hs.CalcHeight(hc, hw) + 8f;
+                    var hr = new Rect(g.x - hw / 2f, g.y - hh / 2f, hw, hh);
+                    GUI.color = new Color(0.05f, 0.03f, 0.02f, 0.75f);
+                    GUI.DrawTexture(hr, UISkin.White);
+                    GUI.color = Color.white;
+                    UISkin.Shadowed(hr, it.HoverText, hs, it.LabelColor);
                 }
             }
         }
