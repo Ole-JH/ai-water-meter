@@ -256,6 +256,29 @@
       };
     })();
 
+    // ---- Clipboard (Clipboard.cs, ShadowfallClipboard.jslib)
+    // The game takes every key, which also stops the browser pasting: let Ctrl/Cmd+V through to the browser (registered
+    // here, before the game's own key handling) and keep what it pastes for the game to pick up.
+    window.sfClipboard = { pasted: "" };
+    window.addEventListener("keydown", function (e) {
+      if (!(e.ctrlKey || e.metaKey) || e.altKey || (e.key !== "v" && e.key !== "V")) return;
+      e.stopImmediatePropagation();
+      // Some browsers (Safari) don't send a paste event to the game's canvas: then ask the clipboard directly
+      window.sfClipboard.waiting = true;
+      setTimeout(function () {
+        if (!window.sfClipboard.waiting) return;
+        window.sfClipboard.waiting = false;
+        if (navigator.clipboard && navigator.clipboard.readText)
+          navigator.clipboard.readText().then(function (t) { if (t) window.sfClipboard.pasted += t; }).catch(function () {});
+      }, 80);
+    }, true);
+    document.addEventListener("paste", function (e) {
+      window.sfClipboard.waiting = false;
+      var t = (e.clipboardData || window.clipboardData).getData("text");
+      if (t) window.sfClipboard.pasted += t;
+      e.preventDefault();
+    });
+
     // ---- Unity
     var config = {
       dataUrl: "Build/{{{ DATA_FILENAME }}}",

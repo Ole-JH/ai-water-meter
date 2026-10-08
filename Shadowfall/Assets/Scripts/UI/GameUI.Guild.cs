@@ -90,12 +90,10 @@ namespace Shadowfall
                     UISkin.V(UISkin.Rich, wordWrap: true));
                 y += 70;
                 UISkin.Shadowed(new Rect(x, y, w, 20), "Name (3 to 24 letters)", UISkin.Small, UISkin.Muted);
-                GUI.SetNextControlName("guild_name");
-                newGuildName = GUI.TextField(new Rect(x, y + 22, w, 32), newGuildName, 24, UISkin.Field);
+                newGuildName = TextInput(new Rect(x, y + 22, w, 32), "guild_name", newGuildName, 24);
                 y += 62;
                 UISkin.Shadowed(new Rect(x, y, w, 20), "Tag (2 to 4 letters, shown before your name)", UISkin.Small, UISkin.Muted);
-                GUI.SetNextControlName("guild_tag");
-                newGuildTag = GUI.TextField(new Rect(x, y + 22, 120, 32), newGuildTag, 4, UISkin.Field);
+                newGuildTag = TextInput(new Rect(x, y + 22, 120, 32), "guild_tag", newGuildTag, 4);
                 if (UISkin.Btn(new Rect(x + 130, y + 22, w - 130, 32), "Found the guild (1000 gold)", UISkin.Button) && newGuildName.Trim().Length >= 3 && newGuildTag.Trim().Length >= 2)
                     NetClient.I?.SendChat("/guild create " + newGuildName.Trim() + " " + newGuildTag.Trim());
                 guildFieldFocused = GUI.GetNameOfFocusedControl().StartsWith("guild_");
@@ -114,16 +112,14 @@ namespace Shadowfall
             // invite (officers), the message of the day (officers)
             if (officer)
             {
-                GUI.SetNextControlName("guild_invite");
-                guildInvite = GUI.TextField(new Rect(x, y, w - 126, 30), guildInvite, 16, UISkin.Field);
+                guildInvite = TextInput(new Rect(x, y, w - 126, 30), "guild_invite", guildInvite, 16);
                 if (UISkin.Btn(new Rect(x + w - 120, y, 120, 30), "Invite", UISkin.Button) && guildInvite.Trim().Length > 0)
                 {
                     NetClient.I?.SendChat("/ginvite " + guildInvite.Trim());
                     guildInvite = "";
                 }
                 y += 36;
-                GUI.SetNextControlName("guild_motd");
-                guildMotd = GUI.TextField(new Rect(x, y, w - 126, 30), guildMotd, 120, UISkin.Field);
+                guildMotd = TextInput(new Rect(x, y, w - 126, 30), "guild_motd", guildMotd, 120);
                 if (UISkin.Btn(new Rect(x + w - 120, y, 120, 30), "Set message", UISkin.Button))
                 {
                     NetClient.I?.SendChat("/gmotd " + guildMotd.Trim());

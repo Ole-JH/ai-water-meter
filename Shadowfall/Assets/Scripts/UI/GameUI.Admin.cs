@@ -121,11 +121,9 @@ namespace Shadowfall
             Section(ref y, x, w, "Teleport");
             float tw = (w - 12) / 4f;
             UISkin.Shadowed(new Rect(x, y + 6, 20, 24), "X", UISkin.Label, UISkin.Muted);
-            GUI.SetNextControlName("admin_tpx");
-            tpX = GUI.TextField(new Rect(x + 20, y, tw - 20, 32), tpX, 6, UISkin.Field);
+            tpX = TextInput(new Rect(x + 20, y, tw - 20, 32), "admin_tpx", tpX, 6);
             UISkin.Shadowed(new Rect(x + tw + 6, y + 6, 20, 24), "Z", UISkin.Label, UISkin.Muted);
-            GUI.SetNextControlName("admin_tpz");
-            tpZ = GUI.TextField(new Rect(x + tw + 26, y, tw - 20, 32), tpZ, 6, UISkin.Field);
+            tpZ = TextInput(new Rect(x + tw + 26, y, tw - 20, 32), "admin_tpz", tpZ, 6);
             if (AdminButton(new Rect(x + 2 * (tw + 6), y, tw, 32), "Go") && float.TryParse(tpX, out float gx) && float.TryParse(tpZ, out float gz))
                 AdminTools.Send(new AdminCmd { c = "tp", x = gx, z = gz });
             if (AdminButton(new Rect(x + 3 * (tw + 6), y, tw, 32), "Where am I"))
@@ -311,8 +309,7 @@ namespace Shadowfall
             y += 50;
 
             Section(ref y, x, w, "Announcement");
-            GUI.SetNextControlName("admin_announce");
-            announceText = GUI.TextField(new Rect(x, y, w - 96, 34), announceText, 200, UISkin.Field);
+            announceText = TextInput(new Rect(x, y, w - 96, 34), "admin_announce", announceText, 200);
             if (AdminButton(new Rect(x + w - 90, y, 90, 34), "Send") && announceText.Trim().Length > 0)
             {
                 AdminTools.Send(new AdminCmd { c = "announce", text = announceText });
@@ -345,8 +342,7 @@ namespace Shadowfall
             y += 8;
             // resetpw <account or character>
             Section(ref y, x, w, "Reset a password");
-            GUI.SetNextControlName("admin_resetpw");
-            resetName = GUI.TextField(new Rect(x, y, w - 156, 32), resetName, 40, UISkin.Field);
+            resetName = TextInput(new Rect(x, y, w - 156, 32), "admin_resetpw", resetName, 40);
             if (AdminButton(new Rect(x + w - 150, y, 150, 32), "Reset password") && resetName.Trim().Length > 0)
             {
                 AdminTools.Send(new AdminCmd { c = "resetpw", name = resetName.Trim() });

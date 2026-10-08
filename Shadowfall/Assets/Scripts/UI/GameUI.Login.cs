@@ -148,9 +148,8 @@ namespace Shadowfall
         {
             UISkin.Shadowed(new Rect(x, y, w, 20), label, FieldLabel, UISkin.Muted);
             y += 22;
-            if (control != null) GUI.SetNextControlName(control);
-            value = password ? GUI.PasswordField(new Rect(x, y, w, 40), value ?? "", '•', max, UISkin.Field)
-                             : GUI.TextField(new Rect(x, y, w, 40), value ?? "", max, UISkin.Field);
+            // (named, so Tab goes from field to field and Ctrl/Cmd+V pastes into it: TextInput)
+            value = TextInput(new Rect(x, y, w, 40), control ?? "login_" + label, value, max, password);
             y += 52;
             return value;
         }
@@ -340,7 +339,7 @@ namespace Shadowfall
                 UISkin.Shadowed(new Rect(x, y, w, 22), "Delete " + heroes[selectedHero].name + " forever? Enter your password:",
                     UISkin.V(UISkin.Small, wordWrap: true), new Color(1f, 0.6f, 0.5f));
                 y += 26;
-                deletePass = GUI.PasswordField(new Rect(x, y, w - 130, 38), deletePass, '•', 128, UISkin.Field);
+                deletePass = TextInput(new Rect(x, y, w - 130, 38), "deletepass", deletePass, 128, true);
                 if (UISkin.Btn(new Rect(x + w - 120, y, 120, 38), "Delete", UISkin.Button))
                 {
                     net.DeleteCharacter(heroes[selectedHero].name, deletePass);

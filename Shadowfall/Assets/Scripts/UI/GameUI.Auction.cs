@@ -37,8 +37,7 @@ namespace Shadowfall
 
         void DrawAuctionBrowse(Player p, Rect r, float x, float y, float w)
         {
-            GUI.SetNextControlName("auction_search");
-            auctionSearch = GUI.TextField(new Rect(x, y, w - 130, 34), auctionSearch, 40, UISkin.Field);
+            auctionSearch = TextInput(new Rect(x, y, w - 130, 34), "auction_search", auctionSearch, 40);
             auctionFieldFocused |= GUI.GetNameOfFocusedControl() == "auction_search";
             bool enter = Event.current.type == EventType.KeyDown && (Event.current.keyCode == KeyCode.Return || Event.current.keyCode == KeyCode.KeypadEnter) && auctionFieldFocused;
             if (UISkin.Btn(new Rect(x + w - 120, y, 120, 34), "Search", UISkin.Button) || enter) Auction.Browse(auctionSearch);
@@ -97,8 +96,7 @@ namespace Shadowfall
             var sel = auctionSlot >= 0 && auctionSlot < p.Inventory.Slots.Length ? p.Inventory.Slots[auctionSlot] : null;
             if (sel == null) { auctionSlot = -1; return; }
             GUI.Label(new Rect(x, y + 6, 260, 24), "<b><color=#" + Item.Hex(sel.NameColor) + ">" + sel.Name + "</color></b>  for", UISkin.InkRich);
-            GUI.SetNextControlName("auction_price");
-            auctionPrice = GUI.TextField(new Rect(x + 270, y, 120, 34), auctionPrice, 8, UISkin.Field);
+            auctionPrice = TextInput(new Rect(x + 270, y, 120, 34), "auction_price", auctionPrice, 8);
             auctionFieldFocused |= GUI.GetNameOfFocusedControl() == "auction_price";
             if (UISkin.Btn(new Rect(x + w - 110, y, 110, 34), "List It", UISkin.Button) && int.TryParse(auctionPrice, out var price))
             {

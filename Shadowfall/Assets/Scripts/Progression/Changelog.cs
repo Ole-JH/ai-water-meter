@@ -30,6 +30,7 @@ namespace Shadowfall
                     "Losing a town to invaders now hurts: they set fire to the quarter behind the gate they broke, and it burns for five minutes, its streets strewn with the wreckage of the fight.",
                     "Its people run for it, merchants, smiths, healers, quest givers and the auctioneer included: nothing can be bought, sold, salvaged, reforged or auctioned in that quarter until the fires are out. Shops in the rest of the town still trade.",
                     "The townsfolk keep indoors while it burns, and a burned town isn't attacked again until it's over.",
+                    "Copy and paste: Ctrl+V (Cmd+V) pastes into the chat and every text field, Ctrl+C copies, and right-clicking a chat line copies it. Tab moves between the fields of the login screen (and every other form). The help window scrolls.",
                     "A button for every chat command: point at the chat for Say, Party, Guild, Whisper, Reply, Who, Invite and Emotes; the guild window can now found a guild, invite, set the message, promote, demote, hand over the lead, kick and leave.",
                     "Faster loading and much less memory: the game no longer needs more than a phone browser allows (it got stuck at 90% on iPhones).",
                     "A big performance pass: cheaper ground and grass, shadows only as far as you can see, pooled spell effects, a lighter interface and fewer lights burning when nobody needs them.",

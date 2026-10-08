@@ -303,6 +303,7 @@ namespace Shadowfall
             tooltip = null;
             laneY = VH * 0.13f + (bossShown != null ? 70f : 0f);
 
+            TextInputEvents();
             HandleChatKeys();
 
             var p = Player.I;
@@ -1667,6 +1668,82 @@ namespace Shadowfall
 
         public void SetReplyTarget(string name) => replyTo = name;
 
+        // ---- text fields: Tab moves between them, Ctrl/Cmd+V pastes (the browser's clipboard: Clipboard), Ctrl/Cmd+C copies
+        readonly List<string> tabOrder = new List<string>(), tabOrderShown = new List<string>();
+        string pasted;          // waiting for the focused field (or the chat) to take it
+        float pastedAt;
+        bool copyAsked;
+
+        /// <summary>Tab between the fields shown, pasted text, and copy requests (start of OnGUI).</summary>
+        void TextInputEvents()
+        {
+            var e = Event.current;
+            copyAsked = false; // a copy is for this key press only
+            if (e.type == EventType.Repaint)
+            {
+                // the fields drawn last time, in order
+                tabOrderShown.Clear();
+                tabOrderShown.AddRange(tabOrder);
+                tabOrder.Clear();
+                if (pasted != null && Time.unscaledTime - pastedAt > 1f) pasted = null; // nobody was typing
+            }
+            if (pasted == null && (pasted = Clipboard.TakePaste()) != null) pastedAt = Time.unscaledTime;
+            if (ChatOpen && pasted != null)
+            {
+                chatText = OneLine(chatText + pasted, 200);
+                pasted = null;
+            }
+            if (e.type != EventType.KeyDown) return;
+            if (e.keyCode == KeyCode.Tab || e.character == '\t')
+            {
+                int i = tabOrderShown.IndexOf(GUI.GetNameOfFocusedControl());
+                if (i < 0) return;
+                if (e.keyCode == KeyCode.Tab && tabOrderShown.Count > 1)
+                    GUI.FocusControl(tabOrderShown[(i + (e.shift ? -1 : 1) + tabOrderShown.Count) % tabOrderShown.Count]);
+                e.Use();
+            }
+            else if ((e.control || e.command) && (e.keyCode == KeyCode.C || e.keyCode == KeyCode.X)) copyAsked = true;
+        }
+
+        static string OneLine(string s, int max)
+        {
+            s = s.Replace("\r\n", " ").Replace('\n', ' ').Replace('\r', ' ').Replace('\t', ' ');
+            return s.Length > max ? s.Substring(0, max) : s;
+        }
+
+        /// <summary>
+        /// A text field that takes part in Tab order, takes pasted text at its cursor and copies its selection (or all of it)
+        /// to the browser's clipboard. Every text field in the game goes through here.
+        /// </summary>
+        public string TextInput(Rect r, string name, string value, int max, bool password = false, GUIStyle style = null)
+        {
+            var e = Event.current;
+            value = value ?? "";
+            if (e.type == EventType.Repaint) tabOrder.Add(name);
+            if (GUI.GetNameOfFocusedControl() == name)
+            {
+                var editor = (TextEditor)GUIUtility.GetStateObject(typeof(TextEditor), GUIUtility.keyboardControl);
+                if (pasted != null)
+                {
+                    string add = OneLine(pasted, max);
+                    int at = editor != null ? Mathf.Clamp(Mathf.Min(editor.cursorIndex, editor.selectIndex), 0, value.Length) : value.Length;
+                    int end = editor != null ? Mathf.Clamp(Mathf.Max(editor.cursorIndex, editor.selectIndex), at, value.Length) : value.Length;
+                    value = value.Substring(0, at) + add + value.Substring(end);
+                    if (value.Length > max) value = value.Substring(0, max);
+                    if (editor != null) { editor.text = value; editor.cursorIndex = editor.selectIndex = Mathf.Min(value.Length, at + add.Length); }
+                    pasted = null;
+                }
+                if (copyAsked && e.type == EventType.KeyDown && !password)
+                {
+                    string sel = editor != null ? editor.SelectedText : "";
+                    Clipboard.Copy(string.IsNullOrEmpty(sel) ? value : sel);
+                    copyAsked = false;
+                }
+            }
+            GUI.SetNextControlName(name);
+            return password ? GUI.PasswordField(r, value, '\u2022', max, style ?? UISkin.Field) : GUI.TextField(r, value, max, style ?? UISkin.Field);
+        }
+
         /// <summary>The chat commands as buttons, above the chat when it's open or pointed at.</summary>
         void DrawChatBar(Rect bar)
         {
@@ -1768,6 +1845,12 @@ namespace Shadowfall
             {
                 if (chatText.Length > 0) chatText = chatText.Substring(0, chatText.Length - 1);
             }
+            else if (e.control || e.command)
+            {
+                // Ctrl/Cmd+C copies what's typed, +X cuts it (+V pastes: TextInputEvents); no letters from shortcuts
+                if (e.keyCode == KeyCode.C || e.keyCode == KeyCode.X) { Clipboard.Copy(chatText); if (e.keyCode == KeyCode.X) chatText = ""; }
+                copyAsked = false;
+            }
             else
             {
                 char c = e.character;
@@ -1857,6 +1940,13 @@ namespace Shadowfall
                     if (live && band.Contains(Event.current.mousePosition) && Player.I != null) ItemTooltip(l.Item, Player.I, l.Who != null ? "Linked by " + l.Who : "Linked");
                 }
                 UISkin.Shadowed(row, l.Text, UISkin.Small, c);
+                // right-click a line: it goes to the clipboard
+                if (live && inWorld && Event.current.type == EventType.MouseDown && Event.current.button == 1 && row.Contains(Event.current.mousePosition))
+                {
+                    Clipboard.Copy((l.Who != null && !l.Text.Contains(l.Who) ? l.Who + ": " : "") + l.Text);
+                    Event.current.Use();
+                    Log("Copied to the clipboard.", new Color(0.6f, 0.6f, 0.6f));
+                }
                 // the speaker's name: click for the player menu (whisper, invite, trade), or a whisper if they're far
                 if (live && inWorld && !string.IsNullOrEmpty(l.Who))
                 {
@@ -1892,7 +1982,7 @@ namespace Shadowfall
                 if (empty)
                 {
                     GUI.color = new Color(1, 1, 1, 0.45f);
-                    GUI.Label(r, "Say something...   /p party   /w name   /r reply   /invite name", style);
+                    GUI.Label(r, "Say something...   /p party   /w name   /r reply   Ctrl+V pastes", style);
                     GUI.color = Color.white;
                 }
                 else GUI.Label(r, shown + caret, style);
@@ -2509,12 +2599,14 @@ namespace Shadowfall
             return Exploration.Seen(center);
         }
 
+        Vector2 helpScroll;
+
         void DrawHelp()
         {
             var r = new Rect((VW - 600) / 2, 40, 600, Mathf.Min(720, VH - 50));
             if (UISkin.Window(r, "How to Play", true, true)) showHelp = false;
             Block(r);
-            GUI.Label(new Rect(r.x + 28, r.y + 58, 544, r.height - 110),
+            string text =
                 "<b>Combat</b>\n" +
                 "Left-click the ground to move (hold to keep walking). Left-click a monster to attack it; Shift+click attacks in place.\n" +
                 "<b>1-5</b> your class's abilities (right-click casts ability 2),  <b>Q / E</b> health / mana potions,  <b>R</b> recall to town (and back),  <b>V</b> mount / dismount,  " +
@@ -2536,7 +2628,13 @@ namespace Shadowfall
                 "<b>Zones</b>\n" +
                 "North: Whisperwood (1-7)    East: Goblin Encampment (3-10)\n" +
                 "West: Ironvein Quarry (3-15)    South: Forsaken Graveyard (6-11)\n" +
-                "Far south: Crypt of the Lich (boss)", UISkin.InkRich);
+                "Far south: Crypt of the Lich (boss)";
+            // scrolls (mouse wheel, or drag the bar) when the window is shorter than the text
+            var view = new Rect(r.x + 28, r.y + 58, 552, r.height - 110);
+            float textH = UISkin.InkRich.CalcHeight(new GUIContent(text), 530f) + 12f;
+            helpScroll = GUI.BeginScrollView(view, helpScroll, new Rect(0, 0, 530, textH));
+            GUI.Label(new Rect(0, 0, 530, textH), text, UISkin.InkRich);
+            GUI.EndScrollView();
             GUI.Label(new Rect(r.x + 28, r.yMax - 44, 544, 26), "Graphics, sound and other settings: press <b>Esc</b> and choose <b>Settings</b>.", UISkin.InkRich);
         }
 

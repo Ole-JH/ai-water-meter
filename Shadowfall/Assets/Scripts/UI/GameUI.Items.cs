@@ -276,8 +276,7 @@ namespace Shadowfall
 
             // Gold
             UISkin.IconInSlot(new Rect(lx, y + 4, 24, 24), UISkin.Icon("gold"), Color.white, 0);
-            GUI.SetNextControlName("trade_gold");
-            tradeGoldText = GUI.TextField(new Rect(lx + 30, y, 110, 32), tradeGoldText, 9, UISkin.Field);
+            tradeGoldText = TextInput(new Rect(lx + 30, y, 110, 32), "trade_gold", tradeGoldText, 9);
             if (UISkin.Btn(new Rect(lx + 146, y, colW - 146, 32), "Set", UISkin.Button))
             {
                 int.TryParse(tradeGoldText, out int g);
