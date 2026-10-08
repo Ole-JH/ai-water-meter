@@ -18,9 +18,21 @@ namespace Shadowfall
             public float Radius, Until;
             public Transform Root;   // the fires, their lights and the roar (all gone with it)
             public bool Told;
+            public readonly List<Vector3> Ruins = new List<Vector3>(); // houses partly fallen in (rebuilt after the fire)
+            public float KeepUntil;  // rebuilding: the ruins stand at least until then (and while the carpenters work)
         }
 
         static readonly Dictionary<string, Burning> burning = new Dictionary<string, Burning>();
+        // fires out, ruins still standing while the town is rebuilt (SiegeAftermath's workers), then cleared away
+        static readonly Dictionary<string, Burning> rebuilding = new Dictionary<string, Burning>();
+
+        /// <summary>The fallen-in houses of a town that burns or is being rebuilt (where the workers go).</summary>
+        public static List<Vector3> RuinsOf(string town)
+        {
+            if (town != null && burning.TryGetValue(town, out var b)) return b.Ruins;
+            if (town != null && rebuilding.TryGetValue(town, out var r)) return r.Ruins;
+            return null;
+        }
         static Sack runner;
         const int MaxHouses = 36; // the whole quarter, most of the town
         static readonly Color Flame = new Color(1f, 0.5f, 0.15f);
@@ -76,6 +88,7 @@ namespace Shadowfall
 
         static void Ignite(NetSack s)
         {
+            if (rebuilding.TryGetValue(s.k, out var old)) { rebuilding.Remove(s.k); if (old.Root != null) Destroy(old.Root.gameObject); }
             var b = new Burning
             {
                 Town = s.k, Gate = s.g, At = new Vector3(s.x, 0f, s.z), Radius = s.r, Until = Time.time + s.left,
@@ -131,7 +144,8 @@ namespace Shadowfall
                     var roar = Sfx.LoopAt("fire_loop", h.center + Vector3.up * 2f, 0.55f, 32f);
                     if (roar != null) roar.transform.SetParent(b.Root, true);
                 }
-                Ruin(b, h, spots, n, rng);
+                var ruinAt = Ruin(b, h, spots, n, rng);
+                if (ruinAt.HasValue) b.Ruins.Add(ruinAt.Value);
             }
             Pall(b);
             WallFires(b, s, rng);
@@ -154,7 +168,7 @@ namespace Shadowfall
         /// black smoke from every third (seen from far off), and every third one partly fallen in: charred beams and a
         /// slab of roof down against its side, a heap of rubble and burning timbers at its foot.
         /// </summary>
-        static void Ruin(Burning b, Bounds h, Vector3[] spots, int n, System.Random rng)
+        static Vector3? Ruin(Burning b, Bounds h, Vector3[] spots, int n, System.Random rng)
         {
             float R(float a, float c) => a + (float)rng.NextDouble() * (c - a);
             var root = b.Root;
@@ -177,7 +191,7 @@ namespace Shadowfall
                         Smoke = true, Grow = true, Radius = size * 0.2f, Max = 60,
                     }, root, top + Vector3.up * 1.5f);
             }
-            if (n % 2 != 1) return;
+            if (n % 2 != 1) return null;
             // fallen in on one side
             var side = (rng.NextDouble() < 0.5 ? Vector3.right : Vector3.forward) * (rng.NextDouble() < 0.5 ? -1f : 1f);
             var at = foot + side * (size * 0.5f + 0.6f);
@@ -195,6 +209,7 @@ namespace Shadowfall
                 stone.transform.rotation = Quaternion.Euler(R(0f, 360f), R(0f, 360f), R(0f, 360f));
             }
             PropFire.Add(root, at + Vector3.up * 0.3f, Flame, R(0.6f, 0.9f), true);
+            return at;
         }
 
         /// <summary>
@@ -380,15 +395,38 @@ namespace Shadowfall
             // The flames die down; a last puff of smoke where each one was
             foreach (var f in b.Root.GetComponentsInChildren<PropFire>())
                 if (f != null && SpellFx.Ready) SpellFx.Dust(f.transform.position, 1.2f, new Color(0.3f, 0.3f, 0.32f));
-            Destroy(b.Root.gameObject);
+            // The fire goes, the wreck stays: the ruins and wreckage are cleared while the town is rebuilt
+            foreach (var f in b.Root.GetComponentsInChildren<PropFire>(true)) if (f != null) Destroy(f.gameObject);
+            foreach (var l in b.Root.GetComponentsInChildren<Light>(true)) if (l != null) Destroy(l.gameObject);
+            foreach (var ps in b.Root.GetComponentsInChildren<ParticleSystem>(true)) if (ps != null) Destroy(ps.gameObject);
+            foreach (var a in b.Root.GetComponentsInChildren<AudioSource>(true)) if (a != null) Destroy(a.gameObject);
+            foreach (var reeve in b.Root.GetComponentsInChildren<RebuildReeve>(true)) if (reeve != null) Destroy(reeve.gameObject);
+            b.KeepUntil = Time.time + 8f;
+            rebuilding[town] = b;
+        }
+
+        /// <summary>The rebuilding is done (or never came): the ruins and wreckage are cleared away.</summary>
+        static void ClearRebuilt()
+        {
+            List<string> done = null;
+            foreach (var kv in rebuilding)
+                if (Time.time > kv.Value.KeepUntil && !SiegeAftermath.Repairing(kv.Key)) (done ??= new List<string>()).Add(kv.Key);
+            if (done == null) return;
+            foreach (var k in done)
+            {
+                var b = rebuilding[k];
+                rebuilding.Remove(k);
+                if (b.Root != null) Destroy(b.Root.gameObject);
+            }
         }
 
         float nextLook;
 
         void Update()
         {
-            if (Time.time < nextLook || burning.Count == 0) return;
+            if (Time.time < nextLook || (burning.Count == 0 && rebuilding.Count == 0)) return;
             nextLook = Time.time + 1f;
+            ClearRebuilt();
             var hero = Player.I;
             if (hero == null) return;
             foreach (var b in burning.Values)

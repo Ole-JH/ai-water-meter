@@ -368,6 +368,8 @@ namespace Shadowfall
             float nextFidget;
             public Vector3? FaceAt;
             public string Party;   // an emote kept up while standing about: dance, cheer, clap, sit
+            public float RaiseTo = -1f; // up a scaffold once there (the platform's height)
+            GameObject load;           // a plank on the shoulder (Shuttle)
             public Vector3? OrbitAbout; // a ring dance: round and round this point (OrbitR away, OrbitSpeed radians a second)
             public float OrbitR = 3f, OrbitSpeed = 0.6f, OrbitAngle;
             float nextParty;
@@ -405,6 +407,35 @@ namespace Shadowfall
 
             public void FadeOut(float after) { fadeAt = Time.time + after; fadeLen = 1.5f; }
 
+            /// <summary>
+            /// To and fro for good: picks up a plank at <paramref name="from"/> (a moment bent over the pile), carries it
+            /// on the shoulder to <paramref name="to"/>, puts it down there, and goes back for the next.
+            /// </summary>
+            public void Shuttle(Vector3 from, Vector3 to)
+            {
+                if (load == null)
+                {
+                    load = Factory.Prim(PrimitiveType.Cube, transform, new Vector3(0.28f, 1.55f, 0.1f), new Vector3(0.14f, 0.07f, 2f), new Color(0.78f, 0.62f, 0.4f));
+                    load.transform.localRotation = Quaternion.Euler(-8f, 0f, 0f);
+                    load.SetActive(false);
+                }
+                Walk(from);
+                OnArrive = x =>
+                {
+                    x.view?.Interact();
+                    x.Delay = Random.Range(1.2f, 2.4f);
+                    x.load.SetActive(true);
+                    x.Walk(to);
+                    x.OnArrive = y =>
+                    {
+                        y.view?.Interact();
+                        y.Delay = Random.Range(1f, 2.2f);
+                        y.load.SetActive(false);
+                        y.Shuttle(from, to);
+                    };
+                };
+            }
+
             /// <summary>Standing about: now and then a glance aside, a shuffle of the feet, so nobody stands like a post.</summary>
             void Fidget()
             {
@@ -440,6 +471,14 @@ namespace Shadowfall
                 }
                 if (Tending && at >= path.Count && Delay <= 0f)
                 {
+                    if (RaiseTo >= 0f && Mathf.Abs(transform.position.y - RaiseTo) > 0.01f)
+                    {
+                        // up the scaffold's poles, hand over hand
+                        var p = transform.position;
+                        transform.position = new Vector3(p.x, Mathf.MoveTowards(p.y, RaiseTo, 1.4f * dt), p.z);
+                        view?.UpdateLocomotion(0.8f);
+                        return;
+                    }
                     if (FaceAt.HasValue) Factory.Face(transform, FaceAt.Value, dt * 6f);
                     if (Time.time >= nextTend) { nextTend = Time.time + Random.Range(FaceAt.HasValue ? 1.6f : 3f, FaceAt.HasValue ? 2.8f : 6f); view?.Interact(); }
                     view?.UpdateLocomotion(0f);

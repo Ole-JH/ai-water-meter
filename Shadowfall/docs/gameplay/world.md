@@ -333,7 +333,8 @@ one of the walled towns (Hollowmere, Frosthaven, Saltreach or Emberwatch), usual
       cups are raised in toasts and fireworks burst overhead. Click the table to eat: the **Heroes'
       Feast**, +25% experience for fifteen minutes (it survives a reload). Each hero can eat once a feast, so it can't
       be stretched;
-    - carpenters mend the gate behind scaffolding for three minutes; it stays battered until they're done.
+    - carpenters mend the gate for three minutes: three up on the scaffolding hammering, two hauling planks from the
+      pile, a foreman shouting orders; the gate stays battered until they're done.
 - **The town is sacked** when the gate breaks, or when nobody stops the siege within 12 minutes: the invaders plunder
   the market and withdraw, and nobody is rewarded. Worse, **they set fire to the quarter behind the broken gate** (inside
   the walls, everything but the far side of town) for **twelve minutes**:
@@ -363,7 +364,9 @@ one of the walled towns (Hollowmere, Frosthaven, Saltreach or Emberwatch), usual
   the world map show where. Kill the captors within ten minutes and the captives run home, the fires burn half as long
   again, and everyone who fought the captors gets experience. Leave them and they're carried off into the wilds.
 - **The broken gate** lies in its burning heap until the fires are out; then carpenters put up scaffolding and build it
-  anew over three minutes.
+  anew over three minutes. The burnt-out ruins stand meanwhile, and work crews come out of the houses to rebuild the
+  town: builders hammering at the fallen-in houses, labourers hauling timber from a lumber pile and clearing the
+  rubble, the reeve directing them. When the work is done, the ruins are gone.
 - **Graves** are dug in the town's graveyard for every guard who fell, won or lost (if you weren't there to see them
   carried in, the townsfolk mourn them when you arrive).
 

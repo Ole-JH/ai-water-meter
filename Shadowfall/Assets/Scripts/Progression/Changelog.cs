@@ -37,6 +37,7 @@ namespace Shadowfall
                     "Updates are announced in chat: a new version on its way, building, testing, a countdown before the restart, and when it's live.",
                     "Every fallen guard is carried to the graveyard, archers too: those who die outside the gate are fetched as soon as it opens. The bearers and the townsfolk stay and mourn for a few minutes.",
                     "The gate's scaffolding no longer lingers: carpenters only start once a sacked town's fires are out, and the gate stays battered until their three minutes of work are done.",
+                    "Work crews rebuild after a siege: carpenters up on the gate's scaffolding, labourers hauling planks, a foreman shouting orders; after a sack the ruins stand while builders hammer at them and haul timber from a lumber pile, until the town is whole again.",
                     "A proper feast: bunting and lanterns over the square, a roast turning on a spit over the bonfire, a barkeep at the ale cask, a minstrel singing, a ring dance round the fire, toasts and fireworks.",
                 },
             },

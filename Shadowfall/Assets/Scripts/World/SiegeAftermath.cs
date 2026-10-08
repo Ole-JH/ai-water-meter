@@ -27,7 +27,13 @@ namespace Shadowfall
             }
         }
 
-        class Built { public string Key; public GameObject Root; public float Until; public readonly List<SiegeLife.Extra> People = new List<SiegeLife.Extra>(); }
+        class Built
+        {
+            public string Key; public GameObject Root; public float Until;
+            public readonly List<SiegeLife.Extra> People = new List<SiegeLife.Extra>();
+            public readonly List<Vector3> Hammers = new List<Vector3>();     // where hammering is heard (the scaffold, the ruins)
+            public readonly List<SiegeLife.Extra> Talkers = new List<SiegeLife.Extra>(); // the foreman, the reeve: they shout
+        }
         readonly Dictionary<string, Built> built = new Dictionary<string, Built>();
         NetAfter last;
         float nextCheck, nextCheer, nextHammer;
@@ -94,8 +100,16 @@ namespace Shadowfall
             {
                 nextHammer = Time.time + R(0.8f, 1.6f);
                 foreach (var b in built.Values)
-                    if (b.Key.StartsWith("rp|") && b.Root != null && Factory.FlatDistance(p.transform.position, b.Root.transform.position) < 35f)
-                        Sfx.Play(rng.NextDouble() < 0.5 ? "chop" : "anvil", b.Root.transform.position + Vector3.up * 1.5f, 0.3f, 0.15f, 35f);
+                {
+                    if (!b.Key.StartsWith("rp|") || b.Root == null) continue;
+                    foreach (var h in b.Hammers) // one blow from somewhere near, now and then
+                        if (rng.NextDouble() < 0.35 && Factory.FlatDistance(p.transform.position, h) < 35f)
+                            Sfx.Play(rng.NextDouble() < 0.6 ? "chop" : "anvil", h + Vector3.up * 1.2f, 0.28f, 0.15f, 35f);
+                    if (rng.NextDouble() < 0.06)
+                        foreach (var t in b.Talkers)
+                            if (t != null && Factory.FlatDistance(p.transform.position, t.transform.position) < 30f && rng.NextDouble() < 0.5)
+                                Speech.Say(t.transform, 2.5f, t.name.StartsWith("Reeve") ? Pick(reeveLines) : Pick(orders));
+                }
             }
         }
 
@@ -446,14 +460,76 @@ namespace Shadowfall
             var pile = at + inward * 3f + across * 3.5f;
             for (int i = 0; i < 6; i++) Factory.PrimAt(PrimitiveType.Cube, tr, pile + Vector3.up * (0.08f + i * 0.1f), Abs(across * 0.3f + inward * 2.4f) + Vector3.up * 0.08f, new Color(0.78f, 0.62f, 0.4f));
             var life = SiegeLife.Get();
-            var c1 = life.Person("Carpenter", "Characters/Barbarian", TownLife.Walkable(at + inward * 1.2f + across * 1.4f), 1.9f);
-            var c2 = life.Person("Carpenter", "Characters/Keeper", TownLife.Walkable(at + inward * 1.2f - across * 1.4f), 1.85f);
-            c1.FaceAt = c2.FaceAt = gate;
-            c1.Tending = c2.Tending = true;
-            b.People.Add(c1);
-            b.People.Add(c2);
+            string[] models = { "Characters/Barbarian", "Characters/Keeper", "Characters/Rogue", "Characters/RogueHooded", "Characters/Knight" };
+            string M() => models[rng.Next(models.Length)];
+            // carpenters up on the scaffold (two on the top deck, one below), hammering at the new gate
+            float[] decks = { 2.95f, 2.95f, 1.45f };
+            float[] along = { -1.4f, 1.3f, 0.2f };
+            for (int i = 0; i < 3; i++)
+            {
+                var foot = TownLife.Walkable(at + inward * 0.7f + across * along[i]);
+                var c = life.Person("Carpenter", M(), foot, R(1.8f, 1.95f));
+                c.FaceAt = gate;
+                c.Tending = true;
+                c.RaiseTo = decks[i];
+                b.People.Add(c);
+                b.Hammers.Add(foot + Vector3.up * decks[i]);
+            }
+            // two hauling fresh planks from the pile to the foot of the scaffold, and the foreman giving orders
+            for (int i = 0; i < 2; i++)
+            {
+                var hauler = life.Person("Labourer", M(), TownLife.Walkable(pile + across * R(-1f, 1f)), R(1.75f, 1.9f));
+                hauler.Shuttle(TownLife.Walkable(pile - across * 0.8f + inward * R(-0.5f, 0.5f)), TownLife.Walkable(at + inward * 2f + across * R(-1.5f, 1.5f)));
+                b.People.Add(hauler);
+            }
+            var boss = life.Person("Foreman", "Characters/Knight", TownLife.Walkable(at + inward * 4.5f - across * 2f), 1.95f);
+            boss.FaceAt = at;
+            boss.Party = "point";
+            boss.Line = Pick(orders);
+            b.People.Add(boss);
+            b.Talkers.Add(boss);
+
+            // around the town after a sack: crews at the fallen-in houses, timber hauled from a lumber pile
+            var ruins = Sack.RuinsOf(town);
+            if (ruins != null && ruins.Count > 0)
+            {
+                var yard = TownLife.Walkable(t.Center + inward * 6f + across * 6f);
+                for (int i = 0; i < 8; i++)
+                    Factory.PrimAt(PrimitiveType.Cube, tr, yard + new Vector3(R(-0.3f, 0.3f), 0.1f + (i / 2) * 0.16f, (i % 2) * 0.5f), new Vector3(2.4f, 0.14f, 0.3f), new Color(0.72f, 0.56f, 0.36f));
+                Factory.PrimAt(PrimitiveType.Cube, tr, yard + new Vector3(0f, 0.25f, 1.8f), new Vector3(1.2f, 0.5f, 0.8f), new Color(0.5f, 0.5f, 0.5f)); // cut stone
+                int crews = Mathf.Min(6, ruins.Count);
+                for (int k = 0; k < crews; k++)
+                {
+                    var ruin = ruins[k];
+                    var hammerer = life.Person("Builder", M(), TownLife.Walkable(ruin + new Vector3(R(-1.5f, 1.5f), 0f, R(-1.5f, 1.5f))), R(1.75f, 1.95f));
+                    hammerer.FaceAt = ruin;
+                    hammerer.Tending = true;
+                    b.People.Add(hammerer);
+                    b.Hammers.Add(ruin);
+                    var hauler = life.Person("Labourer", M(), TownLife.Walkable(yard + new Vector3(R(-1f, 1f), 0f, R(-1f, 1f))), R(1.75f, 1.9f));
+                    hauler.Shuttle(TownLife.Walkable(yard + new Vector3(R(-1.2f, 1.2f), 0f, -1f)), TownLife.Walkable(ruin + new Vector3(R(-2f, 2f), 0f, R(-2f, 2f))));
+                    b.People.Add(hauler);
+                    if (k % 2 == 0)
+                    {
+                        // clearing the rubble: shovelling it into a barrow
+                        var clearer = life.Person("Labourer", M(), TownLife.Walkable(ruin + new Vector3(R(-2f, 2f), 0f, R(-2f, 2f))), R(1.75f, 1.9f));
+                        clearer.FaceAt = ruin;
+                        clearer.Tending = true;
+                        b.People.Add(clearer);
+                    }
+                }
+                var reeve = life.Person("Reeve Halden", "Characters/Keeper", TownLife.Walkable(yard + inward * 2f), 1.9f);
+                reeve.FaceAt = yard;
+                reeve.Party = "point";
+                b.People.Add(reeve);
+                b.Talkers.Add(reeve);
+            }
             return b;
         }
+
+        static readonly string[] reeveLines = { "Timber to the baker's first, then the smithy!", "Clear that rubble before you lay a stone!", "We'll be back on our feet by market day.", "Careful, that wall's still warm!" };
+        static readonly string[] orders = { "Mind that beam! Up, up!", "Hammer, not your thumb, Wat!", "Planks to the left, lads!", "This gate'll stand a hundred years!", "Faster! The raiders won't wait for us next time!", "Steady... and drop it in!" };
+        static string Pick(string[] a) => a[Random.Range(0, a.Length)];
 
         static Vector3 Abs(Vector3 v) => new Vector3(Mathf.Abs(v.x), Mathf.Abs(v.y), Mathf.Abs(v.z));
 
