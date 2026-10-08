@@ -32,6 +32,21 @@ namespace Shadowfall
         /// <summary>A pending party invitation or shared quest, shown as a popup.</summary>
         public class Offer { public int From; public string Name; public QuestDef Quest; public float Time; }
         public Offer PartyInvite { get; private set; }
+        /// <summary>A ready check we haven't answered yet (from the leader).</summary>
+        public Offer ReadyPrompt { get; private set; }
+        /// <summary>The last ready check's answers so far (member id: ready or not), and when it started.</summary>
+        public readonly System.Collections.Generic.Dictionary<int, bool> ReadyAnswers = new System.Collections.Generic.Dictionary<int, bool>();
+        public float ReadyAt { get; private set; } = -100f;
+        /// <summary>The party's loot rule: gold picked up is shared with the members nearby.</summary>
+        public bool ShareGold { get; private set; }
+
+        public void StartReadyCheck() => PartySend("pready");
+        public void AnswerReady(bool yes)
+        {
+            ReadyPrompt = null;
+            if (State == ConnState.InWorld) Send(new PartyYesMsg { t = "pans", yes = yes });
+        }
+        public void SetShareGold(bool on) { if (State == ConnState.InWorld) Send(new PartyYesMsg { t = "ploot", yes = on }); }
         public Offer QuestOffer { get; private set; }
 
         readonly WebSocketConnection socket = new WebSocketConnection();
@@ -560,11 +575,28 @@ namespace Shadowfall
                     break;
 
                 case "chat": HandleChat(m); break;
+                case "rcheck":
+                    ReadyAnswers.Clear();
+                    ReadyAnswers[m.id] = true;
+                    ReadyAt = Time.time;
+                    if (m.id != MyId) ReadyPrompt = new Offer { From = m.id, Name = m.name, Time = Time.time };
+                    Sfx.Play2D("bell", 0.5f, 1.2f);
+                    GameUI.Log(m.id == MyId ? "You start a ready check." : m.name + " starts a ready check.", PartyColor);
+                    break;
+                case "rans":
+                    ReadyAnswers[m.id] = m.yes;
+                    if (!m.yes) GameUI.Log(m.name + " is not ready.", new Color(1f, 0.55f, 0.4f));
+                    break;
+                case "rdone":
+                    GameUI.Log(m.ok ? "Everyone is ready!" : "Not everyone is ready.", m.ok ? new Color(0.5f, 1f, 0.5f) : new Color(1f, 0.55f, 0.4f));
+                    Sfx.Play2D(m.ok ? "quest_done" : "ui_error", 0.45f);
+                    break;
                 case "dungeon": HandleDungeon(m); break;
                 case "party":
                     bool wasInParty = InParty;
                     Party = m.pm ?? new NetPartyMember[0];
                     PartyLeader = m.id;
+                    ShareGold = m.sg;
                     if (!wasInParty && InParty)
                     {
                         GameUI.Log("You joined a party. Type /p to talk to your party.", PartyColor);

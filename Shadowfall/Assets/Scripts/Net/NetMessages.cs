@@ -51,6 +51,7 @@ namespace Shadowfall
         public string hash;     // "grid": the server's map hash
         public bool mail;
         public bool rare;       // "ach": a rare achievement (announced to everyone)
+        public bool yes, ok, sg; // "rans": a member's answer; "rdone": everyone ready; "party": the gold is shared
         public NetCharacter[] chars;
         public float x, z, tx, tz, dmg;
         public bool hasSave;
@@ -182,6 +183,8 @@ namespace Shadowfall
 
     /// <summary>Party commands: pinvite (name), paccept, pdecline, pleave, pkick (id), pshare (q).</summary>
     [Serializable] public class PartyCmd { public string t, name, q; public int id; }
+    /// <summary>A yes/no to the party: pans (ready-check answer), ploot (share gold).</summary>
+    [Serializable] public class PartyYesMsg { public string t; public bool yes; }
     /// <summary>A map ping for the party (server-space position).</summary>
     [Serializable] public class PingCmd { public string t = "pping"; public float x, z; }
     [Serializable] public class TradeCmd { public string t; public int id, gold; public int[] slots; }

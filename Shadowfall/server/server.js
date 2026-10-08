@@ -883,6 +883,19 @@ function closeTrade(tr, msg) {
 }
 function partySys(p, msg) { for (const o of partyMembers(p)) sys(o, msg); }
 
+/**
+ * Gold picked up: all of it to the finder, or (the party's "share gold" rule) split evenly with the party members
+ * nearby (same place, within PARTY_RANGE), the odd coins to the finder.
+ */
+function shareGold(s, gold) {
+  const p = partyOf(s);
+  const near = p && p.shareGold ? partyMembers(p).filter((o) => o !== s && o.ledger && !o.dead && (o.inst || 0) === (s.inst || 0) && dist(o.x, o.z, s.x, s.z) <= PARTY_RANGE) : [];
+  if (!near.length || gold < near.length + 1) { s.ledger.gold += gold; return; }
+  const each = Math.floor(gold / (near.length + 1));
+  s.ledger.gold += gold - each * near.length;
+  for (const o of near) { o.ledger.gold += each; sendInv(o); }
+}
+
 function findOnline(name) {
   const n = String(name || "").trim().toLowerCase();
   if (!n) return null;
@@ -899,7 +912,7 @@ function sendParty(p) {
       di: o.inst || 0, dn: inst ? `${DUNGEONS[inst.dIdx].name}, level ${inst.depth}` : "",
     };
   });
-  const data = JSON.stringify({ t: "party", id: p.leader, pm });
+  const data = JSON.stringify({ t: "party", id: p.leader, pm, sg: !!p.shareGold });
   for (const o of partyMembers(p)) safeSend(o, data);
 }
 
@@ -1067,6 +1080,39 @@ const partyHandlers = {
   },
 
   pleave(s) { if (partyOf(s)) leaveParty(s, "has left the party."); else sys(s, "You are not in a party."); },
+
+  /** The leader asks if everyone's ready: a prompt for each member, answers shown to all (30 s). */
+  pready(s) {
+    const p = partyOf(s);
+    if (!p || p.leader !== s.id) return sys(s, "Only the party leader can start a ready check.");
+    const t = now();
+    if (p.ready && t - p.ready.at < 10) return;
+    p.ready = { at: t, answers: new Map([[s.id, true]]) };
+    const data = JSON.stringify({ t: "rcheck", id: s.id, name: s.name });
+    for (const o of partyMembers(p)) safeSend(o, data);
+  },
+  pans(s, m) {
+    const p = partyOf(s);
+    if (!p || !p.ready || now() - p.ready.at > 30 || p.ready.answers.has(s.id)) return;
+    p.ready.answers.set(s.id, !!m.yes);
+    const members = partyMembers(p);
+    const data = JSON.stringify({ t: "rans", id: s.id, name: s.name, yes: !!m.yes });
+    for (const o of members) safeSend(o, data);
+    if (members.every((o) => p.ready.answers.has(o.id))) {
+      const ok = members.every((o) => p.ready.answers.get(o.id));
+      const done = JSON.stringify({ t: "rdone", ok });
+      for (const o of members) safeSend(o, done);
+      p.ready = null;
+    }
+  },
+  /** The leader's loot rule: share gold with the party nearby, or finders keepers. */
+  ploot(s, m) {
+    const p = partyOf(s);
+    if (!p || p.leader !== s.id) return sys(s, "Only the party leader can change the loot rules.");
+    p.shareGold = !!m.yes;
+    partySys(p, p.shareGold ? "Loot rule: gold is shared with the party nearby." : "Loot rule: finders keepers (gold goes to whoever picks it up).");
+    sendParty(p);
+  },
 
   pkick(s, m) {
     const p = partyOf(s);
@@ -1945,7 +1991,7 @@ const itemOps = {
       if (left === d.item.Count) return ierr(s, "pickup", "Your bags are full.", { id: d.id });
       if (left > 0) { d.item.Count = left; ierr(s, "pickup", "Your bags are full.", { id: d.id, n: left }); return true; }
     }
-    s.ledger.gold += d.gold;
+    shareGold(s, d.gold);
     s.drops.delete(d.id);
     iok(s, "pickup", { id: d.id });
     return true;
@@ -2415,8 +2461,9 @@ const handlers = {
       case "/guild": case "/g": case "/gchat": case "/ginvite": case "/gleave": case "/gkick": case "/gpromote": case "/gdemote": case "/gleader": case "/gmotd": case "/gbanner":
         return guilds.command(s, cmd.toLowerCase(), rest);
       case "/leave": return partyHandlers.pleave(s);
+      case "/ready": case "/rc": return partyHandlers.pready(s);
       default:
-        if (cmd.startsWith("/")) return sys(s, "Commands: /p party chat, /g guild chat, /w name whisper, /invite name, /leave, /guild, /who");
+        if (cmd.startsWith("/")) return sys(s, "Commands: /p party chat, /g guild chat, /w name whisper, /invite name, /leave, /ready (party ready check), /guild, /who");
     }
     broadcast({ t: "chat", id: s.id, name: s.name, msg, ...link });
   },

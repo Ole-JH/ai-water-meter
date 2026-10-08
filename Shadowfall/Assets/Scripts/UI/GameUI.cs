@@ -550,6 +550,16 @@ namespace Shadowfall
                 UISkin.Bar(new Rect(tx, r.y + 45, tw, 15), mhp > 0 ? hp / mhp : 0f, "Red",
                     m.dead ? "Dead" : Mathf.CeilToInt(hp) + " / " + Mathf.CeilToInt(mhp), new Color(0.75f, 0.12f, 0.1f));
                 if (m.mmp > 0) UISkin.Bar(new Rect(tx, r.y + 64, tw, 9), m.mp / m.mmp, "Blue", null, new Color(0.2f, 0.35f, 0.9f));
+                // the ready check: a mark on the portrait for 40 s (green ready, red not, grey waiting)
+                if (Time.time - net.ReadyAt < 40f)
+                {
+                    bool answered = net.ReadyAnswers.TryGetValue(m.id, out bool ready);
+                    var mark = new Rect(pr.x - 4, pr.y - 4, 24, 24);
+                    GUI.color = answered ? (ready ? new Color(0.25f, 0.8f, 0.3f) : new Color(0.85f, 0.25f, 0.2f)) : new Color(0.4f, 0.4f, 0.4f);
+                    GUI.DrawTexture(mark, UISkin.Circle);
+                    GUI.color = Color.white;
+                    UISkin.Shadowed(mark, answered ? (ready ? "OK" : "NO") : "?", UISkin.V(UISkin.SmallCenter, fontSize: 11), Color.white, 1);
+                }
 
                 if (net.IsLeader)
                 {
@@ -566,6 +576,21 @@ namespace Shadowfall
             var leave = new Rect(12, y, 130, 32);
             Block(leave);
             if (UISkin.Btn(leave, "Leave Party", UISkin.Button)) net.LeaveParty();
+            if (net.IsLeader)
+            {
+                // the leader's tools: a ready check, and the loot rule for gold
+                var rcb = new Rect(148, y, 74, 32);
+                Block(rcb);
+                if (UISkin.Btn(rcb, "Ready?", UISkin.Button)) net.StartReadyCheck();
+                if (rcb.Contains(Event.current.mousePosition)) tooltip = "Ready check: ask everyone in the party if they're ready (or type /ready)";
+                var gb = new Rect(228, y, 74, 32);
+                Block(gb);
+                if (UISkin.Btn(gb, net.ShareGold ? "Split" : "Keep", UISkin.Button)) net.SetShareGold(!net.ShareGold);
+                if (gb.Contains(Event.current.mousePosition))
+                    tooltip = "<b>Loot rule for gold</b>\n" + (net.ShareGold ? "Shared: gold anyone picks up is split with the party nearby." : "Finders keepers: gold goes to whoever picks it up.") +
+                              "\n<color=#998877>Click to switch. Items are always each player's own.</color>";
+            }
+            else UISkin.Shadowed(new Rect(148, y + 6, 160, 20), net.ShareGold ? "Gold is shared" : "Finders keepers", UISkin.V(UISkin.Small, fontSize: 12), UISkin.Muted);
         }
 
         void DrawPlayerMenu()
@@ -645,6 +670,13 @@ namespace Shadowfall
             {
                 if (Time.time - inv.Time > 60f) net.AnswerPartyInvite(false);
                 else if (OfferBox(y, "<b>" + inv.Name + "</b> invites you to join a party.", out bool yes)) net.AnswerPartyInvite(yes);
+                y += 140;
+            }
+            var rc = net.ReadyPrompt;
+            if (rc != null)
+            {
+                if (Time.time - rc.Time > 30f) net.AnswerReady(false);
+                else if (OfferBox(y, "<b>" + rc.Name + "</b> asks: are you ready?", out bool yes)) net.AnswerReady(yes);
                 y += 140;
             }
             var ti = net.TradeInvite;

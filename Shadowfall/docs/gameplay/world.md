@@ -74,6 +74,8 @@ Right-click another player (anywhere on their character, or click the name above
 - The party leader can remove members with the **x** on their party frame.
 - **Shared kills** give every member their **own loot**: nobody else sees or can take it.
 
+The party leader has two buttons under the party frames. **Ready?** (or type `/ready`) asks everyone if they're ready: each member gets a Ready / Not ready prompt, and a green or red mark shows on their portrait for everyone. **Split / Keep** is the loot rule for gold: with *Split*, gold anyone picks up is shared evenly with the party members nearby (the odd coins go to the finder); with *Keep* (the default) it's finders keepers. Items are always each player's own loot.
+
 ## Guilds
 
 Every guild has a **banner**: a field colour, a second colour and an emblem (cross, chevron, star, sun, diamond,

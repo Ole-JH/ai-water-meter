@@ -952,6 +952,21 @@ async function main() {
     const pings = d.all("ping");
     assert.ok(pings.length === 1 && pings[0].x === 150.5 && pings[0].name === "Bob" && pings[0].di === 0, "map pings reach the party, not too often");
 
+    // ready check (leader only), answers seen by all; the loot rule (leader only)
+    b.ws.send(JSON.stringify({ t: "pready" }));
+    await sleep(150);
+    assert.ok(!d.find("rcheck"), "only the leader can start a ready check");
+    a.ws.send(JSON.stringify({ t: "pready" }));
+    await sleep(200);
+    assert.ok(b.find("rcheck") && d.find("rcheck")?.name === "Alice", "a ready check reaches every member");
+    b.ws.send(JSON.stringify({ t: "pans", yes: true }));
+    d.ws.send(JSON.stringify({ t: "pans", yes: false }));
+    await sleep(250);
+    assert.ok(a.all("rans").length === 2 && a.find("rdone")?.ok === false, "answers come back, and one 'not ready' makes it a no");
+    a.ws.send(JSON.stringify({ t: "ploot", yes: true }));
+    await sleep(200);
+    assert.strictEqual(d.all("party").at(-1).sg, true, "the leader can turn on shared gold, and the party frames know");
+
     // ---- achievements: announced to the party once, and titles only for what you've earned
     b.ws.send(JSON.stringify({ t: "ach", id: "first_blood" }));
     b.ws.send(JSON.stringify({ t: "ach", id: "made_up_achievement" }));
