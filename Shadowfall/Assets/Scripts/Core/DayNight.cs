@@ -18,6 +18,9 @@ namespace Shadowfall
         /// <summary>In-game hour, 0..24.</summary>
         public static float Hour { get; private set; } = 12f;
 
+        /// <summary>Holds the time of day (the scripted town tour only: TownTour); null follows the server's clock.</summary>
+        public static float? HourOverride;
+
         static double serverOffsetMs;  // server clock - local clock
         public static void SyncServerTime(double serverNowMs)
         {
@@ -105,7 +108,7 @@ namespace Shadowfall
         {
             double cycleMs = CycleMinutes * 60000.0;
             double t = ((NowMs() + serverOffsetMs) % cycleMs + cycleMs) % cycleMs / cycleMs;
-            Hour = (float)(t * 24.0);
+            Hour = HourOverride ?? (float)(t * 24.0);
 
             if (Dungeon.Active) { ApplyDungeon(); return; }
             RenderSettings.fogStartDistance = 34f;

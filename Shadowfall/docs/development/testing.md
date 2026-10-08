@@ -83,6 +83,12 @@ achievements and comfort settings for a screenshot each, walks to the nearest du
 map, a fight), comes back up and fights the nearest monsters outside (backing off below 60% health), and reports the
 frame rate of each scene as `fps:<scene>` steps (with the worst frame and how many particle systems and lights there
 are). Run it against any server with the check script, e.g. `CHECK_URL='https://your.server/?tour=1' node check.js`.
+
+**Town tour** (by hand): with `?sfcheck=1&town=1` the check then looks at Hollowmere's life up close, on this client
+only (`TownTour.cs`): the square by day, a pretend raid at the south gate (villagers running for their doors, the shutters
+shut), then at night (the time held with `DayNight.HourOverride`) every front door swung open in turn with the lit windows
+around it, and the west gate pulled to and then swung open as the hero walks up. Each door is reported with its model and
+position.
 It registers one `check######` account there.
 
 With `?sfcheck=1&photos=1` (by hand; the deploy check skips it to save minutes) the check also takes a **photo tour**

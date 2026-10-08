@@ -29,6 +29,7 @@ namespace Shadowfall
 
         public class Door
         {
+            public string Model;
             public Vector3 Centre;   // middle of the doorway, at the sill
             public Vector3 Out;      // the way the door faces (flat)
             public Vector3 Step;     // on the ground just outside
@@ -64,7 +65,7 @@ namespace Shadowfall
             var root = house.transform.GetChild(0); // the model itself (scaled); glTFast mirrors x into Unity's space
             var hinge = new Vector3(-s.x - PanelW * 0.5f, s.y, s.z + 0.004f);
 
-            var d = new Door();
+            var d = new Door { Model = name };
             d.Centre = root.TransformPoint(new Vector3(-s.x, s.y, s.z));
             d.Out = Factory.Flat(root.TransformDirection(Vector3.forward)).normalized;
             d.Step = new Vector3(d.Centre.x, 0f, d.Centre.z) + d.Out * 0.9f;
@@ -87,6 +88,8 @@ namespace Shadowfall
             d.Shut = leaf.rotation;
             doors.Add(d);
         }
+
+        public static IReadOnlyList<Door> All => doors;
 
         /// <summary>The door nearest <paramref name="p"/> within <paramref name="max"/> metres (or null).</summary>
         public static Door Near(Vector3 p, float max)

@@ -158,6 +158,12 @@ namespace Shadowfall
                 Report("tour");
                 yield return gameObject.AddComponent<PlaytestTour>().Run(Shot, Report);
             }
+            else if (TownTour.Requested)
+            {
+                // Doors, windows, gates and townsfolk at night and under a pretend raid (TownTour.cs)
+                Report("town tour");
+                yield return gameObject.AddComponent<TownTour>().Run(Shot, Report);
+            }
             else if (Application.absoluteURL.Contains("photos=1"))
             {
                 // Every model lined up, and the towns from above, for judging how things look (PhotoTour.cs). By hand
