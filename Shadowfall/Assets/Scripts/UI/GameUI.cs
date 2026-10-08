@@ -1066,6 +1066,17 @@ namespace Shadowfall
                 DotAt(bp, WorldBoss.Color, 11f);
             }
 
+            // Legendary and set items lying about: a pulsing ping in their colour (on the rim when off the map)
+            foreach (var d in LootDrop.Treasures)
+            {
+                if (d == null) continue;
+                var lp = toMap(d.transform.position);
+                var c = r.center;
+                float rad = r.width / 2f - 8f;
+                if ((lp - c).magnitude > rad) lp = c + (lp - c).normalized * rad;
+                DotAt(lp, d.LabelColor, 6f + 3f * Mathf.Abs(Mathf.Sin(Time.time * 4f)));
+            }
+
             // A town under attack: a pulsing marker at the gate (on the rim when it's off the map)
             if (Invasion.Active && !Dungeon.Active)
             {

@@ -55,6 +55,14 @@ namespace Shadowfall
         public override Color LabelColor => Gold > 0 ? new Color(1f, 0.85f, 0.2f) : Item.NameColor;
         public override float LabelHeight => 0.6f;
 
+        /// <summary>Legendary and set drops lying about, for the minimap's pings.</summary>
+        public static readonly List<LootDrop> Treasures = new List<LootDrop>();
+        float beamPulse;
+        Transform beam, ring;
+        Light glow;
+        int bounces;
+        Vector3 flyFrom, spin;
+
         public static LootDrop Spawn(Vector3 around, Item item, int gold, int netId)
         {
             if (byId.ContainsKey(netId)) return byId[netId];
@@ -76,14 +84,21 @@ namespace Shadowfall
             d.DisplayName = d.HoverText;
             d.InteractRange = 1.4f;
             d.spawnTime = Time.time;
-            d.fallFrom = new Vector3(0, 1.5f, 0);
+            // it bursts out of where the monster stood, tumbling, and lands where it lies
+            d.flyFrom = new Vector3(around.x - pos.x, 1.1f, around.z - pos.z);
+            d.fallFrom = d.flyFrom;
+            d.spin = new Vector3(Random.Range(-720f, 720f), Random.Range(-360f, 360f), Random.Range(-720f, 720f));
             d.BuildVisual();
 
             var box = go.AddComponent<BoxCollider>();
             box.size = new Vector3(0.9f, 0.6f, 0.9f);
             box.center = new Vector3(0, 0.3f, 0);
+            if (d.Rare >= Rarity.Set) Treasures.Add(d);
             return d;
         }
+
+        /// <summary>The drop's rarity (Common for gold and non-gear).</summary>
+        Rarity Rare => Gold > 0 || Item == null || Item.Kind != ItemKind.Equipment ? Rarity.Common : Item.Rarity;
 
         void BuildVisual()
         {
@@ -98,34 +113,106 @@ namespace Shadowfall
                 return;
             }
 
-            var c = Item.Kind == ItemKind.Equipment ? Item.IconColor : Item.IconColor;
+            var c = Item.IconColor;
             var body = Factory.Prim(PrimitiveType.Cube, visual, new Vector3(0, 0.12f, 0), new Vector3(0.45f, 0.18f, 0.3f), c).transform;
             body.localRotation = Quaternion.Euler(0, Random.Range(0, 360f), 0);
-            if (Item.Kind == ItemKind.Equipment && Item.Rarity >= Rarity.Magic)
+            var rare = Rare;
+            if (rare < Rarity.Magic) return;
+            var rc = Item.RarityColor(rare);
+            Factory.Prim(PrimitiveType.Cube, body, new Vector3(0, 0.6f, 0), new Vector3(0.6f, 0.3f, 0.6f), rc, false, Mat.Glow(rc));
+            // a beam of its colour: faint for magic, taller for rare and set, a pillar for a legendary
+            float h = rare >= Rarity.Legendary ? 34f : rare >= Rarity.Set ? 9f : rare >= Rarity.Rare ? 4.5f : 1.6f;
+            float w = rare >= Rarity.Legendary ? 0.22f : rare >= Rarity.Rare ? 0.12f : 0.07f;
+            beam = Factory.Prim(PrimitiveType.Cylinder, transform, new Vector3(0, h * 0.5f, 0), new Vector3(w, h * 0.5f, w), rc, false, Mat.Glow(rc)).transform;
+            beam.GetComponent<Renderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            beam.gameObject.SetActive(false); // it rises once the drop has landed
+            if (rare >= Rarity.Rare)
             {
-                var rc = Item.RarityColor(Item.Rarity);
-                Factory.Prim(PrimitiveType.Cube, body, new Vector3(0, 0.6f, 0), new Vector3(0.6f, 0.3f, 0.6f), rc, false, Mat.Glow(rc));
-                if (Item.Rarity >= Rarity.Rare)
-                {
-                    // Loot beam
-                    float h = Item.Rarity >= Rarity.Legendary ? 9f : 3.5f;
-                    var beam = Factory.Prim(PrimitiveType.Cylinder, transform, new Vector3(0, h * 0.5f, 0), new Vector3(0.12f, h * 0.5f, 0.12f), rc, false, Mat.Glow(rc));
-                    beam.GetComponent<Renderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-                }
+                ring = Factory.Prim(PrimitiveType.Cylinder, transform, new Vector3(0f, 0.02f, 0f), new Vector3(1.1f, 0.005f, 1.1f), rc * 0.6f, false, Mat.Glow(rc * 0.5f)).transform;
+                ring.GetComponent<Renderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                ring.gameObject.SetActive(false);
+                glow = new GameObject("LootGlow").AddComponent<Light>();
+                glow.transform.SetParent(transform, false);
+                glow.transform.localPosition = Vector3.up * 0.8f;
+                glow.type = LightType.Point;
+                glow.color = rc;
+                glow.range = rare >= Rarity.Legendary ? 6f : 3.5f;
+                glow.intensity = 0f;
+                glow.shadows = LightShadows.None;
             }
         }
 
         void Update()
         {
-            float t = (Time.time - spawnTime) / 0.35f;
-            if (t <= 1f) visual.localPosition = Vector3.Lerp(fallFrom, Vector3.zero, t * t) + Vector3.up * Mathf.Sin(t * Mathf.PI) * 0.6f;
-            else visual.localPosition = Vector3.zero;
+            float t = (Time.time - spawnTime) / 0.55f;
+            if (t <= 1f)
+            {
+                // the arc out, tumbling
+                var p = Vector3.Lerp(flyFrom, Vector3.zero, t);
+                p.y = Mathf.Lerp(flyFrom.y, 0f, t) + Mathf.Sin(t * Mathf.PI) * 1.1f;
+                visual.localPosition = p;
+                visual.Rotate(spin * Time.deltaTime, Space.Self);
+                return;
+            }
+            float since = Time.time - spawnTime - 0.55f;
+            if (bounces == 0)
+            {
+                bounces = 1;
+                visual.localRotation = Quaternion.Euler(0f, visual.localEulerAngles.y, 0f);
+                Landed();
+            }
+            // two little bounces, then still
+            float b = since < 0.22f ? Mathf.Sin(since / 0.22f * Mathf.PI) * 0.18f : since < 0.36f ? Mathf.Sin((since - 0.22f) / 0.14f * Mathf.PI) * 0.06f : 0f;
+            visual.localPosition = Vector3.up * b;
+
+            if (beam != null)
+            {
+                // the beam breathes, its ring turns, its light glows
+                beamPulse += Time.deltaTime;
+                float k = 0.85f + 0.15f * Mathf.Sin(beamPulse * 3f);
+                float half = beam.localScale.y, grow = Mathf.Clamp01(since / 0.4f);
+                beam.localPosition = new Vector3(0f, half * (2f * grow - 1f), 0f); // rises out of the ground
+                beam.localScale = new Vector3(BeamWidth() * k, half, BeamWidth() * k);
+                beam.gameObject.SetActive(true);
+                if (ring != null) { ring.gameObject.SetActive(true); ring.Rotate(0f, 60f * Time.deltaTime, 0f); ring.localScale = new Vector3(1.1f * k, 0.005f, 1.1f * k); }
+                if (glow != null) glow.intensity = (Rare >= Rarity.Legendary ? 2.2f : 1.2f) * k * grow;
+            }
+        }
+
+        float BeamWidth() => Rare >= Rarity.Legendary ? 0.22f : Rare >= Rarity.Rare ? 0.12f : 0.07f;
+
+        /// <summary>It hits the ground: a puff, and a sound that tells you what it is before you look.</summary>
+        void Landed()
+        {
+            var at = transform.position;
+            if (Gold > 0) { Sfx.Play("coins", at, 0.35f, 0.15f, 20f); return; }
+            Sfx.Play("drop", at, 0.4f, 0.15f, 20f);
+            SpellFx.Dust(at, 0.35f);
+            switch (Rare)
+            {
+                case Rarity.Legendary:
+                    Sfx.Play2D("levelup", 0.5f, 0.8f);
+                    Sfx.Play("holy_cast", at, 0.7f, 0.05f, 60f);
+                    SpellFx.Column(at, Item.RarityColor(Rarity.Legendary), 1.2f, 8f, 1.2f);
+                    SpellFx.Ring(at + Vector3.up * 0.05f, Item.RarityColor(Rarity.Legendary), 2.5f, 0.8f);
+                    GameUI.Banner("A legendary item!", Item.RarityColor(Rarity.Legendary));
+                    break;
+                case Rarity.Set:
+                    Sfx.Play("holy_cast", at, 0.55f, 0.05f, 50f);
+                    SpellFx.Ring(at + Vector3.up * 0.05f, Item.RarityColor(Rarity.Set), 1.8f, 0.6f);
+                    break;
+                case Rarity.Rare:
+                    Sfx.Play("zap", at, 0.35f, 0.1f, 30f);
+                    SpellFx.Ring(at + Vector3.up * 0.05f, Item.RarityColor(Rarity.Rare), 1.2f, 0.5f);
+                    break;
+            }
         }
 
         protected override void OnDisable()
         {
             base.OnDisable();
             if (byId.TryGetValue(NetId, out var d) && d == this) byId.Remove(NetId);
+            Treasures.Remove(this);
         }
 
         public override void Interact(Player p)
@@ -148,7 +235,24 @@ namespace Shadowfall
                 GameUI.Log("You pick up " + (d.Item.Count > 1 ? d.Item.Count + "x " : "") + d.Item.Name + ".", d.Item.NameColor);
             }
             byId.Remove(id);
-            Destroy(d.gameObject);
+            d.FlyToHero();
+        }
+
+        /// <summary>Picked up: the drop leaps into the hero and is gone (coins with a tinkle and a count).</summary>
+        void FlyToHero()
+        {
+            enabled = false;
+            Treasures.Remove(this);
+            foreach (var col in GetComponents<Collider>()) col.enabled = false;
+            if (beam != null) Destroy(beam.gameObject);
+            if (ring != null) Destroy(ring.gameObject);
+            if (glow != null) Destroy(glow.gameObject);
+            var p = Player.I;
+            if (p == null || visual == null) { Destroy(gameObject); return; }
+            if (Gold > 0) GameUI.Float(p.transform.position + Vector3.up * 2.1f, "+" + Gold, new Color(1f, 0.85f, 0.25f), 0.9f);
+            visual.SetParent(null, true);
+            visual.gameObject.AddComponent<IntoHero>().Init(p.transform);
+            Destroy(gameObject);
         }
 
         /// <summary>The server refused: gone (no message), too far, or the bags are full (left = what stayed behind).</summary>
@@ -159,6 +263,28 @@ namespace Shadowfall
             d.pendingUntil = 0f;
             if (left > 0 && d.Item != null) { d.Item.Count = left; d.DisplayName = d.HoverText; }
             if (Player.I != null) GameUI.Float(Player.I.transform.position + Vector3.up * 2.5f, why, new Color(1f, 0.4f, 0.4f), 0.9f);
+        }
+    }
+
+    /// <summary>A picked-up drop flying into the hero: up, then in, shrinking away.</summary>
+    public class IntoHero : MonoBehaviour
+    {
+        Transform hero;
+        Vector3 from;
+        float t;
+
+        public void Init(Transform h) { hero = h; from = transform.position; }
+
+        void Update()
+        {
+            t += Time.deltaTime / 0.35f;
+            if (hero == null || t >= 1f) { Destroy(gameObject); return; }
+            var to = hero.position + Vector3.up * 1.1f;
+            var p = Vector3.Lerp(from, to, t * t);
+            p.y += Mathf.Sin(t * Mathf.PI) * 0.8f;
+            transform.position = p;
+            transform.localScale = Vector3.one * Mathf.Lerp(1f, 0.15f, t);
+            transform.Rotate(0f, 720f * Time.deltaTime, 0f);
         }
     }
 

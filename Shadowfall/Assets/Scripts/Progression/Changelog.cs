@@ -24,6 +24,16 @@ namespace Shadowfall
         {
             new Entry
             {
+                Id = 49, Date = "2026-10-08", Title = "Loot you can hear",
+                Items = new[]
+                {
+                    "Loot bursts out of the monster, tumbles and bounces where it lands. Each rarity sounds different as it hits the ground, so you hear a rare before you see it.",
+                    "Magic, rare and set items raise a beam of their colour that breathes and glows. A legendary raises a pillar of light you can see from far off, with a ping on the minimap.",
+                    "What you pick up flies into your hands, and gold tinkles with a count.",
+                },
+            },
+            new Entry
+            {
                 Id = 48, Date = "2026-10-08", Title = "Hits that land",
                 Items = new[]
                 {
