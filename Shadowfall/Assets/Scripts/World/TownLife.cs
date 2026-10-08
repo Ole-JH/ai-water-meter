@@ -143,7 +143,7 @@ namespace Shadowfall
     public class Walker : MonoBehaviour
     {
         public enum Kind { Villager, Child, Guard, Dog }
-        enum Doing { Nothing, Walking, Working, Sitting, Chatting, Playing, Patrolling, Inside }
+        enum Doing { Nothing, Walking, Working, Sitting, Chatting, Playing, Patrolling, Inside, Entering }
 
         public Vector3[] Route;
         public int RouteIndex;
@@ -169,6 +169,18 @@ namespace Shadowfall
         Vector3 faceTo;
         Walker partner;       // who we're chatting with
         int line;
+        HouseDoors.Door door; // the front door of Home (going in and out through it)
+        bool doorFound;
+        float enterUntil;
+
+        HouseDoors.Door MyDoor
+        {
+            get
+            {
+                if (!doorFound && kind != Kind.Guard && kind != Kind.Dog) { doorFound = true; door = HouseDoors.Near(Home, 7f); }
+                return door;
+            }
+        }
 
         public static Walker Create(Transform parent, string speaker, CharacterLook look, Vector3 pos, float speed, Kind kind)
         {
@@ -211,7 +223,7 @@ namespace Shadowfall
         string Plan(out Vector3 place, out Doing there)
         {
             float h = Hour;
-            place = Home;
+            place = MyDoor != null ? MyDoor.Step : Home;
             there = Doing.Inside;
             switch (kind)
             {
@@ -282,6 +294,7 @@ namespace Shadowfall
             string now = Plan(out var place, out var there);
             if (now != plan) Begin(now, place, there);
             if (hidden) return;
+            if (doing == Doing.Entering) { GoIn(); return; }
             if (Watching()) return;
 
             float moved = Move();
@@ -339,6 +352,21 @@ namespace Shadowfall
                 // Coming out of the house (or the barracks).
                 SetHidden(false);
                 transform.position = TownLife.Walkable(kind == Kind.Guard ? TownLife.Barracks : Home);
+                var d = kind == Kind.Guard ? null : MyDoor;
+                if (d != null)
+                {
+                    // Out through the front door: it swings open and they step over the threshold
+                    var step = TownLife.Walkable(d.Step);
+                    transform.position = step;
+                    HouseDoors.Swing(d, 1.3f);
+                    arriveDoing = there;
+                    Go(place, Doing.Walking);
+                    if (there == Doing.Patrolling) arriveDoing = Doing.Patrolling;
+                    path.Insert(0, step);
+                    transform.position = new Vector3(d.Centre.x, 0f, d.Centre.z) + d.Out * 0.15f;
+                    transform.rotation = Quaternion.LookRotation(d.Out);
+                    return;
+                }
             }
             if (kind == Kind.Guard && was == "watch" && now == "barracks" && HeroWithin(20f))
                 Speech.Say(transform, 2.6f, NightWatch ? "Dawn. The day watch has it. I need my bed." : "Your watch now. Keep the torches lit.");
@@ -364,7 +392,17 @@ namespace Shadowfall
             faceTo = Vector3.zero;
             switch (doing)
             {
-                case Doing.Inside: SetHidden(true); break;
+                case Doing.Inside:
+                    // At the door: open it and walk in (straight in if there is no door to open)
+                    var d = MyDoor;
+                    if (d != null && Factory.FlatDistance(transform.position, d.Step) < 3f)
+                    {
+                        doing = Doing.Entering;
+                        enterUntil = Time.time + 1.2f;
+                        HouseDoors.Swing(d, 1.5f);
+                    }
+                    else SetHidden(true);
+                    break;
                 case Doing.Working: faceTo = Work.FaceTo; nextAction = Time.time + 1f; break;
                 case Doing.Sitting:
                     faceTo = kind == Kind.Dog ? Vector3.zero : TownLife.TavernDoor + new Vector3(2.5f, 0, 0);
@@ -391,6 +429,19 @@ namespace Shadowfall
             }
             if (Time.time >= nextTrample) { nextTrample = Time.time + 0.3f; SnowField.Trample(transform.position); }
             return sp;
+        }
+
+        /// <summary>Through the open door and out of sight.</summary>
+        void GoIn()
+        {
+            var d = MyDoor;
+            var inside = new Vector3(d.Centre.x, 0f, d.Centre.z) - d.Out * 0.3f;
+            var to = Factory.Flat(inside - transform.position);
+            float step = speed * 0.8f * Time.deltaTime;
+            if (Time.time >= enterUntil || to.magnitude <= step + 0.35f) { doing = Doing.Inside; SetHidden(true); return; }
+            transform.position += to.normalized * step;
+            Factory.Face(transform, inside, Time.deltaTime * 10f);
+            view?.UpdateLocomotion(speed * 0.8f);
         }
 
         void SetHidden(bool h)

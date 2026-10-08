@@ -56,7 +56,7 @@ Where the old world's north and east edges were, a broken ridge of rock runs wit
 
 Every vendor buys your loot: right-click an item in your bags while trading.
 
-NPCs greet you when you walk up and talk among themselves in speech bubbles. Villagers stroll around the square (and go home after dark), two guards patrol between the gates with torches at night, and a hound roams the village.
+NPCs greet you when you walk up and talk among themselves in speech bubbles. Villagers stroll around the square (and go home after dark, opening the front door as they go in: by night the doorway glows with the hearth inside), two guards patrol between the gates with torches at night, and a hound roams the village.
 
 ## Day and night
 
@@ -336,7 +336,9 @@ the weather.
 - **Rain** darkens and soaks the ground (it dries out slowly afterwards), splashes on the ground and drums on your ears.
   **Thunderstorms** add lightning flashes and thunder, and now and then a bolt strikes a tree near you: it burns for
   a while and stands charred and bare afterwards. Puddles gather in the hollows as the rain soaks the ground, with
-  raindrop rings on them, and shrink as it dries; in winter they're frozen over. In the cold your breath steams.
+  raindrop rings on them, and shrink as it dries; in winter they're frozen over. In the cold your breath steams, and
+  so does everyone else's. Clothes soak dark after half a minute in the rain and a snowfall frosts them pale; both
+  dry off slowly once it stops.
 - **Fog** closes in until you can barely see the next house.
 - **Snow** falls where it's cold: everywhere in winter, and in the north (Whisperwood) in spring and autumn. It **piles up**
   while it snows and melts slowly when it stops (in winter it never quite goes). Storms in winter are blizzards.

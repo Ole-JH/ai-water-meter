@@ -108,6 +108,7 @@ namespace Shadowfall
 
         public void Generate()
         {
+            HouseDoors.Clear();
             var oldState = Random.state;
             Random.InitState(Seed);
             art = ArtLibrary.Available;
@@ -608,8 +609,10 @@ namespace Shadowfall
             grid.BlockRect(r.xMin, r.yMin, r.xMax - 1, r.yMax - 1);
             // Fitted to the plot the houses stood shorter than the heroes' shoulders allowed for, so they are drawn
             // a quarter larger; the eaves overhang the blocked plot a little, which reads as a porch, not a wall.
-            if (Art(model, c, (Mathf.Min(r.width, r.height) - 0.4f) * BuildingScale, ArtLibrary.Fit.Width, yaw) != null)
+            var house = Art(model, c, (Mathf.Min(r.width, r.height) - 0.4f) * BuildingScale, ArtLibrary.Fit.Width, yaw);
+            if (house != null)
             {
+                HouseDoors.Add(house, model);
                 // A few props in the yard (inside the blocked footprint).
                 Art(Pick("Props/barrel_large", "Props/barrel_small_stack"), new Vector3(r.xMin + 0.5f, 0, r.yMin + 0.5f), 1f, ArtLibrary.Fit.Height, VR(0, 360));
                 Art(Pick("Props/crates_stacked", "Props/box_stacked"), new Vector3(r.xMax - 0.5f, 0, r.yMax - 0.5f), 1.1f, ArtLibrary.Fit.Height, VR(0, 360));

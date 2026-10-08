@@ -30,6 +30,8 @@ namespace Shadowfall
                     "Townsfolk wave when you walk up to them, and villagers standing about give you a wave as you pass (now and then, not every time).",
                     "Pigeons peck about the town squares by day and burst up when someone runs through; crows in the wilds now take off from other heroes and monsters too.",
                     "Houses and gate towers in every town are a quarter bigger, so they no longer look like dollhouses next to the heroes.",
+                    "Front doors open: townsfolk going home at night or setting off in the morning swing the door open (creak and all), and after dark the doorway glows with the hearth inside.",
+                    "Weather on people: half a minute in the rain soaks clothes dark, a snowfall frosts them pale, and both dry off slowly. Everyone's breath steams in the cold, not just yours.",
                 },
             },
             new Entry

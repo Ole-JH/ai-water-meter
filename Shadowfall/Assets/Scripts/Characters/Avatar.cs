@@ -98,6 +98,7 @@ namespace Shadowfall
                 if (view != null) Destroy(view.Root);
                 look = p.Look;
                 view = CharacterView.Create(transform, CharacterLook.ForHero(look));
+                CharacterWeather.Off(view);
                 built = true;
                 weapon = null;
             }

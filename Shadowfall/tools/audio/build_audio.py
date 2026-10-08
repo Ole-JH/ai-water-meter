@@ -41,6 +41,8 @@ PICKS = {
     "loot": [("kenney_rpg-audio.zip", "beltHandle1.ogg"), ("kenney_rpg-audio.zip", "beltHandle2.ogg"), ("kenney_rpg-audio.zip", "handleSmallLeather.ogg")],
     "equip": [("kenney_rpg-audio.zip", "cloth1.ogg"), ("kenney_rpg-audio.zip", "cloth2.ogg"), ("kenney_rpg-audio.zip", "metalLatch.ogg")],
     "drop": [("kenney_rpg-audio.zip", "dropLeather.ogg")],
+    "door_open": [("kenney_rpg-audio.zip", "doorOpen_1.ogg"), ("kenney_rpg-audio.zip", "doorOpen_2.ogg")],
+    "door_close": [("kenney_rpg-audio.zip", f"doorClose_{i}.ogg") for i in (1, 2, 3, 4)],
     "book": [("kenney_rpg-audio.zip", "bookOpen.ogg"), ("kenney_rpg-audio.zip", "bookFlip1.ogg")],
     "ui_click": [("kenney_interface-sounds.zip", f"click_00{i}.ogg") for i in (1, 2, 3)],
     "ui_open": [("kenney_interface-sounds.zip", "open_001.ogg"), ("kenney_interface-sounds.zip", "open_002.ogg")],

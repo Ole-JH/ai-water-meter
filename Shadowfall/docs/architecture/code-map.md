@@ -19,6 +19,7 @@
 | `World/GroundSurface.cs` | Splat control maps, curving roads, ground mesh with lake beds, water, grass blades |
 | `World/Dungeon.cs` | Dungeons on the client: builds the server's layout (walls, floors, torches, campfires, boss braziers, props), portals, stairs, chests |
 | `World/TownLife.cs` | Strolling villagers, patrolling guards, the village hound |
+| `World/HouseDoors.cs` | Front doors that swing open when townsfolk go in or out (a leaf over the door painted into each house model) |
 | `World/Ambience.cs` | Crows, bats, fireflies and falling leaves around the hero |
 | `World/NpcChatter.cs` | What NPCs and villagers say in speech bubbles |
 | `World/WorldGrid.cs` | Tile walkability, A* pathfinding, line of sight, hashing and packing |
@@ -36,6 +37,7 @@
 | `Characters/PartyPortraits.cs` | Live portraits of the other party members (their model, weapon and helm in a lit booth of the avatar studio) |
 | `Characters/Player.cs` | Click-to-move, targeting, melee, abilities, stats, potions, recall, gathering (and its effects), save and load |
 | `Characters/Enemy.cs` | `EnemyDef` (looks) and the `Enemy` network proxy (interpolation, hit prediction, death, personal loot) |
+| `Characters/CharacterWeather.cs` | Clothes soaked dark by rain, frosted by snow; breath in the cold for nearby people |
 | `Characters/CharacterView.cs` | Animated model wrapper (`AnimSet`, `CharacterLook`: model, weapon kind, headgear, extra `Parts`) for heroes, NPCs, companions and monsters |
 | `Characters/Avatar.cs` | The hero's avatar: a copy of the model in the current loadout, rendered off-screen for the portrait and character window |
 | `Characters/Emotes.cs` | `EmoteDef`: the emotes, their clips, chat lines and `/commands` |

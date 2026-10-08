@@ -79,6 +79,7 @@ namespace Shadowfall
                     slot.localPosition = new Vector3(x + w / 2f, 0f, 0f);
                     slot.localRotation = Quaternion.Euler(0f, 160f, 0f); // facing the camera, a little turned
                     var view = CharacterView.Create(slot, look);
+                    CharacterWeather.Off(view);
                     if (view == null) names.Add(name + " (MISSING MODEL)");
                     else names.Add(name);
                     x += w;

@@ -188,6 +188,7 @@ namespace Shadowfall
             var go = ArtLibrary.Spawn(look.Model, parent, Vector3.zero, look.Height);
             if (go == null) return null;
             if (look.Tint.HasValue) ArtLibrary.Tint(go, look.Tint.Value);
+            CharacterWeather.Add(go, look);
             if (look.Light.HasValue)
             {
                 var l = new GameObject("Glow").AddComponent<Light>();

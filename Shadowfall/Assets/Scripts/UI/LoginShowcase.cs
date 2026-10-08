@@ -53,6 +53,7 @@ namespace Shadowfall
             look = heroLook;
             if (view != null) Destroy(view.Root);
             view = CharacterView.Create(transform, CharacterLook.ForHero(heroLook));
+            CharacterWeather.Off(view);
             if (view == null) return;
             weapons.TryGetValue(heroLook, out var w);
             view.Equip(w, true);
