@@ -74,6 +74,8 @@ namespace Shadowfall
 
         /// <summary>Every town house's bounds (a lost siege sets the ones behind the broken gate on fire: Sack).</summary>
         public static readonly System.Collections.Generic.List<Bounds> HouseBounds = new System.Collections.Generic.List<Bounds>();
+        /// <summary>The churches' footprints (the town graveyards are laid out beside them: TownGraveyard).</summary>
+        public static readonly System.Collections.Generic.List<Bounds> Churches = new System.Collections.Generic.List<Bounds>();
 
         /// <summary>For each house (same order as HouseBounds): points on its roof and upper walls, taken from the model itself,
         /// where a fire sits on the building (the bounds of a turned house or a windmill are much bigger than it).</summary>
@@ -166,6 +168,7 @@ namespace Shadowfall
             HouseDoors.Clear();
             HouseWindows.Clear();
             HouseBounds.Clear();
+            Churches.Clear();
             HouseFireSpots.Clear();
             var oldState = Random.state;
             Random.InitState(Seed);
@@ -697,6 +700,7 @@ namespace Shadowfall
                 var hb = new Bounds(c, Vector3.zero);
                 foreach (var hr in house.GetComponentsInChildren<Renderer>()) hb.Encapsulate(hr.bounds);
                 HouseBounds.Add(hb);
+                if (model.Contains("church")) Churches.Add(hb);
                 HouseFireSpots.Add(FireSpots(house, hb));
                 // A few props in the yard (inside the blocked footprint).
                 Art(Pick("Props/barrel_large", "Props/barrel_small_stack"), new Vector3(r.xMin + 0.5f, 0, r.yMin + 0.5f), 1f, ArtLibrary.Fit.Height, VR(0, 360));

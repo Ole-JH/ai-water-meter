@@ -302,7 +302,7 @@ one of the walled towns (Hollowmere, Frosthaven, Saltreach or Emberwatch), usual
   the gate one by one and walk to their posts; each archer waits at the foot of a siege ladder until the militia have
   it standing, then climbs it and walks along the wall. When a guard falls he lies where he fell until two militiamen can reach him (outside a shut gate: as soon as it
   opens or the siege ends); they carry him to the town's
-  **graveyard** (a fenced plot inside the walls) and bury him, and townsfolk come out of their houses to mourn him a
+  **graveyard** (a fenced churchyard beside the town's church, or a quiet plot by the walls in a town without one) and bury him, and townsfolk come out of their houses to mourn him a
   few minutes before going home.
 - **Fire arrows.** Once the waves come, the raiders' archers and casters now and then set a roof behind the gate alight.
   A fire grows (the townsfolk's bucket line only slows it) and, left burning at full strength, spreads to the next roof.

@@ -10,8 +10,9 @@ namespace Shadowfall
     /// </summary>
     public class TownGraveyard
     {
-        const int Cols = 5, Rows = 3;
-        const float W = 10f, D = 7f; // the plot, along x and z
+        const int Rows = 3;
+        float W = 10f, D = 7f;       // the plot, along x and z (smaller beside a church if that's all the room there is)
+        int Cols => Mathf.Clamp(Mathf.FloorToInt((W - 2.4f) / 1.5f) + 1, 3, 5);
 
         static readonly Dictionary<string, TownGraveyard> byTown = new Dictionary<string, TownGraveyard>();
 
@@ -54,6 +55,33 @@ namespace Shadowfall
                     tries.Add(new Vector3(x, 0f, z));
             // the edges of town first: a graveyard keeps out of the way
             tries.Sort((a, b) => Factory.FlatDistance(b, t.Center).CompareTo(Factory.FlatDistance(a, t.Center)));
+            // Beside the town's church, if it has one: a churchyard, on whichever side has room (and no street)
+            foreach (var ch in WorldGenerator.Churches)
+            {
+                if (!t.Contains(ch.center.x, ch.center.z)) continue;
+                foreach (var size in new[] { new Vector2(10f, 7f), new Vector2(8f, 6f), new Vector2(7f, 5f), new Vector2(6f, 5f) })
+                {
+                    W = size.x; D = size.y;
+                    var near = new List<Vector3>();
+                    foreach (var dir in new[] { Vector3.forward, Vector3.back, Vector3.left, Vector3.right })
+                    {
+                        float reach = Vector3.Dot(ch.extents, new Vector3(Mathf.Abs(dir.x), 0f, Mathf.Abs(dir.z))) + (dir.x != 0f ? W : D) / 2f + 1.2f;
+                        var along = Vector3.Cross(Vector3.up, dir);
+                        for (float slide = -4f; slide <= 4.01f; slide += 2f)
+                            for (float extra = 0f; extra <= 4.01f; extra += 2f)
+                                near.Add(new Vector3(ch.center.x, 0f, ch.center.z) + dir * (reach + extra) + along * slide);
+                    }
+                    near.Sort((a, b) => Factory.FlatDistance(a, ch.center).CompareTo(Factory.FlatDistance(b, ch.center)));
+                    foreach (var c in near)
+                    {
+                        if (!ClearBut(c, grid, t, ch)) continue;
+                        Centre = c;
+                        Build(t);
+                        return true;
+                    }
+                }
+            }
+            W = 10f; D = 7f;
             for (int pass = 0; pass < 2; pass++)
                 foreach (var c in tries)
                 {
@@ -66,7 +94,7 @@ namespace Shadowfall
             return false;
         }
 
-        static bool Clear(Vector3 c, WorldGrid grid, Settlement t, float houseGap)
+        bool Clear(Vector3 c, WorldGrid grid, Settlement t, float houseGap, Bounds? skip = null)
         {
             var ground = GroundSurface.Current;
             for (float x = -W / 2 - 1f; x <= W / 2 + 1f; x += 1f)
@@ -79,6 +107,7 @@ namespace Shadowfall
                 }
             foreach (var h in WorldGenerator.HouseBounds)
             {
+                if (skip.HasValue && h.center == skip.Value.center) continue;
                 var hb = h;
                 hb.Expand(new Vector3(houseGap * 2f, 10f, houseGap * 2f));
                 if (hb.Intersects(new Bounds(c, new Vector3(W, 4f, D)))) return false;
@@ -86,6 +115,16 @@ namespace Shadowfall
             foreach (var g in new[] { "north", "south", "east", "west" })
                 if (Factory.FlatDistance(Rampart.SideOf(t, g).Centre, c) < 12f) return false;
             return true;
+        }
+
+        /// <summary>Clear, beside the church (its own footprint only kept off, not a wide berth round it).</summary>
+        bool ClearBut(Vector3 c, WorldGrid grid, Settlement t, Bounds church)
+        {
+            var plot = new Bounds(c, new Vector3(W, 4f, D));
+            var hb = church;
+            hb.Expand(new Vector3(0.6f, 10f, 0.6f));
+            if (hb.Intersects(plot)) return false;
+            return Clear(c, grid, t, 0.6f, church);
         }
 
         void Build(Settlement t)

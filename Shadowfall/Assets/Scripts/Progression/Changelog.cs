@@ -33,7 +33,7 @@ namespace Shadowfall
                     "A sacked town burns much harder: house fires two to three times the size, flames up the walls and along the town wall itself, and twice the wreckage.",
                     "The town crier tells the truth after a siege: the sack, the captives or the feast, not a stale call to arms.",
                     "The Siege Record board by each crier now actually stands there (it was being built out of sight).",
-                    "Town graveyards keep off the streets and the square: they're laid out on a quiet plot near the walls.",
+                    "Town graveyards keep off the streets: they're churchyards beside the town's church (or, without one, a quiet plot near the walls).",
                     "Updates are announced in chat: a new version on its way, building, testing, a countdown before the restart, and when it's live.",
                     "Every fallen guard is carried to the graveyard, archers too: those who die outside the gate are fetched as soon as it opens. The bearers and the townsfolk stay and mourn for a few minutes.",
                     "The gate's scaffolding no longer lingers: carpenters only start once a sacked town's fires are out, and the gate stays battered until their three minutes of work are done.",
