@@ -78,6 +78,10 @@ namespace Shadowfall
             NetClient.I?.SaveNow();
             Sfx.Play2D("quest_done", 0.8f);
             GameUI.Banner("Quest Complete: " + q.Def.Title, new Color(1f, 0.85f, 0.3f));
+            // the fanfare: a ring of gold at the hero's feet, a shower of sparks, and the rewards flying into the bags
+            SpellFx.Ring(p.transform.position + Vector3.up * 0.05f, new Color(1f, 0.85f, 0.3f), 3f, 0.7f);
+            SpellFx.Hit(p.transform.position + Vector3.up * 1.6f, new Color(1f, 0.85f, 0.35f), false, 24);
+            GameUI.RewardsToBags(GameUI.QuestRewardOrigin(p), Mathf.Clamp(q.Def.RewardGold / 15, 4, 12), string.IsNullOrEmpty(item) ? (Color?)null : Item.RarityColor(rarity));
             GameUI.Log("Quest complete: " + q.Def.Title + " (+" + q.Def.RewardXp + " xp, +" + q.Def.RewardGold + " gold)",
                 new Color(1f, 0.85f, 0.3f));
         }

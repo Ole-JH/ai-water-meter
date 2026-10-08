@@ -307,6 +307,7 @@ namespace Shadowfall
             DrawOffers();
             if (p.IsDead) DrawDeath(p);
             DrawScreenFlash();
+            DrawFlyers();
             DrawAchievementToasts();
             if (menu != MenuPage.None) DrawGameMenu(p);
 
@@ -720,7 +721,7 @@ namespace Shadowfall
                     if (!string.IsNullOrEmpty(npc.Title))
                         UISkin.Shadowed(new Rect(g.x - 140, g.y - 2, 280, 20), "<" + npc.Title + ">", UISkin.SmallCenter, new Color(0.75f, 0.9f, 0.7f));
                     var mark = npc.Marker(p, out var mc);
-                    if (mark != null) UISkin.Shadowed(new Rect(g.x - 40, g.y - 74, 80, 56), mark, UISkin.TitleHuge, mc, 2);
+                    if (mark != null) QuestMarker(g, mark, mc, npc.GetInstanceID());
                     continue;
                 }
 
@@ -1099,6 +1100,12 @@ namespace Shadowfall
                         case 7: showHelp = !showHelp; break;
                         default: menu = menu == MenuPage.None ? MenuPage.Main : MenuPage.None; break;
                     }
+                }
+                if (i == 0)
+                {
+                    bagButton = b.center;
+                    float bump = 1f - (Time.unscaledTime - bagBumpAt) / 0.3f;
+                    if (bump > 0f) b = new Rect(b.x - bump * 4f, b.y - bump * 6f, b.width + bump * 8f, b.height + bump * 8f);
                 }
                 UISkin.IconInSlot(b, UISkin.Icon(icons[i]), Color.white, 5);
                 if (i == 2 && Player.I != null && Player.I.TalentPoints > 0)
@@ -2108,6 +2115,82 @@ namespace Shadowfall
             GUI.color = Color.white;
         }
 
+        /// <summary>A quest giver's "!" or "?": bobbing over their head with a soft glow; a quest ready to hand in pulses.</summary>
+        static void QuestMarker(Vector2 g, string mark, Color mc, int seed)
+        {
+            bool live = mc.b < 0.5f; // gold: available or ready (grey: not yet)
+            bool ready = live && mark == "?";
+            float t = Time.time;
+            float bob = Mathf.Sin(t * 2.4f + seed * 0.37f) * 5f;
+            float pulse = ready ? 1f + 0.13f * Mathf.Sin(t * 5f) : 1f;
+            var c = new Vector2(g.x, g.y - 46 + bob);
+            if (live && Event.current.type == EventType.Repaint)
+            {
+                float glow = (ready ? 70f : 56f) * pulse;
+                GUI.color = new Color(1f, 0.8f, 0.2f, ready ? 0.22f + 0.1f * Mathf.Sin(t * 5f) : 0.14f);
+                GUI.DrawTexture(new Rect(c.x - glow / 2, c.y - glow / 2, glow, glow), UISkin.Circle);
+                GUI.color = Color.white;
+            }
+            var style = UISkin.V(UISkin.TitleHuge, fontSize: Mathf.RoundToInt(UISkin.TitleHuge.fontSize * pulse));
+            UISkin.Shadowed(new Rect(c.x - 50, c.y - 40, 100, 80), mark, style, live ? Color.Lerp(mc, Color.white, ready ? 0.25f * (pulse - 0.87f) / 0.26f : 0f) : mc, 2);
+        }
+
+        // ---- rewards flying from a quest giver's hands into the bags
+
+        struct Flyer { public Vector2 From; public float Start; public string Icon; public Color Tint; public float Arc; }
+        static readonly List<Flyer> flyers = new List<Flyer>();
+        static Vector2 bagButton = new Vector2(-1f, -1f);
+        static float bagBumpAt = -10f;
+
+        /// <summary>Coins (and the reward item) arc from <paramref name="from"/> (GUI) into the bags button, one after another.</summary>
+        public static void RewardsToBags(Vector2 from, int coins, Color? item)
+        {
+            for (int i = 0; i < coins; i++)
+                flyers.Add(new Flyer { From = from + Random.insideUnitCircle * 18f, Start = Time.unscaledTime + 0.15f + i * 0.07f, Icon = "gold", Tint = Color.white, Arc = Random.Range(80f, 160f) });
+            if (item.HasValue)
+                flyers.Add(new Flyer { From = from, Start = Time.unscaledTime + 0.25f + coins * 0.07f, Icon = "bags", Tint = item.Value, Arc = 190f });
+        }
+
+        /// <summary>Where a quest's rewards set off from: the quest giver's window when it's open, else above the hero.</summary>
+        public static Vector2 QuestRewardOrigin(Player p)
+        {
+            if (I != null && I.dialogNpc != null) return new Vector2(14 + 235, 120 + 260);
+            if (I != null && p != null && I.WorldToGui(p.transform.position + Vector3.up * 2f, out var g)) return g;
+            return I != null ? new Vector2(I.VW / 2f, I.VH / 2f) : Vector2.zero;
+        }
+
+        void DrawFlyers()
+        {
+            if (flyers.Count == 0) return;
+            var to = bagButton.x < 0f ? new Vector2(VW - 200, VH - 40) : bagButton;
+            const float flight = 0.7f;
+            for (int i = flyers.Count - 1; i >= 0; i--)
+            {
+                var f = flyers[i];
+                float k = (Time.unscaledTime - f.Start) / flight;
+                if (k < 0f) continue;
+                if (k >= 1f)
+                {
+                    flyers.RemoveAt(i);
+                    bagBumpAt = Time.unscaledTime;
+                    if (f.Icon == "gold") Sfx.Play2D("coins", 0.12f, Random.Range(1.1f, 1.4f));
+                    else Sfx.Play2D("loot", 0.5f);
+                    continue;
+                }
+                if (Event.current.type != EventType.Repaint) continue;
+                float e = k * k * (3f - 2f * k);
+                var pos = Vector2.Lerp(f.From, to, e) + Vector2.down * Mathf.Sin(k * Mathf.PI) * f.Arc;
+                float size = (f.Icon == "gold" ? 26f : 40f) * (1f - 0.35f * k);
+                if (f.Icon != "gold")
+                {
+                    GUI.color = new Color(f.Tint.r, f.Tint.g, f.Tint.b, 0.35f);
+                    GUI.DrawTexture(new Rect(pos.x - size, pos.y - size, size * 2, size * 2), UISkin.Circle);
+                    GUI.color = Color.white;
+                }
+                UISkin.IconInSlot(new Rect(pos.x - size / 2, pos.y - size / 2, size, size), UISkin.Icon(f.Icon), f.Tint, 0);
+            }
+        }
+
         static Color flashColor;
         static float flashAt = -10f, flashFor = 1f;
 
@@ -2137,6 +2220,9 @@ namespace Shadowfall
             float bodyH = Mathf.Max(60f, UISkin.V(UISkin.Ink14, wordWrap: true).CalcHeight(new GUIContent(body), 420));
             return 122 + 32 + bodyH + 10 + 46 + 40 + 46 + 40;
         }
+
+        string typedBody;
+        float typedAt;
 
         void DrawDialog(Player p)
         {
@@ -2168,7 +2254,13 @@ namespace Shadowfall
                     string body = state != null && state.IsReady(p) ? q.CompletionText : q.Description;
                     var bodyStyle = UISkin.V(UISkin.Ink14, wordWrap: true);
                     float bodyH = Mathf.Max(60f, bodyStyle.CalcHeight(new GUIContent(body), 420));
-                    GUI.Label(new Rect(r.x + 26, y, 420, bodyH), body, bodyStyle);
+                    var bodyRect = new Rect(r.x + 26, y, 420, bodyH);
+                    // the giver's words come out a few at a time (a click shows them all)
+                    if (body != typedBody) { typedBody = body; typedAt = Time.unscaledTime; }
+                    int shown = body.IndexOf('<') >= 0 ? body.Length : Mathf.Min(body.Length, Mathf.FloorToInt((Time.unscaledTime - typedAt) * 70f));
+                    if (shown < body.Length && ClickedIn(bodyRect) == 0) { typedAt = -100f; shown = body.Length; }
+                    // the rest is there but see-through, so the words don't jump about as they wrap
+                    GUI.Label(bodyRect, shown >= body.Length ? body : body.Substring(0, shown) + "<color=#00000000>" + body.Substring(shown) + "</color>", bodyStyle);
                     y += bodyH + 10;
                     GUI.Label(new Rect(r.x + 26, y, 420, 44), "<b>Objective:</b> " + q.Objective, UISkin.Ink14);
                     y += 46;

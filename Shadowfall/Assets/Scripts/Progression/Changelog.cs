@@ -24,6 +24,16 @@ namespace Shadowfall
         {
             new Entry
             {
+                Id = 64, Date = "2026-10-08", Title = "Tales well told",
+                Items = new[]
+                {
+                    "Quest markers bob over the givers' heads and glow; a quest ready to hand in pulses.",
+                    "Quest givers' words come out as they speak (click to read it all at once).",
+                    "Handing in a quest: a ring of gold at your feet, and the coins and reward fly into your bags.",
+                },
+            },
+            new Entry
+            {
                 Id = 63, Date = "2026-10-08", Title = "A tidier pack",
                 Items = new[]
                 {
