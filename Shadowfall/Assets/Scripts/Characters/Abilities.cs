@@ -253,6 +253,7 @@ namespace Shadowfall
                 SpellFx.Explosion(target + Vector3.up * 0.5f, color, radius, false);
                 SpellFx.Column(target, color, radius * 0.6f, 9f, 0.9f);
                 SpellFx.Shockwave(target, color, radius);
+                ImpactMarks.Place(target, ImpactMarks.Kind.Holy, radius * 0.8f);
                 Sfx.Play("boom", target, 0.8f, 0.08f, 60f);
                 Sfx.Play("holy_bolt", target, 0.8f, 0.05f, 50f);
             }
@@ -261,6 +262,8 @@ namespace Shadowfall
                 SpellFx.Explosion(target + Vector3.up * 0.5f, new Color(1f, 0.4f, 0.05f), radius, true);
                 SpellFx.Shockwave(target, new Color(1f, 0.45f, 0.1f), radius);
                 SpellFx.GroundFire(target, radius * 0.55f, 1.5f);
+                ImpactMarks.Place(target, ImpactMarks.Kind.Scorch, radius * 0.75f, 30f);
+                ImpactMarks.Place(target, ImpactMarks.Kind.Crack, radius * 0.6f, 30f);
                 SpellFx.Dust(target, radius * 0.75f, new Color(0.3f, 0.25f, 0.2f));
                 for (int i = 0; i < 10; i++) // flying rocks
                     FxPulse.Spawn(target + Vector3.up * 0.5f, new Color(0.25f, 0.18f, 0.12f), Vector3.one * Random.Range(0.15f, 0.35f), Vector3.one * 0.05f, Random.Range(0.6f, 1f), PrimitiveType.Cube)

@@ -812,6 +812,20 @@ namespace Shadowfall
             }
         }
 
+        readonly float[] barLastCd = new float[8], barCasts = { -10f, -10f, -10f, -10f, -10f, -10f, -10f, -10f }, barReady = { -10f, -10f, -10f, -10f, -10f, -10f, -10f, -10f };
+
+        /// <summary>A coloured frame around <paramref name="r"/>, grown outward by <paramref name="grow"/>, at <paramref name="alpha"/>.</summary>
+        static void Outline(Rect r, Color c, float alpha, float grow)
+        {
+            var o = new Rect(r.x - grow, r.y - grow, r.width + grow * 2f, r.height + grow * 2f);
+            GUI.color = new Color(c.r, c.g, c.b, Mathf.Clamp01(alpha));
+            GUI.DrawTexture(new Rect(o.x, o.y, o.width, 2), UISkin.White);
+            GUI.DrawTexture(new Rect(o.x, o.yMax - 2, o.width, 2), UISkin.White);
+            GUI.DrawTexture(new Rect(o.x, o.y, 2, o.height), UISkin.White);
+            GUI.DrawTexture(new Rect(o.xMax - 2, o.y, 2, o.height), UISkin.White);
+            GUI.color = Color.white;
+        }
+
         void DrawActionBar(Player p)
         {
             const float slot = 58, gap = 8;
@@ -838,6 +852,22 @@ namespace Shadowfall
                 UISkin.IconInSlot(r, UISkin.Icon(UISkin.AbilityIcon(a.Id)), locked ? new Color(0.35f, 0.35f, 0.35f) : Color.white, 3);
 
                 float cd = p.CooldownEnd[i] - Time.time;
+                // a cast pops the button in its colour; a cooldown running out flashes it ready
+                if (i < barCasts.Length)
+                {
+                    if (cd > 0.3f && barLastCd[i] <= 0f) barCasts[i] = Time.unscaledTime;
+                    if (cd <= 0f && barLastCd[i] > 0f && a.Cooldown >= 2f) { barReady[i] = Time.unscaledTime; Sfx.Play2D("ui_click", 0.2f, 1.6f); }
+                    barLastCd[i] = cd;
+                    float pressed = 1f - (Time.unscaledTime - barCasts[i]) / 0.3f, ready = 1f - (Time.unscaledTime - barReady[i]) / 0.55f;
+                    if (pressed > 0f) Outline(r, a.Color, pressed, 3f * pressed);
+                    if (ready > 0f)
+                    {
+                        GUI.color = new Color(1f, 1f, 1f, 0.35f * ready);
+                        GUI.DrawTexture(new Rect(r.x + 3, r.y + 3, r.width - 6, r.height - 6), UISkin.White);
+                        Outline(r, Color.white, ready, 6f * (1f - ready));
+                        GUI.color = Color.white;
+                    }
+                }
                 if (cd > 0)
                 {
                     float frac = Mathf.Clamp01(cd / a.Cooldown);

@@ -113,6 +113,7 @@ namespace Shadowfall
                     {
                         // embers that keep burning where it hit, and a ring of flame
                         SpellFx.GroundFire(ground, Mathf.Max(0.6f, radius * 0.45f), 0.9f);
+                        ImpactMarks.Place(ground, ImpactMarks.Kind.Scorch, Mathf.Max(0.6f, radius * 0.55f));
                         SpellFx.Ring(ground, color, Mathf.Max(1f, radius * 1.2f), 0.4f);
                     }
                     else

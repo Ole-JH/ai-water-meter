@@ -38,6 +38,7 @@ namespace Shadowfall
         {
             SpellFx.CastCircle(at, Gold, 4f, 1.2f);
             SpellFx.Shockwave(at, Gold, 4f);
+            ImpactMarks.Place(at, ImpactMarks.Kind.Holy, 3.4f, 14f);
             SpellFx.Column(at, Gold, 1.2f, 5f, 0.8f);
             SpellFx.Flash(at + Vector3.up, Gold, 9f, 2.5f, 0.8f);
         }
@@ -78,6 +79,7 @@ namespace Shadowfall
             Sfx.Play("boom", at, 0.8f, 0.1f, 50f);
             Sfx.Play("rubble", at, 0.6f, 0.1f, 40f);
             SpellFx.Dust(at, radius * 0.7f);
+            ImpactMarks.Place(at, ImpactMarks.Kind.Crack, radius * 0.6f);
             SpellFx.Shockwave(at, new Color(1f, 0.6f, 0.3f), radius);
             SpellFx.Hit(at + Vector3.up * 0.3f, new Color(0.55f, 0.45f, 0.35f), false, 18);
             for (int i = 0; i < 8; i++) // rocks thrown up by the slam

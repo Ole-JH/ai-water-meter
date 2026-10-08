@@ -24,6 +24,15 @@ namespace Shadowfall
         {
             new Entry
             {
+                Id = 53, Date = "2026-10-08", Title = "Spells that leave a mark",
+                Items = new[]
+                {
+                    "Fireballs and meteors scorch the ground with glowing embers, Frost Nova leaves rime and ice splinters, Leap and meteors crack the earth, and holy power burns glowing runes. They fade after a while.",
+                    "Ability buttons pop in their colour when you cast, and flash when a cooldown comes back.",
+                },
+            },
+            new Entry
+            {
                 Id = 52, Date = "2026-10-08", Title = "Level up, gear up",
                 Items = new[]
                 {

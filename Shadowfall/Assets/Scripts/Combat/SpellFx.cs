@@ -321,6 +321,7 @@ namespace Shadowfall
         public static void FrostNova(Vector3 pos, float radius)
         {
             var ice = new Color(0.55f, 0.85f, 1f);
+            ImpactMarks.Place(pos, ImpactMarks.Kind.Frost, radius * 0.7f, 14f);
             if (!Ready) { FxPulse.Ring(pos, ice, radius, 0.45f); return; }
             var up = pos + Vector3.up * 0.4f;
             Emit(new P { Burst = 80, Duration = 0.1f, Life = new Vector2(0.35f, 0.5f), Speed = new Vector2(radius * 2.2f, radius * 2.8f), Size = new Vector2(0.08f, 0.18f), Start = new Color(0.9f, 0.97f, 1f), Mid = ice, End = new Color(0.3f, 0.6f, 1f, 0f), Shape = ParticleSystemShapeType.Circle, Radius = 0.4f, Stretch = true, Drag = 2f }, up);
