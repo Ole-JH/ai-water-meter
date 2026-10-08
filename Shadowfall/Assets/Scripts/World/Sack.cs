@@ -22,7 +22,7 @@ namespace Shadowfall
 
         static readonly Dictionary<string, Burning> burning = new Dictionary<string, Burning>();
         static Sack runner;
-        const int MaxHouses = 12;
+        const int MaxHouses = 36; // the whole quarter, most of the town
         static readonly Color Flame = new Color(1f, 0.5f, 0.15f);
 
         /// <summary>The server's list of burning quarters (sent when one starts or ends, and at login).</summary>
@@ -95,7 +95,7 @@ namespace Shadowfall
                 {
                     var at = spots[j];
                     Light light = null;
-                    if (j == 0)
+                    if (j == 0 && n % 2 == 0) // a light every other house (forward lights are dear; LightCull does the rest)
                     {
                         light = new GameObject("FireLight").AddComponent<Light>();
                         light.transform.SetParent(b.Root, false);
@@ -109,9 +109,14 @@ namespace Shadowfall
                     float k = j == 0 ? 1.6f : R(0.75f, 1.15f);
                     PropFire.Add(b.Root, at, Flame, size * k, j == 0 || j % 3 == 0, light);
                 }
-                var roar = Sfx.LoopAt("fire_loop", h.center + Vector3.up * 2f, 0.55f, 32f);
-                if (roar != null) roar.transform.SetParent(b.Root, true);
+                if (n % 3 == 0)
+                {
+                    var roar = Sfx.LoopAt("fire_loop", h.center + Vector3.up * 2f, 0.55f, 32f);
+                    if (roar != null) roar.transform.SetParent(b.Root, true);
+                }
+                Ruin(b, h, spots, n, rng);
             }
+            Pall(b);
             Debris(b, s, rng);
             // The reeve, on the far side of town from the fire, asking for help with the rebuilding
             var town = WorldGenerator.TownAt(b.At - Factory.Flat(b.At - CenterOf(s.k)).normalized * 6f);
@@ -124,6 +129,66 @@ namespace Shadowfall
             var hero = Player.I;
             if (hero != null && Factory.FlatDistance(hero.transform.position, b.At) < b.Radius + 40f)
                 Sfx.Play("boom", b.At + Vector3.up * 2f, 0.6f, 0.1f, 80f);
+        }
+
+        /// <summary>
+        /// What the fire does to a house: soot scorched on the ground round it, embers drifting up off it, a column of
+        /// black smoke from every third (seen from far off), and every third one partly fallen in: charred beams and a
+        /// slab of roof down against its side, a heap of rubble and burning timbers at its foot.
+        /// </summary>
+        static void Ruin(Burning b, Bounds h, Vector3[] spots, int n, System.Random rng)
+        {
+            float R(float a, float c) => a + (float)rng.NextDouble() * (c - a);
+            var root = b.Root;
+            float size = Mathf.Max(h.size.x, h.size.z);
+            var foot = new Vector3(h.center.x, 0f, h.center.z);
+            ImpactMarks.Place(foot, ImpactMarks.Kind.Scorch, size * 0.55f, 3600f);
+            var top = spots.Length > 0 ? spots[0] : h.center + Vector3.up * h.size.y;
+            if (SpellFx.Ready)
+            {
+                SpellFx.Loop(new SpellFx.P
+                {
+                    Rate = 6, Duration = 1f, Life = new Vector2(1.5f, 3f), Speed = new Vector2(0.6f, 1.6f), Size = new Vector2(0.04f, 0.09f),
+                    Start = new Color(1f, 0.6f, 0.2f, 1f), End = new Color(1f, 0.3f, 0.05f, 0f), Gravity = -0.15f, Radius = size * 0.3f, Max = 30,
+                }, root, top);
+                if (n % 3 == 0)
+                    SpellFx.Loop(new SpellFx.P
+                    {
+                        Rate = 5, Duration = 1f, Life = new Vector2(6f, 9f), Speed = new Vector2(2.2f, 3.2f), Size = new Vector2(2.2f, 3.6f),
+                        Start = new Color(0.12f, 0.11f, 0.1f, 0.55f), End = new Color(0.25f, 0.24f, 0.23f, 0f), Velocity = new Vector3(0.5f, 0.6f, 0.2f),
+                        Smoke = true, Grow = true, Radius = size * 0.2f, Max = 60,
+                    }, root, top + Vector3.up * 1.5f);
+            }
+            if (n % 3 != 1) return;
+            // fallen in on one side
+            var side = (rng.NextDouble() < 0.5 ? Vector3.right : Vector3.forward) * (rng.NextDouble() < 0.5 ? -1f : 1f);
+            var at = foot + side * (size * 0.5f + 0.6f);
+            if (WorldGrid.Instance != null && !WorldGrid.Instance.IsWalkable(at)) at = foot + side * (size * 0.5f + 1.6f);
+            var slab = Factory.Prim(PrimitiveType.Cube, root, at + Vector3.up * 1.1f, new Vector3(size * 0.7f, 0.18f, 2.6f), Charred);
+            slab.transform.rotation = Quaternion.LookRotation(side) * Quaternion.Euler(R(35f, 55f), 90f, R(-8f, 8f));
+            for (int k = 0; k < 5; k++)
+            {
+                var beam = Factory.Prim(PrimitiveType.Cube, root, at + new Vector3(R(-1.2f, 1.2f), R(0.3f, 1.2f), R(-1.2f, 1.2f)), new Vector3(0.22f, 0.22f, R(1.6f, 3f)), k % 2 == 0 ? Charred : Wood * 0.5f);
+                beam.transform.rotation = Quaternion.Euler(R(-40f, 40f), R(0f, 360f), R(-30f, 30f));
+            }
+            for (int k = 0; k < 8; k++)
+            {
+                var stone = Factory.Prim(PrimitiveType.Cube, root, at + new Vector3(R(-1.5f, 1.5f), 0.1f, R(-1.5f, 1.5f)), Vector3.one * R(0.2f, 0.5f), Stone * R(0.5f, 0.8f));
+                stone.transform.rotation = Quaternion.Euler(R(0f, 360f), R(0f, 360f), R(0f, 360f));
+            }
+            PropFire.Add(root, at + Vector3.up * 0.3f, Flame, R(0.6f, 0.9f), true);
+        }
+
+        /// <summary>Ash drifting down over the whole quarter.</summary>
+        static void Pall(Burning b)
+        {
+            if (!SpellFx.Ready) return;
+            SpellFx.Loop(new SpellFx.P
+            {
+                Rate = 18, Duration = 1f, Life = new Vector2(5f, 8f), Speed = new Vector2(0.05f, 0.2f), Size = new Vector2(0.05f, 0.11f),
+                Start = new Color(0.55f, 0.53f, 0.5f, 0.8f), End = new Color(0.4f, 0.38f, 0.36f, 0f), Gravity = 0.05f, Velocity = new Vector3(0.3f, -0.4f, 0.1f),
+                Shape = ParticleSystemShapeType.Circle, Radius = b.Radius * 0.8f, Max = 150,
+            }, b.Root, b.At + Vector3.up * 12f);
         }
 
         static readonly Color Wood = new Color(0.42f, 0.29f, 0.18f), Charred = new Color(0.12f, 0.1f, 0.09f), Stone = new Color(0.45f, 0.43f, 0.4f);
@@ -161,7 +226,7 @@ namespace Shadowfall
             }
 
             // Inside the walls: the street behind the gate and the quarter
-            for (int i = 0; i < 70; i++)
+            for (int i = 0; i < 180; i++)
             {
                 var p = Spot(2f, b.Radius * 0.9f, true);
                 if (float.IsInfinity(p.x)) continue;
@@ -189,16 +254,24 @@ namespace Shadowfall
                     if (crate != null) crate.transform.rotation = Quaternion.Euler(R(-25f, 25f), R(0f, 360f), R(-25f, 25f));
                 }
                 else if (roll < 0.8) Arrow(root, p, rng);
-                else if (roll < 0.86)
+                else if (roll < 0.89)
                 {
-                    PropFire.Add(root, p + Vector3.up * 0.1f, Flame, R(0.35f, 0.6f), false); // burning wreckage in the street
+                    PropFire.Add(root, p + Vector3.up * 0.1f, Flame, R(0.35f, 0.75f), rng.NextDouble() < 0.3); // burning wreckage in the street
                     Plank(p, true);
                 }
-                else if (roll < 0.92) ImpactMarks.Place(p, ImpactMarks.Kind.Scorch, R(0.8f, 1.6f), s.left);
+                else if (roll < 0.95) ImpactMarks.Place(p, ImpactMarks.Kind.Scorch, R(0.8f, 2.2f), s.left);
                 else Factory.Prim(PrimitiveType.Cube, root, p + Vector3.up * 0.05f, new Vector3(R(0.5f, 1f), 0.1f, R(0.4f, 0.8f)), Charred); // ash and cinders
             }
+            // The broken gateway: a heap of stone and the gate's charred timbers across it
+            for (int i = 0; i < 18; i++)
+            {
+                var p = b.At + Quaternion.Euler(0f, R(0f, 360f), 0f) * Vector3.forward * R(0.5f, 3f);
+                var stone = Factory.Prim(PrimitiveType.Cube, root, new Vector3(p.x, R(0.1f, 0.4f), p.z), Vector3.one * R(0.25f, 0.6f), Stone * R(0.6f, 0.95f));
+                stone.transform.rotation = Quaternion.Euler(R(0f, 360f), R(0f, 360f), R(0f, 360f));
+            }
+            for (int i = 0; i < 3; i++) PropFire.Add(root, b.At + Quaternion.Euler(0f, R(0f, 360f), 0f) * Vector3.forward * R(1f, 3f) + Vector3.up * 0.2f, Flame, R(0.5f, 0.8f), i == 0);
             // The gate's planks, thrown inward, and a fallen banner
-            for (int i = 0; i < 10; i++)
+            for (int i = 0; i < 18; i++)
             {
                 var p = Spot(1f, 6f, true);
                 if (!float.IsInfinity(p.x)) Plank(p, rng.NextDouble() < 0.3);
@@ -210,9 +283,9 @@ namespace Shadowfall
                 if (banner != null) banner.transform.rotation = Quaternion.Euler(84f, R(0f, 360f), 0f);
             }
             // The battlefield outside: arrows, broken weapons' hafts, planks of the ladders and the dead's gear
-            for (int i = 0; i < 45; i++)
+            for (int i = 0; i < 90; i++)
             {
-                var p = Spot(3f, 22f, false);
+                var p = Spot(3f, 26f, false);
                 if (float.IsInfinity(p.x)) continue;
                 double roll = rng.NextDouble();
                 if (roll < 0.45) Arrow(root, p, rng);

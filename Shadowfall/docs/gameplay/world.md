@@ -291,8 +291,10 @@ one of the walled towns (Hollowmere, Frosthaven, Saltreach or Emberwatch), usual
 - The invaders are monsters of the land around that gate, at about the level of the heroes near the town, and there
   are more of them the more heroes are around. They fight anyone they meet on the way, as usual; heroes inside the
   walls are out of their reach.
-- **The town's guards join in** with each wave: three archers climb up onto the wall walk beside the gate and shoot
-  down at the invaders, and four soldiers march out and hold a line in front of the gate. They only chip away (a few
+- **The town's guards muster at once**, as soon as the raiders are sighted (or start gathering): four archers climb up
+  onto the wall walk beside the gate, and six soldiers form up in the street behind it, march out through the gateway
+  and hold a line in front of it. They're in place well before the first wave: the soldiers brace behind their shields,
+  the archers point out the raiders' camp. Archers shoot down at the invaders once they come. They only chip away (a few
   percent of an invader's life a blow), so the heroes do the real work, and guard kills give nobody experience or loot
   unless a hero hurt the monster too. Invaders still go for heroes first; with no hero near they fight the soldiers
   (their archers and casters shoot at the wall's archers too), and only then batter the gate. Fallen guards are
@@ -327,8 +329,11 @@ one of the walled towns (Hollowmere, Frosthaven, Saltreach or Emberwatch), usual
     - carpenters mend the gate behind scaffolding for a few minutes.
 - **The town is sacked** when the gate breaks, or when nobody stops the siege within 12 minutes: the invaders plunder
   the market and withdraw, and nobody is rewarded. Worse, **they set fire to the quarter behind the broken gate** (inside
-  the walls, a little more than half the town's width from the gate) for **twelve minutes**:
-    - its houses burn, flames all over the roofs and out of the upper walls, smoke rising;
+  the walls, everything but the far side of town) for **twelve minutes**:
+    - its houses burn, flames all over the roofs and out of the upper walls; columns of black smoke rise high enough to
+      be seen from far off, embers drift up and ash falls over the whole quarter; every third house has partly fallen
+      in, charred beams and a slab of roof down against its side;
+    - the broken gate lies in a burning heap of stone and timber, and isn't mended until the fires are out;
     - the wreckage of the fight lies about: the gate's planks thrown inward, toppled barrels and spilled crates, charred
       timber, rubble, arrows in the ground, a fallen banner, scorch marks and burning wreckage, and a battlefield of
       arrows and broken timber outside the gate;

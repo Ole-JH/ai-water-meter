@@ -21,6 +21,8 @@ namespace Shadowfall
 
         CharacterView view;
         CharacterLook look;
+        float nextReady;
+        static readonly string[] musterCalls = { "To the walls!", "Form up! Shields!", "Look sharp, they're coming!", "Hold here. Nobody passes.", "Archers, find your marks!" };
         Vector3 target;
         // what they shout (one voice at a time across the line, so it doesn't turn into a babble)
         static float nextShout;
@@ -91,6 +93,9 @@ namespace Shadowfall
             else go.transform.position = new Vector3(g.x, 0f, g.z);
             tg.target = new Vector3(g.x, tg.Archer ? Rampart.Top : 0f, g.z);
             tg.lastPos = go.transform.position;
+            tg.nextReady = Time.time + Random.Range(2f, 5f);
+            var iv0 = Invasion.Current;
+            if (iv0 != null && (iv0.phase == "warn" || iv0.phase == "gather")) Shout(tg, musterCalls, 0.5f); // mustering
             All[g.i] = tg;
             return tg;
         }
@@ -175,7 +180,17 @@ namespace Shadowfall
             float moved = Factory.FlatDistance(transform.position, lastPos);
             lastPos = transform.position;
             speed = Mathf.Lerp(speed, dt > 0f ? moved / dt : 0f, dt * 10f);
-            if (view != null) view.UpdateLocomotion(speed);
+            // At their posts before the attack: soldiers brace behind their shields, archers point out the raiders' camp
+            var iv = Invasion.Current;
+            if (view != null && iv != null && (iv.phase == "warn" || iv.phase == "gather") && speed < 0.2f && dist < 0.3f && Time.time >= nextReady && !view.Emoting)
+            {
+                nextReady = Time.time + Random.Range(4f, 9f);
+                var camp = new Vector3(iv.sx, 0f, iv.sz);
+                if (iv.sx != 0f || iv.sz != 0f) Face(camp);
+                view.Emote(EmoteDef.Get(Archer ? "point" : "guard"));
+                return;
+            }
+            if (view != null && !view.Emoting) view.UpdateLocomotion(speed);
         }
 
         void OnDestroy() { if (All.TryGetValue(Id, out var tg) && tg == this) All.Remove(Id); }

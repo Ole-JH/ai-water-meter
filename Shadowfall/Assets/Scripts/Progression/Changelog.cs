@@ -24,6 +24,15 @@ namespace Shadowfall
         {
             new Entry
             {
+                Id = 82, Date = "2026-10-08", Title = "Ready at the walls, ruined in defeat",
+                Items = new[]
+                {
+                    "The guards muster the moment the raiders are sighted: four archers on the wall and six soldiers who form up behind the gate, march out and brace behind their shields long before the charge.",
+                    "Losing a town is far worse: the fire takes everything but the far side of town, black smoke rises high over it, ash falls, houses fall in, and the broken gate lies in a burning heap until the fires are out.",
+                },
+            },
+            new Entry
+            {
                 Id = 81, Date = "2026-10-08", Title = "The siege comes alive",
                 Items = new[]
                 {

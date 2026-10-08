@@ -32,7 +32,7 @@ const PLAYERS_NEAR = 110;   // players this close to a town count towards it (ch
 // The town's guards: archers up on the wall walk beside the gate and soldiers holding a line outside it. They help a
 // little (a few percent of an invader's life a blow) so the heroes still do the real work; the fallen are replaced at
 // each new wave. Invaders still go for heroes first; with none around they fight the guards, then the gate.
-const ARCHERS = 3, SOLDIERS = 4;
+const ARCHERS = 4, SOLDIERS = 6;
 const GUARD_HIT = 0.025;    // share of an invader's max life per guard blow
 const ARCHER_RANGE = 22, ARCHER_CD = 2.6, SOLDIER_CD = 1.7, SOLDIER_REACH = 7, GUARD_SPEED = 3.2;
 // The battering ram: built in the war camp, pushed to the gate by its crew when the first wave charges, and much harder
@@ -203,9 +203,9 @@ module.exports = function createInvasions(ctx) {
     if (changed) sendAfter();
   }
   // Burning quarters: town name -> { town, gate, until }. The quarter is everything inside the walls within
-  // sackRadius of the broken gate (a bit more than half the town's width).
+  // sackRadius of the broken gate (most of the town: all but its far side).
   const sacks = new Map();
-  const sackRadius = (t) => 0.55 * (t.x1 - t.x0);
+  const sackRadius = (t) => 0.85 * (t.x1 - t.x0); // most of the town: everything but the far side
   const inside = (t, x, z) => x >= t.x0 && x <= t.x1 && z >= t.z0 && z <= t.z1;
 
   function sackState() {
@@ -297,9 +297,9 @@ module.exports = function createInvasions(ctx) {
       };
       buildRam();
       placeBeacons();
+      postGuards(); // the guards muster at once and march to their posts, ready well before the first wave
       if (warned) {
         broadcast({ t: "sys", msg: `Scouts sight raiders massing outside the ${g.name} gate of ${t.name}! They attack in ${Math.round(WARN_S)} seconds. Defenders, to the walls, or strike their camp before they're ready!` });
-        postGuards(); // the guards hurry to their posts
       } else broadcast({ t: "sys", msg: `${t.name} is under attack! Monsters are gathering outside its ${g.name} gate. Defend the town!` });
       log(`${warned ? "Raiders sighted near" : "Invasion of"} ${t.name} (${g.name} gate, level ${level}, ${ros.types.join(", ")})`);
       send();
@@ -441,8 +441,11 @@ module.exports = function createInvasions(ctx) {
       const off = soldierSpots[i % soldierSpots.length];
       const px = g.x + g.nx * 3.5 + ax * off, pz = g.z + g.nz * 3.5 + az * off;
       if (!walkable(px, pz)) continue;
-      // they come out through the gate and take up their post
-      inv.guards.push({ id: inv.nextGuard++, k: "s", x: g.x, z: g.z, px, pz, hp: 70 + lvl * 26, mhp: 70 + lvl * 26, next: now() + 1 });
+      // they muster in the street behind the gate, march out through it and take up their post
+      const mx = g.x - g.nx * 9 + ax * (off * 0.4), mz = g.z - g.nz * 9 + az * (off * 0.4);
+      const fromIn = inv.phase === "warn" || inv.phase === "gather" ? walkable(mx, mz) : false;
+      inv.guards.push({ id: inv.nextGuard++, k: "s", x: fromIn ? mx : g.x, z: fromIn ? mz : g.z, px, pz, hp: 70 + lvl * 26, mhp: 70 + lvl * 26, next: now() + 1,
+        ...(fromIn ? { wx: g.x, wz: g.z } : {}) });
     }
   }
 
@@ -458,6 +461,17 @@ module.exports = function createInvasions(ctx) {
     let best = null, bd = range;
     for (const m of list) { const d = dist(m.x, m.z, x, z); if (d < bd) { bd = d; best = m; } }
     return best;
+  }
+
+  /** A soldier on the way to his post: through the gateway first if he mustered inside. True while still marching. */
+  function march(o) {
+    if (o.wx !== undefined) {
+      step(o, o.wx, o.wz, GUARD_SPEED);
+      if (dist(o.x, o.z, o.wx, o.wz) < 0.3) { delete o.wx; delete o.wz; }
+      return true;
+    }
+    step(o, o.px, o.pz, GUARD_SPEED);
+    return dist(o.x, o.z, o.px, o.pz) > 0.1;
   }
 
   function step(o, tx, tz, speed) {
@@ -483,7 +497,7 @@ module.exports = function createInvasions(ctx) {
       }
       // a soldier: steps up to an invader near his post, otherwise holds the line
       const m = nearestInvader(g.px, g.pz, SOLDIER_REACH, foes);
-      if (!m) { step(g, g.px, g.pz, GUARD_SPEED); continue; }
+      if (!m || g.wx !== undefined) { march(g); continue; }
       if (dist(g.x, g.z, m.x, m.z) > 1.7) { step(g, m.x, m.z, GUARD_SPEED); continue; }
       if (t < g.next) continue;
       g.next = t + SOLDIER_CD * rand(0.85, 1.15);
@@ -696,19 +710,22 @@ module.exports = function createInvasions(ctx) {
         if (spawnOne(false)) inv.massed++;
         inv.nextMass = t + (WARN_S * 0.6) / want;
       }
-      for (const g of inv.guards) if (g.k === "s") step(g, g.px, g.pz, GUARD_SPEED);
+      let marching = false;
+      for (const g of inv.guards) if (g.k === "s" && march(g)) marching = true;
       if (t >= inv.waveAt) {
         inv.phase = "wave";
         inv.began = t;
         broadcast({ t: "sys", msg: `The war horns sound: the raiders charge the ${inv.gate.name} gate of ${inv.town.name}!` });
         spawnWave();
         send();
-      } else if (t - inv.sentAt > (inv.guards.some((g) => g.k === "s" && dist(g.x, g.z, g.px, g.pz) > 0.1) ? 0.35 : 2)) send();
+      } else if (t - inv.sentAt > (marching ? 0.35 : 2)) send();
       return;
     }
     if (inv.phase === "gather") {
+      let marching = false;
+      for (const g of inv.guards) if (g.k === "s" && march(g)) marching = true;
       if (t >= inv.waveAt) { inv.phase = "wave"; spawnWave(); send(); }
-      else if (t - inv.sentAt > 2) send();
+      else if (t - inv.sentAt > (marching ? 0.35 : 2)) send();
       return;
     }
     updateGuards(t);

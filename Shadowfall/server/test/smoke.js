@@ -475,7 +475,7 @@ async function invasionTests(a, b) {
   await sleep(1200); // INVASION_GATHER_S=1
   const iv1 = a.all("invasion").at(-1).iv;
   assert.ok(iv1.phase === "wave" && iv1.wave === 1 && iv1.left > 0, "after the gathering the first wave marches");
-  assert.ok(iv1.gd && iv1.gd.filter((g) => g.k === "a").length === 3 && iv1.gd.some((g) => g.k === "s"),
+  assert.ok(iv1.gd && iv1.gd.filter((g) => g.k === "a").length === 4 && iv1.gd.some((g) => g.k === "s"),
     "the town posts its guards: archers on the wall, soldiers before the gate");
 
   // Alice fights them in front of the gate (Bob stays in town): three waves, the last with a warlord.
