@@ -65,6 +65,7 @@ namespace Shadowfall
 
         void Clear()
         {
+            if (bodies.Exists(x => x.Who != null)) { warnedFor = null; return; } // the dead are still being seen to
             foreach (var e in extras) if (e != null) Destroy(e.gameObject);
             extras.Clear();
             wounded = 0;
@@ -153,6 +154,7 @@ namespace Shadowfall
 
         void Update()
         {
+            FetchBodies();
             var iv = Invasion.Current;
             if (iv == null || iv.phase != "warn" || iv.paused) return;
             var hero = Player.I;
@@ -209,17 +211,54 @@ namespace Shadowfall
         {
             var iv = Invasion.Current;
             var town = Town(iv);
-            if (town == null || !HeroNear(town, 120f)) return;
-            Get().Carry(at, look, town);
+            if (town == null || !HeroNear(town, 150f)) return;
+            Get().Fallen(at, look, town);
+        }
+
+        /// <summary>A fallen guard lying where he fell, until the militia can get to him.</summary>
+        class Body { public Extra Who; public Settlement Town; public float Since; public bool Sent; }
+        readonly List<Body> bodies = new List<Body>();
+        float nextFetch;
+
+        void Fallen(Vector3 at, CharacterLook look, Settlement town)
+        {
+            if (bodies.Count >= 14) return; // the rest are seen to out of sight
+            var ground = TownLife.Walkable(new Vector3(at.x, 0f, at.z)); // an archer falls off the wall walk to its foot
+            var body = Extra.Make(this, "Fallen guard", look, ground, 0f);
+            body.Lying = true;
+            body.transform.rotation = Quaternion.Euler(0f, R(0f, 360f), 0f);
+            bodies.Add(new Body { Who = body, Town = town, Since = Time.time });
+        }
+
+        /// <summary>
+        /// Sends two militiamen out of a house for each body they can reach now (one outside a shut gate waits until the
+        /// gate is open or broken, at the latest when the siege is over), a few seconds apart.
+        /// </summary>
+        void FetchBodies()
+        {
+            if (Time.time < nextFetch || bodies.Count == 0) return;
+            bodies.RemoveAll(x => x.Who == null);
+            nextFetch = Time.time + R(1.5f, 3.5f);
+            var grid = WorldGrid.Instance;
+            foreach (var b in bodies)
+            {
+                if (b.Sent || b.Who == null || Time.time - b.Since < R(2f, 5f)) continue;
+                var near = TownLife.Walkable(Vector3.MoveTowards(b.Who.transform.position, b.Town.Center, 12f));
+                var probe = new List<Vector3>();
+                if (grid != null && !grid.FindPath(near, b.Who.transform.position, probe, 6000)) continue; // behind a shut gate: later
+                b.Sent = true;
+                Carry(b.Who, b.Town);
+                return; // one pair at a time
+            }
         }
 
         static readonly string[] mourning = { "Rest now, friend.", "He held the gate for us.", "Gone... just like that.", "We'll not forget you.", "Who'll tell his mother?", "May the gods keep you." };
 
-        void Carry(Vector3 at, CharacterLook look, Settlement town)
+        void Carry(Extra body, Settlement town)
         {
-            if (wounded >= 10) return; // the rest are seen to out of sight
+            var at = body.transform.position;
             var yard = TownGraveyard.For(town.Name);
-            if (yard == null) return;
+            if (yard == null) { body.FadeOut(60f); return; }
             var bed = yard.NextGrave();
             yard.Dug(); // counted now, so the server's tally later doesn't dig it again
             wounded++;
@@ -230,8 +269,6 @@ namespace Shadowfall
             var start = TownLife.Walkable(door != null ? door.Step : near);
             var a = Extra.Make(this, "Militia", militiaLook, start, R(3.2f, 4.2f));
             var b = Extra.Make(this, "Militia", militiaLook, TownLife.Walkable(start + Vector3.right), R(3.2f, 4.2f));
-            var body = Extra.Make(this, "Fallen guard", look, at, 0f);
-            body.Lying = true;
             a.Delay = R(1f, 4f);
             b.Delay = a.Delay + R(0.2f, 1.2f);
             a.Walk(at + Vector3.left * 0.7f);
@@ -272,10 +309,11 @@ namespace Shadowfall
                     m.FaceAt = bed;
                     m.Party = rng.NextDouble() < 0.4 ? "sit" : "bow";
                     m.Line = rng.NextDouble() < 0.5 ? Pick(mourning) : null;
-                    m.FadeOut(R(150f, 260f)); // a few minutes, then home
+                    m.FadeOut(R(200f, 330f)); // a few minutes, then home
                 }
             }
-            yield return new WaitForSeconds(R(40f, 90f));
+            // the bearers stay and mourn with them, then go back to the fight (or home)
+            yield return new WaitForSeconds(R(120f, 200f));
             if (a != null) a.FadeOut(R(0f, 4f));
             if (b != null) b.FadeOut(R(2f, 8f));
         }
@@ -330,6 +368,8 @@ namespace Shadowfall
             float nextFidget;
             public Vector3? FaceAt;
             public string Party;   // an emote kept up while standing about: dance, cheer, clap, sit
+            public Vector3? OrbitAbout; // a ring dance: round and round this point (OrbitR away, OrbitSpeed radians a second)
+            public float OrbitR = 3f, OrbitSpeed = 0.6f, OrbitAngle;
             float nextParty;
 
             public void Cheer() => view?.Cheer();
@@ -412,6 +452,18 @@ namespace Shadowfall
                     Hidden = false;
                     if (view != null) view.Root.SetActive(true);
                     if (Door != null) HouseDoors.Swing(Door, 1.3f);
+                }
+                if (OrbitAbout.HasValue && at >= path.Count)
+                {
+                    OrbitAngle += OrbitSpeed * dt;
+                    var c = OrbitAbout.Value;
+                    var to = c + new Vector3(Mathf.Cos(OrbitAngle), 0f, Mathf.Sin(OrbitAngle)) * OrbitR;
+                    var step = to - transform.position;
+                    transform.position = Vector3.MoveTowards(transform.position, to, 4f * dt);
+                    var tangent = new Vector3(-Mathf.Sin(OrbitAngle), 0f, Mathf.Cos(OrbitAngle)) * Mathf.Sign(OrbitSpeed);
+                    transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(tangent), dt * 8f);
+                    view?.UpdateLocomotion(Mathf.Abs(OrbitSpeed) * OrbitR + step.magnitude);
+                    return;
                 }
                 if (!string.IsNullOrEmpty(Party) && at >= path.Count)
                 {

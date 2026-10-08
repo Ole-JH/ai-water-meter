@@ -239,7 +239,7 @@ namespace Shadowfall
                     tg.Fall();
                     nextShout = 0f;
                     Shout(Nearest(tg.transform.position), downCalls, 1f);
-                    if (!tg.Archer) SiegeLife.GuardDown(tg.transform.position, tg.look); // carried back to the healer
+
                     break;
             }
         }
@@ -254,9 +254,24 @@ namespace Shadowfall
         {
             if (dieAt >= 0f) return;
             dieAt = Time.time;
+            // his comrades carry him to the town's graveyard (SiegeLife); this body sinks away as that one takes its place
+            if (view != null && view.Root.activeSelf)
+            {
+                view.Die();
+                Sfx.Play("death", transform.position + Vector3.up, 0.3f, 0.1f, 25f);
+                StartCoroutine(HandOver());
+                return;
+            }
             if (view != null) view.Die();
             Sfx.Play("death", transform.position + Vector3.up, 0.3f, 0.1f, 25f);
             Destroy(gameObject, 6f);
+        }
+
+        System.Collections.IEnumerator HandOver()
+        {
+            yield return new WaitForSeconds(2.2f); // he falls; then he lies there until they come for him
+            SiegeLife.GuardDown(transform.position, look);
+            Destroy(gameObject);
         }
 
         void Update()

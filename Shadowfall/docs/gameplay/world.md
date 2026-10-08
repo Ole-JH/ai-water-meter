@@ -300,7 +300,8 @@ one of the walled towns (Hollowmere, Frosthaven, Saltreach or Emberwatch), usual
   (their archers and casters shoot at the wall's archers too), and only then batter the gate. Fallen guards are
   replaced at the next wave. The guards call out as they fight. Seen from the start, they come out of the houses near
   the gate one by one and walk to their posts; each archer waits at the foot of a siege ladder until the militia have
-  it standing, then climbs it and walks along the wall. When a soldier falls, two militiamen carry him to the town's
+  it standing, then climbs it and walks along the wall. When a guard falls he lies where he fell until two militiamen can reach him (outside a shut gate: as soon as it
+  opens or the siege ends); they carry him to the town's
   **graveyard** (a fenced plot inside the walls) and bury him, and townsfolk come out of their houses to mourn him a
   few minutes before going home.
 - **Fire arrows.** Once the waves come, the raiders' archers and casters now and then set a roof behind the gate alight.
@@ -327,7 +328,9 @@ one of the walled towns (Hollowmere, Frosthaven, Saltreach or Emberwatch), usual
   experience (about a sixth of a level) and a boss's share of loot at their feet: gold, a guaranteed rare and a gem,
   with a chance at set and legendary items. Invaders also give 30% more experience each. Then:
     - **a victory feast** for five minutes: bells ring, a long banquet table is laid in the square with a roast, bread,
-      cheese and ale, townsfolk sit at its benches and dance round a bonfire. Click the table to eat: the **Heroes'
+      cheese and ale, townsfolk sit at its benches, bunting and lanterns hang over the square, a roast turns on a spit
+      over the bonfire, a barkeep pours from the ale cask, a minstrel sings, a ring of dancers goes round the fire,
+      cups are raised in toasts and fireworks burst overhead. Click the table to eat: the **Heroes'
       Feast**, +25% experience for fifteen minutes (it survives a reload). Each hero can eat once a feast, so it can't
       be stretched;
     - carpenters mend the gate behind scaffolding for a few minutes.

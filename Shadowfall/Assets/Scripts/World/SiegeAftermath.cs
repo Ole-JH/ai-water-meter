@@ -216,10 +216,45 @@ namespace Shadowfall
             l.color = new Color(1f, 0.65f, 0.3f);
             l.range = 14f;
             l.intensity = 2f;
+            // a roast turning on a spit over the fire
+            var spit = new GameObject("Spit").transform;
+            spit.SetParent(t, false);
+            spit.position = fire + Vector3.up * 1.15f;
+            foreach (float s2 in new[] { -1.1f, 1.1f })
+            {
+                Factory.PrimAt(PrimitiveType.Cube, t, fire + new Vector3(s2, 0.6f, 0f), new Vector3(0.08f, 1.2f, 0.08f), new Color(0.3f, 0.2f, 0.12f)).transform.rotation = Quaternion.Euler(0f, 0f, s2 > 0 ? -10f : 10f);
+            }
+            Factory.PrimAt(PrimitiveType.Cylinder, spit, spit.position, new Vector3(0.04f, 1.2f, 0.04f), new Color(0.4f, 0.4f, 0.42f)).transform.rotation = Quaternion.Euler(0f, 0f, 90f);
+            Factory.PrimAt(PrimitiveType.Sphere, spit, spit.position, new Vector3(0.9f, 0.5f, 0.55f), new Color(0.62f, 0.33f, 0.16f));
+            // bunting on poles round the square, lanterns, a cask of ale with a barkeep
+            var flags = new[] { new Color(0.85f, 0.2f, 0.18f), new Color(0.95f, 0.8f, 0.25f), new Color(0.25f, 0.45f, 0.85f), new Color(0.3f, 0.7f, 0.35f) };
+            var corners = new Vector3[4];
+            for (int k = 0; k < 4; k++)
+            {
+                var c = TownLife.Walkable(at + new Vector3(k < 2 ? -5.5f : 5.5f, 0f, k % 2 == 0 ? -4f : 5f));
+                corners[k] = c;
+                Factory.PrimAt(PrimitiveType.Cylinder, t, c + Vector3.up * 2f, new Vector3(0.1f, 2f, 0.1f), wood * 0.8f);
+                PropFire.Add(t, c + Vector3.up * 4.1f, new Color(1f, 0.75f, 0.35f), 0.25f, false); // a lantern on top
+            }
+            foreach (var (p0, p1) in new[] { (corners[0], corners[3]), (corners[1], corners[2]), (corners[0], corners[1]), (corners[2], corners[3]) })
+            {
+                var a0 = p0 + Vector3.up * 3.8f; var a1 = p1 + Vector3.up * 3.8f;
+                int n = Mathf.Max(4, Mathf.RoundToInt(Vector3.Distance(a0, a1) / 0.7f));
+                for (int k = 1; k < n; k++)
+                {
+                    float u = k / (float)n;
+                    var q = Vector3.Lerp(a0, a1, u) + Vector3.down * Mathf.Sin(u * Mathf.PI) * 0.7f;
+                    var flag = Factory.PrimAt(PrimitiveType.Cube, t, q + Vector3.down * 0.18f, new Vector3(0.28f, 0.34f, 0.02f), flags[k % flags.Length]);
+                    flag.transform.rotation = Quaternion.LookRotation(Vector3.Cross(Vector3.up, (a1 - a0).normalized)) * Quaternion.Euler(0f, 0f, 45f);
+                }
+            }
+            var cask = TownLife.Walkable(at + new Vector3(4.6f, 0f, 0f));
+            ArtLibrary.Spawn("Props/barrel_large", t, cask - at, 1.1f, ArtLibrary.Fit.Height, 0f, false);
+            ArtLibrary.Spawn("Props/barrel_small_stack", t, cask - at + new Vector3(0.9f, 0f, 0.8f), 1f, ArtLibrary.Fit.Height, 30f, false);
             // the townsfolk: some sat at the benches, the rest dancing and cheering round the fire
             var life = SiegeLife.Get();
             string[] models = { "Characters/Keeper", "Characters/RogueHooded", "Characters/Mage", "Characters/Rogue", "Characters/Knight" };
-            for (int i = 0; i < 11; i++)
+            for (int i = 0; i < 12; i++)
             {
                 string model = models[(i + rng.Next(3)) % models.Length];
                 SiegeLife.Extra e;
@@ -240,8 +275,84 @@ namespace Shadowfall
                 }
                 b.People.Add(e);
             }
+            // the barkeep at the cask, a minstrel, and a ring of dancers going round the fire
+            var keep = life.Person("Barkeep", "Characters/Barbarian", TownLife.Walkable(cask + new Vector3(-0.2f, 0f, -1.1f)), 1.9f);
+            keep.Tending = true; keep.FaceAt = cask; b.People.Add(keep);
+            var minstrel = life.Person("Minstrel", "Characters/Rogue", TownLife.Walkable(at + new Vector3(-4.8f, 0f, 2.2f)), 1.8f);
+            minstrel.FaceAt = at; minstrel.Party = "cheer"; b.People.Add(minstrel);
+            for (int i = 0; i < 7; i++)
+            {
+                var d = life.Person("Dancer", models[(i + 2) % models.Length], TownLife.Walkable(fire + Quaternion.Euler(0f, i * 51f, 0f) * Vector3.forward * 3.2f), i == 3 ? 1.2f : R(1.7f, 1.9f));
+                d.OrbitAbout = fire;
+                d.OrbitR = R(2.9f, 3.4f);
+                d.OrbitSpeed = 0.55f;
+                d.OrbitAngle = i * (Mathf.PI * 2f / 7f);
+                b.People.Add(d);
+            }
+            b.Root.AddComponent<FeastLife>().Init(b.People, spit, fire, minstrel, keep);
             Sfx.Play("bell", at + Vector3.up * 3f, 0.8f, 0.05f, 80f);
             return b;
+        }
+
+        /// <summary>The feast going on: the spit turning, toasts, the minstrel's songs, the barkeep pouring, fireworks.</summary>
+        class FeastLife : MonoBehaviour
+        {
+            List<SiegeLife.Extra> people;
+            Transform spit;
+            Vector3 fire;
+            SiegeLife.Extra minstrel, keep;
+            float nextToast, nextSong, nextFirework, nextPour;
+            static readonly string[] toasts = { "To the defenders!", "To the town that held!", "To the fallen!", "To the heroes of the wall!" };
+            static readonly string[] songs = { "~ Oh the gate it held, and the raiders fled ~", "~ Fill the cups and raise them high ~", "~ The warlord came, the warlord ran ~", "~ Dance, dance, the walls still stand ~" };
+            static readonly Color[] sparks = { new Color(1f, 0.5f, 0.2f), new Color(0.4f, 0.7f, 1f), new Color(1f, 0.9f, 0.3f), new Color(0.8f, 0.4f, 1f), new Color(0.5f, 1f, 0.5f) };
+
+            public void Init(List<SiegeLife.Extra> p, Transform s, Vector3 f, SiegeLife.Extra m, SiegeLife.Extra k)
+            {
+                people = p; spit = s; fire = f; minstrel = m; keep = k;
+                nextToast = Time.time + Random.Range(8f, 14f);
+                nextSong = Time.time + Random.Range(3f, 6f);
+                nextFirework = Time.time + Random.Range(4f, 8f);
+            }
+
+            void Update()
+            {
+                if (spit != null) spit.Rotate(Vector3.right, 40f * Time.deltaTime, Space.Self);
+                var hero = Player.I;
+                if (hero == null || Factory.FlatDistance(hero.transform.position, fire) > 60f) return;
+                if (Time.time >= nextToast)
+                {
+                    // one raises a cup, everybody cheers
+                    nextToast = Time.time + Random.Range(18f, 30f);
+                    var who = people[Random.Range(0, people.Count)];
+                    if (who != null) Speech.Say(who.transform, 2.4f, toasts[Random.Range(0, toasts.Length)]);
+                    foreach (var e in people) if (e != null && Random.value < 0.75f) e.Cheer();
+                    Sfx.Play("coins", fire + Vector3.up, 0.25f, 0.2f, 30f); // cups clinking
+                }
+                if (minstrel != null && Time.time >= nextSong)
+                {
+                    nextSong = Time.time + Random.Range(9f, 15f);
+                    Speech.Say(minstrel.transform, 2.4f, songs[Random.Range(0, songs.Length)]);
+                }
+                if (keep != null && Time.time >= nextPour)
+                {
+                    nextPour = Time.time + Random.Range(4f, 8f);
+                    if (Random.value < 0.4f) Speech.Say(keep.transform, 2.4f, Random.value < 0.5f ? "On the house tonight!" : "Who's dry? Who's dry?");
+                }
+                if (Time.time >= nextFirework && SpellFx.Ready)
+                {
+                    // a rocket goes up from behind the fire and bursts over the square
+                    nextFirework = Time.time + Random.Range(3.5f, 7f);
+                    var c = sparks[Random.Range(0, sparks.Length)];
+                    var at = fire + new Vector3(Random.Range(-6f, 6f), Random.Range(11f, 16f), Random.Range(-6f, 6f));
+                    SpellFx.Emit(new SpellFx.P
+                    {
+                        Burst = 60, Duration = 0.1f, Life = new Vector2(0.9f, 1.6f), Speed = new Vector2(3f, 6f), Size = new Vector2(0.12f, 0.24f),
+                        Start = new Color(1f, 1f, 1f, 1f), Mid = c, End = new Color(c.r, c.g, c.b, 0f), Gravity = 0.6f, Drag = 1.5f, Radius = 0.2f, Stretch = true,
+                    }, at);
+                    SpellFx.Flash(at, c, 18f, 1.6f, 0.5f);
+                    Sfx.Play("boom", at, 0.25f, 0.25f, 90f);
+                }
+            }
         }
 
         /// <summary>Our plate at a victory feast ("fed"): +25% experience for fifteen minutes, kept over a reload.</summary>

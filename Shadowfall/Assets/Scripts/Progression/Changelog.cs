@@ -35,6 +35,8 @@ namespace Shadowfall
                     "The Siege Record board by each crier now actually stands there (it was being built out of sight).",
                     "Town graveyards keep off the streets and the square: they're laid out on a quiet plot near the walls.",
                     "Updates are announced in chat: a new version on its way, building, testing, a countdown before the restart, and when it's live.",
+                    "Every fallen guard is carried to the graveyard, archers too: those who die outside the gate are fetched as soon as it opens. The bearers and the townsfolk stay and mourn for a few minutes.",
+                    "A proper feast: bunting and lanterns over the square, a roast turning on a spit over the bonfire, a barkeep at the ale cask, a minstrel singing, a ring dance round the fire, toasts and fireworks.",
                 },
             },
             new Entry

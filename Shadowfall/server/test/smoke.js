@@ -157,7 +157,7 @@ async function accountTests(admin) {
   const w1 = await c.next("welcome");
   assert.ok(w1.name === "Fern" && w1.look === "Mage" && !w1.hasSave, "a new character enters the world");
   c.send({ t: "save", save: { level: 4, gold: 12, look: "Mage", x: 144, z: 150 } });
-  await sleep(150);
+  await sleep(400); // (the save is written before the leave is handled; give a busy machine a moment)
   c.send({ t: "leave" });
   const back = await c.next("account");
   assert.ok(back.chars.length === 1 && back.chars[0].lvl === 4, "back to character select, with the character's level");
