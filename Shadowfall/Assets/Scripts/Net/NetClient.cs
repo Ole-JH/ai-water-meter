@@ -447,7 +447,21 @@ namespace Shadowfall
             }
 
             NetMsg m;
-            try { m = JsonUtility.FromJson<NetMsg>(raw); }
+            try
+            {
+                if (raw.StartsWith(SnapHead, System.StringComparison.Ordinal))
+                {
+                    // The snapshot (10 a second) as its own small message: parsing it as a NetMsg made all of NetMsg's
+                    // nested objects (a save, an item, a guild...) every time, steady garbage for the browser's GC
+                    var sm = JsonUtility.FromJson<SnapMsg>(raw);
+                    if (snap == null) snap = new NetMsg { t = "snap" };
+                    snap.l = sm.l;
+                    snap.m = sm.m;
+                    snap.p = sm.p;
+                    m = snap;
+                }
+                else m = JsonUtility.FromJson<NetMsg>(raw);
+            }
             catch (System.Exception e) { Debug.LogWarning("Bad message: " + e.Message); return; }
             if (m == null || m.t == null) return;
             if (DungeonId != 0) ShiftIn(m);
@@ -731,6 +745,9 @@ namespace Shadowfall
             if (p.Level < q.MinLevel) { GameUI.Log(m.name + " shared \"" + q.Title + "\", but you need level " + q.MinLevel + ".", PartyColor); return; }
             QuestOffer = new Offer { From = m.id, Name = m.name, Quest = q, Time = Time.time };
         }
+
+        const string SnapHead = "{\"t\":\"snap\"";
+        NetMsg snap; // reused for every snapshot (only l, m and p are set)
 
         void HandleSnapshot(NetMsg m)
         {

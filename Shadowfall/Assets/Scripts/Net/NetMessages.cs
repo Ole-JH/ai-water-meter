@@ -36,6 +36,15 @@ namespace Shadowfall
         public string ti;      // title worn under their name (empty = none)
     }
 
+    /// <summary>The 10-a-second snapshot alone: players online, the monsters and players around us (see NetClient).</summary>
+    [Serializable]
+    public class SnapMsg
+    {
+        public int l;
+        public NetMonster[] m;
+        public NetPlayer[] p;
+    }
+
     /// <summary>Union of every server -> client message.</summary>
     [Serializable]
     public class NetMsg

@@ -89,4 +89,5 @@ nav:
       - Extending the game: development/extending.md
       - Art & UI: development/art.md
       - Testing: development/testing.md
+      - Performance: development/performance.md
   - Troubleshooting: troubleshooting.md
