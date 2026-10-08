@@ -52,6 +52,15 @@ check_reason() {
   echo "$stage: $detail" | sed 's/\\n/ /g; s/\\"/"/g'
 }
 
+# The lines from the client build's output that say what went wrong (compiler errors first), for the failure message.
+build_errors() {
+  f="$state/build.log"
+  [ -f "$f" ] || return 0
+  { grep -E "error CS[0-9]+" "$f" | sort -u | head -n 6
+    grep -E "\[client-build\]|Build failed|build failed|BuildFailedException|Exception:|Error building|No valid Unity|license|No space left|Killed|exit status" "$f" | grep -v "error CS" | tail -n 8
+  } | cut -c1-300 | tr '\n' ' ' | cut -c1-1400
+}
+
 shots() { ls "$state"/check/*.png 2>/dev/null | grep -E -- "$1" | head -n 10; }
 
 branch="${AUTODEPLOY_BRANCH:-$(git rev-parse --abbrev-ref HEAD)}"
@@ -99,9 +108,14 @@ give_up() { # why, notify-text, [screenshots...]
 if [ -n "$build" ]; then
   log "Building the client into server/public-next..."
   rm -rf server/public-next
-  SF_BUILD_OUT=server/public-next "$TASK" client:build \
-    || give_up "Client build failed for $short; the server keeps running the previous version." \
-               "client build failed for $short ($subject); still running the previous version."
+  rm -f "$state/build.rc"
+  # The build's output goes to the log as before, and to build.log so the failure message can quote it.
+  if ! { SF_BUILD_OUT=server/public-next "$TASK" client:build 2>&1; echo "exit $?" > "$state/build.rc"; } | tee "$state/build.log" \
+     || ! grep -qx "exit 0" "$state/build.rc"; then
+    why="$(build_errors)"
+    give_up "Client build failed for $short; the server keeps running the previous version." \
+            "client build failed for $short ($subject); still running the previous version. ${why:+Build said: $why}"
+  fi
 fi
 
 rm -f "$state"/check/*.png "$state"/check/result.json  # no stale screenshots in this deploy's messages

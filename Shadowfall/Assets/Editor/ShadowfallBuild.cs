@@ -164,7 +164,7 @@ namespace Shadowfall.EditorTools
                 if (AssetDatabase.LoadAssetAtPath<GameObject>(path) == null) broken.Add(path + " (importer: " + (AssetImporter.GetAtPath(path)?.GetType().Name ?? "none") + ")");
             }
             if (broken.Count > 0)
-                Debug.LogError("[Shadowfall] " + broken.Count + " model(s) did not import and will show as boxes in the game:\n  " + string.Join("\n  ", broken));
+                Debug.LogWarning("[Shadowfall] " + broken.Count + " model(s) did not import and will show as boxes in the game:\n  " + string.Join("\n  ", broken));
             else Debug.Log("[Shadowfall] All models import as GameObjects.");
         }
     }
