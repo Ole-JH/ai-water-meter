@@ -2538,7 +2538,9 @@ let tickCount = 0;
 // Town invasions (invasion.js): monsters attack a walled town's gate in waves now and then.
 const invasions = createInvasions({
   TOWNS, SPAWNERS, MONSTERS, monsters, sessions, spawnMonster, makeElite, findPath, nearestWalkable, moveAlongPath, speedOf,
-  monsterAttack, broadcast, safeSend, rollLoot: I.rollLoot, dropFor, heroClass, log, now, rand, dist, r2, metrics: M.invasions,
+  monsterAttack, broadcast, safeSend, rollLoot: I.rollLoot, dropFor, heroClass, log, now, rand, dist, r2, metrics: M.invasions, walkable,
+  // a town guard's blow: no hero's threat (a kill by guards credits only the heroes who also hurt it)
+  guardHit: (m, dmg) => { if (m.hp <= 0) return; m.hp -= dmg; if (m.hp <= 0) killMonster(m); },
   deep: (x, z) => x >= OLD_SIZE && z >= OLD_SIZE,
 });
 

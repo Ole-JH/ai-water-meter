@@ -475,11 +475,15 @@ async function invasionTests(a, b) {
   await sleep(1200); // INVASION_GATHER_S=1
   const iv1 = a.all("invasion").at(-1).iv;
   assert.ok(iv1.phase === "wave" && iv1.wave === 1 && iv1.left > 0, "after the gathering the first wave marches");
+  assert.ok(iv1.gd && iv1.gd.filter((g) => g.k === "a").length === 3 && iv1.gd.some((g) => g.k === "s"),
+    "the town posts its guards: archers on the wall, soldiers before the gate");
 
   // Alice fights them in front of the gate (Bob stays in town): three waves, the last with a warlord.
   state(a, 144.5, 96);
   await sleep(300);
   assert.ok(view(a).m.length >= iv1.left, "the invaders are out there");
+  for (let i = 0; i < 20 && !a.all("gev").some((e) => e.k === "shot" || e.k === "swing"); i++) await sleep(300);
+  assert.ok(a.all("gev").some((e) => e.k === "shot" || e.k === "swing"), "the guards fight the invaders");
   for (let i = 0; i < 3; i++) {
     a.ws.send(JSON.stringify({ t: "adm", c: "killall", r: 60 }));
     await sleep(400);
@@ -505,7 +509,7 @@ async function invasionTests(a, b) {
   // Nobody answers: the invaders march on the gate by themselves, batter it down and sack the town.
   a.ws.send(JSON.stringify({ t: "adm", c: "invasion", town: "Saltreach", gate: "west" }));
   let last;
-  for (let i = 0; i < 60 && (last = b.all("invasion").at(-1).iv).phase !== "lost"; i++) await sleep(500);
+  for (let i = 0; i < 120 && (last = b.all("invasion").at(-1).iv).phase !== "lost"; i++) await sleep(500); // (the guards hold them up a while)
   assert.strictEqual(last.phase, "lost", "unopposed invaders march on the gate and break it");
   assert.strictEqual(last.hp, 0, "the gate's integrity runs out");
   assert.ok(b.all("sys").some((m) => /broke through the west gate of Saltreach/.test(m.msg)), "the sack is announced");

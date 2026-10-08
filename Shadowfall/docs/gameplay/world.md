@@ -268,6 +268,12 @@ the minimap counts down to the attack.
 - The invaders are monsters of the land around that gate, at about the level of the heroes near the town, and there
   are more of them the more heroes are around. They fight anyone they meet on the way, as usual; heroes inside the
   walls are out of their reach.
+- **The town's guards join in** with each wave: three archers climb up onto the wall walk beside the gate and shoot
+  down at the invaders, and four soldiers march out and hold a line in front of the gate. They only chip away (a few
+  percent of an invader's life a blow), so the heroes do the real work, and guard kills give nobody experience or loot
+  unless a hero hurt the monster too. Invaders still go for heroes first; with no hero near they fight the soldiers
+  (their archers and casters shoot at the wall's archers too), and only then batter the gate. Fallen guards are
+  replaced at the next wave.
 - **The gate shuts** as soon as the monsters start gathering: nobody walks in or out there until it's over (recall or
   a waystone still gets you home).
 - **The militia put up ladders.** Two helpers carry a ladder each from the middle of town to the inside of the wall,

@@ -776,6 +776,15 @@ namespace Shadowfall
                         UISkin.V(UISkin.SmallCenter, fontSize: 12), new Color(0.75f, 0.82f, 1f));
             }
 
+            // the town's guards in an invasion: who they are, and how they're holding up
+            foreach (var tg in TownGuards.All.Values)
+            {
+                if (tg == null || Factory.FlatDistance(tg.transform.position, p.transform.position) > 30f) continue;
+                if (!WorldToGui(tg.Head, out var gg)) continue;
+                UISkin.Shadowed(new Rect(gg.x - 100, gg.y - 18, 200, 18), tg.Title, UISkin.V(UISkin.SmallCenter, fontSize: 12), new Color(0.55f, 0.75f, 1f));
+                Plate(new Rect(gg.x - 24, gg.y + 1, 48, 4), tg.Health / tg.MaxHealth, new Color(0.35f, 0.6f, 1f));
+            }
+
             foreach (var rp in RemotePlayer.ById.Values)
             {
                 if (rp == null) continue;

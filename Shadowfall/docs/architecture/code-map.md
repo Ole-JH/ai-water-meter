@@ -60,6 +60,7 @@
 | `World/BountyBoard.cs` | The bounty boards with today's notices (torn off when done) and the Bounty Cache falling from the sky |
 | `World/WeatherDetail.cs` | Puddles (and ice) around the hero, breath in the cold, and lightning striking trees (`WorldGenerator.Trees`) |
 | `World/DungeonFeatures.cs` | Dungeon traps (spike plates, pendulums) and the boss room's portcullises |
+| `World/TownGuards.cs` | The town's guards in an invasion (server/invasion.js runs them): wall archers and soldiers before the gate |
 | `World/Footprints.cs` | Prints in sand, snow and wet mud from heroes, players and monsters: one decal mesh, fading out |
 | `World/DungeonAtmosphere.cs` | The air in a dungeon: dust, snow, sand or embers drifting about, ceiling drips into puddles, cobwebs, bones, and each dungeon's own floor (frost, sand drifts, glowing cracks) |
 | `UI/MapPing.cs` | Party map pings (Alt+click the world map or minimap): ripples on the maps and a pillar of light in the world |

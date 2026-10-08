@@ -18,10 +18,17 @@ const SIEGE_RATE = Number(process.env.INVASION_SIEGE_RATE ?? 0.35);
 const RESULT_S = 15;        // how long the outcome stays on players' screens
 const STAGING = 24;         // how far outside the gate the invaders gather
 const PLAYERS_NEAR = 110;   // players this close to a town count towards it (choosing the town, scaling the waves)
+// The town's guards: archers up on the wall walk beside the gate and soldiers holding a line outside it. They help a
+// little (a few percent of an invader's life a blow) so the heroes still do the real work; the fallen are replaced at
+// each new wave. Invaders still go for heroes first; with none around they fight the guards, then the gate.
+const ARCHERS = 3, SOLDIERS = 4;
+const GUARD_HIT = 0.025;    // share of an invader's max life per guard blow
+const ARCHER_RANGE = 22, ARCHER_CD = 2.6, SOLDIER_CD = 1.7, SOLDIER_REACH = 7, GUARD_SPEED = 3.2;
 
 module.exports = function createInvasions(ctx) {
   const { TOWNS, SPAWNERS, MONSTERS, monsters, sessions, spawnMonster, makeElite, findPath, nearestWalkable, moveAlongPath,
-    speedOf, monsterAttack, broadcast, safeSend, rollLoot, dropFor, heroClass, deep, log, now, rand, dist, r2, metrics } = ctx;
+    speedOf, monsterAttack, broadcast, safeSend, rollLoot, dropFor, heroClass, deep, log, now, rand, dist, r2, metrics,
+    walkable, guardHit } = ctx;
 
   const minutes = Number(process.env.INVASION_MINUTES ?? 45);
   let inv = null;
@@ -80,7 +87,7 @@ module.exports = function createInvasions(ctx) {
       inv = {
         id: nextId++, town: t, gate: g, sx, sz, types: ros.types, level, players: Math.max(1, defenders.length),
         phase: "gather", wave: 0, integrity: 100, began: now(), waveAt: now() + GATHER_S, ids: new Set(),
-        defenders: new Map(), sentAt: 0, endedAt: 0,
+        defenders: new Map(), sentAt: 0, endedAt: 0, guards: [], nextGuard: 1,
       };
       broadcast({ t: "sys", msg: `${t.name} is under attack! Monsters are gathering outside its ${g.name} gate. Defend the town!` });
       log(`Invasion of ${t.name} (${g.name} gate, level ${level}, ${ros.types.join(", ")})`);
@@ -90,8 +97,107 @@ module.exports = function createInvasions(ctx) {
     return `no gate of ${t.name} can be reached from outside`;
   }
 
+  // ------------------------------------------------------------------ the town's guards
+
+  /** Tops the guards up to strength (each wave): archers onto the wall by the gate, soldiers out in front of it. */
+  function postGuards() {
+    const g = inv.gate, ax = Math.abs(g.nz), az = Math.abs(g.nx); // along the wall
+    const have = (k) => inv.guards.filter((x) => x.k === k).length;
+    const lvl = inv.level;
+    const archerSpots = [-5, 5, -9, 9];
+    for (let i = have("a"); i < ARCHERS; i++) {
+      const off = archerSpots[i % archerSpots.length];
+      const x = g.x - g.nx * 2.6 + ax * off, z = g.z - g.nz * 2.6 + az * off; // just inside the wall line: the walkway
+      inv.guards.push({ id: inv.nextGuard++, k: "a", x, z, px: x, pz: z, hp: 40 + lvl * 14, mhp: 40 + lvl * 14, next: now() + rand(1, 3) });
+    }
+    const soldierSpots = [-3, 3, -1, 1, -5, 5];
+    for (let i = have("s"); i < SOLDIERS; i++) {
+      const off = soldierSpots[i % soldierSpots.length];
+      const px = g.x + g.nx * 3.5 + ax * off, pz = g.z + g.nz * 3.5 + az * off;
+      if (!walkable(px, pz)) continue;
+      // they come out through the gate and take up their post
+      inv.guards.push({ id: inv.nextGuard++, k: "s", x: g.x, z: g.z, px, pz, hp: 70 + lvl * 26, mhp: 70 + lvl * 26, next: now() + 1 });
+    }
+  }
+
+  /** What the players near the town see of the guards, and their deeds. */
+  function guardEvent(ev) {
+    const c = centre(inv.town), data = JSON.stringify({ t: "gev", ...ev });
+    for (const s of sessions.values()) if (s.inWorld && !s.inst && dist(s.x, s.z, c.x, c.z) < PLAYERS_NEAR) safeSend(s, data);
+  }
+
+  const invaders = () => { const out = []; for (const id of inv.ids) { const m = monsters.get(id); if (m && m.hp > 0) out.push(m); } return out; };
+
+  function nearestInvader(x, z, range, list) {
+    let best = null, bd = range;
+    for (const m of list) { const d = dist(m.x, m.z, x, z); if (d < bd) { bd = d; best = m; } }
+    return best;
+  }
+
+  function step(o, tx, tz, speed) {
+    const dx = tx - o.x, dz = tz - o.z, d = Math.hypot(dx, dz), s = speed * 0.1;
+    if (d < 0.05) return;
+    const nx = d <= s ? tx : o.x + (dx / d) * s, nz = d <= s ? tz : o.z + (dz / d) * s;
+    if (walkable(nx, nz)) { o.x = nx; o.z = nz; }
+  }
+
+  function updateGuards(t) {
+    const foes = invaders();
+    for (const g of inv.guards) {
+      if (g.hp <= 0) continue;
+      if (g.k === "a") {
+        if (t < g.next) continue;
+        const m = nearestInvader(g.x, g.z, ARCHER_RANGE, foes);
+        if (!m) continue;
+        g.next = t + ARCHER_CD * rand(0.85, 1.15);
+        guardEvent({ k: "shot", id: g.id, mid: m.id, x: r2(m.x), z: r2(m.z) });
+        guardHit(m, Math.max(1, Math.round(m.maxHp * GUARD_HIT)));
+        continue;
+      }
+      // a soldier: steps up to an invader near his post, otherwise holds the line
+      const m = nearestInvader(g.px, g.pz, SOLDIER_REACH, foes);
+      if (!m) { step(g, g.px, g.pz, GUARD_SPEED); continue; }
+      if (dist(g.x, g.z, m.x, m.z) > 1.7) { step(g, m.x, m.z, GUARD_SPEED); continue; }
+      if (t < g.next) continue;
+      g.next = t + SOLDIER_CD * rand(0.85, 1.15);
+      guardEvent({ k: "swing", id: g.id, mid: m.id, x: r2(m.x), z: r2(m.z) });
+      guardHit(m, Math.max(1, Math.round(m.maxHp * GUARD_HIT)));
+    }
+  }
+
+  /** An invader with no hero to fight turns on a guard near by (soldiers; their archers and casters shoot up at the
+   * wall's archers too). Returns true while it's fighting one. */
+  function fightGuard(m, t) {
+    const ranged = !!m.def.ranged, reach = ranged ? Math.max(8, m.def.range) : 9;
+    let g = null, bd = reach + 4;
+    for (const o of inv.guards) {
+      if (o.hp <= 0 || (o.k === "a" && !ranged)) continue;
+      const d = dist(o.x, o.z, m.x, m.z);
+      if (d < bd) { bd = d; g = o; }
+    }
+    if (!g) return false;
+    m.sieging = false;
+    const range = ranged ? m.def.range : m.def.range + 0.6;
+    m.ry = (Math.atan2(g.x - m.x, g.z - m.z) * 180) / Math.PI;
+    if (bd > range) {
+      m.path = [[g.x, g.z]];
+      moveAlongPath(m, speedOf(m) * 0.9);
+      return true;
+    }
+    m.path = [];
+    if (t >= m.nextAttack) {
+      m.nextAttack = t + m.def.cd * rand(0.9, 1.2);
+      monsterAttack(m, null, ranged ? "shot" : "melee", 0, g.x, g.z);
+      g.hp -= m.dmg * rand(0.8, 1.2);
+      if (g.hp <= 0) { g.hp = 0; guardEvent({ k: "die", id: g.id }); }
+      else guardEvent({ k: "hurt", id: g.id });
+    }
+    return true;
+  }
+
   function spawnWave() {
     inv.wave++;
+    postGuards();
     const count = Math.min(18, 3 + inv.wave * 2 + (inv.players - 1) * 2);
     for (let i = 0; i < count + (inv.wave === WAVES ? 1 : 0); i++) {
       const warlord = inv.wave === WAVES && i === count;
@@ -127,8 +233,10 @@ module.exports = function createInvasions(ctx) {
   function state() {
     if (!inv) return { phase: "none" };
     const left = inv.phase === "gather" ? Math.max(0, Math.ceil(inv.waveAt - now())) : 0;
+    const live = inv.phase === "won" || inv.phase === "lost" ? [] : inv.guards.filter((g) => g.hp > 0);
     return { town: inv.town.name, gate: inv.gate.name, phase: inv.phase, gx: r2(inv.gate.x), gz: r2(inv.gate.z),
-      wave: inv.wave, waves: WAVES, left: inv.phase === "wave" ? alive() : left, hp: Math.max(0, Math.round(inv.integrity)) };
+      wave: inv.wave, waves: WAVES, left: inv.phase === "wave" ? alive() : left, hp: Math.max(0, Math.round(inv.integrity)),
+      gd: live.map((g) => ({ i: g.id, k: g.k, x: r2(g.x), z: r2(g.z), hp: Math.ceil(g.hp), mh: g.mhp })) };
   }
 
   function send() {
@@ -181,6 +289,8 @@ module.exports = function createInvasions(ctx) {
       else if (t - inv.sentAt > 2) send();
       return;
     }
+    updateGuards(t);
+    inv.guards = inv.guards.filter((g) => g.hp > 0);
     // Battering the gate
     for (const id of inv.ids) {
       const m = monsters.get(id);
@@ -190,13 +300,15 @@ module.exports = function createInvasions(ctx) {
     if (inv.integrity <= 0 || t - inv.began > MAX_S) return end(false);
     if (inv.wave < WAVES && (n <= 2 || t - inv.waveAt > WAVE_GAP_S)) { spawnWave(); send(); return; }
     if (inv.wave >= WAVES && n === 0) return end(true);
-    // Every few points off the gate goes out at once (the gate shows its damage), the rest every two seconds.
-    if (t - inv.sentAt > 2 || (inv.sentHp - inv.integrity >= 2 && t - inv.sentAt > 0.4)) send();
+    // Every few points off the gate goes out at once (the gate shows its damage), the rest every two seconds; while
+    // guards are out it goes a few times a second, so their walking looks smooth.
+    if (t - inv.sentAt > (inv.guards.length ? 0.35 : 2) || (inv.sentHp - inv.integrity >= 2 && t - inv.sentAt > 0.4)) send();
   }
 
   /** An invader with nobody to fight: march on the gate, then batter it. */
   function idle(m, t) {
     if (!inv || m.invasion !== inv.id || inv.phase !== "wave") return false;
+    if (fightGuard(m, t)) return true; // no hero near: the guards before the gate
     const g = inv.gate, d = dist(m.x, m.z, g.x, g.z);
     if (d < 3.5) {
       m.path = [];

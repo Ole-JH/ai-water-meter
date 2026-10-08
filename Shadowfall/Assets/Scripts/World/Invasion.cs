@@ -22,6 +22,7 @@ namespace Shadowfall
             var was = Current;
             Current = iv == null || iv.phase == "none" ? null : iv;
             Rampart.Sync(); // the gate, the ladders and the helpers
+            TownGuards.Sync(Current != null ? Current.gd : null, Current == null || Current.phase == "won" || Current.phase == "lost");
             if (Current == null) return;
             if (Current.phase == "gather") { countdownFrom = Current.left; countdownAt = Time.time; }
 

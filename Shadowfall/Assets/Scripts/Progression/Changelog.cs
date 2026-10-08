@@ -24,6 +24,15 @@ namespace Shadowfall
         {
             new Entry
             {
+                Id = 75, Date = "2026-10-08", Title = "The town stands with you",
+                Items = new[]
+                {
+                    "In an invasion the town's guards join the fight: archers climb onto the wall by the gate and shoot down, soldiers march out and hold a line before it. They chip in a little; the heroes still do the heavy lifting.",
+                    "Invaders still go for heroes first; with none near, they fight the guards, and only then the gate.",
+                },
+            },
+            new Entry
+            {
                 Id = 74, Date = "2026-10-08", Title = "Big fights, big bars",
                 Items = new[]
                 {

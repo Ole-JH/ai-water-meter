@@ -127,7 +127,11 @@ namespace Shadowfall
         public float gx, gz;           // where the invaders batter the gate
         public int wave, waves, left;  // left: invaders alive (wave), or seconds until the first wave (gather)
         public int hp;                 // the gate's integrity, 0..100
+        public NetGuard[] gd;          // the town's guards (TownGuards)
     }
+
+    /// <summary>A town guard in an invasion: k "a" an archer on the wall, "s" a soldier before the gate.</summary>
+    [Serializable] public class NetGuard { public int i, hp, mh; public string k; public float x, z; }
 
     // ---------------------------------------------------------------- client -> server
 
