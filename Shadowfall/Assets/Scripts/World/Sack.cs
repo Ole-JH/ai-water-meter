@@ -51,6 +51,12 @@ namespace Shadowfall
             return false;
         }
 
+        /// <summary>Seconds until the fires of a town are out (0: not burning).</summary>
+        public static int SecondsLeft(string town) => town != null && burning.TryGetValue(town, out var b) ? Mathf.Max(0, Mathf.CeilToInt(b.Until - Time.time)) : 0;
+
+        /// <summary>The quarter that burns in a town ("west"), or null.</summary>
+        public static string GateOf(string town) => town != null && burning.TryGetValue(town, out var b) ? b.Gate : null;
+
         /// <summary>Some quarter of this town is burning (the townsfolk keep indoors).</summary>
         public static bool Burns(string town) => town != null && burning.ContainsKey(town);
 
@@ -107,6 +113,14 @@ namespace Shadowfall
                 if (roar != null) roar.transform.SetParent(b.Root, true);
             }
             Debris(b, s, rng);
+            // The reeve, on the far side of town from the fire, asking for help with the rebuilding
+            var town = WorldGenerator.TownAt(b.At - Factory.Flat(b.At - CenterOf(s.k)).normalized * 6f);
+            if (town != null)
+            {
+                var away = Factory.Flat(CenterOf(s.k) - b.At).normalized;
+                var spot = TownLife.Walkable(town.Center + away * Mathf.Min(town.Rect.width, town.Rect.height) * 0.25f);
+                RebuildReeve.Create(b.Root, spot, s.k, b.At);
+            }
             var hero = Player.I;
             if (hero != null && Factory.FlatDistance(hero.transform.position, b.At) < b.Radius + 40f)
                 Sfx.Play("boom", b.At + Vector3.up * 2f, 0.6f, 0.1f, 80f);
@@ -261,5 +275,52 @@ namespace Shadowfall
                 }
             }
         }
+    }
+
+    /// <summary>
+    /// The reeve of a burned town, standing clear of the fire: bring timber (5 logs), stone (5 ore) or coin and the
+    /// fires are out sooner (server: rebuild), for experience. Only there while it burns.
+    /// </summary>
+    public class RebuildReeve : Interactable
+    {
+        public string Town;
+        CharacterView view;
+        Vector3 fire;
+        float nextCall;
+        static readonly string[] Calls = { "Timber! Stone! Anything you can spare!", "Bring logs and ore, and we'll have the fires out sooner!",
+            "The masons need paying. Every coin helps!", "Don't stand there gawping, help us rebuild!" };
+
+        public override string HoverText => "Reeve of " + Town + "\n<help put out the fires and rebuild>";
+        public override Color LabelColor => new Color(1f, 0.75f, 0.35f);
+        public override float LabelHeight => 2.6f;
+
+        public static RebuildReeve Create(Transform parent, Vector3 at, string town, Vector3 fire)
+        {
+            var go = new GameObject("Reeve");
+            go.transform.SetParent(parent, false);
+            go.transform.position = at;
+            go.transform.rotation = Quaternion.LookRotation(Factory.Flat(fire - at).sqrMagnitude > 0.01f ? Factory.Flat(fire - at) : Vector3.forward);
+            var r = go.AddComponent<RebuildReeve>();
+            r.Town = town;
+            r.fire = fire;
+            r.DisplayName = "Reeve Halden";
+            r.InteractRange = 2.4f;
+            r.view = CharacterView.Create(go.transform, new CharacterLook { Model = "Characters/Keeper", Height = 1.9f, Anims = AnimSet.Kenney, Tint = new Color(0.9f, 0.8f, 0.7f) });
+            r.AddClickCollider(0.5f, 2f);
+            return r;
+        }
+
+        void Update()
+        {
+            view?.UpdateLocomotion(0f);
+            if (Time.time < nextCall) return;
+            nextCall = Time.time + Random.Range(18f, 30f);
+            var p = Player.I;
+            if (p == null || Factory.FlatDistance(p.transform.position, transform.position) > 22f) return;
+            Speech.Say(transform, 2.5f, Calls[Random.Range(0, Calls.Length)]);
+            view?.Interact();
+        }
+
+        public override void Interact(Player p) => GameUI.I?.OpenRebuild(this);
     }
 }

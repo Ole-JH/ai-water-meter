@@ -24,6 +24,16 @@ namespace Shadowfall
         {
             new Entry
             {
+                Id = 79, Date = "2026-10-08", Title = "Scouts and rebuilding",
+                Items = new[]
+                {
+                    "Scouts now see raiders coming a minute and a half before an invasion: everyone hears which town and gate, a bell tolls, the gate is marked on the minimap and the world map, and the tracker counts down. Time to get there.",
+                    "Help a burned town rebuild: while it burns, Reeve Halden takes timber (5 logs), stone (5 ore) or coin, and each delivery shortens the fires and pays experience.",
+                    "Put the fires out early and everyone hears who helped; the merchants come straight back.",
+                },
+            },
+            new Entry
+            {
                 Id = 78, Date = "2026-10-08", Title = "Burned out",
                 Items = new[]
                 {

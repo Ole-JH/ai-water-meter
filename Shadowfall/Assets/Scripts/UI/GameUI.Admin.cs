@@ -11,6 +11,7 @@ namespace Shadowfall
     {
         bool showAdmin;
         int adminTab, spawnType, spawnLevel = 5, spawnCount = 1, adminDifficulty, adminGate, adminRiftTier = 1;
+        bool adminWarn;
         bool spawnElite;
         string announceText = "";
         static readonly string[] adminTabs = { "Hero", "Dungeons", "World", "Events", "Players" };
@@ -163,14 +164,19 @@ namespace Shadowfall
             {
                 if (!t.Walled) continue;
                 if (AdminButton(new Rect(x + k++ * (tw + 6), y, tw, 32), t.Name.Split(' ')[0]))
-                    AdminTools.Send(new AdminCmd { c = "invasion", town = t.Name, gate = adminGate == 0 ? "" : adminGates[adminGate].ToLowerInvariant() });
+                    AdminTools.Send(new AdminCmd { c = "invasion", town = t.Name, gate = adminGate == 0 ? "" : adminGates[adminGate].ToLowerInvariant(), warn = adminWarn });
             }
             y += 38;
-            float hw = (w - 6) / 2f;
+            float hw = (w - 6) / 2f, qw = (w - 12) / 3f;
+            // the town buttons above start it straight away, or (ticked) with the scouts' 90-second warning first
+            var wr = new Rect(x, y, qw, 32);
+            if (AdminButton(wr, (adminWarn ? "[x]" : "[ ]") + " Scouts first")) adminWarn = !adminWarn;
+            if (wr.Contains(Event.current.mousePosition))
+                tooltip = "Ticked, the town buttons start an invasion as the server's own do: scouts announce the town and gate and the raiders gather 90 seconds later";
             GUI.enabled = Invasion.Current != null;
-            if (AdminButton(new Rect(x, y, hw, 32), "Go to the gate") && Invasion.Current != null)
+            if (AdminButton(new Rect(x + qw + 6, y, qw, 32), "Go to the gate") && Invasion.Current != null)
                 AdminTools.Send(new AdminCmd { c = "tp", x = Invasion.Current.gx, z = Invasion.Current.gz - 4f });
-            if (AdminButton(new Rect(x + hw + 6, y, hw, 32), "End it")) AdminTools.Send(new AdminCmd { c = "invasion", stop = true });
+            if (AdminButton(new Rect(x + 2 * (qw + 6), y, qw, 32), "End it")) AdminTools.Send(new AdminCmd { c = "invasion", stop = true });
             GUI.enabled = true;
             y += 38;
             // As a lost siege: the quarter behind the chosen gate burns for five minutes (south when "Any gate")

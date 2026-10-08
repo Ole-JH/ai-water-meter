@@ -96,7 +96,7 @@ Server → client:
 | `toffer` | `slots[]`, `gold` | Your current offer: up to 12 bag slots plus gold (items stay in your bags until the trade completes). Resets both acceptances |
 | `tok` | — | Accept the current offers |
 | `tcancel` | — | Cancel the trade |
-| `iop` | `op` + `i`, `j`, `slot`, `n`, `id`, `k`, `name`, `to` | An item or gold action, carried out by the server: `equip i`, `unequip slot`, `use i`, `drop i`, `pickup id`, `sort`, `stash i`, `unstash i`, `socket i` (into `to` = `eq` `slot` or `bag` `j`), `fuse`, `sell i`, `sellcommon`, `vendor k`, `buy k i n name`, `craft name`, `gather name`, `quest k`, `hire k`, `respec`, `chest i`. Answered by `iok` or `ierr`, then `inv` |
+| `iop` | `op` + `i`, `j`, `slot`, `n`, `id`, `k`, `name`, `to` | An item or gold action, carried out by the server: `equip i`, `unequip slot`, `use i`, `drop i`, `pickup id`, `sort`, `stash i`, `unstash i`, `socket i` (into `to` = `eq` `slot` or `bag` `j`), `fuse`, `sell i`, `sellcommon`, `vendor k`, `buy k i n name`, `craft name`, `gather name`, `quest k`, `hire k`, `respec`, `chest i`, `rebuild k` (`wood`, `stone` or `gold` for the reeve of a burning town you stand in). Answered by `iok` or `ierr`, then `inv` |
 | `adm` | `c` + arguments | Admin command (`tp`, `tpto`, `summon`, `dungeon`, `regen`, `spawn`, `killall`, `time`, `elites`, `announce`, `kick`, `who`, `resetpw`, `give`); refused unless the account is an admin. See [Admin module](../deployment/admin.md) |
 | `chat` | `msg` | Chat to everyone. Commands handled by the server: `/who`, `/p` (party), `/w name` (whisper), `/invite name`, `/leave`, `/a` (admin). `/r` is turned into `/w` by the client |
 | `pinvite` | `name` | Invite a player to your party (leader only once in a party) |
@@ -146,7 +146,7 @@ Server → client:
 | `tclose` | `msg` | Trade cancelled (by either player, distance, dungeon, logout) |
 | `tp` | `x`, `z` | Admin teleport: move there (in the current space) |
 | `clock` | `now` | The server clock changed (an admin set the time of day) |
-| `sack` | `sk[]` | At login (if any) and whenever one starts or ends: the quarters burning after a lost siege `{k,g,x,z,r,left}`: town `k`, gate `g` at `x`, `z`, everything inside its walls within `r` of the gate, seconds `left`. Trade with merchants, smiths and auctioneers is refused there (`ierr`) |
+| `sack` | `sk[]` | At login (if any) and whenever one starts or ends: the quarters burning after a lost siege `{k,g,x,z,r,left}`: town `k`, gate `g` at `x`, `z`, everything inside its walls within `r` of the gate, seconds `left`. Trade with merchants, smiths and auctioneers is refused there (`ierr`). Sent again when deliveries to the reeve (`iop rebuild`) shorten the fires |
 | `weather` | `s`, `sky`, `i`, `left` | At login and on every change: season `s` (0 spring, 1 summer, 2 autumn, 3 winter), `sky` (`clear`, `cloudy`, `rain`, `storm`, `fog`; rain and storms fall as snow where it's cold), intensity `i` (0..1), seconds `left` in the season |
 | `admwho` | `items[]` | Admin player list: `id\|name\|level\|where` |
 | `sys` | `msg` | System message (joins, leaves, boss kills, `/who`) |

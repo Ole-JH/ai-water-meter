@@ -230,7 +230,7 @@ namespace Shadowfall
                 {
                     if (waystoneOpen != null) waystoneOpen = null;
                     else if (chooseDungeon >= 0) chooseDungeon = -1;
-                    else if (dialogNpc != null || craftStation != null || forgeOpen || riftOpen || auctionOpen) { dialogNpc = null; craftStation = null; forgeOpen = false; riftOpen = false; auctionOpen = false; }
+                    else if (dialogNpc != null || craftStation != null || forgeOpen || riftOpen || auctionOpen || rebuildAt != null) { dialogNpc = null; craftStation = null; forgeOpen = false; riftOpen = false; auctionOpen = false; rebuildAt = null; }
                     else if (showGuild) showGuild = false;
                     else if (guildBoardOpen) guildBoardOpen = false;
                     else if (tradeOpen) NetClient.I?.CancelTrade();
@@ -345,6 +345,7 @@ namespace Shadowfall
             if (showGuild) DrawGuild(p);
             if (guildBoardOpen) DrawGuildBoard(p);
             if (riftOpen) DrawRiftWindow(p);
+            if (rebuildAt != null) DrawRebuild(p);
             if (showTalents) DrawTalents(p);
             if (showStash) DrawStash(p);
             if (tradeOpen) DrawTrade(p);
@@ -830,6 +831,14 @@ namespace Shadowfall
                     continue;
                 }
 
+                if (it is RebuildReeve reeve)
+                {
+                    if (!WorldToGui(it.Position + Vector3.up * it.LabelHeight, out var g)) continue;
+                    UISkin.Shadowed(new Rect(g.x - 140, g.y - 20, 280, 22), it.DisplayName, UISkin.SmallCenter, reeve.LabelColor);
+                    UISkin.Shadowed(new Rect(g.x - 140, g.y - 2, 280, 20), "<Rebuild " + reeve.Town.Split(' ')[0] + ">", UISkin.SmallCenter, new Color(0.75f, 0.9f, 0.7f));
+                    QuestMarker(g, "!", new Color(1f, 0.75f, 0.35f), reeve.GetInstanceID());
+                    continue;
+                }
                 if (it is AuctionPodium podium)
                 {
                     if (podium.Away) continue;
@@ -1432,8 +1441,8 @@ namespace Shadowfall
                 DotAt(lp, d.LabelColor, 6f + 3f * Mathf.Abs(Mathf.Sin(Time.time * 4f)));
             }
 
-            // A town under attack: a pulsing marker at the gate (on the rim when it's off the map)
-            if (Invasion.Active && !Dungeon.Active)
+            // A town under attack (or raiders sighted): a pulsing marker at the gate (on the rim when it's off the map)
+            if (Invasion.Marked && !Dungeon.Active)
             {
                 var gp = toMap(Invasion.Gate);
                 var c = r.center;
@@ -1559,7 +1568,7 @@ namespace Shadowfall
             if (iv == null || Dungeon.Active) return 0f;
             float x = VW - 330, y = 342;
             float pulse = Invasion.Active ? 0.75f + 0.25f * Mathf.Sin(Time.time * 4f) : 1f;
-            UISkin.Shadowed(new Rect(x, y, 300, 26), "Invasion: " + iv.town, UISkin.Heading, Invasion.Color * pulse + new Color(0, 0, 0, 1f - pulse));
+            UISkin.Shadowed(new Rect(x, y, 300, 26), (Invasion.Warned ? "Raiders near " : "Invasion: ") + iv.town, UISkin.Heading, Invasion.Color * pulse + new Color(0, 0, 0, 1f - pulse));
             y += 28;
             UISkin.Shadowed(new Rect(x + 12, y, 300, 20), Invasion.Status, UISkin.Small, UISkin.Cream);
             y += 24;
@@ -2531,11 +2540,11 @@ namespace Shadowfall
                 var bp = toMap(WorldBoss.Position);
                 if (r.Contains(bp)) UISkin.Shadowed(new Rect(bp.x - 130, bp.y + 9, 260, 20), WorldBoss.Current.name, UISkin.SmallCenter, WorldBoss.Color, 2);
             }
-            if (Invasion.Active && !Dungeon.Active)
+            if (Invasion.Marked && !Dungeon.Active)
             {
                 mark(Invasion.Gate, Invasion.Color, 12f + 5f * Mathf.Abs(Mathf.Sin(Time.time * 3f)));
                 var ig = toMap(Invasion.Gate);
-                if (r.Contains(ig)) UISkin.Shadowed(new Rect(ig.x - 110, ig.y + 8, 220, 20), "Under attack!", UISkin.SmallCenter, Invasion.Color, 2);
+                if (r.Contains(ig)) UISkin.Shadowed(new Rect(ig.x - 110, ig.y + 8, 220, 20), Invasion.Warned ? "Raiders sighted! " + Invasion.Countdown + " s" : "Under attack!", UISkin.SmallCenter, Invasion.Color, 2);
             }
             mark(p.transform.position, Color.white, 11);
             MapPing.Draw(toMap, r, true);

@@ -19,6 +19,9 @@ const MAX_S = 12 * 60;      // a siege nobody answers ends in a sack
 const SIEGE_RATE = Number(process.env.INVASION_SIEGE_RATE ?? 0.35);
 const RESULT_S = 15;        // how long the outcome stays on players' screens
 const SACK_S = Number(process.env.SACK_S ?? 300); // how long the quarter behind a broken gate burns
+// Scouts see the raiders coming: an invasion the server starts by itself is announced this long before they gather
+// (phase "warn"), so heroes further away have time to come and defend
+const WARN_S = Number(process.env.INVASION_WARN_S ?? 90);
 const STAGING = 24;         // how far outside the gate the invaders gather
 const PLAYERS_NEAR = 110;   // players this close to a town count towards it (choosing the town, scaling the waves)
 // The town's guards: archers up on the wall walk beside the gate and soldiers holding a line outside it. They help a
@@ -35,6 +38,7 @@ module.exports = function createInvasions(ctx) {
 
   const minutes = Number(process.env.INVASION_MINUTES ?? 45);
   let inv = null;
+  let pending = null; // { town, gate, at }: scouted, the gathering starts at "at"
   let nextId = 1;
   let nextAt = minutes > 0 ? now() + rand(0.3, 0.6) * minutes * 60 : Infinity;
 
@@ -86,14 +90,33 @@ module.exports = function createInvasions(ctx) {
     return { types: [...types], level: Math.round(lv / Math.max(1, near.length)) };
   }
 
+  /** The walled town for the next siege: one with heroes about (more heroes, more likely), not one already burning. */
+  function chooseTown() {
+    const players = overworld();
+    const weighted = walled.filter((w) => !sacks.has(w.name)).map((w) => ({ t: w, n: near(w, players).length })).filter((w) => w.n > 0);
+    if (!weighted.length) return null;
+    let r = Math.random() * weighted.reduce((a, w) => a + w.n, 0);
+    return weighted.find((w) => (r -= w.n) < 0)?.t || weighted[0].t;
+  }
+
+  /** Scouts sight the raiders: name the town and gate now, the gathering begins in WARN_S seconds. */
+  function scout(town, gateName) {
+    const t = town || chooseTown();
+    if (!t) return "nobody is near a walled town";
+    const g = gates(t).filter((x) => !gateName || x.name === gateName).sort(() => Math.random() - 0.5)[0];
+    if (!g) return `${t.name} has no ${gateName} gate`;
+    pending = { town: t, gate: g, at: now() + WARN_S };
+    broadcast({ t: "sys", msg: `Scouts sight raiders massing near ${t.name}! They will fall on its ${g.name} gate in ${Math.round(WARN_S)} seconds. Defenders, make haste!` });
+    send();
+    log(`Raiders sighted near ${t.name} (${g.name} gate)`);
+    return null;
+  }
+
   /** Sets up a siege of town t (or the busiest walled town). Returns why not, or null. */
   function begin(t, gateName) {
-    const players = overworld();
     if (!t) {
-      const weighted = walled.filter((w) => !sacks.has(w.name)).map((w) => ({ t: w, n: near(w, players).length })).filter((w) => w.n > 0);
-      if (!weighted.length) return "nobody is near a walled town";
-      let r = Math.random() * weighted.reduce((a, w) => a + w.n, 0);
-      t = weighted.find((w) => (r -= w.n) < 0)?.t || weighted[0].t;
+      t = chooseTown();
+      if (!t) return "nobody is near a walled town";
     }
     const options = gates(t).filter((g) => !gateName || g.name === gateName).sort(() => Math.random() - 0.5);
     for (const g of options) {
@@ -103,7 +126,7 @@ module.exports = function createInvasions(ctx) {
       if (!findPath(sx, sz, g.x, g.z, 8000).length) continue;
       const ros = roster(sx, sz);
       if (!ros.types.length) continue;
-      const defenders = near(t, players);
+      const defenders = near(t);
       const avg = defenders.length ? defenders.reduce((a, s) => a + (s.lvl || 1), 0) / defenders.length : ros.level;
       const level = Math.max(1, Math.min(40, Math.round(Math.max(ros.level, avg - 1))));
       inv = {
@@ -253,6 +276,11 @@ module.exports = function createInvasions(ctx) {
   const alive = () => { let n = 0; for (const id of inv.ids) if (monsters.has(id)) n++; else inv.ids.delete(id); return n; };
 
   function state() {
+    if (!inv && pending) {
+      const g = pending.gate;
+      return { town: pending.town.name, gate: g.name, phase: "warn", gx: r2(g.x), gz: r2(g.z), wave: 0, waves: WAVES,
+        left: Math.max(0, Math.ceil(pending.at - now())), hp: 100, gd: [] };
+    }
     if (!inv) return { phase: "none" };
     const left = inv.phase === "gather" ? Math.max(0, Math.ceil(inv.waveAt - now())) : 0;
     const live = inv.phase === "won" || inv.phase === "lost" ? [] : inv.guards.filter((g) => g.hp > 0);
@@ -300,8 +328,16 @@ module.exports = function createInvasions(ctx) {
     for (const [name, k] of sacks) if (t >= k.until) { sacks.delete(name); burntOut = true; broadcast({ t: "sys", msg: `The fires in ${name} are out. Its merchants are back at their stalls.` }); }
     if (burntOut) sendSacks();
     if (!inv) {
+      if (pending) {
+        if (t >= pending.at) {
+          const p = pending;
+          pending = null;
+          if (sacks.has(p.town.name) || begin(p.town, p.gate.name)) { send(); nextAt = t + 5 * 60; }
+        }
+        return;
+      }
       if (t >= nextAt) {
-        const why = begin(null);
+        const why = WARN_S > 0 ? scout() : begin(null);
         if (why) nextAt = t + 5 * 60; // try again in a while
       }
       return;
@@ -363,7 +399,7 @@ module.exports = function createInvasions(ctx) {
   return {
     tick, idle, onDamage,
     sendTo(s) {
-      if (inv) safeSend(s, JSON.stringify({ t: "invasion", iv: state() }));
+      if (inv || pending) safeSend(s, JSON.stringify({ t: "invasion", iv: state() }));
       if (sacks.size) safeSend(s, JSON.stringify(sackState()));
     },
     /** In a burning quarter (its merchants, smiths and auctioneers have fled): their trade is refused there. */
@@ -371,6 +407,24 @@ module.exports = function createInvasions(ctx) {
       for (const k of sacks.values())
         if (inside(k.town, x, z) && dist(x, z, k.gate.x, k.gate.z) < sackRadius(k.town)) return k.town.name;
       return "";
+    },
+    /** The burning town a hero stands in (anywhere inside its walls), or null. */
+    sackOf(x, z) {
+      for (const k of sacks.values()) if (inside(k.town, x, z)) return k;
+      return null;
+    },
+    /** A delivery for the rebuilding: the fires burn `seconds` shorter; out early, everyone hears who helped. True if out. */
+    douse(k, seconds, who) {
+      k.until -= seconds;
+      k.helpers = k.helpers || new Map();
+      k.helpers.set(who, (k.helpers.get(who) || 0) + 1);
+      if (k.until > now()) { sendSacks(); return false; }
+      sacks.delete(k.town.name);
+      const top = [...k.helpers.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5).map(([n]) => n);
+      broadcast({ t: "sys", msg: `The fires in ${k.town.name} are out early, thanks to ${top.join(", ")}${k.helpers.size > top.length ? " and others" : ""}. Its merchants are back at their stalls.` });
+      sendSacks();
+      log(`The fires in ${k.town.name} were put out early by ${k.helpers.size} helpers`);
+      return true;
     },
     /** Admin: set the quarter behind a gate on fire now (the end of a lost siege), or put every fire out. */
     sack(townName, gateName) {
@@ -383,15 +437,21 @@ module.exports = function createInvasions(ctx) {
     },
     active: () => (inv && inv.phase !== "won" && inv.phase !== "lost" ? inv.town.name : ""),
     /** Admin: start one now (at the named town, or the busiest), or end the current one. */
-    start(townName, gateName) {
+    start(townName, gateName, warn) {
       if (inv && inv.phase !== "won" && inv.phase !== "lost") return `${inv.town.name} is already under attack.`;
       inv = null;
+      pending = null;
       const t = townName ? walled.find((w) => w.name.toLowerCase().startsWith(String(townName).toLowerCase())) : null;
       if (townName && !t) return `No walled town called "${townName}" (${walled.map((w) => w.name).join(", ")}).`;
+      if (warn) { // as the server does by itself: scouts' warning first
+        const why = scout(t || walled[0], gateName);
+        return why ? `No invasion: ${why}.` : `Scouts sight raiders near ${pending.town.name}; they gather in ${Math.round(WARN_S)} s.`;
+      }
       const why = begin(t, gateName);
       return why ? `No invasion: ${why}.` : `Invasion of ${inv.town.name} begins at the ${inv.gate.name} gate.`;
     },
     stop() {
+      if (!inv && pending) { const name = pending.town.name; pending = null; send(); return `The raiders massing near ${name} scatter.`; }
       if (!inv) return "There is no invasion.";
       for (const id of inv.ids) monsters.delete(id);
       inv.ids.clear();

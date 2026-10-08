@@ -1451,7 +1451,7 @@ function runAdmin(s, c, a) {
       return `It is now ${SEASONS[i]}.`;
     }
     case "invasion":
-      return a.stop ? invasions.stop() : invasions.start(a.town || "", a.gate);
+      return a.stop ? invasions.stop() : invasions.start(a.town || "", a.gate, !!a.warn);
     case "sack":
       return invasions.sack(a.town || "", a.gate);
     case "worldboss":
@@ -1566,13 +1566,14 @@ function adminFromChat(s, line) {
     case "worldboss": return runAdmin(s, "worldboss", w[0] === "stop" ? { stop: true } : { name: rest });
     case "invasion": {
       const gate = ["north", "south", "east", "west"].includes((w[w.length - 1] || "").toLowerCase()) ? w.pop().toLowerCase() : undefined;
-      return runAdmin(s, "invasion", w[0] === "stop" ? { stop: true } : { town: w.join(" "), gate });
+      const warn = w[0] === "warn" ? !!w.shift() : false;
+      return runAdmin(s, "invasion", w[0] === "stop" ? { stop: true } : { town: w.join(" "), gate, warn });
     }
     case "sack": {
       const gate = ["north", "south", "east", "west"].includes((w[w.length - 1] || "").toLowerCase()) ? w.pop().toLowerCase() : undefined;
       return runAdmin(s, "sack", { town: w.join(" "), gate });
     }
-    default: return "Admin commands: tp x z, tpto name, summon name, dungeon <id|0-6> [depth], regen, spawn <type> [level] [count] [elite], killall [radius], time dawn|day|dusk|night, elites <0-1>, announce text, kick name, who, resetpw <account or character>, give gold [n]|legendary|set|gems|potions|materials|mounts, weather clear|cloudy|rain|storm|fog [minutes], season spring|summer|autumn|winter, invasion [town] [north|south|east|west] | invasion stop, sack [town] [gate] | sack stop, worldboss [name] | worldboss stop, bounties, rift <tier>, riftbest <tier>, status";
+    default: return "Admin commands: tp x z, tpto name, summon name, dungeon <id|0-6> [depth], regen, spawn <type> [level] [count] [elite], killall [radius], time dawn|day|dusk|night, elites <0-1>, announce text, kick name, who, resetpw <account or character>, give gold [n]|legendary|set|gems|potions|materials|mounts, weather clear|cloudy|rain|storm|fog [minutes], season spring|summer|autumn|winter, invasion [warn] [town] [north|south|east|west] | invasion stop, sack [town] [gate] | sack stop, worldboss [name] | worldboss stop, bounties, rift <tier>, riftbest <tier>, status";
   }
 }
 
@@ -2187,6 +2188,35 @@ const itemOps = {
     I.addItem(s.ledger.bag, I.material(name));
     return true;
   },
+  /**
+   * Helping a burned town rebuild (invasion.js, the sack): the reeve takes timber (5 logs), stone (5 ore) or coin, each
+   * delivery shortening the fires and paying experience.
+   */
+  rebuild(s, m) {
+    const k = invasions.sackOf(s.x, s.z);
+    if (!k) return ierr(s, "rebuild", "Nothing here is burning.");
+    const t = now();
+    if (t - (s.lastRebuild || 0) < 0.8) return ierr(s, "rebuild", "");
+    s.lastRebuild = t;
+    const kind = String(m.k || "");
+    const gold = Math.max(50, 25 * (s.lvl || 1));
+    let seconds;
+    if (kind === "wood" || kind === "stone") {
+      const names = kind === "wood" ? ["Oak Logs", "Willow Logs", "Yew Logs"] : ["Copper Ore", "Iron Ore", "Mithril Ore"];
+      const name = names.find((n) => I.countOf(s.ledger.bag, n) >= REBUILD_COUNT);
+      if (!name) return ierr(s, "rebuild", `The reeve needs ${REBUILD_COUNT} ${kind === "wood" ? "logs of one kind (woodcutting)" : "ore of one kind (mining)"}.`);
+      I.removeByName(s.ledger.bag, name, REBUILD_COUNT);
+      seconds = 30;
+    } else if (kind === "gold") {
+      if (s.ledger.gold < gold) return ierr(s, "rebuild", `You need ${gold} gold.`);
+      s.ledger.gold -= gold;
+      seconds = 20;
+    } else return false;
+    const xp = Math.round(4 * Math.pow(s.lvl || 1, 1.4));
+    const out = invasions.douse(k, seconds, s.name);
+    iok(s, "rebuild", { k: kind, xp, msg: out ? "out" : "", gold: kind === "gold" ? gold : 0 });
+    return true;
+  },
   /** Turning in a quest: collect items are taken, the gold and item reward paid, once per character. */
   quest(s, m) {
     const id = String(m.k || ""), q = I.GAMEDATA.quests[id];
@@ -2237,6 +2267,7 @@ const itemOps = {
 };
 
 const ECONOMY_OPS = new Set(Object.keys(itemOps));
+const REBUILD_COUNT = 5; // logs or ore per delivery for a burned town
 /** The trade that needs someone behind a counter (refused in a burning quarter). */
 const SACK_OPS = new Set(["vendor", "buy", "sell", "salvage", "reforge", "hire", "quest", "aubrowse", "aulist", "aubuy", "aucancel"]);
 

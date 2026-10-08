@@ -262,9 +262,13 @@ Cache falls out of the sky at your feet as a chest trailing light, lands with a 
 ## Town invasions
 
 Every 45 minutes or so (the server's `INVASION_MINUTES`), monsters from the surrounding lands gather outside a gate of
-one of the walled towns (Hollowmere, Frosthaven, Saltreach or Emberwatch), usually where heroes are. Everyone online
-hears of it, the town shows on the minimap and the world map with a pulsing red marker at the gate, and a tracker under
-the minimap counts down to the attack.
+one of the walled towns (Hollowmere, Frosthaven, Saltreach or Emberwatch), usually where heroes are.
+
+- **Scouts see them coming** a minute and a half ahead (`INVASION_WARN_S`, 90 seconds): everyone online hears which town
+  and which gate, a bell tolls and the town crier calls it out, the gate gets a marker on the minimap and the world map
+  ("Raiders sighted!") and the tracker under the minimap counts down. Time to head over, or ride a waystone.
+- Then the raiders gather outside the gate: the marker turns to a pulsing red one and the tracker counts down to the
+  attack.
 
 - **A minute later the first wave marches on the gate**, then a second and a third, the last led by a **warlord** (a
   three-affix champion with extra health). The next wave comes when the last is nearly dead, or after 75 seconds.
@@ -305,6 +309,14 @@ the minimap counts down to the attack.
 
     Shops elsewhere in the town still trade. A burning town isn't attacked again until the fires are out; then
     everyone comes back.
+- **Help it rebuild.** While a town burns, its reeve, Halden, stands near the middle of town, away from the flames (a "!" over his head), and asks for
+  help. Click him and bring him:
+    - **timber**: 5 logs of one kind (Oak, Willow or Yew, from woodcutting), the fires burn 30 seconds shorter;
+    - **stone**: 5 ore of one kind (Copper, Iron or Mithril, from mining), 30 seconds shorter;
+    - **coin**: 25 gold a level (at least 50), 20 seconds shorter.
+
+    Every delivery pays experience. If the fires go out early, everyone online hears whose help did it, and the
+    merchants come straight back.
 
 Defending counts towards four [achievements](achievements.md#combat), one of them with the title *the Defender*, and
 one for jumping down from the wall onto the invaders' side.

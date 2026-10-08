@@ -63,6 +63,12 @@ namespace Shadowfall
                 case "pickup":
                     LootDrop.PickedUp(m.id);
                     break;
+                case "rebuild": // timber, stone or coin for a burned town
+                    p.AddXp(m.xp);
+                    Sfx.Play2D(m.k == "gold" ? "coins" : "chop", 0.6f);
+                    GameUI.Log(m.msg == "out" ? "That did it: the fires are out! +" + m.xp + " experience." : "The reeve thanks you: the fires will be out sooner. +" + m.xp + " experience.",
+                        new Color(1f, 0.75f, 0.35f));
+                    break;
                 case "sell":
                     Sfx.Play2D("coins", 0.5f);
                     GameUI.Log("Sold " + m.name + (m.n > 1 ? " x" + m.n : "") + " for " + m.gold + " gold.", GoldColor);

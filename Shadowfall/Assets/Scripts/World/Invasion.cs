@@ -14,6 +14,10 @@ namespace Shadowfall
         /// <summary>The invasion going on (or just ended), or null.</summary>
         public static NetInvasion Current { get; private set; }
         public static bool Active => Current != null && (Current.phase == "gather" || Current.phase == "wave");
+        /// <summary>Scouts have sighted raiders: the town and gate are known, they gather in Countdown seconds.</summary>
+        public static bool Warned => Current != null && Current.phase == "warn";
+        /// <summary>Worth a marker on the maps: sighted, or attacking.</summary>
+        public static bool Marked => Active || Warned;
         public static Vector3 Gate => Current != null ? new Vector3(Current.gx, 0f, Current.gz) : Vector3.zero;
         static float countdownFrom, countdownAt;
 
@@ -24,7 +28,15 @@ namespace Shadowfall
             Rampart.Sync(); // the gate, the ladders and the helpers
             TownGuards.Sync(Current != null ? Current.gd : null, Current == null || Current.phase == "won" || Current.phase == "lost");
             if (Current == null) return;
-            if (Current.phase == "gather") { countdownFrom = Current.left; countdownAt = Time.time; }
+            if (Current.phase == "gather" || Current.phase == "warn") { countdownFrom = Current.left; countdownAt = Time.time; }
+            if (iv.phase == "warn" && (was == null || was.phase != "warn" || was.town != iv.town))
+            {
+                // Scouts' warning: time to come and defend
+                GameUI.Banner("Raiders sighted near " + iv.town + "!", Color);
+                Sfx.Play2D("bell", 0.7f);
+                TownCrier.Announce("Hear ye! Scouts have sighted raiders massing near " + iv.town + "! They'll fall on the " + iv.gate + " gate any moment. Defenders, to the walls!");
+                return;
+            }
 
             bool started = was == null || was.town != iv.town || (was.phase != "gather" && iv.phase == "gather");
             if (started && iv.phase == "gather")
@@ -73,6 +85,7 @@ namespace Shadowfall
                 if (c == null) return "";
                 switch (c.phase)
                 {
+                    case "warn": return "Raiders sighted! They gather at the " + c.gate + " gate in " + Countdown + " s";
                     case "gather": return "Monsters gather at the " + c.gate + " gate - first wave in " + Countdown + " s";
                     case "wave": return "Wave " + c.wave + "/" + c.waves + "  -  " + c.left + (c.left == 1 ? " invader" : " invaders") + "  -  " + c.gate + " gate";
                     case "won": return "The town holds!";

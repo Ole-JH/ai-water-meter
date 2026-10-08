@@ -196,7 +196,7 @@ namespace Shadowfall
     /// <summary>Dungeon commands: denter, dstairs, dleave (town = after dying).</summary>
     [Serializable] public class DungeonCmd { public string t; public bool town; public int d, df; }
     /// <summary>Admin command (the server checks the sender is an admin). Unused fields are ignored.</summary>
-    [Serializable] public class AdminCmd { public string t = "adm"; public string c, name, type, text, phase, what, kind, town, gate; public float x, z, r, chance; public int d, l, n, df; public bool elite, fresh, stop; }
+    [Serializable] public class AdminCmd { public string t = "adm"; public string c, name, type, text, phase, what, kind, town, gate; public float x, z, r, chance; public int d, l, n, df; public bool elite, fresh, stop, warn; }
 
     /// <summary>Party commands: pinvite (name), paccept, pdecline, pleave, pkick (id), pshare (q).</summary>
     [Serializable] public class PartyCmd { public string t, name, q; public int id; }

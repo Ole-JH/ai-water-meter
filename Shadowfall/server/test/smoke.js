@@ -479,7 +479,7 @@ async function invasionTests(a, b) {
     "the town posts its guards: archers on the wall, soldiers before the gate");
 
   // Alice fights them in front of the gate (Bob stays in town): three waves, the last with a warlord.
-  state(a, 144.5, 96);
+  state(a, 144.5, 104); // close enough to the gate that the invaders who come for her meet its guards
   await sleep(300);
   assert.ok(view(a).m.length >= iv1.left, "the invaders are out there");
   for (let i = 0; i < 20 && !a.all("gev").some((e) => e.k === "shot" || e.k === "swing"); i++) await sleep(300);
@@ -531,9 +531,42 @@ async function invasionTests(a, b) {
   assert.ok(burning.refused && !burning.served, "no trade in the burning quarter");
   const elsewhere = await shop(478.5, 144.5);
   assert.ok(!elsewhere.refused && elsewhere.served, "the far side of town still trades");
+  // The rebuilding: the reeve takes timber, stone or coin, each delivery shortens the fires and pays experience
+  state(b, 470.5, 150.5); // in Saltreach, clear of the fire
+  await sleep(150);
+  const leftNow = () => (b.all("sack").at(-1)?.sk || []).find((k) => k.k === "Saltreach")?.left || 0;
+  const errs0 = b.all("ierr").length;
+  b.ws.send(JSON.stringify({ t: "iop", op: "rebuild", k: "wood" }));
+  await sleep(250);
+  assert.ok(b.all("ierr").slice(errs0).some((m) => m.op === "rebuild" && /needs 5 logs/.test(m.msg)), "the reeve needs five logs");
+  for (let i = 0; i < 5; i++) { b.ws.send(JSON.stringify({ t: "iop", op: "gather", name: "Oak Logs" })); await sleep(1300); }
+  const before = leftNow();
+  b.ws.send(JSON.stringify({ t: "iop", op: "rebuild", k: "wood" }));
+  await sleep(300);
+  const ok = b.all("iok").filter((m) => m.op === "rebuild").at(-1);
+  assert.ok(ok && ok.xp > 0, "a delivery pays experience");
+  assert.ok(leftNow() <= before - 25, "and the fires burn half a minute shorter");
+  assert.strictEqual(b.all("inv").at(-1).bag.filter((x) => x && x.Name === "Oak Logs").length, 0, "the logs are taken");
   a.ws.send(JSON.stringify({ t: "adm", c: "sack", town: "stop" }));
   await sleep(200);
   assert.strictEqual((b.all("sack").at(-1)?.sk || []).length, 0, "an admin can put the fires out");
+  const errs1 = b.all("ierr").length;
+  b.ws.send(JSON.stringify({ t: "iop", op: "rebuild", k: "gold" }));
+  await sleep(250);
+  assert.ok(b.all("ierr").slice(errs1).some((m) => m.op === "rebuild" && /Nothing here is burning/.test(m.msg)), "no rebuilding where nothing burns");
+
+  // Scouts see raiders coming: the town and gate are known before they gather
+  a.ws.send(JSON.stringify({ t: "adm", c: "invasion", town: "Frost", gate: "north", warn: true }));
+  await sleep(400);
+  const warned = b.all("invasion").at(-1)?.iv;
+  assert.ok(warned && warned.phase === "warn" && warned.town === "Frosthaven" && warned.left > 0, "raiders are sighted before they gather");
+  assert.ok(b.all("sys").some((m) => /Scouts sight raiders massing near Frosthaven/.test(m.msg)), "and everyone is warned");
+  let gathered;
+  for (let i = 0; i < 20 && (gathered = b.all("invasion").at(-1).iv).phase === "warn"; i++) await sleep(250);
+  assert.strictEqual(gathered.phase, "gather", "then they gather at the gate that was named");
+  assert.strictEqual(gathered.gate, warned.gate, "the same gate");
+  a.ws.send(JSON.stringify({ t: "adm", c: "invasion", stop: true }));
+  await sleep(200);
   state(b, 146, 150);
   state(a, 144, 150);
   await sleep(150);
@@ -865,7 +898,7 @@ async function main() {
   if (db.url) console.log("Testing against PostgreSQL");
   writeLegacyCharacter("Oldtimer", "oldpass", { level: 7, gold: 99, look: "Mage", x: 144, z: 150 });
   const server = spawn(process.execPath, [path.join(__dirname, "..", "server.js")], {
-    env: { ...process.env, PORT: String(PORT), DATA_DIR, PUBLIC_DIR, ELITE_CHANCE: "0", INVASION_MINUTES: "0", INVASION_GATHER_S: "1", INVASION_SIEGE_RATE: "15", WORLD_BOSS_MINUTES: "0", WORLD_BOSS_SLAM_S: "1", RIFT_COLLAPSE_S: "2", ADMINS: "alice", METRICS_PORT: String(METRICS_PORT), DATABASE_URL: db.url },
+    env: { ...process.env, PORT: String(PORT), DATA_DIR, PUBLIC_DIR, ELITE_CHANCE: "0", INVASION_MINUTES: "0", INVASION_GATHER_S: "1", INVASION_WARN_S: "2", INVASION_SIEGE_RATE: "15", WORLD_BOSS_MINUTES: "0", WORLD_BOSS_SLAM_S: "1", RIFT_COLLAPSE_S: "2", ADMINS: "alice", METRICS_PORT: String(METRICS_PORT), DATABASE_URL: db.url },
     stdio: ["ignore", "pipe", "pipe"],
   });
   let serverLog = "";
