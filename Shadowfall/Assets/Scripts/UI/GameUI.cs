@@ -1854,10 +1854,27 @@ namespace Shadowfall
             y += 30;
             for (int i = 0; i < pb.Points.Length; i++)
             {
+                var row = new Rect(r.x + 24, y, r.width - 48, 30);
+                // the bar fills with the colour as points go in
+                float fill = pb.Points[i] / (float)ParagonBoard.Cap;
+                if (Event.current.type == EventType.Repaint && fill > 0f)
+                {
+                    var pc = ParagonBoard.Color;
+                    GUI.color = new Color(pc.r, pc.g, pc.b, 0.12f + 0.1f * fill);
+                    GUI.DrawTexture(new Rect(row.x, row.y + 2, row.width * fill, row.height - 4), UISkin.White);
+                    GUI.color = Color.white;
+                }
+                NodeFlash(row, new Rect(r.xMax - 66, y, 34, 30), "p:" + i, ParagonBoard.Color);
                 UISkin.Shadowed(new Rect(r.x + 32, y + 2, 120, 26), ParagonBoard.Names[i], UISkin.Label, UISkin.Cream);
                 UISkin.Shadowed(new Rect(r.x + 140, y + 2, 70, 26), "<b>" + pb.Points[i] + "</b> / " + ParagonBoard.Cap, UISkin.Label, UISkin.Gold);
                 UISkin.Shadowed(new Rect(r.x + 216, y + 4, 180, 26), ParagonBoard.Effects[i] + " each", UISkin.Small, UISkin.Muted);
-                if (pb.Free > 0 && pb.Points[i] < ParagonBoard.Cap && UISkin.Btn(new Rect(r.xMax - 66, y, 34, 30), "+", UISkin.SquareButton)) p.SpendParagon(i);
+                bool can = pb.Free > 0 && pb.Points[i] < ParagonBoard.Cap;
+                if (can) NodeGlow(new Rect(r.xMax - 66, y, 34, 30), null, true, 0f);
+                if (can && UISkin.Btn(new Rect(r.xMax - 66, y, 34, 30), "+", UISkin.SquareButton))
+                {
+                    p.SpendParagon(i);
+                    LitNode("p:" + i, pb.Points[i] >= ParagonBoard.Cap);
+                }
                 y += 30;
             }
             if (pb.Spent > 0 && UISkin.Btn(new Rect(r.x + 32, y + 4, 130, 26), "Reset points", UISkin.Button)) p.ResetParagon();

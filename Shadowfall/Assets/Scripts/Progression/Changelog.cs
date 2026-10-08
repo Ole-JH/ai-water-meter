@@ -24,6 +24,15 @@ namespace Shadowfall
         {
             new Entry
             {
+                Id = 65, Date = "2026-10-08", Title = "Points well spent",
+                Items = new[]
+                {
+                    "Talents light up in purple as you put points in, and gold once full; ones you can still learn breathe.",
+                    "Spending a talent or paragon point flashes the row with a chime; paragon rows fill up as points go in.",
+                },
+            },
+            new Entry
+            {
                 Id = 64, Date = "2026-10-08", Title = "Tales well told",
                 Items = new[]
                 {

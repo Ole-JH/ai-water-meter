@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace Shadowfall
@@ -66,20 +67,26 @@ namespace Shadowfall
                 bool hover = row.Contains(Event.current.mousePosition);
                 UISkin.Box(row, hover ? UISkin.InsetLight : UISkin.Inset);
                 var icon = new Rect(row.x + 10, row.y + 9, 52, 52);
+                bool canLearn = points > 0 && rank < t.MaxRank;
+                NodeGlow(icon, rank > 0 ? (rank >= t.MaxRank ? UISkin.Gold : TalentColor) : (Color?)null, canLearn, rank / (float)t.MaxRank);
                 UISkin.Box(icon, UISkin.Slot);
                 UISkin.IconInSlot(icon, UISkin.Icon(t.Icon), rank > 0 ? Color.white : new Color(0.5f, 0.5f, 0.5f), 4);
+                NodeFlash(row, icon, "t:" + t.Id, TalentColor);
                 UISkin.Shadowed(new Rect(row.x + 74, row.y + 8, 300, 24), t.Name, UISkin.Label, rank > 0 ? UISkin.Gold : UISkin.Cream);
                 GUI.Label(new Rect(row.x + 74, row.y + 32, row.width - 170, 36), t.Description, UISkin.V(UISkin.RichSmall, wordWrap: true));
                 // rank pips
                 for (int i = 0; i < t.MaxRank; i++)
                 {
                     GUI.color = i < rank ? new Color(0.8f, 0.6f, 1f) : new Color(0.25f, 0.22f, 0.2f);
-                    GUI.DrawTexture(new Rect(row.xMax - 86 + i * 14, row.y + 14, 10, 10), UISkin.White);
+                    // the pip just filled pops in
+                    float pop = i == rank - 1 && nodeFlash.TryGetValue("t:" + t.Id, out var at) ? Mathf.Clamp01(1f - (Time.unscaledTime - at) / 0.35f) : 0f;
+                    GUI.DrawTexture(new Rect(row.xMax - 86 + i * 14 - pop * 3f, row.y + 14 - pop * 3f, 10 + pop * 6f, 10 + pop * 6f), UISkin.White);
                 }
                 GUI.color = Color.white;
                 UISkin.Shadowed(new Rect(row.xMax - 90, row.y + 26, 76, 20), rank + " / " + t.MaxRank, UISkin.SmallCenter, UISkin.Muted);
                 GUI.enabled = points > 0 && rank < t.MaxRank;
-                if (UISkin.Btn(new Rect(row.xMax - 74, row.y + 44, 48, 22), "+", UISkin.Button)) p.LearnTalent(t);
+                if (UISkin.Btn(new Rect(row.xMax - 74, row.y + 44, 48, 22), "+", UISkin.Button) && p.LearnTalent(t))
+                    LitNode("t:" + t.Id, rank + 1 >= t.MaxRank);
                 GUI.enabled = true;
                 y += 78;
             }
@@ -94,6 +101,52 @@ namespace Shadowfall
             GUI.enabled = true;
             if (new Rect(r.x + (r.width - 260) / 2, y, 260, 40).Contains(Event.current.mousePosition))
                 tooltip = inTown ? "Refund every talent point." : "You can only reset your talents in Hollowmere.";
+        }
+
+        static readonly Color TalentColor = new Color(0.8f, 0.6f, 1f);
+        static readonly Dictionary<string, float> nodeFlash = new Dictionary<string, float>();
+
+        /// <summary>A point just went into <paramref name="key"/>: it flashes, and a full one rings out.</summary>
+        public static void LitNode(string key, bool full)
+        {
+            nodeFlash[key] = Time.unscaledTime;
+            if (full) Sfx.Play2D("levelup", 0.35f, 1.4f);
+            else Sfx.Play2D("holy_cast", 0.25f, 1.6f);
+        }
+
+        /// <summary>The halo behind a talent or paragon node: its colour once points are in (brighter the fuller), a slow
+        /// breathing outline while a point could go in.</summary>
+        static void NodeGlow(Rect icon, Color? lit, bool canLearn, float fill)
+        {
+            if (Event.current.type != EventType.Repaint) return;
+            if (lit.HasValue)
+            {
+                var c = lit.Value;
+                float s = 14f + 8f * fill;
+                GUI.color = new Color(c.r, c.g, c.b, 0.18f + 0.22f * fill);
+                GUI.DrawTexture(new Rect(icon.x - s, icon.y - s, icon.width + s * 2, icon.height + s * 2), UISkin.Circle);
+            }
+            if (canLearn)
+            {
+                float k = 0.5f + 0.5f * Mathf.Sin(Time.unscaledTime * 3.2f);
+                Outline(icon, new Color(0.8f, 0.6f, 1f), 0.35f + 0.5f * k, 1f + 2f * k);
+            }
+            GUI.color = Color.white;
+        }
+
+        /// <summary>Just spent: a white flash over the row fading out and a ring bursting out of the icon.</summary>
+        static void NodeFlash(Rect row, Rect icon, string key, Color c)
+        {
+            if (Event.current.type != EventType.Repaint || !nodeFlash.TryGetValue(key, out var at)) return;
+            float k = (Time.unscaledTime - at) / 0.6f;
+            if (k >= 1f) { nodeFlash.Remove(key); return; }
+            GUI.color = new Color(1f, 1f, 1f, 0.25f * (1f - k));
+            GUI.DrawTexture(row, UISkin.White);
+            float grow = 30f * k;
+            Outline(new Rect(icon.x - grow, icon.y - grow, icon.width + grow * 2, icon.height + grow * 2), c, 1f - k, 2f);
+            GUI.color = new Color(1f, 1f, 1f, 0.6f * (1f - k));
+            GUI.DrawTexture(icon, UISkin.White);
+            GUI.color = Color.white;
         }
 
         // =====================================================================================
