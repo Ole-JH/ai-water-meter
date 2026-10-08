@@ -176,16 +176,25 @@ namespace Shadowfall
             GUI.enabled = true;
             y += 38;
             // As a lost siege: the quarter behind the chosen gate burns for five minutes (south when "Any gate")
-            UISkin.Shadowed(new Rect(x, y + 6, 90, 22), "Burn quarter:", UISkin.Small, UISkin.Muted);
+            // which quarter: the gate picked above ("Any gate" burns the south one)
+            string burnGate = adminGate == 0 ? "South" : adminGates[adminGate];
+            UISkin.Shadowed(new Rect(x, y - 2, 90, 18), "Burn the", UISkin.Small, UISkin.Muted);
+            UISkin.Shadowed(new Rect(x, y + 14, 90, 18), burnGate.ToLowerInvariant() + " quarter:", UISkin.Small, UISkin.Muted);
             float sw = (w - 90 - 80 - walled * 4) / Mathf.Max(1, walled);
             k = 0;
             foreach (var t in WorldGenerator.Towns)
             {
                 if (!t.Walled) continue;
-                if (AdminButton(new Rect(x + 90 + k++ * (sw + 4), y, sw, 30), t.Name.Split(' ')[0]))
-                    AdminTools.Send(new AdminCmd { c = "sack", town = t.Name, gate = adminGate == 0 ? "south" : adminGates[adminGate].ToLowerInvariant() });
+                var br = new Rect(x + 90 + k++ * (sw + 4), y, sw, 30);
+                if (AdminButton(br, t.Name.Split(' ')[0]))
+                    AdminTools.Send(new AdminCmd { c = "sack", town = t.Name, gate = burnGate.ToLowerInvariant() });
+                if (br.Contains(Event.current.mousePosition))
+                    tooltip = "Set fire to the " + burnGate.ToLowerInvariant() + " quarter of " + t.Name + " for five minutes, as a lost siege does: its houses burn, " +
+                              "its merchants flee and their trade is refused there. Pick the gate in the row above.";
             }
-            if (AdminButton(new Rect(x + w - 76, y, 76, 30), "Put out")) AdminTools.Send(new AdminCmd { c = "sack", town = "stop" });
+            var pr = new Rect(x + w - 76, y, 76, 30);
+            if (AdminButton(pr, "Put out")) AdminTools.Send(new AdminCmd { c = "sack", town = "stop" });
+            if (pr.Contains(Event.current.mousePosition)) tooltip = "Put out every burning quarter now; everyone comes back";
             y += 44;
 
             Section(ref y, x, w, "World boss");
