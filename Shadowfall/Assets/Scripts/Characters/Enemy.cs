@@ -166,6 +166,7 @@ namespace Shadowfall
             e.Height = 2f * def.Scale;
             e.BuildModel();
             if (!string.IsNullOrEmpty(m.el)) e.MakeElite(m);
+            if (WorldBoss.Is(def.Name)) BossPresence.Attach(e, e.model, e.Height);
             var col = go.AddComponent<CapsuleCollider>();
             col.center = new Vector3(0, e.Height * 0.5f, 0);
             col.height = e.Height;
@@ -289,8 +290,9 @@ namespace Shadowfall
             if (dying)
             {
                 // corpses lie in their blood for a while before sinking away
-                if (Time.time - deathTime > 7f) transform.position += Vector3.down * dt * 0.8f;
-                if (Time.time - deathTime > 10f) Destroy(gameObject);
+                float linger = WorldBoss.Is(Def.Name) ? BossPresence.Linger : 7f; // a world boss lies where it fell a while
+                if (Time.time - deathTime > linger) transform.position += Vector3.down * dt * 0.8f;
+                if (Time.time - deathTime > linger + 3f) Destroy(gameObject);
                 return;
             }
 

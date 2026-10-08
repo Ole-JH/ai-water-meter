@@ -24,6 +24,16 @@ namespace Shadowfall
         {
             new Entry
             {
+                Id = 38, Date = "2026-10-08", Title = "Giants worth gathering for",
+                Items = new[]
+                {
+                    "World bosses climb out of their land when they rise: Bramblehide from a thicket, Hrimgar from frozen earth, Gorvash from the sand, the Pyre Colossus from a lava crack.",
+                    "Each wears three armour plates that break off at three quarters, half and a quarter of its health. Every break lowers its armour and quickens its slams. Once the last is gone, it burns with rage.",
+                    "Slams leave craters, and a fallen giant lies where it fell for a minute and a half.",
+                },
+            },
+            new Entry
+            {
                 Id = 37, Date = "2026-10-08", Title = "Hold the walls",
                 Items = new[]
                 {

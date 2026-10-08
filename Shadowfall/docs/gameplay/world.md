@@ -190,14 +190,20 @@ under the minimap shows its health, how many heroes are fighting it and which wa
 | **Gorvash the Dune Reaver** | the Sunscar Badlands | 20 | Desert Raiders, Raider Marksmen |
 | **The Pyre Colossus** | the Ashen Reach | 24 | Ember Skeletons, Ash Wraiths |
 
+- **It climbs out of its land** when it rises: Bramblehide out of a thicket, Hrimgar out of frozen earth, Gorvash out
+  of the sand, the Colossus out of a lava crack. Be there when it's announced to see it; a scar stays on the ground.
 - They are made for many: each hero who joins the fight adds a third of its health.
+- **Three armour plates** (bark, ice, bronze or obsidian) break off at three quarters, a half and a quarter of its
+  health. Each break takes away some of its armour (your hits land harder) and quickens its slams. With the last one
+  gone it glows with its rage.
 - **The slam**: every ten seconds or so it stops, a red ring spreads on the ground around it, and a moment and a half later
-  it slams everything inside for heavy damage. Step out of the ring.
+  it slams everything inside for heavy damage. Step out of the ring. Every slam leaves a crater for a couple of minutes.
 - At two thirds and at one third of its health it calls for help; at a quarter it becomes **enraged**, hitting harder and
   moving faster.
 - Everyone who hurt it gets the kill: a boss's loot with a bonus on top (better than a dungeon boss on Nightmare), and the
   experience of a boss. Two [achievements](achievements.md#bosses), one with the title *the Giantsbane*.
-- If you run, it walks back to its lair and recovers fully. Left alone for 25 minutes it goes back to sleep.
+- Its body lies where it fell for a minute and a half, smouldering, with its plates scattered around it.
+- If you run, it walks back to its lair and recovers fully (plates and all). Left alone for 25 minutes it goes back to sleep.
 
 ## Daily bounties
 

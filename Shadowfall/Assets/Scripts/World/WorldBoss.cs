@@ -15,6 +15,8 @@ namespace Shadowfall
         public const float SlamRadius = 6f, SlamWindup = 1.5f;
 
         public static NetWorldBoss Current { get; private set; }
+        /// <summary>When (Time.time) the current one rose: a new one's entrance is played (BossPresence).</summary>
+        public static float RoseAt { get; private set; } = -100f;
         public static bool Up => Current != null;
         public static Vector3 Position => Current != null ? new Vector3(Current.x, 0f, Current.z) : Vector3.zero;
 
@@ -24,6 +26,7 @@ namespace Shadowfall
         {
             var was = Current;
             Current = wb == null || wb.phase != "up" ? null : wb;
+            if (Current != null && (was == null || was.name != wb.name)) RoseAt = Time.time - wb.age;
             if (Current != null && (was == null || was.name != wb.name))
             {
                 GameUI.Banner(wb.name + " has risen in " + wb.region + "!", Color);

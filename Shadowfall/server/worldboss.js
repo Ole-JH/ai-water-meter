@@ -1,7 +1,8 @@
 // World bosses. Every WORLD_BOSS_MINUTES or so (default 90, 0 = never) one of four giants rises at its lair, preferably
 // the one whose level suits the heroes online, and everyone is told where. It is a fight for many: it grows tougher
 // with every hero who joins in, telegraphs a ground slam (a red ring: step out), calls for help at two thirds and one
-// third of its health, and rages at a quarter. Everyone who hurt it gets the kill (better loot than a dungeon boss).
+// third of its health, and rages at a quarter. It wears three armour plates (the client shows them): one breaks off at
+// three quarters, a half and a quarter of its health, each time taking some of its armour and quickening its slams. Everyone who hurt it gets the kill (better loot than a dungeon boss).
 // Left alone for WORLD_BOSS_STAY minutes it goes back to sleep.
 //
 // The server calls: tick(t) every simulation tick, abilities(m, s, d, t) while it fights, onDamage(m, s) when a hero
@@ -48,7 +49,9 @@ module.exports = function createWorldBosses(ctx) {
     m.baseHp = m.maxHp;
     m.baseDmg = m.dmg;
     m.attackers = new Set();
+    m.baseArmor = m.armor;
     m.slamAt = 0; m.nextSlam = 0; m.addsCalled = 0; m.enraged = false;
+    m.plates = 3; m.slamEvery = SLAM_EVERY;
     boss = { lair, id: m.id, began: now(), sentAt: 0 };
     broadcast({ t: "sys", msg: `${lair.name} has risen in ${lair.region}! Gather your allies: it is marked on your map.` });
     log(`World boss ${lair.name} rose at ${Math.round(m.x)}, ${Math.round(m.z)}`);
@@ -60,7 +63,8 @@ module.exports = function createWorldBosses(ctx) {
     const m = boss && monsters.get(boss.id);
     if (!m) return { phase: "none" };
     return { phase: "up", name: boss.lair.name, region: boss.lair.region, x: r2(m.x), z: r2(m.z), l: m.level,
-      hp: Math.max(1, Math.round((m.hp / m.maxHp) * 100)), n: m.attackers.size };
+      hp: Math.max(1, Math.round((m.hp / m.maxHp) * 100)), n: m.attackers.size,
+      age: Math.round(now() - boss.began), pl: m.plates }; // age: seconds since it rose (the client plays its entrance when new)
   }
 
   function send() {
@@ -90,6 +94,15 @@ module.exports = function createWorldBosses(ctx) {
       monsters.delete(m.id);
       return end(`${boss.lair.name} returns to its slumber, unchallenged.`);
     }
+    const frac = m.hp / m.maxHp;
+    const plates = frac < 0.25 ? 0 : frac < 0.5 ? 1 : frac < 0.75 ? 2 : 3;
+    if (plates < m.plates) { // an armour plate breaks off
+      m.plates = plates;
+      m.armor = Math.round(m.armor * 0.7);
+      m.slamEvery *= 0.85;
+      monsterAttack(m, null, "phase", plates); // dmg carries the plates left
+      return send();
+    }
     if (t - boss.sentAt > 3) send();
   }
 
@@ -103,9 +116,9 @@ module.exports = function createWorldBosses(ctx) {
       m.nextAttack = t + 0.6;
       return true;
     }
-    if (!m.nextSlam) m.nextSlam = t + SLAM_EVERY * 0.6;
+    if (!m.nextSlam) m.nextSlam = t + m.slamEvery * 0.6;
     if (t >= m.nextSlam && d < SLAM_RADIUS + 2) {
-      m.nextSlam = t + SLAM_EVERY * rand(0.85, 1.15);
+      m.nextSlam = t + m.slamEvery * rand(0.85, 1.15);
       m.slamAt = t + SLAM_WINDUP;
       m.slamX = m.x; m.slamZ = m.z;
       monsterAttack(m, null, "warn", 0, m.x, m.z); // the red ring
@@ -140,6 +153,7 @@ module.exports = function createWorldBosses(ctx) {
     m.speedMul = 1;
     m.attackers.clear();
     m.addsCalled = 0; m.enraged = false; m.slamAt = 0; m.nextSlam = 0;
+    m.plates = 3; m.slamEvery = SLAM_EVERY; m.armor = m.baseArmor;
   }
 
   function onDamage(m, s) {

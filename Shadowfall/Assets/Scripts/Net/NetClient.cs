@@ -784,6 +784,13 @@ namespace Shadowfall
                     else GameUI.Banner("Lich King: \"Rise, my servants!\"", new Color(0.6f, 0.85f, 1f));
                     break;
 
+                case "phase": // a world boss's armour plate breaks off (dmg: plates left)
+                    {
+                        var presence = e != null ? e.GetComponent<BossPresence>() : null;
+                        if (presence != null) presence.BreakTo(Mathf.RoundToInt(m.dmg));
+                    }
+                    break;
+
                 case "warn": // a world boss winds up a slam: a red ring on the ground, get out of it
                 {
                     var at = new Vector3(m.x, 0.05f, m.z);
@@ -798,6 +805,7 @@ namespace Shadowfall
                     var at = new Vector3(m.x, 0f, m.z);
                     SpellFx.Shockwave(at, new Color(1f, 0.6f, 0.3f), WorldBoss.SlamRadius);
                     SpellFx.Dust(at, WorldBoss.SlamRadius);
+                    BossPresence.Crater(at, WorldBoss.SlamRadius, e != null ? e.Def.Name : null);
                     Sfx.Play("boom", at, 1f, 0.05f, 60f);
                     if (p != null && Factory.FlatDistance(p.transform.position, at) < 25f) CameraRig.Shake(0.35f);
                     if (p != null && !p.IsDead && Factory.FlatDistance(p.transform.position, at) < WorldBoss.SlamRadius + 0.3f) p.TakeDamage(m.dmg, e);

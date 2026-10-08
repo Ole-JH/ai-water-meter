@@ -108,6 +108,7 @@ namespace Shadowfall
         public string name, region, phase;
         public float x, z;
         public int l, hp, n;
+        public int age, pl;            // seconds since it rose; armour plates left (BossPresence)
     }
 
     /// <summary>A town invasion (server/invasion.js): phase none | gather | wave | won | lost.</summary>

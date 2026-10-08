@@ -752,6 +752,17 @@ async function worldBossTests(a, b) {
   await sleep(300); // the next snapshot carries the new maximum
   assert.ok(boss().mhp > hp0, `a second hero makes it tougher (${hp0} -> ${boss().mhp})`);
   assert.strictEqual(b.all("wboss").at(-1).wb.n, 2, "the tracker counts the heroes fighting it");
+  assert.ok(wb.age >= 0 && wb.age < 5 && wb.pl === 3, "a new world boss: how long it has been up (for its entrance) and its three armour plates");
+  const ar0 = boss().ar;
+  for (let i = 0; i < 80 && !a.all("matk").some((m) => m.k === "phase"); i++) {
+    a.ws.send(JSON.stringify({ t: "hit", mid: boss().id, dmg: 160 }));
+    await sleep(40);
+  }
+  const phase = a.all("matk").find((m) => m.k === "phase");
+  assert.ok(phase && phase.dmg === 2, "at three quarters of its health an armour plate breaks off");
+  await sleep(300);
+  assert.strictEqual(b.all("wboss").at(-1).wb.pl, 2, "everyone hears it has two plates left");
+  assert.ok(boss().ar < ar0, `and it has less armour (${ar0} -> ${boss().ar})`);
   a.ws.send(JSON.stringify({ t: "adm", c: "killall", r: 15 }));
   await sleep(500);
   const ka = a.all("kill").find((k) => k.name === "Old Bramblehide"), kb = b.all("kill").find((k) => k.name === "Old Bramblehide");
