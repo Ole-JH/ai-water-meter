@@ -472,9 +472,9 @@ namespace Shadowfall
             {
                 float pos = -2.1f + i * 0.33f;
                 float hgt = i < 5 ? 3.2f : i < 7 ? 1.6f : 0.6f;
-                Factory.PrimAt(PrimitiveType.Cube, tr, gate + inward * 0.4f + across * pos + Vector3.up * hgt / 2f, Abs(across * 0.3f + inward * 0.12f) + Vector3.up * hgt, fresh * (i % 2 == 0 ? 1f : 0.93f));
+                Factory.PrimAt(PrimitiveType.Cube, tr, gate + inward * 1.6f + across * pos + Vector3.up * hgt / 2f, Abs(across * 0.3f + inward * 0.12f) + Vector3.up * hgt, fresh * (i % 2 == 0 ? 1f : 0.93f));
             }
-            Factory.PrimAt(PrimitiveType.Cube, tr, gate + inward * 0.55f + across * -1.4f + Vector3.up * 2.2f, Abs(across * 1.6f + inward * 0.1f) + Vector3.up * 0.18f, fresh * 0.85f); // a crossbar on the finished half
+            Factory.PrimAt(PrimitiveType.Cube, tr, gate + inward * 1.75f + across * -1.4f + Vector3.up * 2.2f, Abs(across * 1.6f + inward * 0.1f) + Vector3.up * 0.18f, fresh * 0.85f); // a crossbar on the finished half
             // fresh planks stacked by it, a sawhorse
             var pile = at + inward * 3f + across * 3.5f;
             for (int i = 0; i < 6; i++) Factory.PrimAt(PrimitiveType.Cube, tr, pile + Vector3.up * (0.08f + i * 0.1f), Abs(across * 0.3f + inward * 2.4f) + Vector3.up * 0.08f, new Color(0.78f, 0.62f, 0.4f));
