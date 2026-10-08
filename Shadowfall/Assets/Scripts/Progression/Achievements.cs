@@ -64,6 +64,10 @@ namespace Shadowfall
             new AchievementDef { Id = "reforge_first", Name = "Second Opinion", Description = "Reforge a property of an item.", Category = AchievementCategory.Professions, Icon = "ach_anvil", Points = 5, Stat = "reforged", Goal = 1 },
             new AchievementDef { Id = "reforge_25", Name = "Never Satisfied", Description = "Reforge 25 times.", Category = AchievementCategory.Professions, Icon = "ach_anvil", Points = 10, Stat = "reforged", Goal = 25, Title = "the Perfectionist" },
 
+            // ---- bounties
+            new AchievementDef { Id = "bounty_10", Name = "Bounty Hunter", Description = "Finish 10 daily bounties.", Category = AchievementCategory.Combat, Icon = "ach_kills", Points = 10, Stat = "bounties", Goal = 10 },
+            new AchievementDef { Id = "bounty_days_7", Name = "Regular", Description = "Finish all three bounties of a day, seven times.", Category = AchievementCategory.Combat, Icon = "ach_kills", Points = 25, Stat = "bounty_days", Goal = 7, Title = "the Bounty Hunter" },
+
             // ---- greater rifts
             new AchievementDef { Id = "rift_1", Name = "Through the Tear", Description = "Clear a greater rift in time.", Category = AchievementCategory.Dungeons, Icon = "ach_dungeon", Points = 10, Stat = "rift_tier", Goal = 1 },
             new AchievementDef { Id = "rift_10", Name = "Riftwalker", Description = "Clear a tier 10 greater rift in time.", Category = AchievementCategory.Dungeons, Icon = "ach_hell", Points = 25, Stat = "rift_tier", Goal = 10, Title = "the Riftwalker" },

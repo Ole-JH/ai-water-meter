@@ -20,7 +20,7 @@ namespace Shadowfall
         {
             bool joined = Current == null && g != null && !string.IsNullOrEmpty(g.name);
             Current = g != null && !string.IsNullOrEmpty(g.name) ? g : null;
-            if (joined) Player.I?.Achievements.Add("guild");
+            if (joined) Player.I?.Achievements.Max("guild", 1);
         }
 
         public static void Invited(string from, string guild)

@@ -563,6 +563,11 @@ namespace Shadowfall
                 case "dreq": Duel.Challenged(m.id, m.name); break;
                 case "guild": Guild.Set(m.g); break;
                 case "rinfo": Rift.OnInfo(m); break;
+                case "bounties": Bounties.Set(m.items); break;
+                case "bounty":
+                    Bounties.Finished(m);
+                    SpawnDrops(m.drops);
+                    break;
                 case "rift": Rift.OnState(m); break;
                 case "ginv": Guild.Invited(m.name, m.k); break;
                 case "duel": Duel.OnState(m); break;

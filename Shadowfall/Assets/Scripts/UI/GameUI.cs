@@ -175,7 +175,8 @@ namespace Shadowfall
                 {
                     if (waystoneOpen != null) waystoneOpen = null;
                     else if (chooseDungeon >= 0) chooseDungeon = -1;
-                    else if (dialogNpc != null || craftStation != null || forgeOpen) { dialogNpc = null; craftStation = null; forgeOpen = false; }
+                    else if (dialogNpc != null || craftStation != null || forgeOpen || riftOpen) { dialogNpc = null; craftStation = null; forgeOpen = false; riftOpen = false; }
+                    else if (showGuild) showGuild = false;
                     else if (tradeOpen) NetClient.I?.CancelTrade();
                     else if (menu != MenuPage.None) menu = menu == MenuPage.Main ? MenuPage.None : MenuPage.Main;
                     else if (showNews) CloseNews(Player.I);
@@ -1200,11 +1201,31 @@ namespace Shadowfall
             return y - y0;
         }
 
+        /// <summary>Today's bounties, while any is left to do. Returns the height it took.</summary>
+        float DrawBounties(float y0)
+        {
+            var list = Bounties.List;
+            bool open = false;
+            foreach (var b in list) if (!b.Done) open = true;
+            if (!open || Dungeon.Active) return 0f;
+            float x = VW - 330, y = y0;
+            UISkin.Shadowed(new Rect(x, y, 300, 26), "Bounties", UISkin.Heading, Bounties.Color);
+            y += 28;
+            foreach (var b in list)
+            {
+                UISkin.Shadowed(new Rect(x + 12, y, 290, 20), b.Done ? "<s>" + b.Text + "</s>  done" : b.Text + ":  " + b.Have + " / " + b.Need,
+                    UISkin.Small, b.Done ? new Color(0.55f, 1f, 0.55f) : UISkin.Cream);
+                y += 22;
+            }
+            return y - y0 + 10;
+        }
+
         void DrawQuestTracker(Player p)
         {
             float top = DrawInvasionTracker();
             top += DrawWorldBossTracker(342 + top);
             top += DrawRiftTracker(342 + top);
+            top += DrawBounties(342 + top);
             if (p.Quests.Active.Count == 0) return;
             float x = VW - 330, y = 342 + top;
             UISkin.Shadowed(new Rect(x, y, 300, 26), "Quests", UISkin.Heading, UISkin.Gold);

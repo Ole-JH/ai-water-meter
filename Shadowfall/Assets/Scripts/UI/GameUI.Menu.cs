@@ -97,6 +97,7 @@ namespace Shadowfall
             dialogNpc = null;
             craftStation = null;
             forgeOpen = false;
+            riftOpen = false;
             menuPlayer = null;
             socketGem = -1;
             ChatOpen = false;

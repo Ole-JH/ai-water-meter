@@ -120,7 +120,8 @@ namespace Shadowfall
         {
             if (RemotePlayer.ById.TryGetValue(OpponentId, out var rp) && rp != null)
             {
-                foe = rp.GetComponent<DuelFoe>() ?? rp.gameObject.AddComponent<DuelFoe>();
+                foe = rp.GetComponent<DuelFoe>(); // (not ??: Unity's fake-null objects in the editor would skip AddComponent)
+                if (foe == null) foe = rp.gameObject.AddComponent<DuelFoe>();
                 foe.Bind(rp);
             }
         }

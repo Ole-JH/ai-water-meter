@@ -21,6 +21,7 @@ const createWorldBosses = require("./worldboss");
 const createDuels = require("./duel");
 const createGuilds = require("./guild");
 const createRifts = require("./rift");
+const createBounties = require("./bounty");
 
 const PORT = parseInt(process.env.PORT || "7341", 10);
 // Behind a reverse proxy, take the client's address from X-Forwarded-For (for login rate limits).
@@ -578,6 +579,7 @@ function killMonster(m) {
     const loot = s.ledger ? I.rollLoot({ name: m.type, boss: !!m.def.boss }, m.level, m.lootBonus || 0, heroClass(s), !!m.elite, lootSource(m)) : [];
     const drops = s.ledger ? dropFor(s, m.x, m.z, loot, m.inst) : [];
     safeSend(s, JSON.stringify({ t: "kill", mid: m.id, name: m.type, l: m.level, xp, x: r2(m.x), z: r2(m.z), drops, ...(m.elite ? { el: m.elite.name } : {}), ...(m.lootBonus ? { lb: m.lootBonus } : {}) }));
+    bounties.onKill(s, m);
   }
   if (m.def.boss && m.inst) {
     const inst = instances.get(m.inst);
@@ -684,6 +686,7 @@ function completeLogin(s) {
   invasions.sendTo(s);
   worldBosses.sendTo(s);
   guilds.entered(s);
+  bounties.send(s);
   broadcast({ t: "sys", msg: `${ch.name} has entered the world.` });
   log(`${ch.name} entered the world (${sessions.size} connected)`);
 }
@@ -1219,7 +1222,7 @@ async function adminResetPassword(s, name) {
     `They choose "Forgot password?" > "I have a code" and enter it with their account name.`;
 }
 
-const ADMIN_COMMANDS = new Set(["tp", "tpto", "summon", "dungeon", "regen", "spawn", "killall", "time", "elites", "announce", "kick", "who", "resetpw", "give", "weather", "season", "invasion", "worldboss"]);
+const ADMIN_COMMANDS = new Set(["tp", "tpto", "summon", "dungeon", "regen", "spawn", "killall", "time", "elites", "announce", "kick", "who", "resetpw", "give", "weather", "season", "invasion", "worldboss", "bounties"]);
 
 function runAdmin(s, c, a) {
   a = a || {};
@@ -1320,6 +1323,10 @@ function runAdmin(s, c, a) {
       return a.stop ? invasions.stop() : invasions.start(a.town || "", a.gate);
     case "worldboss":
       return a.stop ? worldBosses.stop() : worldBosses.start(a.name || "");
+    case "bounties": // new bounties now (testing)
+      bounties.roll(s);
+      bounties.send(s);
+      return "New bounties.";
     case "elites": {
       const v = Number(a.chance);
       if (!Number.isFinite(v)) return `Elite chance is ${ELITE_CHANCE}.`;
@@ -1388,6 +1395,7 @@ function adminFromChat(s, line) {
     case "who": return runAdmin(s, "who");
     case "resetpw": return runAdmin(s, "resetpw", { name: w[0] });
     case "give": return runAdmin(s, "give", { what: w[0], n: w[1] });
+    case "bounties": return runAdmin(s, "bounties");
     case "worldboss": return runAdmin(s, "worldboss", w[0] === "stop" ? { stop: true } : { name: rest });
     case "invasion": {
       const gate = ["north", "south", "east", "west"].includes((w[w.length - 1] || "").toLowerCase()) ? w.pop().toLowerCase() : undefined;
@@ -2325,6 +2333,11 @@ const invasions = createInvasions({
 // Guilds (guild.js): a name, a tag before members' names, guild chat and ranks; stored with the accounts.
 const guilds = createGuilds({ store, sessions, safeSend, sys, findOnline, log, now, ledgerChanged: (s) => ledgerChanged(s) });
 metrics.gauge("shadowfall_guilds", "Guilds.", () => guilds.count());
+
+// Daily bounties (bounty.js): three tasks a day per hero, counted from the kills credited here.
+const bounties = createBounties({
+  MONSTERS, SPAWNERS, DUNGEONS, safeSend, give, dropFor, rollChest: I.rollChest, randomEquipment: I.randomEquipment, heroClass, ledgerChanged, sys, log,
+});
 
 // Greater rifts (rift.js): timed tiers opened at the Rift Stone, with a leaderboard.
 const rifts = createRifts({

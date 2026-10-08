@@ -428,6 +428,7 @@ function ledgerFromSave(save) {
   for (const it of save.equipped || []) { const c = clean(it); if (c && c.Kind === Kind.Equipment && c.Slot > 0) L.eq[c.Slot] = c; }
   L.companions = Array.isArray(save.companions) ? save.companions.filter((c) => typeof c === "string").slice(0, 20) : [];
   L.riftBest = Math.max(0, parseInt(save.riftBest, 10) || 0); // the highest rift tier beaten in time (rift.js)
+  L.bounties = save.bounties && typeof save.bounties === "object" ? save.bounties : null; // today's bounties (bounty.js)
   return L;
 }
 
@@ -439,6 +440,7 @@ function ledgerToSave(L, save) {
   save.equipped = Object.values(L.eq).filter(Boolean);
   save.companions = L.companions.slice();
   save.riftBest = L.riftBest || 0;
+  save.bounties = L.bounties || null;
   return save;
 }
 

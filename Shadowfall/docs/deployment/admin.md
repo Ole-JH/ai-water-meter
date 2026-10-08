@@ -53,6 +53,7 @@ The same server-side commands work from chat with `/a` (or `/admin`):
 | `season spring\|summer\|autumn\|winter` | `/a season winter`: jump to the start of that season, for everyone |
 | `weather clear\|cloudy\|rain\|storm\|fog [minutes]` | `/a weather storm 10` (rain and storms fall as snow where it's cold) |
 | `elites <0-1>` | `/a elites 0.5` |
+| `bounties` | `/a bounties`: new bounties for you now (for testing) |
 | `worldboss [name]` / `worldboss stop` | `/a worldboss hrimgar`: raise a [world boss](../gameplay/world.md#world-bosses) now (by part of its name; without one, the best fit for the heroes online), or put it back to sleep |
 | `invasion [town] [north\|south\|east\|west]` / `invasion stop` | `/a invasion frost north`: start a [town invasion](../gameplay/world.md#town-invasions) now (the town by the start of its name; without one, the busiest walled town; without a gate, a random one), or call the current one off |
 | `announce <text>` | `/a announce Server restart in 5 minutes` |

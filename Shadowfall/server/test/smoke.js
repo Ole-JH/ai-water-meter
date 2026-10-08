@@ -21,6 +21,7 @@ const PUBLIC_DIR = fs.mkdtempSync(path.join(os.tmpdir(), "shadowfall-public-"));
 fs.writeFileSync(path.join(PUBLIC_DIR, "index.html"), "<!doctype html><title>Shadowfall</title>");
 // Game build stamps (they sort by time).
 const BUILD_A = "2026.10.07-090000", BUILD_B = "2026.10.08-120000", BUILD_C = "2026.10.09-080000";
+const MONSTER_NAMES = Object.keys(require("../content").MONSTERS);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // A fake 576x576 world (the real size): open field with a 4-cell wall around the edge.
@@ -484,6 +485,29 @@ async function invasionTests(a, b) {
   await sleep(150);
 }
 
+async function bountyTests(a) {
+  const list = () => a.all("bounties").at(-1).items.map((x) => x.split("|"));
+  assert.ok(a.find("bounties"), "bounties are sent at login");
+  a.ws.send(JSON.stringify({ t: "adm", c: "bounties" }));
+  await sleep(200);
+  const b0 = list();
+  assert.strictEqual(b0.length, 3, "three bounties a day");
+  const [text, have, need, done, kind, target] = b0[0];
+  assert.ok(kind === "kill" && MONSTER_NAMES.includes(target) && have === "0" && +need >= 15 && done === "0" && text.startsWith(`Slay ${need} ${target}`), "the first is a hunt for a monster of the hero's level");
+  const gearCount = () => a.all("inv").at(-1).bag.filter((x) => x.Kind === 0).length, gear0 = gearCount();
+  for (let left = +need; left > 0; left -= 20) {
+    a.ws.send(JSON.stringify({ t: "adm", c: "spawn", type: target, n: Math.min(20, left), l: 3 }));
+    await sleep(150);
+  }
+  a.ws.send(JSON.stringify({ t: "adm", c: "killall", r: 15 }));
+  await sleep(400);
+  const b1 = list();
+  assert.ok(b1[0][3] === "1" && b1[0][1] === need, "killing them finishes it");
+  const paid = a.all("bounty").at(-1);
+  assert.ok(paid && paid.k === text && paid.xp > 0 && paid.gold > 0, "a finished bounty pays experience and gold");
+  assert.ok(gearCount() > gear0 || a.all("bounty").at(-1).drops.length > 0, "and an item");
+}
+
 async function riftTests(a) {
   state(a, 300, 300);
   await sleep(150);
@@ -577,7 +601,7 @@ async function duelTests(a, b) {
   a.ws.send(JSON.stringify({ t: "dhit", id: bId, dmg: 30 }));
   await sleep(150);
   assert.ok(!b.find("dhit"), "no hits before the fight starts");
-  await sleep(3100);
+  for (let i = 0; i < 25 && a.all("duel").at(-1).k !== "fight"; i++) await sleep(200);
   assert.strictEqual(a.all("duel").at(-1).k, "fight", "then the fight starts");
   a.ws.send(JSON.stringify({ t: "dhit", id: bId, dmg: 30 }));
   b.ws.send(JSON.stringify({ t: "dhit", id: 999, dmg: 30 }));
@@ -593,7 +617,7 @@ async function duelTests(a, b) {
   b.ws.send(JSON.stringify({ t: "dreq", id: aId }));
   await sleep(150);
   a.ws.send(JSON.stringify({ t: "dans", yes: true }));
-  await sleep(3400);
+  for (let i = 0; i < 25 && b.all("duel").at(-1)?.k !== "fight"; i++) await sleep(200);
   state(a, 144, 210); // 60 m away
   await sleep(800);
   const end = b.all("duel").at(-1);
@@ -880,6 +904,7 @@ async function main() {
     await duelTests(a, b);
     await guildTests(a, b);
     await riftTests(a);
+    await bountyTests(a);
 
     const danaId = d.find("welcome").id;
     d.ws.send(JSON.stringify({ t: "vanish", dur: 3 }));

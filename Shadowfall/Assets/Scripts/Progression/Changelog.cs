@@ -24,6 +24,16 @@ namespace Shadowfall
         {
             new Entry
             {
+                Id = 34, Date = "2026-10-08", Title = "Daily bounties",
+                Items = new[]
+                {
+                    "Three bounties a day, picked for your level: hunt a kind of monster, slay elites, defeat a dungeon boss. They show above your quests.",
+                    "Each pays gold, experience and gear at once; finish all three for the Bounty Cache. Two new achievements.",
+                    "Fixes: right-click casts at your duel opponent instead of opening their menu; Esc closes the guild and rift windows.",
+                },
+            },
+            new Entry
+            {
                 Id = 33, Date = "2026-10-08", Title = "Greater rifts",
                 Items = new[]
                 {

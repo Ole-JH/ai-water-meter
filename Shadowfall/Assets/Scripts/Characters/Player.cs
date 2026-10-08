@@ -529,7 +529,7 @@ namespace Shadowfall
                 float best = 1.1f;
                 foreach (var c in All)
                 {
-                    if (c.IsDead || c.Faction == Faction.Player) continue;
+                    if (c.IsDead || c.Faction == Faction.Player || !(c is Enemy)) continue;
                     float dist = Factory.FlatDistance(c.transform.position, MouseGround);
                     if (dist < best + c.Radius) { best = dist - c.Radius; HoveredEnemy = c as Enemy; }
                 }
@@ -577,7 +577,8 @@ namespace Shadowfall
                 if (GameInput.RightDown && GameUI.I != null)
                 {
                     var other = GameUI.I.RemotePlayerUnderMouse();
-                    if (other != null) { GameUI.I.OpenPlayerMenu(other); rightOnPlayer = true; }
+                    // (not our duel opponent: right-click casts at them like at a monster)
+                    if (other != null && !(Duel.Fighting && other.Id == Duel.OpponentId)) { GameUI.I.OpenPlayerMenu(other); rightOnPlayer = true; }
                 }
                 if (!GameInput.RightHeld) rightOnPlayer = false;
                 if (GameInput.RightHeld && !rightOnPlayer) CastAbility(1, MouseGround, true);

@@ -199,6 +199,20 @@ under the minimap shows its health, how many heroes are fighting it and which wa
   experience of a boss. Two [achievements](achievements.md#bosses), one with the title *the Giantsbane*.
 - If you run, it walks back to its lair and recovers fully. Left alone for 25 minutes it goes back to sleep.
 
+## Daily bounties
+
+Every hero gets **three bounties a day** (new ones at midnight UTC), chosen for their level and shown above the quest
+tracker:
+
+- **a hunt**: slay 15 to 30 of a monster that lives where you hunt;
+- **a second hunt**, or **elites**: slay 2 to 4 elite champions anywhere;
+- **a dungeon boss** suited to your level, or **any 60 to 100 monsters**.
+
+Kills count as the server credits them, party kills included. Each finished bounty pays at once: gold (30 + 25 per
+level), experience and a piece of gear for your level. Finish all three in a day for the **Bounty Cache** at your feet (a
+treasure chest's worth of loot) and double experience on the last one. Two [achievements](achievements.md#combat), one
+with the title *the Bounty Hunter*.
+
 ## Town invasions
 
 Every 45 minutes or so (the server's `INVASION_MINUTES`), monsters from the surrounding lands gather outside a gate of
