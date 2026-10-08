@@ -287,7 +287,7 @@ namespace Shadowfall
                 yield return null;
             }
             SpellFx.Dust(bucket + Vector3.up * 0.4f, 0.5f, new Color(0.9f, 0.9f, 0.92f));
-            Sfx.Play("frost_cast", bucket, 0.5f, 0.1f, 25f);
+            Sfx.Play("sizzle", bucket, 0.6f, 0.1f, 25f);
             Destroy(piece);
             busy = false;
         }

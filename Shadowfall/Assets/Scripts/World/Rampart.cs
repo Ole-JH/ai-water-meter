@@ -482,7 +482,7 @@ namespace Shadowfall
             if (now) { transform.rotation = leaning; raiseT = -1f; Ready(); return; }
             raiseT = 0f;
             transform.rotation = carried;
-            Sfx.Play("whoosh", transform.position + Vector3.up, 0.4f, 0.1f);
+            Sfx.Play("swing", transform.position + Vector3.up, 0.4f, 0.1f);
         }
 
         void Ready()

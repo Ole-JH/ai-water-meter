@@ -195,6 +195,11 @@ it (and again to get off). The one you picked last is the one ++v++ calls.
 You can't mount within 4 seconds of being hit. Attacking, casting, gathering, taking a hit or entering a dungeon throws
 you off. Other players see you riding (the server only shows a mount you own).
 
+Called, your mount comes galloping in from behind you and you swing up into the saddle. Each wears a saddle and a
+blanket (the White Charger full red-and-gold barding), and kicks up whatever it runs on: dust, sand or snow, with the
+sound of its hooves on grass, stone or snow. Get off and it trots away; get knocked off by a hit and it rears up and
+bolts.
+
 ## Stash
 
 The stash chest by the village square holds 40 items and is saved with your character. Click it to open it; right-click items in your bags to store them and click stashed items to take them back.

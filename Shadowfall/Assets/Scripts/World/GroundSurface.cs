@@ -98,6 +98,7 @@ namespace Shadowfall
 
         public void Bake()
         {
+            Current = this;
             BakeRoads();
             c0 = new Color32[CW * CH];
             c1 = new Color32[CW * CH];
@@ -346,6 +347,8 @@ namespace Shadowfall
         /// </summary>
         /// <summary>All grass chunks (hidden on Low graphics).</summary>
         public static GameObject GrassRoot { get; private set; }
+        /// <summary>The overworld's ground (for what a mount's hooves kick up).</summary>
+        public static GroundSurface Current { get; private set; }
 
         public void BuildGrass(Transform parent, WorldGrid grid, int seed)
         {

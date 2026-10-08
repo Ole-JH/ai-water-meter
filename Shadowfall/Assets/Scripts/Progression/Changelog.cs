@@ -24,6 +24,17 @@ namespace Shadowfall
         {
             new Entry
             {
+                Id = 42, Date = "2026-10-08", Title = "Saddle up",
+                Items = new[]
+                {
+                    "Your mount comes galloping in when you call it, and you swing up into the saddle.",
+                    "Mounts wear saddles and blankets, and the White Charger has red-and-gold barding. They kick up dust, sand or snow, and you hear their hooves.",
+                    "Get off and your mount trots away. Get knocked off by a hit and it rears up and bolts.",
+                    "The forge's quench now sizzles properly, and a few missing sounds were fixed.",
+                },
+            },
+            new Entry
+            {
                 Id = 41, Date = "2026-10-08", Title = "Duels with a crowd",
                 Items = new[]
                 {

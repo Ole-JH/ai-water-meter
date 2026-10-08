@@ -783,7 +783,7 @@ namespace Shadowfall
             AttackTarget = null;
             interactTarget = null;
             Hop(transform.position, w.At(w.LadderAt), true, 1.1f, w);
-            Sfx.Play("whoosh", transform.position + Vector3.up, 0.3f, 0.1f);
+            Sfx.Play("swing", transform.position + Vector3.up, 0.3f, 0.1f);
         }
 
         /// <summary>Off the wall at once, inside (the walkway is being taken down).</summary>
@@ -837,7 +837,7 @@ namespace Shadowfall
                 var land = w.Landing(a + d, outside);
                 if (!grid.IsWalkable(land)) continue;
                 Hop(transform.position, land, false, 0.6f, null);
-                Sfx.Play("whoosh", transform.position, 0.35f, 0.15f);
+                Sfx.Play("swing", transform.position, 0.35f, 0.15f);
                 if (outside) Achievements.Add("wall_jump");
                 return;
             }
@@ -1609,10 +1609,13 @@ namespace Shadowfall
             NetClient.I?.SendStateNow();
         }
 
-        public void Dismount()
+        public void Dismount() => Dismount(false);
+
+        /// <summary>Off the mount (<paramref name="knocked"/>: thrown off by a hit, and it bolts).</summary>
+        public void Dismount(bool knocked)
         {
             if (mountRig == null) return;
-            mountRig.Remove();
+            mountRig.Remove(knocked);
             mountRig = null;
             NetClient.I?.SendStateNow();
         }
@@ -2002,7 +2005,7 @@ namespace Shadowfall
             CancelRecall("Recall interrupted");
             if (mountRig != null && amount > 0)
             {
-                Dismount();
+                Dismount(true);
                 GameUI.Float(transform.position + Vector3.up * 2.5f, "Knocked off your mount!", new Color(1f, 0.6f, 0.4f), 0.9f);
             }
             if (action == Action.Gather) StopGathering();
