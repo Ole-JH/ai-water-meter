@@ -5,7 +5,7 @@ Builds the game's sound effects into Assets/Resources/Audio:
   * picks clips from CC0 packs downloaded into .art-cache/audio (task audio:fetch):
       Kenney RPG Audio, Impact Sounds, Interface Sounds; rubberduck's 80 CC0 creature SFX, 100 CC0 SFX (1 and 2),
       25 CC0 bang SFX (OpenGameArt)
-  * synthesizes the rest (sword swings, spells, level-up, ambience loops) with numpy
+  * synthesizes the rest (sword swings, spells, level-up, ambience loops, war drums and horns) with numpy
 
 Every clip is written as mono OGG named <key>_<n>.ogg; the game picks a random variant of a key.
 Needs: numpy, ffmpeg.   Run: task audio:build   (or: python3 tools/audio/build_audio.py .art-cache/audio)
@@ -351,6 +351,40 @@ def weather_sounds(rng):
     return s
 
 
+def war_sounds(rng):
+    """Raiders massing outside a town: war drums (a slow, heavy pattern) and a long, rough war horn."""
+    s = {}
+
+    def drum_hit(freq, sec, amp):
+        m = int(SR * sec)
+        tt = t(sec)
+        pitch = freq * (1 + 0.6 * np.exp(-tt * 30))  # the skin's pitch drops right after the hit
+        body = np.sin(2 * np.pi * np.cumsum(pitch) / SR) * np.exp(-tt * 7)
+        slap = lowpass(rng.standard_normal(m), 900) * np.exp(-tt * 45) * 0.8
+        return (body + slap) * amp
+
+    for k, (beats, base) in enumerate([((0, 0.5, 1.0, 1.25), 62), ((0, 0.75, 1.0, 1.5), 55)]):
+        sec = 2.0
+        out = np.zeros(int(SR * sec))
+        for i, b in enumerate(beats):
+            h = drum_hit(base * (1.0 if i % 2 == 0 else 1.18), 0.6, 1.0 if i == 0 else 0.7)
+            a = int(b * SR)
+            out[a:a + len(h)] += h[: len(out) - a]
+        s.setdefault("war_drum", []).append(norm(lowpass(out, 2500), 0.8))
+
+    for k, f0 in enumerate((98, 87)):
+        sec = 2.8
+        tt = t(sec)
+        bend = f0 * (1 + 0.04 * np.clip(tt / 0.25, 0, 1) - 0.04 * np.clip((tt - 2.2) / 0.6, 0, 1))
+        bend = bend * (1 + 0.006 * np.sin(2 * np.pi * 5.2 * tt))  # a player's wavering breath
+        ph = 2 * np.pi * np.cumsum(bend) / SR
+        tone = sum(np.sin(ph * h) / h ** 0.9 for h in range(1, 12))  # brassy: lots of harmonics
+        breath = bandnoise(len(tt), 300, 3000, rng) * 0.08
+        brass = lowpass(tone + breath, 1400 + 900 * np.clip(tt / 0.4, 0, 1))
+        s.setdefault("war_horn", []).append(norm(brass * env(len(tt), 0.18, 0.7), 0.7))
+    return s
+
+
 # ----------------------------------------------------------------------------- output
 
 def ffmpeg_to_ogg(src_bytes, dst, is_wav):
@@ -394,6 +428,7 @@ def main():
     clips_by_key = synth(np.random.default_rng(7))
     clips_by_key.update(class_spells(np.random.default_rng(11)))
     clips_by_key.update(weather_sounds(np.random.default_rng(23)))
+    clips_by_key.update(war_sounds(np.random.default_rng(31)))
     for key, clips in clips_by_key.items():
         for i, x in enumerate(clips):
             ffmpeg_to_ogg(wav_bytes(x), os.path.join(OUT, f"{key}_{i}.ogg"), True)

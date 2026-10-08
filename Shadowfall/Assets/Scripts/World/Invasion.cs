@@ -26,6 +26,7 @@ namespace Shadowfall
             var was = Current;
             Current = iv == null || iv.phase == "none" ? null : iv;
             Rampart.Sync(); // the gate, the ladders and the helpers
+            WarCamp.Sync(); // the raiders' camp outside the gate
             TownGuards.Sync(Current != null ? Current.gd : null, Current == null || Current.phase == "won" || Current.phase == "lost");
             if (Current == null) return;
             if (Current.phase == "gather" || Current.phase == "warn") { countdownFrom = Current.left; countdownAt = Time.time; }
@@ -34,7 +35,8 @@ namespace Shadowfall
                 // Scouts' warning: time to come and defend
                 GameUI.Banner("Raiders sighted near " + iv.town + "!", Color);
                 Sfx.Play2D("bell", 0.7f);
-                TownCrier.Announce("Hear ye! Scouts have sighted raiders massing near " + iv.town + "! They'll fall on the " + iv.gate + " gate any moment. Defenders, to the walls!");
+                Sfx.Play2D("war_horn", 0.45f, 0.9f); // far off
+                TownCrier.Announce("Hear ye! Scouts have sighted raiders making camp outside the " + iv.gate + " gate! Defenders, to the walls, or strike their camp before they're ready!");
                 return;
             }
 
@@ -42,9 +44,10 @@ namespace Shadowfall
             bool fellFromWarning = was != null && was.phase == "warn" && iv.phase == "wave"; // the scouts' warning ran out: no gathering
             if (fellFromWarning)
             {
-                GameUI.Banner("The raiders fall on " + iv.town + "!", Color);
+                GameUI.Banner("The raiders charge " + iv.town + "!", Color);
                 Sfx.Play2D("gong", 0.7f);
                 Sfx.Play2D("roar", 0.55f);
+                WarCamp.Charge();
                 TownCrier.Announce("Hear ye! The raiders are at the " + iv.gate + " gate of " + iv.town + "! To arms!");
             }
             else if (started && iv.phase == "gather")
@@ -96,7 +99,7 @@ namespace Shadowfall
                 if (c.paused && (c.phase == "wave" || c.phase == "gather")) return "The raiders wait at the " + c.gate + " gate: nobody is defending";
                 switch (c.phase)
                 {
-                    case "warn": return "Raiders sighted! They attack the " + c.gate + " gate in " + Countdown + " s";
+                    case "warn": return c.n + (c.n == 1 ? " raider" : " raiders") + " massing outside the " + c.gate + " gate - they charge in " + Countdown + " s";
                     case "gather": return "Monsters gather at the " + c.gate + " gate - first wave in " + Countdown + " s";
                     case "wave": return "Wave " + c.wave + "/" + c.waves + "  -  " + c.left + (c.left == 1 ? " invader" : " invaders") + "  -  " + c.gate + " gate";
                     case "won": return "The town holds!";

@@ -276,7 +276,7 @@ namespace Shadowfall
             {
                 if (town == null) { var t = WorldGenerator.TownAt(Home); town = t != null ? t.Name : ""; }
                 if (Sack.Burns(town)) return true; // and while the fires of a lost siege burn
-                return Invasion.Active && Invasion.Current.town == town;
+                return Invasion.Marked && Invasion.Current.town == town; // indoors from the scouts' warning on
             }
         }
 

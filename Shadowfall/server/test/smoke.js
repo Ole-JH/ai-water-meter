@@ -563,13 +563,15 @@ async function invasionTests(a, b) {
   await sleep(400);
   const warned = b.all("invasion").at(-1)?.iv;
   assert.ok(warned && warned.phase === "warn" && warned.town === "Frosthaven" && warned.left > 0, "raiders are sighted before they attack");
-  assert.ok(b.all("sys").some((m) => /Scouts sight raiders massing near Frosthaven/.test(m.msg)), "and everyone is warned");
+  assert.ok(b.all("sys").some((m) => /Scouts sight raiders massing outside the north gate of Frosthaven/.test(m.msg)), "and everyone is warned");
   assert.strictEqual(warned.paused, true, "with nobody in Frosthaven the countdown stands still");
   await sleep(2200); // longer than INVASION_WARN_S=2
   assert.strictEqual(b.all("invasion").at(-1).iv.phase, "warn", "so no attack comes while nobody is there");
   state(b, 144.5, 470.5); // into Frosthaven
   let attacked;
   for (let i = 0; i < 20 && (attacked = b.all("invasion").at(-1).iv).phase === "warn"; i++) await sleep(250);
+  assert.ok(b.all("invasion").some((m) => m.iv.phase === "warn" && m.iv.n > 0 && m.iv.sx && m.iv.gd.some((g) => g.k === "s")),
+    "during the warning the raiders mass in a camp outside the gate and the guards take their posts");
   assert.ok(attacked.phase === "wave" && attacked.wave === 1, "then the first wave falls at once, no gathering");
   assert.strictEqual(attacked.gate, warned.gate, "on the gate that was named");
   a.ws.send(JSON.stringify({ t: "adm", c: "invasion", stop: true }));
@@ -1313,6 +1315,8 @@ async function main() {
       assert.ok(champ.af.split(",").length >= 1, "elites have affixes");
       e.ws.send(JSON.stringify({ t: "hit", mid: champ.id, dmg: 999999 }));
       for (let i = 0; i < 40 && !e.all("kill").some((k) => k.mid === champ.id); i++) {
+        const now = view(e).m.find((m) => m.id === champ.id); // it moves (it fights back): keep next to it
+        if (now && i % 5 === 4) state(e, now.x + 1, now.z);
         e.ws.send(JSON.stringify({ t: "hit", mid: champ.id, dmg: 999999 }));
         await sleep(60);
       }

@@ -266,8 +266,12 @@ one of the walled towns (Hollowmere, Frosthaven, Saltreach or Emberwatch), usual
 
 - **Scouts see them coming** a minute and a half ahead (`INVASION_WARN_S`, 90 seconds): everyone online hears which town
   and which gate, a bell tolls and the town crier calls it out, the gate gets a marker on the minimap and the world map
-  ("Raiders sighted!") and the tracker under the minimap counts down. Time to head over, or ride a waystone; the
-  militia put the ladders up meanwhile.
+  ("Raiders sighted!") and the tracker under the minimap counts down. Time to head over, or ride a waystone.
+- **The raiders make camp** outside the named gate meanwhile: tents, a fire and red war banners, and the first wave
+  marching in a few at a time to the beat of war drums (the tracker counts them). They wait there for the horns, so
+  you can **strike the camp before they're ready**: every raider killed there is one fewer in the first wave, and
+  counts towards the defenders' reward. Inside, the guards hurry to their posts, the militia put the ladders up and the
+  townsfolk bar their doors. Horns sound at 30 and 10 seconds.
 - When the countdown runs out **the first wave falls on the gate** straight away: the marker turns to a pulsing red one
   and the gate shuts.
 - **No heroes, no siege.** The countdown only runs while someone is in or near the town (about 110 m from its middle,

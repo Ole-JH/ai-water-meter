@@ -139,6 +139,8 @@ namespace Shadowfall
         public int hp;                 // the gate's integrity, 0..100
         public NetGuard[] gd;          // the town's guards (TownGuards)
         public bool paused;            // nobody near the town: the countdown and the siege stand still
+        public float sx, sz;           // the raiders' war camp, where they mass during the warning (WarCamp)
+        public int n;                  // raiders in the camp (warn)
     }
 
     /// <summary>A quarter burning after a lost siege: town k, gate g (x, z), everything inside the walls within r of it, left seconds.</summary>
