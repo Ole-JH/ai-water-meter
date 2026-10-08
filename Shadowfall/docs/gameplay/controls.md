@@ -39,6 +39,7 @@ Every time you enter the world the camera starts in the classic view.
 | ++k++ | Skills: professions and abilities |
 | ++l++ | Quest log |
 | ++y++ | Achievements and titles ([Achievements & titles](achievements.md)) |
+| ++o++ | Your guild: message of the day and members ([Guilds](world.md#guilds)) |
 | ++m++ | World map |
 | **R** / **N** button on the minimap | The minimap turns with the camera (R, the default) or keeps north up (N); the gold **N** on the rim always points north |
 | ++f1++ or ++h++ | Help |

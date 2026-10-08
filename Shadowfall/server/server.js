@@ -19,6 +19,7 @@ const A = require("./accounts");
 const createInvasions = require("./invasion");
 const createWorldBosses = require("./worldboss");
 const createDuels = require("./duel");
+const createGuilds = require("./guild");
 
 const PORT = parseInt(process.env.PORT || "7341", 10);
 // Behind a reverse proxy, take the client's address from X-Forwarded-For (for login rate limits).
@@ -676,6 +677,7 @@ function completeLogin(s) {
   safeSend(s, JSON.stringify(weather.message()));
   invasions.sendTo(s);
   worldBosses.sendTo(s);
+  guilds.entered(s);
   broadcast({ t: "sys", msg: `${ch.name} has entered the world.` });
   log(`${ch.name} entered the world (${sessions.size} connected)`);
 }
@@ -686,6 +688,7 @@ function leaveWorld(s, why) {
   if (partyOf(s)) leaveParty(s, why === "select" ? "has left the world." : "has gone offline.");
   if (trades.has(s.id)) closeTrade(trades.get(s.id), `${s.name} has left.`);
   duels.left(s);
+  guilds.left(s);
   const saved = saveCharacter(s);
   s.inWorld = false;
   s.inst = 0;
@@ -1623,6 +1626,7 @@ const authHandlers = {
     const ch = await store.findCharacter(String(m.name || ""));
     if (!ch || String(ch.accountId) !== String(s.acc.id)) return authErr(s, "That character isn't on your account.");
     await store.deleteCharacter(ch.id);
+    guilds.deleted(ch.name);
     store.logEvent(s.acc.id, s.acc.username, `character_deleted:${ch.name}`, s.ip);
     log(`Character deleted: ${ch.name} (${s.acc.username})`);
     await sendAccount(s, { msg: `${ch.name} has been deleted.` });
@@ -2151,6 +2155,7 @@ const handlers = {
   dans(s, m) { if (s.inWorld) duels.answer(s, !!m.yes); },
   dhit(s, m) { if (s.inWorld && !s.dead) duels.hit(s, m.id, m.dmg, 100 + s.lvl * 60); },
   dyield(s) { if (s.inWorld) duels.yieldDuel(s); },
+  ganswer(s, m) { if (s.inWorld) guilds.answer(s, !!m.yes); },
 
   hit(s, m) {
     if (!s.inWorld || s.dead) return;
@@ -2223,9 +2228,11 @@ const handlers = {
         return;
       }
       case "/invite": case "/inv": return invite(s, arg);
+      case "/guild": case "/g": case "/gchat": case "/ginvite": case "/gleave": case "/gkick": case "/gpromote": case "/gdemote": case "/gleader": case "/gmotd":
+        return guilds.command(s, cmd.toLowerCase(), rest);
       case "/leave": return partyHandlers.pleave(s);
       default:
-        if (cmd.startsWith("/")) return sys(s, "Commands: /p party chat, /w name whisper, /invite name, /leave, /who");
+        if (cmd.startsWith("/")) return sys(s, "Commands: /p party chat, /g guild chat, /w name whisper, /invite name, /leave, /guild, /who");
     }
     broadcast({ t: "chat", id: s.id, name: s.name, msg });
   },
@@ -2302,6 +2309,10 @@ const invasions = createInvasions({
   deep: (x, z) => x >= OLD_SIZE && z >= OLD_SIZE,
 });
 
+// Guilds (guild.js): a name, a tag before members' names, guild chat and ranks; stored with the accounts.
+const guilds = createGuilds({ store, sessions, safeSend, sys, findOnline, log, now, ledgerChanged: (s) => ledgerChanged(s) });
+metrics.gauge("shadowfall_guilds", "Guilds.", () => guilds.count());
+
 // Duels (duel.js): two heroes fight each other, and only each other, until one yields.
 const duels = createDuels({ sessions, safeSend, sendNear, sys, dist, now, log, metrics: M.duels });
 
@@ -2368,7 +2379,7 @@ function sendSnapshots(t) {
   // Players: the rarely-changing part gets a version; viewers get it again when it changes.
   for (const o of online) {
     const look = o.look || {};
-    const stat = `"name":${jstr(o.name)},"lvl":${o.lvl},"pl":${o.pl || 0},"mhp":${Math.ceil(o.mhp || 1)},"body":${jstr(look.body || "")},"legs":${jstr(look.legs || "")},` +
+    const stat = `"name":${jstr(o.name)},"lvl":${o.lvl},"pl":${o.pl || 0},"gt":${jstr(guilds.tagOf(o))},"mhp":${Math.ceil(o.mhp || 1)},"body":${jstr(look.body || "")},"legs":${jstr(look.legs || "")},` +
       `"weapon":${jstr(look.weapon || "")},"helm":${jstr(look.helm || "")},"mdl":${jstr(look.mdl || "Knight")},"wk":${jstr(look.wk || "")},` +
       `"cp":${jstr(look.cp || "")},"mt":${jstr(look.mt || "")},"ti":${jstr(look.ti || "")}`;
     if (stat !== o.snapStat) { o.snapStat = stat; o.snapVer = (o.snapVer || 0) + 1; }
@@ -2472,6 +2483,7 @@ async function start() {
   refreshCounts();
   setInterval(refreshCounts, 60000);
 
+  await guilds.load();
   loadWorld();
   if (world) initSpawners();
   else log("No world yet - it will be uploaded by the first client that connects.");

@@ -484,6 +484,40 @@ async function invasionTests(a, b) {
   await sleep(150);
 }
 
+async function guildTests(a, b) {
+  const say = async (c, msg) => { c.ws.send(JSON.stringify({ t: "chat", msg })); await sleep(600); }; // chat: two lines a second
+  await say(a, "/guild create Hollow Guard HG");
+  const g0 = a.all("guild").at(-1)?.g;
+  assert.ok(g0 && g0.name === "Hollow Guard" && g0.tag === "HG" && g0.rank === "leader" && g0.members.length === 1, "founding a guild makes you its leader");
+  assert.ok(a.all("sys").some((m) => /You founded Hollow Guard <HG> \(1000 gold\)/.test(m.msg)), "it costs gold");
+  await say(b, "/guild create Hollow Guard XX");
+  assert.ok(b.all("sys").some((m) => /already a guild called Hollow Guard|costs 1000 gold/.test(m.msg)), "names are unique (and it costs gold)");
+  await say(a, "/ginvite Bob");
+  assert.strictEqual(b.all("ginv").at(-1)?.k, "Hollow Guard <HG>", "an invitation reaches the hero");
+  b.ws.send(JSON.stringify({ t: "ganswer", yes: true }));
+  await sleep(200);
+  const gb = b.all("guild").at(-1)?.g;
+  assert.ok(gb && gb.rank === "member" && gb.members.length === 2 && gb.members.every((m) => m.on), "accepting joins: everyone gets the roster with who's online");
+  assert.ok(a.all("sys").some((m) => /\[HG\] Bob has joined the guild/.test(m.msg)), "the guild hears about it");
+  await say(a, "/g hello guild");
+  assert.ok(b.all("chat").some((m) => m.ch === "g" && m.msg === "hello guild" && m.name === "Alice"), "guild chat reaches the members");
+  state(b, 146, 150);
+  await sleep(500);
+  const aId = a.find("welcome").id;
+  const seen = b.all("snap").flatMap((m) => m.p || []).filter((x) => x.id === aId && "gt" in x).at(-1);
+  assert.strictEqual(seen?.gt, "HG", "the guild tag shows on nameplates");
+  await say(b, "/gkick Alice");
+  assert.ok(b.all("sys").some((m) => /only remove members of a lower rank/.test(m.msg)), "members can't remove the leader");
+  await say(a, "/gpromote Bob");
+  assert.strictEqual(b.all("guild").at(-1).g.rank, "officer", "the leader promotes members to officers");
+  await say(a, "/gmotd Raid at dusk");
+  assert.strictEqual(b.all("guild").at(-1).g.motd, "Raid at dusk", "officers and the leader set the message of the day");
+  await say(b, "/gleave");
+  assert.strictEqual(b.all("guild").at(-1).g, null, "leaving clears the guild");
+  assert.strictEqual(a.all("guild").at(-1).g.members.length, 1, "and the others see them go");
+  state(b, 145, 187);
+}
+
 async function duelTests(a, b) {
   const aId = a.find("welcome").id, bId = b.find("welcome").id;
   state(a, 140, 150);
@@ -800,6 +834,7 @@ async function main() {
     await invasionTests(a, b);
     await worldBossTests(a, b);
     await duelTests(a, b);
+    await guildTests(a, b);
 
     const danaId = d.find("welcome").id;
     d.ws.send(JSON.stringify({ t: "vanish", dur: 3 }));
@@ -876,6 +911,8 @@ async function main() {
     assert.strictEqual(w.save.gold, goldAtLogout, "gold is saved from the server's ledger, not the client's save");
     await sleep(100);
     assert.strictEqual(again.find("inv")?.gold, goldAtLogout, "the ledger is sent at login");
+    assert.strictEqual(again.find("guild")?.g?.name, "Hollow Guard", "guilds are kept: members get theirs at login");
+    assert.ok(again.all("sys").some((m) => m.msg === "[HG] Raid at dusk"), "with the message of the day");
 
     // Same build, different map (a determinism bug): the player isn't locked out but plays on the server's map.
     const mismatch = await connect("Carl", "secret3", "288x288-deadbeef", bytes, BUILD_A);

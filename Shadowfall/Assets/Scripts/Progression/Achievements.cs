@@ -54,6 +54,7 @@ namespace Shadowfall
             new AchievementDef { Id = "boss_twelve", Name = "Nothing Left Standing", Description = "Defeat all twelve bosses.", Category = AchievementCategory.Bosses, Icon = "ach_boss", Points = 150, Stat = "boss", Goal = 12, Title = "the Undefeated" },
 
             // ---- duels
+            new AchievementDef { Id = "guild_join", Name = "Sworn In", Description = "Join or found a guild.", Category = AchievementCategory.Social, Icon = "ach_party", Points = 5, Stat = "guild", Goal = 1 },
             new AchievementDef { Id = "duel_first", Name = "Honour Satisfied", Description = "Win a duel.", Category = AchievementCategory.Social, Icon = "ach_axe", Points = 10, Stat = "duels_won", Goal = 1 },
             new AchievementDef { Id = "duel_25", Name = "Duelist", Description = "Win 25 duels.", Category = AchievementCategory.Social, Icon = "ach_axe", Points = 25, Stat = "duels_won", Goal = 25, Title = "the Duelist" },
             new AchievementDef { Id = "duel_foes", Name = "Open Challenge", Description = "Beat ten different heroes in duels.", Category = AchievementCategory.Social, Icon = "ach_axe", Points = 25, Stat = "duel_foe", Goal = 10 },

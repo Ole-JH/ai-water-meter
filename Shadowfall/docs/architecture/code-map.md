@@ -51,6 +51,7 @@
 | `World/DungeonSites.cs` | The four dungeons (`DungeonDef`: entrance, look, depths) and their entrances (`DungeonEntrance`) |
 | `World/WorldBoss.cs` | The client side of world bosses: which is up and where, the banner, the slam's numbers (tracker and map markers in `GameUI`) |
 | `World/Invasion.cs` | The client side of town invasions: state from the server, banners, the reward and achievements (tracker and map markers in `GameUI`) |
+| `Social/Guild.cs`, `UI/GameUI.Guild.cs` | Our guild as the server sends it, the invitation popup, the guild window (O) |
 | `Characters/Duel.cs` | The client side of duels, and `DuelFoe`: the opponent as a hostile combatant only for us |
 | `Characters/Paragon.cs` | Paragon levels past the level cap: the points and what they give (Player uses them, the character window spends them) |
 | `Items/Forge.cs`, `UI/GameUI.Forge.cs` | Salvage & reforge at the blacksmiths: what it costs and gives (the server's `items.js` decides), and the window |
@@ -96,6 +97,7 @@
 | `admin-cli.js` | Command-line account admin: `reset-code`, `admin on\|off`, `accounts` ([Accounts & passwords](../deployment/accounts.md#admin-command-line)) |
 | `content.js` | Monster stats, spawner table, dungeons (`DUNGEONS`), global `BALANCE`, dungeon `DIFFICULTIES`, town safe-zone rectangle, spawn point |
 | `dungeon.js` | Dungeon level generators: rooms and corridors (`generate`) and natural caverns (`generateCaves`), with start, stairs, boss, chests and packs |
+| `guild.js` | Guilds: founding, invitations, ranks, guild chat, the tag on nameplates (stored with `store.saveGuild`) |
 | `duel.js` | Duels: challenges, the countdown, relaying hits between the two duelists, who wins |
 | `worldboss.js` | World bosses: the four lairs, when one rises, its slam, adds and rage, growing with every hero (`WORLD_BOSS_MINUTES`) |
 | `invasion.js` | Town invasions: choosing the town and gate, the waves, the siege of the gate, rewards (`INVASION_MINUTES`) |

@@ -11,6 +11,7 @@ namespace Shadowfall
         public int Id;
         public string Name;
         public int Level, Paragon;
+        public string GuildTag = "";
         public string Title;   // worn under their name (empty = none)
         float nextTrample;
         public float Health, MaxHealth;
@@ -75,6 +76,7 @@ namespace Shadowfall
                 Name = p.name;
                 Level = p.lvl;
                 Paragon = p.pl;
+                GuildTag = p.gt ?? "";
                 Title = p.ti;
                 MaxHealth = Mathf.Max(1f, p.mhp);
             }

@@ -74,6 +74,26 @@ Right-click another player (anywhere on their character, or click the name above
 - The party leader can remove members with the **x** on their party frame.
 - **Shared kills** give every member their **own loot**: nobody else sees or can take it.
 
+## Guilds
+
+A guild has a name, a tag of 2 to 4 letters shown before every member's name (*&lt;HG&gt; Ayla 24*), its own chat and a
+message of the day shown when members log in. ++o++ opens the guild window with the members, online first. Everything
+else is chat commands:
+
+| Command | Who | What |
+| --- | --- | --- |
+| `/guild create Name TAG` | anyone not in a guild | Found one (1000 gold): a name of 3 to 24 letters, a unique tag |
+| `/guild` | members | Who's in it and who's online |
+| `/g text` | members | Guild chat (green) |
+| `/ginvite name` | officers, the leader | Invite a hero who is online; they accept in a popup |
+| `/gkick name` | officers, the leader | Remove a member of a lower rank |
+| `/gpromote name`, `/gdemote name` | the leader | Make a member an officer, or back |
+| `/gleader name` | the leader | Hand the guild over (you become an officer) |
+| `/gmotd text` | officers, the leader | Set the message of the day |
+| `/gleave` | members | Leave. If the leader leaves, an officer (or the longest member) takes over; the last one out disbands it |
+
+Guilds are kept with the accounts (in the database). Up to 100 members.
+
 ## Duels
 
 Right-click another hero within 20 m and choose **Challenge to Duel**; they have 30 seconds to accept. A flag goes

@@ -170,6 +170,7 @@ namespace Shadowfall
                 if (GameInput.Down(GKey.F1) || GameInput.Down(GKey.H)) showHelp = !showHelp;
                 if (GameInput.Down(GKey.G)) showEmotes = !showEmotes;
                 if (GameInput.Down(GKey.Y)) showAchievements = !showAchievements;
+                if (GameInput.Down(GKey.O)) showGuild = !showGuild;
                 if (GameInput.Down(GKey.Escape))
                 {
                     if (waystoneOpen != null) waystoneOpen = null;
@@ -250,6 +251,7 @@ namespace Shadowfall
             if (showSkills) DrawSkills(p);
             if (showQuests) DrawQuestLog(p);
             if (showAchievements) DrawAchievements(p);
+            if (showGuild) DrawGuild(p);
             if (showTalents) DrawTalents(p);
             if (showStash) DrawStash(p);
             if (tradeOpen) DrawTrade(p);
@@ -559,6 +561,12 @@ namespace Shadowfall
                 else if (OfferBox(y, "<b>" + ti.Name + "</b> wants to trade with you.", out bool yes)) net.AnswerTradeInvite(yes);
                 y += 140;
             }
+            if (Guild.InviteFrom != null)
+            {
+                if (Time.time - Guild.InviteTime > 60f) Guild.Answer(false);
+                else if (OfferBox(y, "<b>" + Guild.InviteFrom + "</b> invites you to join\n<b>" + Guild.InviteGuild + "</b>.", out bool yes)) Guild.Answer(yes);
+                y += 140;
+            }
             if (Duel.ChallengerId != 0)
             {
                 if (Time.time - Duel.ChallengeTime > 30f) Duel.Answer(false);
@@ -628,7 +636,7 @@ namespace Shadowfall
                 if (rp == null) continue;
                 if (!WorldToGui(rp.transform.position + Vector3.up * 2.45f, out var g)) continue;
                 bool mate = NetClient.I.IsPartyMember(rp.Id);
-                string plate = rp.Name + "  " + rp.Level + (rp.Paragon > 0 ? " (" + rp.Paragon + ")" : "") + (rp.Dead ? "  (dead)" : "");
+                string plate = (rp.GuildTag != "" ? "<" + rp.GuildTag + "> " : "") + rp.Name + "  " + rp.Level + (rp.Paragon > 0 ? " (" + rp.Paragon + ")" : "") + (rp.Dead ? "  (dead)" : "");
                 UISkin.Shadowed(new Rect(g.x - 140, g.y - 22, 280, 22), plate, UISkin.SmallCenter,
                     mate ? new Color(0.45f, 1f, 0.5f) : new Color(0.5f, 0.78f, 1f));
                 if (!string.IsNullOrEmpty(rp.Title))

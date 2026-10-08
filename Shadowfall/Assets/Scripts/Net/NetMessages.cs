@@ -28,6 +28,7 @@ namespace Shadowfall
         public int lvl, pl;    // pl: paragon level
         public bool mv, atk, dead;
         public string body, legs, weapon, helm, mdl, wk; // wk = weapon model kind
+        public string gt;      // guild tag (empty = none)
         public string cp;      // companion following them (id, empty = none)
         public string mt;      // mount they ride (id, empty = on foot)
         public string ti;      // title worn under their name (empty = none)
@@ -81,10 +82,21 @@ namespace Shadowfall
         public float i;
         public NetMonster[] m;
         public NetPlayer[] p;
+        public NetGuild g;             // "guild": our guild (null = none); "ginv": name invites us to k
         public int win;                // "duel" (end): the winner's id (0 = a draw)
         public NetWorldBoss wb;        // "wboss": the world boss that is up (see WorldBoss.cs)
         public NetInvasion iv;         // "invasion": a town under attack (see Invasion.cs); "invwin": k = town, xp, drops
     }
+
+    /// <summary>Our guild (server/guild.js): ranks are member, officer, leader.</summary>
+    [Serializable]
+    public class NetGuild
+    {
+        public string name, tag, motd, rank;
+        public NetGuildMember[] members;
+    }
+    [Serializable] public class NetGuildMember { public string name, rank; public bool on; public int lvl; }
+    [Serializable] public class GuildAnswerMsg { public string t = "ganswer"; public bool yes; }
 
     /// <summary>A world boss (server/worldboss.js): phase none | up; hp in percent; n = heroes fighting it.</summary>
     [Serializable]

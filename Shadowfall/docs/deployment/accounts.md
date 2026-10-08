@@ -22,7 +22,8 @@ place the account was logged in. Connections that never log in are closed after 
 
 The server logs which one it uses at startup (*"Accounts are stored in PostgreSQL"*) and exports it as
 `shadowfall_storage_info{kind="postgres"|"files"}`. It creates and migrates the tables itself (`schema_migrations` records the
-version; version 1 has `accounts`, `characters`, `password_resets`, `account_events` and `meta`).
+version; version 1 has `accounts`, `characters`, `password_resets`, `account_events` and `meta`; version 2 adds `guilds`, one JSON
+document per guild. Without a database, guilds are in `guilds.json` in the data folder).
 
 The world map (`world.json`) stays in `server/data` either way.
 

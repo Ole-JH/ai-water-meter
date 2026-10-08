@@ -24,6 +24,15 @@ namespace Shadowfall
         {
             new Entry
             {
+                Id = 32, Date = "2026-10-08", Title = "Guilds",
+                Items = new[]
+                {
+                    "Found a guild with /guild create Name TAG (1000 gold). Its tag shows before every member's name.",
+                    "Guild chat with /g, a message of the day, officers who can invite and remove members, and the guild window (O). Type /guild for all the commands.",
+                },
+            },
+            new Entry
+            {
                 Id = 31, Date = "2026-10-08", Title = "Duels",
                 Items = new[]
                 {

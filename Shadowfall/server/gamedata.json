@@ -505,6 +505,10 @@
    "name": "Nothing Left Standing",
    "title": "the Undefeated"
   },
+  "guild_join": {
+   "name": "Sworn In",
+   "title": ""
+  },
   "duel_first": {
    "name": "Honour Satisfied",
    "title": ""

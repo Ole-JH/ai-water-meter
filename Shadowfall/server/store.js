@@ -59,6 +59,7 @@ class FileStore {
     this.charDir = path.join(dataDir, "characters");
     this.resetFile = path.join(dataDir, "resets.json");
     this.auditFile = path.join(dataDir, "account-events.log");
+    this.guildFile = path.join(dataDir, "guilds.json");
     this.writes = new Map(); // file -> promise chain, so writes to one file never interleave
   }
 
@@ -200,6 +201,19 @@ class FileStore {
     fs.appendFile(this.auditFile, JSON.stringify({ at: new Date().toISOString(), accountId, username, event, ip }) + "\n", () => {});
   }
 
+  // Guilds (guild.js): one file with all of them, keyed by lower-case name.
+  async loadGuilds() { return Object.values(this._read(this.guildFile) || {}); }
+  async saveGuild(g) {
+    const all = this._read(this.guildFile) || {};
+    all[g.name.toLowerCase()] = g;
+    await this._write(this.guildFile, all);
+  }
+  async deleteGuild(name) {
+    const all = this._read(this.guildFile) || {};
+    delete all[String(name).toLowerCase()];
+    await this._write(this.guildFile, all);
+  }
+
   async counts() {
     const n = (d) => { try { return fs.readdirSync(d).filter((f) => f.endsWith(".json")).length; } catch { return 0; } };
     return { accounts: n(this.accDir), characters: n(this.charDir) };
@@ -265,6 +279,12 @@ const MIGRATIONS = [
    CREATE INDEX account_events_account_idx ON account_events (account_id, at);
 
    CREATE TABLE meta (key text PRIMARY KEY, value text);`,
+  // 2: guilds (guild.js): name, tag, members and ranks as one JSON document each
+  `CREATE TABLE guilds (
+     key         text PRIMARY KEY,
+     data        jsonb NOT NULL,
+     updated_at  timestamptz NOT NULL DEFAULT now()
+   );`,
 ];
 
 const ACCOUNT_COLS = `id::text AS id, username, email, pass_salt AS salt, pass_hash AS hash, recovery_salt AS "recoverySalt",
@@ -457,6 +477,19 @@ class PgStore {
   async logEvent(accountId, username, event, ip) {
     this._track(this.pool.query("INSERT INTO account_events (account_id, username, event, ip) VALUES ($1, $2, $3, $4)",
       [accountId || null, username || null, event, ip || null])).catch((e) => this.log("audit log failed", e.message));
+  }
+
+  async loadGuilds() {
+    const { rows } = await this.pool.query("SELECT data FROM guilds");
+    return rows.map((r) => r.data);
+  }
+  async saveGuild(g) {
+    await this._track(this.pool.query(
+      "INSERT INTO guilds (key, data) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET data = $2, updated_at = now()",
+      [g.name.toLowerCase(), JSON.stringify(g)]));
+  }
+  async deleteGuild(name) {
+    await this._track(this.pool.query("DELETE FROM guilds WHERE key = $1", [String(name).toLowerCase()]));
   }
 
   async counts() {

@@ -93,7 +93,7 @@ namespace Shadowfall
 
         void CloseAllWindows()
         {
-            showBags = showChar = showSkills = showQuests = showMap = showHelp = showTalents = showStash = showAdmin = showNews = showEmotes = showAchievements = false;
+            showBags = showChar = showSkills = showQuests = showMap = showHelp = showTalents = showStash = showAdmin = showNews = showEmotes = showAchievements = showGuild = false;
             dialogNpc = null;
             craftStation = null;
             forgeOpen = false;
