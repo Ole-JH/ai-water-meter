@@ -152,6 +152,7 @@ namespace Shadowfall
         public void BackToCharacterSelect()
         {
             if (State != ConnState.InWorld) return;
+            ForgetResume();
             if (Trading) CancelTrade();
             SaveNow();
             Request(null, new AuthMsg { t = "leave" });
@@ -165,6 +166,8 @@ namespace Shadowfall
         /// <summary>Saves, leaves the world and returns to the login screen.</summary>
         public void LogOut()
         {
+            ForgetResume();
+            Resuming = false;
             if (Trading) CancelTrade();
             Disconnect(LoggedOutMessage);
         }
@@ -400,12 +403,13 @@ namespace Shadowfall
         {
             int budget = 200;
             while (budget-- > 0 && socket.TryReceive(out var raw)) Handle(raw);
+            ResumeTick();
 
             if (State == ConnState.InWorld)
             {
                 if (Time.time >= nextStateSend) { nextStateSend = Time.time + 0.1f; SendState(); }
                 if (Time.time >= nextSave) SaveNow();
-                if (Time.time - lastMessage > 15f) Disconnect("Lost connection to the server (timeout).");
+                if (Time.time - lastMessage > 15f) { Disconnect("Lost connection to the server (timeout)."); ResumeSoon(); }
             }
         }
 
@@ -421,7 +425,9 @@ namespace Shadowfall
             if (raw.StartsWith("__close:") || raw.StartsWith("__error:"))
             {
                 string why = raw.Substring(raw.IndexOf(':') + 1);
-                if (State != ConnState.Offline) Disconnect(State == ConnState.InWorld ? "Disconnected: " + why : "Could not connect: " + why);
+                bool wasPlaying = State == ConnState.InWorld;
+                if (State != ConnState.Offline) Disconnect(wasPlaying ? "Disconnected: " + why : Resuming ? Status : "Could not connect: " + why);
+                if (wasPlaying) ResumeSoon(); // the server restarting (a deploy) or the network dropping: get back in by ourselves
                 return;
             }
 
@@ -486,6 +492,7 @@ namespace Shadowfall
                     break;
 
                 case "autherr":
+                    if (m.k == "resume") { ResumeRefused(); Disconnect(""); break; }
                     Busy = false;
                     Notice = "";
                     Status = m.err;
@@ -575,6 +582,7 @@ namespace Shadowfall
                     GameUI.Log(m.name + " invites you to join a party.", PartyColor);
                     break;
                 case "qshare": HandleQuestShare(m); break;
+                case "resume": GotResume(m); break;
                 case "ping":
                     if (m.di == DungeonId) MapPing.Add(new Vector3(m.x, 0f, m.z) + Offset, GameUI.MemberColor(m.id), m.name);
                     break;

@@ -189,10 +189,12 @@ class FileStore {
     this._writeSync(this.resetFile, all);
   }
 
-  async useResetToken(tokenHash, accountId) {
+  /** Uses up a one-time token; with <kinds> only a token of one of those kinds counts (a resume token is no reset code). */
+  async useResetToken(tokenHash, accountId, kinds) {
     const all = this._resets();
     const t = all[tokenHash];
     if (!t || t.usedAt || t.expiresAt < Date.now() || t.accountId !== accountId) return false;
+    if (kinds && !kinds.includes(t.kind)) return false;
     t.usedAt = Date.now();
     this._writeSync(this.resetFile, all);
     return true;
@@ -476,10 +478,11 @@ class PgStore {
       [tokenHash, accountId, kind, expiresAt]);
   }
 
-  async useResetToken(tokenHash, accountId) {
+  async useResetToken(tokenHash, accountId, kinds) {
     const { rows } = await this.pool.query(
       `UPDATE password_resets SET used_at = now()
-       WHERE token_hash = $1 AND account_id = $2 AND used_at IS NULL AND expires_at > now() RETURNING kind`, [tokenHash, accountId]);
+       WHERE token_hash = $1 AND account_id = $2 AND used_at IS NULL AND expires_at > now() AND ($3::text[] IS NULL OR kind = ANY($3)) RETURNING kind`,
+      [tokenHash, accountId, kinds || null]);
     return rows.length > 0;
   }
 

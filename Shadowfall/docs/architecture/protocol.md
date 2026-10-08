@@ -60,6 +60,7 @@ others only while logged in.
 | `register` | `user`, `pass`, `email` (optional) | Create an account and log in | `account` with `rc`, or `autherr` |
 | `forgot` | `user` (account name or email) | Email a reset code. Same answer whether or not the account exists | `authok`, or `autherr` (no SMTP, too many requests) |
 | `reset` | `user`, `code`, `pass` | New password with the recovery code or a reset code (email or admin); logs in | `account` (with a new `rc` if the recovery code was used), or `autherr` |
+| `resume` | `user`, `code`, `name` | Back in after a restart, a dropped connection or a reload, with the token from `resume`; logs in and plays hero `name` | `account` then `welcome` (and a fresh `resume`), or `autherr` with `k: "resume"` (the client forgets the token) |
 | `chpass` | `old`, `pass` | Change the password; logs out the account's other sessions | `authok` or `autherr` |
 | `setemail` | `pass`, `email` | Set the email address (empty removes it) | `authok` or `autherr` |
 | `newcode` | `pass` | Replace the recovery code | `rcode` or `autherr` |
@@ -77,6 +78,7 @@ Server → client:
 | `autherr` | `err` | An account request failed; the connection stays open |
 | `authok` | `msg` | An account request succeeded (password changed, email set, reset email on its way) |
 | `rcode` | `rc` | The new recovery code after `newcode` |
+| `resume` | `user`, `name`, `k` | Sent on entering the world: a one-time token (`k`) to get back in as this hero without the password, for 12 hours or until the password changes |
 
 ## Client → server
 

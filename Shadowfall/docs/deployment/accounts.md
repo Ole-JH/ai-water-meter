@@ -211,6 +211,12 @@ their next login.
 
 - Passwords and recovery codes are stored as salted **scrypt** hashes, never in plain text. Checks are constant-time.
 - Reset codes from emails and admins are stored as **SHA-256** hashes, work once and expire (30 minutes, 24 hours).
+- **Resume tokens** let the game rejoin by itself after a server restart (every deploy), a dropped connection or a reload
+  into a new build. One is handed out on entering the world: random, stored as a SHA-256 hash in the same table as reset
+  codes (kind `resume:<session version>`), single use, valid 12 hours, and void as soon as the password changes. It is
+  never accepted as a reset code (nor a reset code as one). The browser keeps it, but only uses it within 10 minutes of
+  having last been in the world, and forgets it on logging out or going back to character select. Wrong tokens count
+  against the same rate limits as wrong passwords.
 - Wrong passwords and codes are rate-limited per account and per address (above).
 - A reset request doesn't reveal whether an account or email exists. A login with a character name instead of an account
   name says so, to help players who upgraded.

@@ -697,6 +697,19 @@ function fail(s, err) {
   setTimeout(() => s.ws.close(), 100);
 }
 
+/**
+ * A one-time token to get back into the world as this hero without the password (after a server restart, a dropped
+ * connection or the page reloading into a new build). Single use, RESUME_HOURS long, and void once the password changes.
+ */
+const RESUME_HOURS = 12;
+const resumeKind = (acc) => `resume:${acc.sessionVersion | 0}`;
+async function issueResume(s) {
+  if (!s.acc || !s.char) return;
+  const code = crypto.randomBytes(20).toString("hex");
+  await store.createResetToken(s.acc.id, A.tokenHash(code), resumeKind(s.acc), new Date(Date.now() + RESUME_HOURS * 3600000));
+  safeSend(s, JSON.stringify({ t: "resume", user: s.acc.username, name: s.char.name, k: code }));
+}
+
 /** The character is chosen and the world is in sync: put them in the world. */
 function completeLogin(s) {
   const ch = s.char;
@@ -714,6 +727,7 @@ function completeLogin(s) {
   s.x = ch.save && ch.save.x ? ch.save.x : SPAWN.x;
   s.z = ch.save && ch.save.z ? ch.save.z : SPAWN.z;
   safeSend(s, JSON.stringify({ t: "welcome", id: s.id, name: ch.name, look: ch.look, hasSave: !isNew, save: isNew ? undefined : ch.save, now: worldClock(), admin: !!s.admin }));
+  issueResume(s).catch((e) => log("resume token failed", e.message));
   sendInv(s);
   safeSend(s, JSON.stringify(weather.message()));
   invasions.sendTo(s);
@@ -772,7 +786,7 @@ const M = {
   bytesOut: metrics.counter("shadowfall_sent_bytes_total", "Bytes sent to clients."),
   worldMismatch: metrics.counter("shadowfall_world_mismatches_total", "Players whose game built a different map than the server's within the same build (a determinism bug)."),
   handlerErrors: metrics.counter("shadowfall_handler_errors_total", "Exceptions thrown while handling a client message, by type."),
-  logins: metrics.counter("shadowfall_logins_total", "Login attempts, by result (ok, new = account created, bad_password, locked)."),
+  logins: metrics.counter("shadowfall_logins_total", "Login attempts, by result (ok, new = account created, resume = back in after a restart or reload, bad_password, locked)."),
   resets: metrics.counter("shadowfall_password_resets_total", "Password resets by method: recovery (recovery code), code (an email or admin code used), admin (codes issued in game), change (changed in game)."),
   kills: metrics.counter("shadowfall_monsters_killed_total", "Monsters killed, by monster type and whether it was an elite."),
   bossKills: metrics.counter("shadowfall_bosses_killed_total", "Bosses killed, by boss."),
@@ -798,7 +812,7 @@ M.bytesIn.inc(undefined, 0);
 M.bytesOut.inc(undefined, 0);
 M.msgOut.inc(undefined, 0);
 for (const result of ["ok", "error"]) M.saves.inc({ result }, 0);
-for (const result of ["ok", "new", "bad_password", "locked"]) M.logins.inc({ result }, 0);
+for (const result of ["ok", "new", "resume", "bad_password", "locked"]) M.logins.inc({ result }, 0);
 M.worldMismatch.inc(undefined, 0);
 const inWorld = () => [...sessions.values()].filter((o) => o.inWorld);
 metrics.gauge("shadowfall_connections", "Open WebSocket connections (including the login screen).", () => sessions.size);
@@ -1576,6 +1590,23 @@ const authHandlers = {
     await signedIn(s, acc, "login");
   },
 
+  /** Back into the world with a resume token (see issueResume): signs in and plays that hero. */
+  async resume(s, m) {
+    if (!s.hello || s.acc) return;
+    const user = String(m.user || "").trim(), code = String(m.code || ""), name = String(m.name || "");
+    if (!user || !code) return safeSend(s, JSON.stringify({ t: "autherr", err: "Please log in again.", k: "resume" }));
+    if (!allowAttempt(s, user)) return;
+    const acc = await store.findAccount(user);
+    if (!acc || !(await store.useResetToken(A.tokenHash(code), acc.id, [resumeKind(acc)]))) {
+      failedAttempt(s, user);
+      return safeSend(s, JSON.stringify({ t: "autherr", err: "Please log in again.", k: "resume" }));
+    }
+    M.logins.inc({ result: "resume" });
+    await signedIn(s, acc, "resume");
+    const ch = await store.findCharacter(name);
+    if (ch && String(ch.accountId) === String(acc.id)) beginPlay(s, ch);
+  },
+
   async register(s, m) {
     if (!s.hello || s.acc) return;
     const user = String(m.user || "").trim(), pass = String(m.pass || ""), email = String(m.email || "").trim();
@@ -1627,7 +1658,7 @@ const authHandlers = {
     let method = null;
     if (acc && await A.checkRecovery(acc, code)) method = "recovery";
     else if (acc) {
-      const tokenOk = await store.useResetToken(A.tokenHash(code), acc.id);
+      const tokenOk = await store.useResetToken(A.tokenHash(code), acc.id, ["email", "admin"]);
       if (tokenOk) method = "code";
     }
     if (!method) {

@@ -24,6 +24,14 @@ namespace Shadowfall
         {
             new Entry
             {
+                Id = 71, Date = "2026-10-08", Title = "Right back in",
+                Items = new[]
+                {
+                    "When the server restarts for an update, or your connection drops, the game signs you back in by itself and puts you back in the world as the same hero, no login screen.",
+                },
+            },
+            new Entry
+            {
                 Id = 70, Date = "2026-10-08", Title = "Lighter on the frame rate",
                 Items = new[]
                 {

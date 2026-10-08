@@ -230,7 +230,23 @@ async function accountTests(admin) {
   const ow = await legacy.next("welcome");
   assert.strictEqual(ow.save.gold, 99, "imported characters keep their progress");
 
-  for (const x of [c, other, r1, r2, r3, legacy]) x.ws.close();
+  // Resume tokens: back into the world without the password (after a restart or reload), once, and never as a reset code.
+  const tok = await legacy.next("resume");
+  assert.ok(tok.user === "Oldtimer" && tok.name === "Oldtimer" && /^[0-9a-f]{40}$/.test(tok.k), "entering the world hands out a resume token");
+  const r4 = await rawClient();
+  r4.send({ t: "reset", user: "oldtimer", code: tok.k, pass: "hijacked1" });
+  assert.match((await r4.next("autherr")).err, /doesn't match/, "a resume token is no password reset code");
+  const r5 = await rawClient();
+  r5.send({ t: "resume", user: "oldtimer", code: tok.k, name: "Oldtimer" });
+  const rw = await r5.next("welcome");
+  assert.ok(rw.name === "Oldtimer" && rw.save.gold === 99, "a resume token signs in and plays the same hero");
+  assert.ok((await r5.next("resume")).k !== tok.k, "and a fresh token comes with it");
+  const r6 = await rawClient();
+  r6.send({ t: "resume", user: "oldtimer", code: tok.k, name: "Oldtimer" });
+  const again = await r6.next("autherr");
+  assert.ok(again.k === "resume", "a resume token works once");
+
+  for (const x of [c, other, r1, r2, r3, legacy, r4, r5, r6]) x.ws.close();
   await sleep(200);
 }
 
