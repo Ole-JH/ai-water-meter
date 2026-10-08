@@ -55,31 +55,13 @@ namespace Shadowfall
                     tries.Add(new Vector3(x, 0f, z));
             // the edges of town first: a graveyard keeps out of the way
             tries.Sort((a, b) => Factory.FlatDistance(b, t.Center).CompareTo(Factory.FlatDistance(a, t.Center)));
-            // Beside the town's church, if it has one: a churchyard, on whichever side has room (and no street)
-            foreach (var ch in WorldGenerator.Churches)
+            // The churchyards, laid out by hand beside each town's church (the towns are fixed: WorldGenerator)
+            if (Churchyard(t.Name, out var spot, out var w, out var d))
             {
-                if (!t.Contains(ch.center.x, ch.center.z)) continue;
-                foreach (var size in new[] { new Vector2(10f, 7f), new Vector2(8f, 6f), new Vector2(7f, 5f), new Vector2(6f, 5f) })
-                {
-                    W = size.x; D = size.y;
-                    var near = new List<Vector3>();
-                    foreach (var dir in new[] { Vector3.forward, Vector3.back, Vector3.left, Vector3.right })
-                    {
-                        float reach = Vector3.Dot(ch.extents, new Vector3(Mathf.Abs(dir.x), 0f, Mathf.Abs(dir.z))) + (dir.x != 0f ? W : D) / 2f + 1.2f;
-                        var along = Vector3.Cross(Vector3.up, dir);
-                        for (float slide = -4f; slide <= 4.01f; slide += 2f)
-                            for (float extra = 0f; extra <= 4.01f; extra += 2f)
-                                near.Add(new Vector3(ch.center.x, 0f, ch.center.z) + dir * (reach + extra) + along * slide);
-                    }
-                    near.Sort((a, b) => Factory.FlatDistance(a, ch.center).CompareTo(Factory.FlatDistance(b, ch.center)));
-                    foreach (var c in near)
-                    {
-                        if (!ClearBut(c, grid, t, ch)) continue;
-                        Centre = c;
-                        Build(t);
-                        return true;
-                    }
-                }
+                W = w; D = d;
+                Centre = spot;
+                Build(t);
+                return true;
             }
             W = 10f; D = 7f;
             for (int pass = 0; pass < 2; pass++)
@@ -94,7 +76,7 @@ namespace Shadowfall
             return false;
         }
 
-        bool Clear(Vector3 c, WorldGrid grid, Settlement t, float houseGap, Bounds? skip = null)
+        bool Clear(Vector3 c, WorldGrid grid, Settlement t, float houseGap)
         {
             var ground = GroundSurface.Current;
             for (float x = -W / 2 - 1f; x <= W / 2 + 1f; x += 1f)
@@ -107,7 +89,6 @@ namespace Shadowfall
                 }
             foreach (var h in WorldGenerator.HouseBounds)
             {
-                if (skip.HasValue && h.center == skip.Value.center) continue;
                 var hb = h;
                 hb.Expand(new Vector3(houseGap * 2f, 10f, houseGap * 2f));
                 if (hb.Intersects(new Bounds(c, new Vector3(W, 4f, D)))) return false;
@@ -117,14 +98,24 @@ namespace Shadowfall
             return true;
         }
 
-        /// <summary>Clear, beside the church (its own footprint only kept off, not a wide berth round it).</summary>
-        bool ClearBut(Vector3 c, WorldGrid grid, Settlement t, Bounds church)
+        /// <summary>
+        /// Where each town's churchyard is (centre, width along x, depth along z), next to its church, out of the streets:
+        /// Hollowmere's church stands at cells 156-165 x 159-166 (east of it: open ground to the east wall); in the small
+        /// towns (37 cells square, see WorldGenerator.SmallTown) the church fills a corner block 8 cells square, 3 in from
+        /// the walls, and the cross streets run 2 cells either side of the middle (offset 18).
+        /// </summary>
+        static bool Churchyard(string town, out Vector3 centre, out float w, out float d)
         {
-            var plot = new Bounds(c, new Vector3(W, 4f, D));
-            var hb = church;
-            hb.Expand(new Vector3(0.6f, 10f, 0.6f));
-            if (hb.Intersects(plot)) return false;
-            return Clear(c, grid, t, 0.6f, church);
+            var t = WorldGenerator.TownNamed(town);
+            var r = t != null ? t.Rect : new RectInt();
+            switch (town)
+            {
+                case "Hollowmere Village": centre = new Vector3(169f, 0f, 163f); w = 5f; d = 8f; return true;      // east of the church
+                case "Frosthaven": centre = new Vector3(r.xMin + 23.3f, 0f, r.yMin + 30f); w = 4.6f; d = 8f; return true; // west of the church (north-east block)
+                case "Emberwatch": centre = new Vector3(r.xMin + 13.3f, 0f, r.yMin + 30f); w = 4.6f; d = 8f; return true; // before the church (north-west block)
+            }
+            centre = Vector3.zero; w = d = 0f;
+            return false; // no church (Saltreach): a quiet plot near the walls
         }
 
         void Build(Settlement t)
