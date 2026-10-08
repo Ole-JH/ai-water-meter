@@ -114,7 +114,8 @@ namespace Shadowfall.EditorTools
         ///   would be saved without pixels.
         /// </summary>
         // Bump to force one re-import of every model (e.g. after fixing something that broke their textures).
-        const string ArtImportVersion = "3-legacy-animation";
+        // 4: the mounts (added after many Library caches were made) loaded as nothing on the server's builds.
+        const string ArtImportVersion = "4-reimport-mounts";
         const int LegacyAnimation = 1; // GLTFast.AnimationMethod.Legacy
 
         static void MakeModelTexturesReadable()
@@ -150,6 +151,21 @@ namespace Shadowfall.EditorTools
             }
             File.WriteAllText(marker, ArtImportVersion);
             if (changed > 0) Debug.Log("[Shadowfall] Re-imported " + changed + " models (legacy animation, readable textures).");
+
+            // Every model must load as a GameObject (what ArtLibrary does at runtime); one that doesn't would show as a box.
+            var broken = new System.Collections.Generic.List<string>();
+            foreach (var guid in AssetDatabase.FindAssets("", new[] { "Assets/Resources/Art" }))
+            {
+                var path = AssetDatabase.GUIDToAssetPath(guid);
+                if (!path.EndsWith(".glb") && !path.EndsWith(".gltf")) continue;
+                if (AssetDatabase.LoadAssetAtPath<GameObject>(path) != null) continue;
+                // One more try: a fresh import of just this model.
+                AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate | ImportAssetOptions.ForceSynchronousImport);
+                if (AssetDatabase.LoadAssetAtPath<GameObject>(path) == null) broken.Add(path + " (importer: " + (AssetImporter.GetAtPath(path)?.GetType().Name ?? "none") + ")");
+            }
+            if (broken.Count > 0)
+                Debug.LogError("[Shadowfall] " + broken.Count + " model(s) did not import and will show as boxes in the game:\n  " + string.Join("\n  ", broken));
+            else Debug.Log("[Shadowfall] All models import as GameObjects.");
         }
     }
 }
