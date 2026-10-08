@@ -10,6 +10,16 @@ namespace Shadowfall
     public class ColorGrade : MonoBehaviour
     {
         Material mat;
+        public static ColorGrade I;
+
+        /// <summary>
+        /// On only while grading is wanted: a camera with OnRenderImage renders to a texture and copies it to the
+        /// screen even when the effect does nothing, a whole extra full-screen pass (GameSettings.Apply calls this).
+        /// </summary>
+        public static void Refresh()
+        {
+            if (I != null) I.enabled = I.mat != null && GameSettings.ColorGrading;
+        }
 
         /// <summary>0 normal .. 1 drained of colour (death); the frame eases toward it.</summary>
         public static float Mood;
@@ -23,7 +33,8 @@ namespace Shadowfall
             var shader = Resources.Load<Shader>("Shaders/ShadowfallGrade");
             if (shader == null) shader = Shader.Find("Hidden/Shadowfall/Grade");
             if (shader != null && shader.isSupported) mat = new Material(shader) { name = "ColorGrade" };
-            else enabled = false;
+            I = this;
+            Refresh();
         }
 
         void OnRenderImage(RenderTexture src, RenderTexture dst)

@@ -77,14 +77,14 @@ The settings are in the game menu (++esc++ → **Settings**):
     | Resolution | 60%, 75%, 100%, 150%, Native | Pixels drawn, compared with the page's size. *Native* uses every pixel of a Retina / high-DPI screen (up to 4x the work). The biggest setting for speed |
     | Frame rate | 30, 60, Unlimited | The most frames a second. 30 halves the work and saves battery. In the browser the game always draws in step with the screen's refresh and skips whole refreshes to stay under the cap (Unity's own cap would time frames apart from the screen and often show 30 on a 60 Hz screen) |
     | Shadows | Off, Hard, Soft | Sun and moon shadows |
-    | Shadow distance | Short, Medium, Far | How far away shadows are drawn |
+    | Shadow distance | Short, Medium, Far | How much of the ground in view gets shadows (the distance follows the camera: zoomed in, shadows are drawn close and sharp) |
     | Lights | Few, Some, Many | How many lanterns, torches and spells light an object at once, and how far away lights still shine |
-    | Grass | Off, Near, Far | Grass blades up to 30 or 60 paces away |
+    | Grass | Off, Near, Far | Grass blades up to 24 or 45 paces away |
     | Small details | Off, On | Flowers, ferns, pebbles, mushrooms |
     | Effects | Low, High | Particles, blood stains and the colour grade |
     | View distance | Near, Normal, Far | How far out the land is drawn before the haze: Near draws far fewer trees and rocks (the biggest help in the forests) |
 
-    *Low* is 75% resolution, no shadows, grass or small details, few lights and a near view distance; *Medium* (the default) 100% resolution, hard
+    *Low* is 75% resolution, no shadows, grass or small details, few lights and a near view distance; *Medium* (the default; phones and tablets start on *Low*) 100% resolution, hard
     shadows, near grass and some lights; *High* adds soft far shadows, far grass and many lights. Slow on a laptop? Lower
     *Resolution* first. The resolution is remembered by the browser and used from the first frame next time.
 - **UI scale** makes the whole interface bigger or smaller (70–150%), applied when you let go of the slider. However big you make it, the interface never grows past what fits the screen, so on a small screen every window still fits (just smaller). On phones and tablets it's drawn a quarter bigger for fingers; hold the phone sideways.

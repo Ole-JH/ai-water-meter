@@ -15,7 +15,7 @@ Shader "Shadowfall/Decal"
         ZWrite Off
 
         CGPROGRAM
-        #pragma surface surf BlinnPhong decal:blend
+        #pragma surface surf BlinnPhong decal:blend noforwardadd
         #pragma target 3.0
 
         sampler2D _MainTex;

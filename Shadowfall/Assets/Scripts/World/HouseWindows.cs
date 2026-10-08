@@ -135,8 +135,8 @@ namespace Shadowfall
         {
             if (houses.Count == 0 || glow == null) return;
             float night = DayNight.Night, t = Time.time;
-            // the fire inside: three flickers out of step
-            for (int i = 0; i < glow.Length; i++)
+            // the fire inside: three flickers out of step (not by day: no window is lit then)
+            for (int i = 0; i < glow.Length && night > 0.3f; i++)
             {
                 float f = 0.82f + 0.1f * Mathf.Sin(t * (3.1f + i) + i * 2f) + 0.08f * Mathf.PerlinNoise(t * 2.3f, i * 7f);
                 var c = Hearth * (f * Mathf.Lerp(0.3f, 1f, night));

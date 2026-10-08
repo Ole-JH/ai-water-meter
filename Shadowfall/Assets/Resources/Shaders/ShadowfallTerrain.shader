@@ -2,6 +2,9 @@
 // height (alpha) so grass pokes through dirt and stones sit on top of the mortar, instead of a smeary crossfade.
 // On top, the weather (globals set by Weather.cs): snow cover (north and south levels) minus what has been shoveled or
 // trodden (_SfSnowMask), autumn leaves on the natural ground, and wet, darker ground after rain.
+// Cost: the ground covers most of the screen and is drawn once more for every lantern that lights it (the forward
+// "add" pass), so the noise for leaves and snow only runs while there are leaves or snow, and only in the main pass;
+// the lantern passes get the layer blend, the wet darkening and flat snow.
 Shader "Shadowfall/Terrain"
 {
     Properties
@@ -89,12 +92,18 @@ Shader "Shadowfall/Terrain"
             fixed3 tint = tex2D(_Tint, cuv).rgb * 2.0; // 0.5 = neutral
             col *= tint;
 
+            #ifndef UNITY_PASS_FORWARDADD
             // Fallen leaves on grass, forest floor and dirt (not on cobbles or sand).
-            float natural = (dot(b0, 1) + b1.x) / sum;
-            float ln = VNoise(wp * 1.7) * 0.65 + VNoise(wp * 6.3) * 0.35;
-            float leaves = saturate((ln - (1.0 - _SfLeaves * 0.7)) * 5.0) * natural;
-            fixed3 leafCol = lerp(fixed3(0.62, 0.22, 0.05), fixed3(0.85, 0.55, 0.12), VNoise(wp * 9.1));
-            col = lerp(col, leafCol * (0.75 + 0.35 * Hash(floor(wp * 5.0))), leaves);
+            UNITY_BRANCH
+            if (_SfLeaves > 0.001)
+            {
+                float natural = (dot(b0, 1) + b1.x) / sum;
+                float ln = VNoise(wp * 1.7) * 0.65 + VNoise(wp * 6.3) * 0.35;
+                float leaves = saturate((ln - (1.0 - _SfLeaves * 0.7)) * 5.0) * natural;
+                fixed3 leafCol = lerp(fixed3(0.62, 0.22, 0.05), fixed3(0.85, 0.55, 0.12), VNoise(wp * 9.1));
+                col = lerp(col, leafCol * (0.75 + 0.35 * Hash(floor(wp * 5.0))), leaves);
+            }
+            #endif
 
             // Rain darkens the ground.
             col *= lerp(1.0, 0.6, _SfWet);
@@ -106,16 +115,26 @@ Shader "Shadowfall/Terrain"
             region *= 1.0 - saturate((IN.worldPos.x - _SfSnow2.z) / 24.0 + 0.5) * saturate((_SfSnow2.w - IN.worldPos.z) / 24.0 + 0.5);
             float perm = _SfSnow2.x * saturate((IN.worldPos.z - _SfSnow2.y) / 30.0 + 0.5) * saturate((_SfSnow2.z - IN.worldPos.x) / 30.0 + 0.5);
             float cover = max(lerp(_SfSnow.y, _SfSnow.x, region), perm);
-            float cleared = tex2D(_SfSnowMask, cuv).r;
-            float sn = VNoise(wp * 0.6) * 0.55 + VNoise(wp * 2.7) * 0.3 + VNoise(wp * 11.0) * 0.15;
-            float depth = cover * (1.0 - cleared);
-            float snow = saturate((depth * 1.7 - (1.0 - sn) * 0.7) * 4.0);
-            float trodden = cover * saturate(cleared * 2.5) * saturate((0.85 - cleared) * 5.0);
-            col *= lerp(1.0, 0.72, cover * saturate((cleared - 0.6) * 3.0)); // damp where the snow was cleared
-            col = lerp(col, fixed3(0.6, 0.62, 0.66) * (0.85 + sn * 0.2), trodden * 0.7);
-            fixed3 snowCol = lerp(fixed3(0.74, 0.79, 0.88), fixed3(0.96, 0.97, 1.0), sn);
-            snowCol += step(0.985, Hash(floor(wp * 23.0))) * 0.35; // glitter
-            col = lerp(col, snowCol, snow);
+            float cleared = tex2D(_SfSnowMask, cuv).r; // (sampled outside the branch: no texture reads in varying flow control)
+            UNITY_BRANCH
+            if (cover > 0.001)
+            {
+                #ifdef UNITY_PASS_FORWARDADD
+                float sn = 0.5;
+                #else
+                float sn = VNoise(wp * 0.6) * 0.55 + VNoise(wp * 2.7) * 0.3 + VNoise(wp * 11.0) * 0.15;
+                #endif
+                float depth = cover * (1.0 - cleared);
+                float snow = saturate((depth * 1.7 - (1.0 - sn) * 0.7) * 4.0);
+                float trodden = cover * saturate(cleared * 2.5) * saturate((0.85 - cleared) * 5.0);
+                col *= lerp(1.0, 0.72, cover * saturate((cleared - 0.6) * 3.0)); // damp where the snow was cleared
+                col = lerp(col, fixed3(0.6, 0.62, 0.66) * (0.85 + sn * 0.2), trodden * 0.7);
+                fixed3 snowCol = lerp(fixed3(0.74, 0.79, 0.88), fixed3(0.96, 0.97, 1.0), sn);
+                #ifndef UNITY_PASS_FORWARDADD
+                snowCol += step(0.985, Hash(floor(wp * 23.0))) * 0.35; // glitter
+                #endif
+                col = lerp(col, snowCol, snow);
+            }
             o.Albedo = col;
             o.Alpha = 1;
         }

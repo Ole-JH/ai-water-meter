@@ -101,7 +101,13 @@ namespace Shadowfall
                 RenderSettings.fogEndDistance = Mathf.Lerp(42f, 14f, caving);
             }
             if (cam != null) cam.backgroundColor = RenderSettings.fogColor;
-            if (sun != null) { sun.intensity = 0.04f; sun.color = new Color(0.5f, 0.55f, 0.8f); }
+            if (sun != null)
+            {
+                sun.intensity = 0.04f;
+                sun.color = new Color(0.5f, 0.55f, 0.8f);
+                // no sun underground: its shadow pass would draw the whole dungeon again every frame for nothing
+                if (sun.shadows != LightShadows.None) sun.shadows = LightShadows.None;
+            }
         }
 
         void Apply()
@@ -129,6 +135,8 @@ namespace Shadowfall
             if (cam != null) cam.backgroundColor = fog;
 
             if (sun == null) return;
+            var shadows = GameSettings.SunShadows;
+            if (sun.shadows != shadows) sun.shadows = shadows;
             sun.color = Color.Lerp(a.SunC, b.SunC, f);
             sun.intensity = Mathf.Lerp(a.Sun, b.Sun, f);
             sun.shadowStrength = Mathf.Lerp(0.85f, 0.55f, Night);
@@ -221,7 +229,8 @@ namespace Shadowfall
     {
         static readonly HashSet<Light> culled = new HashSet<Light>();
         static readonly List<Light> back = new List<Light>();
-        static float nextScan;
+        static Light[] known = new Light[0];
+        static float nextScan, nextFind;
 
         internal static void Step()
         {
@@ -231,9 +240,12 @@ namespace Shadowfall
             if (hero == null) return;
             Vector3 at = hero.transform.position;
             float far = GameSettings.LightCullDistance + 6f, far2 = far * far;
-            foreach (var l in Object.FindObjectsOfType<Light>())
+            // Looking for lights in the whole scene is the costly part (and makes an array): only every few seconds.
+            // New lights come and go mostly near the hero anyway (spells, loot), where nothing needs switching off.
+            if (Time.unscaledTime >= nextFind) { nextFind = Time.unscaledTime + 4f; known = Object.FindObjectsOfType<Light>(); }
+            foreach (var l in known)
             {
-                if (l.type == LightType.Directional || culled.Contains(l)) continue;
+                if (l == null || l.type == LightType.Directional || culled.Contains(l)) continue;
                 if (l.enabled && (l.transform.position - at).sqrMagnitude > far2) { l.enabled = false; culled.Add(l); }
             }
             back.Clear();

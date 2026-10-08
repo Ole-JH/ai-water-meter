@@ -14,7 +14,8 @@ Shader "Shadowfall/Grass"
         Cull Off
 
         CGPROGRAM
-        #pragma surface surf Lambert vertex:vert
+        // noforwardadd: lanterns light the blades per vertex, no extra pass per light over thousands of blades
+        #pragma surface surf Lambert vertex:vert noforwardadd
         #pragma target 3.0
 
         float _Wind, _WindSpeed;
@@ -69,5 +70,7 @@ Shader "Shadowfall/Grass"
         }
         ENDCG
     }
-    FallBack "Diffuse"
+    // No fallback: a fallback's shadow-caster pass would put every blade into the depth pre-pass that sun shadows use
+    // (blades never cast; the ground under them carries the shadow)
+    FallBack Off
 }

@@ -76,7 +76,8 @@ namespace Shadowfall
         const float BuildingScale = 1.25f;
 
         GameObject Art(string path, Vector3 pos, float size, ArtLibrary.Fit fit = ArtLibrary.Fit.Height, float yaw = 0f, bool shadows = true) =>
-            art ? ArtLibrary.Spawn(path, deco, pos, size, fit, yaw, shadows, true, true) : null;
+            // (small props, barrels, crates and the like, don't cast: see Factory.Prim)
+            art ? ArtLibrary.Spawn(path, deco, pos, size, fit, yaw, shadows && size >= 1.2f, true, true) : null;
 
         GameObject ArtBox(string path, Vector3 pos, Vector3 size, float yaw = 0f) =>
             art ? ArtLibrary.SpawnBox(path, deco, pos, size, yaw) : null;

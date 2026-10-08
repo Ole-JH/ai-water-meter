@@ -26,11 +26,12 @@ namespace Shadowfall
 
         /// <summary>
         /// The graphics preset (Low / Medium / High). Choosing one sets every option on the Graphics page; changing an
-        /// option afterwards makes it "Custom" (<see cref="IsCustom"/>). New players start on Medium.
+        /// option afterwards makes it "Custom" (<see cref="IsCustom"/>). New players start on Medium (on Low on phones and tablets).
         /// </summary>
         public static int Quality
         {
-            get { if (quality < 0) quality = Mathf.Clamp(Load("sf_quality", 1), 0, 2); return quality; }
+            // phones and tablets start on Low (75% resolution, no shadows), everyone else on Medium
+            get { if (quality < 0) quality = Mathf.Clamp(Load("sf_quality", Application.isMobilePlatform ? 0 : 1), 0, 2); return quality; }
             set
             {
                 quality = Mathf.Clamp(value, 0, 2);
@@ -103,7 +104,7 @@ namespace Shadowfall
         public static readonly Option Grass = new Option
         {
             Key = "sf_g_grass", Name = "Grass", Choices = new[] { "Off", "Near", "Far" }, Presets = new[] { 0, 1, 2 },
-            Help = "Grass blades on the ground, drawn up to 30 (Near) or 60 (Far) paces away.",
+            Help = "Grass blades on the ground, drawn up to 24 (Near) or 45 (Far) paces away.",
         };
         public static readonly Option Details = new Option
         {
@@ -227,14 +228,17 @@ namespace Shadowfall
             }
         }
 
-        public static float ShadowDistanceScale => ShadowRange.Value == 0 ? 0.45f : ShadowRange.Value == 1 ? 0.7f : 1f;
+        /// <summary>Of the ground in view (CameraRig fits the shadow distance to it): Short stops a little before the top of the screen.</summary>
+        public static float ShadowDistanceScale => ShadowRange.Value == 0 ? 0.75f : ShadowRange.Value == 1 ? 0.9f : 1f;
         public static bool ColorGrading => Effects.Value > 0;
+        /// <summary>The sun's shadows as set on the Graphics page (none underground: DayNight).</summary>
+        public static LightShadows SunShadows => Dungeon.Active || Shadows.Value == 0 ? LightShadows.None : Shadows.Value == 1 ? LightShadows.Hard : LightShadows.Soft;
         /// <summary>Particle effects are thinned out on Low effects.</summary>
         public static float ParticleScale => Effects.Value == 0 ? 0.5f : 1f;
         /// <summary>Lights further than this from the hero are switched off.</summary>
         public static float LightCullDistance => Lights.Value == 0 ? 25f : Lights.Value == 1 ? 35f : 45f;
         /// <summary>Grass is drawn up to this far from the hero (0 = no grass).</summary>
-        public static float GrassDistance => Grass.Value == 0 ? 0f : Grass.Value == 1 ? 30f : 60f;
+        public static float GrassDistance => Grass.Value == 0 ? 0f : Grass.Value == 1 ? 24f : 45f; // Near: the ground in view at the usual camera
 
 #if UNITY_WEBGL && !UNITY_EDITOR
         [System.Runtime.InteropServices.DllImport("__Internal")] static extern void SF_SetRenderScale(float scale);
@@ -248,7 +252,8 @@ namespace Shadowfall
             QualitySettings.pixelLightCount = Lights.Value == 0 ? 1 : Lights.Value == 1 ? 2 : 4; // each extra pixel light is one more pass per lit object
             QualitySettings.shadowCascades = Shadows.Value == 2 && ShadowRange.Value == 2 ? 2 : 1;
             QualitySettings.antiAliasing = 0;
-            if (Sun != null) Sun.shadows = Shadows.Value == 0 ? LightShadows.None : Shadows.Value == 1 ? LightShadows.Hard : LightShadows.Soft;
+            if (Sun != null) Sun.shadows = SunShadows;
+            ColorGrade.Refresh();
             if (GroundSurface.GrassRoot != null) GroundSurface.GrassRoot.SetActive(Grass.Value > 0);
             if (WorldGenerator.DetailRoot != null) WorldGenerator.DetailRoot.gameObject.SetActive(Details.Value > 0);
             int cap = FrameRate.Value == 0 ? 30 : FrameRate.Value == 1 ? 60 : 0;

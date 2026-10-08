@@ -89,7 +89,9 @@ namespace Shadowfall
         void Update()
         {
             var p = Player.I;
-            cam.enabled = p != null && view != null;
+            // Rendered by hand about ten times a second (every frame while it spins): a whole camera render every frame
+            // for a small portrait cost as much as a good part of the HUD.
+            cam.enabled = false;
             if (p == null) return;
             string w = p.WeaponKind ?? "";
             bool h = p.Inventory.GetEquipped(EquipSlot.Helm) != null;
@@ -121,14 +123,34 @@ namespace Shadowfall
                 if (showT >= 1f) showT = -1f;
             }
             view.Root.transform.localRotation = Quaternion.Euler(0f, Mathf.Sin(turn * 0.6f) * 14f + spin, 0f);
+            if (showT >= 0f || Time.unscaledTime >= nextRender)
+            {
+                nextRender = Time.unscaledTime + 0.1f;
+                cam.Render();
+            }
         }
 
+        float nextRender;
+
         /// <summary>Dungeons use close fog; the studio camera renders without it.</summary>
+        /// <summary>Also without the sun's shadows: they'd cost a shadow map and a depth pass for this little camera.</summary>
         internal class NoFog : MonoBehaviour
         {
             bool fog;
-            void OnPreRender() { fog = RenderSettings.fog; RenderSettings.fog = false; }
-            void OnPostRender() { RenderSettings.fog = fog; }
+            LightShadows shadows;
+            void OnPreRender()
+            {
+                fog = RenderSettings.fog;
+                RenderSettings.fog = false;
+                var sun = GameSettings.Sun;
+                if (sun != null) { shadows = sun.shadows; sun.shadows = LightShadows.None; }
+            }
+            void OnPostRender()
+            {
+                RenderSettings.fog = fog;
+                var sun = GameSettings.Sun;
+                if (sun != null) sun.shadows = shadows;
+            }
         }
 
         internal static void SetLayer(Transform t)

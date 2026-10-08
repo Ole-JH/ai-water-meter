@@ -17,6 +17,7 @@ namespace Shadowfall
         public float Yaw => yaw;
 
         float yaw = DefaultYaw, pitch = DefaultPitch, distance = DefaultDistance;            // smoothed
+        Camera viewCam;
         float yawGoal = DefaultYaw, pitchGoal = DefaultPitch, distanceGoal = DefaultDistance; // input targets
         Vector3 focus;
         Vector2 lastMouse;
@@ -120,8 +121,12 @@ namespace Shadowfall
             }
             transform.SetPositionAndRotation(pos, rot);
 
-            // Keep shadows sharp when zoomed in, but still covering the view when zoomed out or tilted.
-            QualitySettings.shadowDistance = (30f + distance * (2.6f - pitch / 60f)) * GameSettings.ShadowDistanceScale;
+            // Shadows only as far as the ground the camera can see: to where the top edge of the view meets the ground,
+            // plus room for tall things just beyond it (their shadows fall into view). Fewer casters, sharper shadows.
+            if (viewCam == null) viewCam = GetComponent<Camera>();
+            float down = rot.eulerAngles.x - (viewCam != null ? viewCam.fieldOfView : 40f) * 0.5f;
+            float reach = down > 4f ? Mathf.Max(1f, pos.y) / Mathf.Sin(down * Mathf.Deg2Rad) : 90f;
+            QualitySettings.shadowDistance = Mathf.Min(reach + 10f, 80f) * GameSettings.ShadowDistanceScale;
         }
 
         void HandleInput(float dt)

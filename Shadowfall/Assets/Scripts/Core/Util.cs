@@ -80,7 +80,11 @@ namespace Shadowfall
             go.transform.SetParent(parent, false);
             go.transform.localPosition = localPos;
             go.transform.localScale = scale;
-            go.GetComponent<Renderer>().sharedMaterial = material != null ? material : Mat.Get(color);
+            var r = go.GetComponent<Renderer>();
+            r.sharedMaterial = material != null ? material : Mat.Get(color);
+            // Small bits (gibs, coals, rungs, trinkets) don't cast: their shadows hardly show from up here, and each caster
+            // is drawn once more into the shadow map
+            if (Mathf.Max(scale.x, Mathf.Max(scale.y, scale.z)) < 1.4f) r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             return go;
         }
 
