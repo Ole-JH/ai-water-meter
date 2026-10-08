@@ -213,7 +213,7 @@ namespace Shadowfall
             SnowDepth = Dungeon.Active ? 0f : SnowField.DepthAt(pos);
             bool moving = currentSpeed > 0.5f;
             if (moving && SnowDepth > 0.3f) SnowCaked = Mathf.Min(1f, SnowCaked + dt * SnowDepth * 0.06f);
-            else SnowCaked = Mathf.Max(0f, SnowCaked - dt * (SnowDepth < 0.1f ? 0.08f : 0.02f) - (PropNearFire(pos) ? dt * 0.3f : 0f));
+            else SnowCaked = Mathf.Max(0f, SnowCaked - dt * (SnowDepth < 0.1f ? 0.08f : 0.02f) - (SnowCaked > 0f && PropNearFire(pos) ? dt * 0.3f : 0f)); // (the fires are only looked for while there's snow to melt)
             SnowSlow = Mathf.Max(0.45f, 1f - SnowDepth * 0.45f - SnowCaked * 0.2f);
             if (moving && Time.time >= nextTrample)
             {
@@ -574,17 +574,20 @@ namespace Shadowfall
 
         void UpdateHover()
         {
-            HoveredEnemy = null;
-            HoveredFoe = null;
-            HoveredInteractable = null;
             var cam = GameManager.I.Cam;
             Ray ray = cam.ScreenPointToRay(GameInput.MousePosition);
             if (new Plane(Vector3.up, Vector3.zero).Raycast(ray, out float d)) MouseGround = ray.GetPoint(d);
+            // What's under the mouse is looked up every other frame (and on every click): the ray crosses every tree's
+            // and rock's click collider, so it's one of the bigger costs of a frame. The ground point stays per frame.
+            if ((Time.frameCount & 1) == 1 && !GameInput.LeftDown && !GameInput.RightDown) return;
+            HoveredEnemy = null;
+            HoveredFoe = null;
+            HoveredInteractable = null;
 
             if (GameUI.I != null && GameUI.I.MouseOverUI) return;
 
             float bestEnemy = float.MaxValue, bestInter = float.MaxValue;
-            int hitCount = Physics.RaycastNonAlloc(ray, rayHits, 400f);
+            int hitCount = Physics.RaycastNonAlloc(ray, rayHits, Mathf.Min(400f, cam.farClipPlane));
             for (int i = 0; i < hitCount; i++)
             {
                 var h = rayHits[i];
@@ -1479,7 +1482,8 @@ namespace Shadowfall
         /// <summary>Whirlwind ticks and the Leap arc, run every frame.</summary>
         void UpdateChannels(float dt)
         {
-            Buffs.RemoveAll(b => Time.time >= b.Until && ExpireBuff(b));
+            for (int i = Buffs.Count - 1; i >= 0; i--) // (a loop: RemoveAll with a lambda made a new delegate every frame)
+                if (Time.time >= Buffs[i].Until && ExpireBuff(Buffs[i])) Buffs.RemoveAt(i);
             if (RecalculateStatsDeferred) { RecalculateStatsDeferred = false; RecalculateStats(); }
 
             if (Time.time < whirlUntil && Time.time >= nextWhirlTick)

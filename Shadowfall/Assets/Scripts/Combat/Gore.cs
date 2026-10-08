@@ -325,13 +325,17 @@ namespace Shadowfall
                 if (now - decals[i].Born > decals[i].Life + FadeTime) { decals.RemoveAt(i); dirty = true; continue; }
                 if (now - decals[i].Born < decals[i].Grow) growing = true;
             }
-            if (dirty || growing || now >= nextAge)
+            // Growing pools are redrawn 15 times a second, not every frame (the whole mesh of up to 600 splats is rebuilt)
+            if (dirty || (growing && now >= nextGrow) || now >= nextAge)
             {
                 nextAge = now + 1f;
+                nextGrow = now + 0.066f;
                 dirty = false;
                 Rebuild(now);
             }
         }
+
+        float nextGrow;
 
         void Rebuild(float now)
         {

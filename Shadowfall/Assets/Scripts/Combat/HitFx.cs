@@ -62,6 +62,7 @@ namespace Shadowfall
             if (renderers == null || renderers.Length == 0) renderers = GetComponentsInChildren<Renderer>();
             flash = Mathf.Clamp01(0.6f + strength * 0.4f);
             jolt = 1f;
+            enabled = true;
             dir.y = 0f;
             push = (dir.sqrMagnitude > 0.0001f ? dir.normalized : -transform.forward) * Mathf.Lerp(0.12f, 0.35f, strength);
             Apply();
@@ -99,6 +100,7 @@ namespace Shadowfall
                 var local = body.parent != null ? body.parent.InverseTransformDirection(push) : push;
                 body.localPosition = new Vector3(home.x + local.x * k, body.localPosition.y, home.z + local.z * k);
             }
+            if (flash <= 0f && jolt <= 0f) enabled = false; // settled: no LateUpdate until the next hit
         }
     }
 

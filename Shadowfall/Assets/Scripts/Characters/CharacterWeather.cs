@@ -123,9 +123,12 @@ namespace Shadowfall
             }, at + Vector3.up * Height * 0.88f + fwd * 0.15f * Height);
         }
 
+        SkinnedMeshRenderer[] skins;
+
         bool IsVisible()
         {
-            foreach (var r in GetComponentsInChildren<SkinnedMeshRenderer>()) if (r.enabled && r.isVisible) return true;
+            if (skins == null) skins = GetComponentsInChildren<SkinnedMeshRenderer>();
+            foreach (var r in skins) if (r != null && r.enabled && r.isVisible) return true;
             return false;
         }
     }

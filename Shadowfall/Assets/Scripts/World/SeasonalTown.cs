@@ -376,9 +376,8 @@ namespace Shadowfall
                 Rate = 14, Duration = 10f, Life = new Vector2(5f, 8f), Speed = new Vector2(0.1f, 0.4f), Size = new Vector2(0.06f, 0.11f),
                 Start = new Color(1f, 0.75f, 0.85f, 0.9f), Mid = new Color(1f, 0.85f, 0.92f, 0.9f), End = new Color(1f, 0.9f, 0.95f, 0f),
                 Shape = ParticleSystemShapeType.Circle, Radius = 14f, Velocity = new Vector3(0.6f, -0.35f, 0.25f), Max = 200, Smoke = true,
-            }, Vector3.zero);
+            }, transform.position, transform); // attached (a one-shot emitter would go back to SpellFx's pool)
             if (ps == null) return;
-            ps.transform.SetParent(transform, false);
             var main = ps.main;
             main.loop = true;
             main.stopAction = ParticleSystemStopAction.None;

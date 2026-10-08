@@ -45,6 +45,9 @@ namespace Shadowfall
             if (rim == null) BuildRim();
             float step = Span / Size, half = Size / 2f;
             var outside = new Color32(10, 9, 8, 255);
+            // The fog straight from the tile array in the overworld (Exploration.At per pixel was a good part of the cost)
+            var tiles = !underground && !AdminTools.RevealMap ? Exploration.WorldTiles : null;
+            int tw = WorldGenerator.W, th = WorldGenerator.H;
 
             // Per pixel: two lookups in the precomputed maps, the fog, the rim. (The expensive parts, sampling the map,
             // finding wall edges and the fog's noise, were done once in BuildBase.)
@@ -65,8 +68,17 @@ namespace Shadowfall
                     {
                         int b = by * baseW + bx;
                         c = baseMap[b];
-                        float seen = Exploration.At(new Vector3(wx, 0f, wz));
-                        if (seen < 1f) c = Color32.Lerp(fogMap[b], c, seen);
+                        if (tiles != null)
+                        {
+                            int tx = (int)wx, tz = (int)wz; // (never negative here: inside the base map)
+                            byte s = tx < tw && tz < th ? tiles[tz * tw + tx] : (byte)0;
+                            if (s < 255) c = Color32.Lerp(fogMap[b], c, s / 255f);
+                        }
+                        else
+                        {
+                            float seen = Exploration.At(new Vector3(wx, 0f, wz));
+                            if (seen < 1f) c = Color32.Lerp(fogMap[b], c, seen);
+                        }
                     }
                     float k = rim[i];
                     buf[i] = new Color32((byte)Mathf.Min(255f, c.r * k), (byte)Mathf.Min(255f, c.g * k), (byte)Mathf.Min(255f, c.b * k), a);

@@ -153,6 +153,7 @@ namespace Shadowfall
         public static readonly Vector3 Spot = new Vector3(152.6f, 0f, 148.4f); // tools/layout/hollowmere_audit.py has it
         Transform hangers;
         string shown = "";
+        string[] shownBoard;
         float nextAsk;
 
         public override string HoverText => "Guild Board\n<every guild in the realm, and their banners>";
@@ -185,6 +186,9 @@ namespace Shadowfall
             if (p == null || Dungeon.Active) return;
             bool near = Factory.FlatDistance(p.transform.position, transform.position) < 35f;
             if (near && Time.time >= nextAsk) { nextAsk = Time.time + 60f; NetClient.I?.RequestGuildList(); }
+            // A new list arrives as a new array: only then compare what's on it (joining it every frame made garbage)
+            if (ReferenceEquals(Guild.Board, shownBoard)) return;
+            shownBoard = Guild.Board;
             string now = string.Join(";", Guild.Board, 0, Mathf.Min(5, Guild.Board.Length));
             if (now == shown) return;
             shown = now;

@@ -72,18 +72,64 @@ namespace Shadowfall
             public int Max = 200;
         }
 
+        // One-shot effects (no follow) are pooled: a hit used to make and destroy a GameObject with a particle system,
+        // dozens a second in a big fight. A finished one switches itself off and waits here to be set up again.
+        // Callers never keep a one-shot emitter (anything kept is attached to something: follow).
+        static readonly System.Collections.Generic.Stack<ParticleSystem> pool = new System.Collections.Generic.Stack<ParticleSystem>();
+        const int PoolMax = 96;
+        static readonly System.Collections.Generic.Dictionary<(Color, Color, Color), Gradient> gradients = new System.Collections.Generic.Dictionary<(Color, Color, Color), Gradient>();
+        static readonly ParticleSystem.Burst[] oneBurst = new ParticleSystem.Burst[1], noBursts = new ParticleSystem.Burst[0];
+        static readonly AnimationCurve growCurve = AnimationCurve.Linear(0f, 0.6f, 1f, 1.6f),
+            shrinkCurve = new AnimationCurve(new Keyframe(0f, 1f), new Keyframe(0.7f, 0.7f), new Keyframe(1f, 0f));
+
+        class Pooled : MonoBehaviour
+        {
+            public ParticleSystem Ps;
+            void OnParticleSystemStopped()
+            {
+                if (pool.Count >= PoolMax) { Destroy(gameObject); return; }
+                gameObject.SetActive(false);
+                pool.Push(Ps);
+            }
+        }
+
+        static Gradient GradientOf(Color a, Color mid, Color b)
+        {
+            var key = (a, mid, b);
+            if (gradients.TryGetValue(key, out var g)) return g;
+            if (gradients.Count > 400) gradients.Clear();
+            g = new Gradient();
+            g.SetKeys(
+                new[] { new GradientColorKey(a, 0f), new GradientColorKey(mid, 0.45f), new GradientColorKey(b, 1f) },
+                new[] { new GradientAlphaKey(a.a, 0f), new GradientAlphaKey(mid.a, 0.45f), new GradientAlphaKey(b.a, 1f) });
+            gradients[key] = g;
+            return g;
+        }
+
         public static ParticleSystem Emit(P p, Vector3 pos, Transform follow = null, Quaternion? rotation = null)
         {
             if (!Ready) return null;
-            var go = new GameObject("FX");
-            go.SetActive(false);
+            ParticleSystem ps = null;
+            if (follow == null)
+                while (ps == null && pool.Count > 0) ps = pool.Pop();
+            GameObject go;
+            bool reused = ps != null;
+            if (reused) go = ps.gameObject;
+            else
+            {
+                go = new GameObject("FX");
+                go.SetActive(false);
+                ps = go.AddComponent<ParticleSystem>();
+                if (follow == null) go.AddComponent<Pooled>().Ps = ps;
+            }
             if (follow != null) go.transform.SetParent(follow, false);
             else go.transform.position = pos;
-            if (rotation.HasValue) go.transform.rotation = rotation.Value;
+            go.transform.rotation = rotation ?? Quaternion.identity;
+            if (follow != null && !rotation.HasValue) go.transform.localRotation = Quaternion.identity;
 
-            var ps = go.AddComponent<ParticleSystem>();
-            ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
             var main = ps.main;
+            main.stopAction = ParticleSystemStopAction.None; // (a reused one mustn't report itself finished while being set up)
+            ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
             main.playOnAwake = true;
             main.loop = false;
             main.duration = Mathf.Max(0.05f, p.Duration);
@@ -95,51 +141,52 @@ namespace Shadowfall
             main.gravityModifier = p.Gravity;
             main.simulationSpace = ParticleSystemSimulationSpace.World;
             main.maxParticles = p.Max;
-            main.stopAction = follow == null ? ParticleSystemStopAction.Destroy : ParticleSystemStopAction.None;
+            main.stopAction = follow == null ? ParticleSystemStopAction.Callback : ParticleSystemStopAction.None;
 
             var em = ps.emission;
+            em.enabled = true;
             float scale = GameSettings.ParticleScale;
             em.rateOverTime = p.Rate * scale;
-            if (p.Burst > 0) em.SetBursts(new[] { new ParticleSystem.Burst(0f, (short)Mathf.Max(1, Mathf.RoundToInt(p.Burst * scale))) });
+            if (p.Burst > 0)
+            {
+                oneBurst[0] = new ParticleSystem.Burst(0f, (short)Mathf.Max(1, Mathf.RoundToInt(p.Burst * scale)));
+                em.SetBursts(oneBurst);
+            }
+            else if (reused) em.SetBursts(noBursts);
 
             var shape = ps.shape;
             shape.enabled = true;
             shape.shapeType = p.Shape;
             shape.radius = Mathf.Max(0.001f, p.Radius);
             shape.arc = p.Arc;
-            if (p.Shape == ParticleSystemShapeType.Circle) shape.rotation = new Vector3(90f, 0f, 0f); // flat on the ground
+            shape.rotation = p.Shape == ParticleSystemShapeType.Circle ? new Vector3(90f, 0f, 0f) : Vector3.zero; // a circle lies flat on the ground
 
             var col = ps.colorOverLifetime;
             col.enabled = true;
-            var g = new Gradient();
-            var mid = p.Mid ?? Color.Lerp(p.Start, p.End, 0.5f);
-            g.SetKeys(
-                new[] { new GradientColorKey(p.Start, 0f), new GradientColorKey(mid, 0.45f), new GradientColorKey(p.End, 1f) },
-                new[] { new GradientAlphaKey(p.Start.a, 0f), new GradientAlphaKey(mid.a, 0.45f), new GradientAlphaKey(p.End.a, 1f) });
-            col.color = g;
+            col.color = GradientOf(p.Start, p.Mid ?? Color.Lerp(p.Start, p.End, 0.5f), p.End);
 
             var size = ps.sizeOverLifetime;
             size.enabled = true;
-            size.size = p.Grow ? new ParticleSystem.MinMaxCurve(1f, AnimationCurve.Linear(0f, 0.6f, 1f, 1.6f))
-                               : new ParticleSystem.MinMaxCurve(1f, new AnimationCurve(new Keyframe(0f, 1f), new Keyframe(0.7f, 0.7f), new Keyframe(1f, 0f)));
+            size.size = new ParticleSystem.MinMaxCurve(1f, p.Grow ? growCurve : shrinkCurve);
 
+            var lim = ps.limitVelocityOverLifetime;
             if (p.Drag > 0f)
             {
-                var lim = ps.limitVelocityOverLifetime;
                 lim.enabled = true;
                 lim.drag = p.Drag;
                 lim.multiplyDragByParticleSize = false;
             }
+            else if (reused) lim.enabled = false;
+            var vel = ps.velocityOverLifetime;
+            if (reused) { vel.enabled = false; vel.orbitalY = 0f; vel.x = 0f; vel.y = 0f; vel.z = 0f; }
             if (p.Orbital != 0f)
             {
-                var orb = ps.velocityOverLifetime;
-                orb.enabled = true;
-                orb.space = ParticleSystemSimulationSpace.Local;
-                orb.orbitalY = p.Orbital;
+                vel.enabled = true;
+                vel.space = ParticleSystemSimulationSpace.Local;
+                vel.orbitalY = p.Orbital;
             }
             if (p.Velocity != Vector3.zero)
             {
-                var vel = ps.velocityOverLifetime;
                 vel.enabled = true;
                 vel.space = ParticleSystemSimulationSpace.World;
                 vel.x = p.Velocity.x;
@@ -157,7 +204,9 @@ namespace Shadowfall
                 r.velocityScale = 0.06f;
                 r.lengthScale = 2f;
             }
+            else if (reused) r.renderMode = ParticleSystemRenderMode.Billboard;
             go.SetActive(true);
+            if (reused) ps.Play(true);
             return ps;
         }
 

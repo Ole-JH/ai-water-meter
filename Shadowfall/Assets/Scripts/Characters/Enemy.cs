@@ -384,12 +384,15 @@ namespace Shadowfall
 
         float printStride;
         bool printLeft;
+        int ghost = -1;        // a wraith (no prints): worked out once
+        internal StunStars Stars;
 
         /// <summary>Prints in sand, snow and mud (paws for beasts, broad feet for golems and giants), and a puff of
         /// dust on dry ground now and then. Ghosts and wraiths leave nothing.</summary>
         void Prints(float dt)
         {
-            if (moveSpeed < 0.5f || Def.Name.Contains("Wraith")) { printStride = 0f; return; }
+            if (ghost < 0) ghost = Def.Name.Contains("Wraith") ? 1 : 0;
+            if (moveSpeed < 0.5f || ghost == 1) { printStride = 0f; return; }
             float stepLen = Mathf.Clamp(Height * 0.55f, 0.7f, 2.4f);
             printStride += moveSpeed * dt;
             if (printStride < stepLen) return;

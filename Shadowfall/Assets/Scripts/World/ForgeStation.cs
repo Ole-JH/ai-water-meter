@@ -132,15 +132,17 @@ namespace Shadowfall
             }, hearth + Vector3.up * 0.9f, t);
         }
 
+        Material ingotMat;
+
         void Update()
         {
             if (!fxStarted && SpellFx.Ready) StartFx();
             if (hearthLight != null) hearthLight.intensity = 1.2f + Mathf.PerlinNoise(Time.time * 3f, transform.position.x) * 0.5f;
             if (ingot != null)
             {
-                var r = ingot.GetComponent<Renderer>();
+                if (ingotMat == null) { var r = ingot.GetComponent<Renderer>(); if (r != null) ingotMat = r.material; }
                 float glow = 0.75f + Mathf.Sin(Time.time * 2f) * 0.25f;
-                if (r != null) r.material.color = Coal * glow;
+                if (ingotMat != null) ingotMat.color = Coal * glow;
             }
         }
 

@@ -316,7 +316,7 @@ namespace Shadowfall
 
         void Update()
         {
-            if (l == null) return;
+            if (l == null || !l.enabled) return; // switched off far from the hero (LightCull): nothing to flicker
             float n = Mathf.PerlinNoise(Time.time * 5f, seed);
             l.intensity = baseIntensity * (0.8f + n * 0.4f);
             // the flame sways, so the shadows move a little with it

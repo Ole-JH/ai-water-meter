@@ -359,12 +359,13 @@ namespace Shadowfall
 
         public static void Show(Enemy e)
         {
-            if (e.GetComponentInChildren<StunStars>() != null) return;
+            if (e.Stars != null) return;
             var go = new GameObject("StunStars");
             go.transform.SetParent(e.transform, false);
             go.transform.localPosition = Vector3.up * (e.Height + 0.25f);
             var s = go.AddComponent<StunStars>();
             s.enemy = e;
+            e.Stars = s;
             var c = new Color(1f, 0.9f, 0.4f);
             s.stars = new Transform[3];
             for (int i = 0; i < 3; i++)

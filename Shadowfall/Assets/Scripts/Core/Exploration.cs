@@ -20,6 +20,9 @@ namespace Shadowfall
         /// <summary>Bumped whenever something new is revealed (the maps re-render when it changes).</summary>
         public static int Version { get; private set; }
 
+        /// <summary>The overworld's tiles (0 unseen .. 255 explored, row by row), for the minimap's fast path.</summary>
+        public static byte[] WorldTiles => World;
+
         static byte[] World
         {
             get
@@ -30,26 +33,37 @@ namespace Shadowfall
         }
 
         /// <summary>How much of the walkable overworld this hero has explored, in percent.</summary>
+        /// (Counted once over the whole map, then kept up to date as tiles are revealed: the full count is 330,000 tiles.)
         public static int WorldPercent()
         {
             var w = World;
             var grid = WorldGrid.Instance;
             if (grid == null || Dungeon.Active) return 0;
-            int seen = 0, total = 0;
-            for (int y = 0; y < WorldGenerator.H; y++)
-                for (int x = 0; x < WorldGenerator.W; x++)
-                {
-                    if (grid.IsBlocked(x, y)) continue;
-                    total++;
-                    if (w[y * WorldGenerator.W + x] > 128) seen++;
-                }
-            return total > 0 ? Mathf.FloorToInt(seen * 100f / total) : 0;
+            if (recount)
+            {
+                recount = false;
+                seenCount = walkCount = 0;
+                for (int y = 0; y < WorldGenerator.H; y++)
+                    for (int x = 0; x < WorldGenerator.W; x++)
+                    {
+                        if (grid.IsBlocked(x, y)) continue;
+                        walkCount++;
+                        if (w[y * WorldGenerator.W + x] > 128) seenCount++;
+                    }
+            }
+            return walkCount > 0 ? Mathf.FloorToInt(seenCount * 100f / walkCount) : 0;
         }
+
+        static bool recount = true;
+        static int seenCount, walkCount;
+        static int savedVersion = -1;
+        static string saved;
 
         /// <summary>A fresh hero knows only the village.</summary>
         public static void ResetWorld()
         {
             world = new byte[WorldGenerator.W * WorldGenerator.H];
+            recount = true;
             var t = WorldGenerator.Town;
             for (int y = t.yMin - 2; y < t.yMax + 2; y++)
                 for (int x = t.xMin - 2; x < t.xMax + 2; x++)
@@ -94,7 +108,12 @@ namespace Shadowfall
                     if (d > reach) continue;
                     byte v = (byte)(Mathf.Clamp01((reach - d) / Soft) * 255f);
                     int i = y * w + x;
-                    if (v > map[i]) { map[i] = v; changed = true; }
+                    if (v > map[i])
+                    {
+                        if (!inDungeon && map[i] <= 128 && v > 128 && !recount && WorldGrid.Instance != null && !WorldGrid.Instance.IsBlocked(x, y)) seenCount++;
+                        map[i] = v;
+                        changed = true;
+                    }
                 }
             if (changed) Version++;
         }
@@ -122,6 +141,14 @@ namespace Shadowfall
         // bitmap (1 bit per tile, base64); a 288x288 one is from before the world grew and is copied into its corner.
 
         public static string Save()
+        {
+            if (saved != null && savedVersion == Version) return saved; // unchanged since the last save (it's every 20 s)
+            savedVersion = Version;
+            saved = Encode();
+            return saved;
+        }
+
+        static string Encode()
         {
             var map = World;
             var o = new System.Collections.Generic.List<byte>(256);
@@ -166,6 +193,7 @@ namespace Shadowfall
                         seen = !seen;
                     }
                     Version++;
+                    recount = true;
                     return;
                 }
                 var bits = System.Convert.FromBase64String(data);
@@ -175,6 +203,7 @@ namespace Shadowfall
                 for (int i = 0; i < w * w; i++)
                     if ((bits[i >> 3] >> (i & 7) & 1) == 1) world[(i / w) * WorldGenerator.W + i % w] = 255;
                 Version++;
+                recount = true;
             }
             catch (System.FormatException) { }
         }
