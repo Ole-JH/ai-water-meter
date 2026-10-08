@@ -72,6 +72,7 @@ namespace Shadowfall
             if (m.stairs != null && m.stairs.Length == 2) DungeonPortal.Create(root.transform, ToWorld(m.stairs[0], m.stairs[1]), true, Depth + 1);
             if (m.chests != null)
                 for (int i = 0; i + 1 < m.chests.Length; i += 2) DungeonChest.Create(root.transform, ToWorld(m.chests[i], m.chests[i + 1]), i / 2);
+            DungeonFeatures.Build(root.transform, blocked, m.w, m.h, rooms, m.seed, m); // traps, the boss room's doors
         }
 
         public static void Exit()
@@ -373,10 +374,17 @@ namespace Shadowfall
     }
 
     /// <summary>A treasure chest: gold and an item or two, once per hero.</summary>
+    /// <summary>
+    /// A treasure chest: iron-bound wood with a lid on hinges. Opened, the lid swings up, light and coins spill out of
+    /// it, and the server rolls what's inside (for us only); then it stands open and empty.
+    /// </summary>
     public class DungeonChest : Interactable
     {
         bool opened;
         int index;  // which chest of the level (the server knows where each one is)
+        Transform lid;
+        Light glow;
+        float openT = -1f;
 
         public override bool CanInteract => !opened;
         public override Color LabelColor => opened ? Color.gray : new Color(1f, 0.85f, 0.3f);
@@ -388,13 +396,28 @@ namespace Shadowfall
             var go = new GameObject("Chest");
             go.transform.SetParent(parent, false);
             go.transform.position = pos;
+            go.transform.rotation = Quaternion.Euler(0f, Random.Range(0, 4) * 90f + Random.Range(-15f, 15f), 0f);
             var c = go.AddComponent<DungeonChest>();
             c.index = index;
             c.DisplayName = "Treasure Chest";
             c.InteractRange = 1.8f;
             c.AddClickCollider(0.6f, 1f);
-            if (ArtLibrary.Spawn("Props/chest", go.transform, Vector3.zero, 0.9f, ArtLibrary.Fit.Width, Random.Range(0f, 360f)) == null)
-                Factory.Prim(PrimitiveType.Cube, go.transform, new Vector3(0, 0.35f, 0), new Vector3(0.9f, 0.7f, 0.6f), new Color(0.45f, 0.3f, 0.15f));
+            var wood = new Color(0.42f, 0.27f, 0.14f);
+            var iron = new Color(0.25f, 0.25f, 0.27f);
+            var gold = new Color(1f, 0.82f, 0.35f);
+            Factory.Prim(PrimitiveType.Cube, go.transform, new Vector3(0f, 0.27f, 0f), new Vector3(0.9f, 0.54f, 0.58f), wood);
+            foreach (float x in new[] { -0.32f, 0.32f })
+                Factory.Prim(PrimitiveType.Cube, go.transform, new Vector3(x, 0.27f, 0f), new Vector3(0.07f, 0.56f, 0.6f), iron);
+            // inside: a heap of gold (seen once it's open)
+            Factory.Prim(PrimitiveType.Cube, go.transform, new Vector3(0f, 0.5f, 0f), new Vector3(0.78f, 0.06f, 0.46f), gold, false, Mat.Glow(gold * 0.5f));
+            // the lid, hinged along the back edge
+            c.lid = new GameObject("Lid").transform;
+            c.lid.SetParent(go.transform, false);
+            c.lid.localPosition = new Vector3(0f, 0.54f, -0.29f);
+            Factory.Prim(PrimitiveType.Cube, c.lid, new Vector3(0f, 0.09f, 0.29f), new Vector3(0.92f, 0.18f, 0.6f), wood * 1.1f);
+            foreach (float x in new[] { -0.32f, 0.32f })
+                Factory.Prim(PrimitiveType.Cube, c.lid, new Vector3(x, 0.09f, 0.29f), new Vector3(0.07f, 0.2f, 0.62f), iron);
+            Factory.Prim(PrimitiveType.Cube, c.lid, new Vector3(0f, 0.02f, 0.6f), new Vector3(0.14f, 0.16f, 0.04f), gold); // the lock
             return c;
         }
 
@@ -402,10 +425,40 @@ namespace Shadowfall
         {
             if (opened) return;
             opened = true;
+            openT = 0f;
             Sfx.Play("loot", transform.position, 0.8f);
-            Sfx.Play2D("coins", 0.6f);
-            SpellFx.Hit(transform.position + Vector3.up * 0.8f, new Color(1f, 0.85f, 0.3f), false, 16);
+            Sfx.Play("hit_stone", transform.position, 0.4f, 0.2f, 20f); // the lock gives
             NetClient.I?.Op("chest", i: index); // the server rolls what's inside, for us only
+        }
+
+        void Update()
+        {
+            if (openT < 0f || lid == null) return;
+            openT += Time.deltaTime;
+            // a jolt as the lock gives, then the lid swings up and back
+            float k = Mathf.Clamp01((openT - 0.15f) / 0.45f);
+            float jolt = openT < 0.15f ? Mathf.Sin(openT * 80f) * 3f : 0f;
+            lid.localRotation = Quaternion.Euler(-115f * (1f - (1f - k) * (1f - k)) + jolt, 0f, 0f);
+            if (openT >= 0.35f && glow == null)
+            {
+                glow = new GameObject("ChestGlow").AddComponent<Light>();
+                glow.transform.SetParent(transform, false);
+                glow.transform.localPosition = new Vector3(0f, 0.9f, 0f);
+                glow.type = LightType.Point;
+                glow.color = new Color(1f, 0.78f, 0.35f);
+                glow.range = 4f;
+                glow.shadows = LightShadows.None;
+                Sfx.Play2D("coins", 0.6f);
+                SpellFx.Hit(transform.position + Vector3.up * 0.8f, new Color(1f, 0.85f, 0.3f), false, 24);
+                if (SpellFx.Ready)
+                    SpellFx.Emit(new SpellFx.P
+                    {
+                        Burst = 18, Duration = 0.1f, Life = new Vector2(0.6f, 1.1f), Speed = new Vector2(1.5f, 3f), Size = new Vector2(0.06f, 0.1f),
+                        Start = new Color(1f, 0.85f, 0.35f), End = new Color(1f, 0.7f, 0.2f, 0f), Gravity = 1.2f, Velocity = Vector3.up * 2f,
+                    }, transform.position + Vector3.up * 0.6f);
+            }
+            if (glow != null) glow.intensity = Mathf.Max(0f, 2.2f - (openT - 0.35f) * 0.6f); // the gleam fades: it's empty now
+            if (openT > 4.5f) { if (glow != null) Destroy(glow.gameObject); openT = -1f; }
         }
     }
 

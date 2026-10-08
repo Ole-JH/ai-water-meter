@@ -140,6 +140,15 @@ Seven dungeons lie hidden in the wilds, three of them in the [outer lands](#the-
 - **Fog of war:** each level starts dark on your map and is revealed as you explore it.
 - Dying in a dungeon sends you back to town (see [Death](#death)). Logging out inside puts you back at that dungeon's entrance next time.
 
+### Traps, chests and the boss's room
+
+- **Traps** lie in the corridors (not in rifts): **pressure plates** (a raised stone with holes in it) fire a bed of
+  spikes a heartbeat after you step on one, and **pendulum blades** swing across the way from the ceiling; time your
+  run. Each costs about a tenth of your life. They rearm.
+- **Treasure chests** open properly: the lock gives, the lid swings up and light and coins spill out.
+- **The boss's room**: once the fight starts with you inside, iron portcullises slam down over its doorways. They rise
+  again with a rumble when the boss falls, or if the fight is abandoned (nobody hurts it for 15 seconds) or you die.
+
 ## Greater rifts
 
 The **Rift Stone** stands in Hollowmere's square (north-east of the well, with a purple tear turning above it). Use it to

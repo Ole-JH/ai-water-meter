@@ -24,6 +24,16 @@ namespace Shadowfall
         {
             new Entry
             {
+                Id = 47, Date = "2026-10-08", Title = "Deeper dungeons",
+                Items = new[]
+                {
+                    "Dungeon corridors have traps: pressure plates that fire spikes, and pendulum blades swinging across the way. Watch your step, and time your run.",
+                    "When a boss fight starts, iron portcullises slam down over the boss room's doorways. They rise again when the boss falls.",
+                    "Treasure chests open properly: the lid swings up and gold light spills out.",
+                },
+            },
+            new Entry
+            {
                 Id = 46, Date = "2026-10-08", Title = "Puddles and lightning",
                 Items = new[]
                 {

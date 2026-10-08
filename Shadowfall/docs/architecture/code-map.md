@@ -59,6 +59,7 @@
 | `World/AuctionHouse.cs` | The auctioneer and podium by each general merchant (bell on "ausold") and the courier who brings auction mail ("aumail") |
 | `World/BountyBoard.cs` | The bounty boards with today's notices (torn off when done) and the Bounty Cache falling from the sky |
 | `World/WeatherDetail.cs` | Puddles (and ice) around the hero, breath in the cold, and lightning striking trees (`WorldGenerator.Trees`) |
+| `World/DungeonFeatures.cs` | Dungeon traps (spike plates, pendulums) and the boss room's portcullises |
 | `World/Rampart.cs` | The attacked gate during an invasion (shuts, shows damage, loses pieces, breaks), the militia who put up ladders and a walkway, and the walkway heroes climb onto (`Player.ClimbWall`); the shut gate blocks cells with `WorldGrid.SetClosed`, never part of the map |
 | `Social/Auction.cs`, `UI/GameUI.Auction.cs` | The auction house as the server shows it, and its window |
 | `Progression/Bounties.cs` | Today's bounties as the server sends them, and the reward |
