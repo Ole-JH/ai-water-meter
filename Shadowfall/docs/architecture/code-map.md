@@ -57,6 +57,7 @@
 | `Characters/DuelRing.cs` | A duel as everyone nearby sees it: the ring, the countdown, the crowd (villagers watching via `Walker.Watch`) and the winner's banner |
 | `Social/GuildHeraldry.cs` | Guild heraldry: the flag texture, the banner members carry (`GuildBanner`) and the guild board in Hollowmere (`GuildBoard`) |
 | `World/AuctionHouse.cs` | The auctioneer and podium by each general merchant (bell on "ausold") and the courier who brings auction mail ("aumail") |
+| `World/BountyBoard.cs` | The bounty boards with today's notices (torn off when done) and the Bounty Cache falling from the sky |
 | `World/Rampart.cs` | The attacked gate during an invasion (shuts, shows damage, loses pieces, breaks), the militia who put up ladders and a walkway, and the walkway heroes climb onto (`Player.ClimbWall`); the shut gate blocks cells with `WorldGrid.SetClosed`, never part of the map |
 | `Social/Auction.cs`, `UI/GameUI.Auction.cs` | The auction house as the server shows it, and its window |
 | `Progression/Bounties.cs` | Today's bounties as the server sends them, and the reward |

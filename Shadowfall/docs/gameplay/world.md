@@ -237,6 +237,10 @@ level), experience and a piece of gear for your level. Finish all three in a day
 treasure chest's worth of loot) and double experience on the last one. Two [achievements](achievements.md#combat), one
 with the title *the Bounty Hunter*.
 
+Every walled town has a **bounty board** (in Hollowmere on the west side of the square) with your three bounties pinned
+up as notices; click it to read them. A finished bounty's notice is torn off and flutters to the ground. The Bounty
+Cache falls out of the sky at your feet as a chest trailing light, lands with a thud and bursts open.
+
 ## Town invasions
 
 Every 45 minutes or so (the server's `INVASION_MINUTES`), monsters from the surrounding lands gather outside a gate of

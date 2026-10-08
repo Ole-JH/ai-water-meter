@@ -35,6 +35,7 @@ namespace Shadowfall
             Sfx.Play2D("quest_done", 0.7f);
             GameUI.Log("Bounty done: " + m.k + "  -  " + m.gold + " gold, " + m.xp + " experience" + (all ? ", and the Bounty Cache" : "") + ".", Color);
             if (p == null) return;
+            if (all && !Dungeon.Active) BountyBoard.CacheFalls(p.transform.position + p.transform.forward * 1.5f);
             p.AddXp(m.xp);
             p.Achievements.Add("bounties");
             if (all) p.Achievements.Add("bounty_days");

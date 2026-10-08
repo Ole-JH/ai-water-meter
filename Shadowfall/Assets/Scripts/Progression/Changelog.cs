@@ -24,6 +24,15 @@ namespace Shadowfall
         {
             new Entry
             {
+                Id = 45, Date = "2026-10-08", Title = "Wanted",
+                Items = new[]
+                {
+                    "Every walled town has a bounty board with your three bounties pinned up as notices. Finish one and its notice is torn off.",
+                    "Finish all three and the Bounty Cache falls out of the sky at your feet, trailing light, and bursts open.",
+                },
+            },
+            new Entry
+            {
                 Id = 44, Date = "2026-10-08", Title = "Going once, going twice",
                 Items = new[]
                 {
