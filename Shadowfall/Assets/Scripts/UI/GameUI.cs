@@ -12,6 +12,21 @@ namespace Shadowfall
     {
         public static GameUI I;
 
+        /// <summary>The playtest tour (PlaytestTour) opens and closes windows by name.</summary>
+        public static void CheckShow(string window, bool on)
+        {
+            if (I == null) return;
+            switch (window)
+            {
+                case "bags": I.showBags = on; break;
+                case "char": I.showChar = on; break;
+                case "talents": I.showTalents = on; break;
+                case "map": I.showMap = on; break;
+                case "achievements": I.showAchievements = on; break;
+                case "comfort": I.menu = on ? MenuPage.Comfort : MenuPage.None; break;
+            }
+        }
+
         // ---- state read by gameplay code
         public bool MouseOverUI { get; private set; }
         public bool ChatOpen { get; private set; }

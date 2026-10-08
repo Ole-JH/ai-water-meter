@@ -77,6 +77,13 @@ Results go to `.autodeploy/check/`: `01-spawn.png`, `02-well.png`, `03-waystone.
 `result.json` with the verdict, every step, the game's logged errors and the browser console. `CHECK_TIMEOUT_S` (default
 480) limits the whole run; software rendering is slow, so the frame rate it reports is no measure of a real machine.
 
+**Longer playtest** (by hand, never in the deploy check): with `?sfcheck=1&tour=1` the game skips the photo tour and
+plays on instead (`PlaytestTour.cs`): opens the bags, character, talents, map, achievements and comfort settings for a
+screenshot each, fights the nearest monsters outside town, walks to the nearest dungeon and goes down, and reports the
+frame rate of each scene as `fps:<scene>` steps (with the worst frame and how many particle systems and lights there
+are). Run it against any server with the check script, e.g. `CHECK_URL='https://your.server/?tour=1' node check.js`.
+It registers one `check######` account there.
+
 After the walk, the check takes a **photo tour** (`PhotoTour.cs`): every monster, boss, NPC, hero class and mount lined
 up five at a time under studio light with their names in a caption (`models-*.png`; a model that failed to load is
 marked *MISSING MODEL*), and each walled town and Hollowmere's square from above (`town-*.png`). After a deploy,

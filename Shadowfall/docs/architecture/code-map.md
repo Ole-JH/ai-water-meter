@@ -76,6 +76,7 @@
 | `Items/Forge.cs`, `UI/GameUI.Forge.cs` | Salvage & reforge at the blacksmiths: what it costs and gives (the server's `items.js` decides), and the window |
 | `Core/ErrorReporter.cs` | Sends the game's exceptions and errors to the server (`Plugins/WebGL/ShadowfallReport.jslib`, the page's `sfReport`) |
 | `Core/PhotoTour.cs` | The browser check's photo tour: every model lined up, the towns from above |
+| `Core/PlaytestTour.cs` | With `?sfcheck=1&tour=1` only: a longer scripted playtest (windows, a fight, a dungeon) with frame rates per scene |
 | `Core/GameCheck.cs` | With `?sfcheck=1` only: the game plays a scripted session by itself for the [browser check](../development/testing.md#browser-check) |
 | `Core/Exploration.cs` | Fog of war (revealed tiles, saved with the character) and the client side of the admin module (`AdminTools`) |
 | `UI/Minimap.cs` | Round minimap and fogged world map rendering |
