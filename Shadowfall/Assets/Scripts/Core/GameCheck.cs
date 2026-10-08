@@ -132,8 +132,10 @@ namespace Shadowfall
 
             float fps = walkTime > 0f ? frames / walkTime : 0f;
             if (net.State != NetClient.ConnState.InWorld) { yield return Fail("lost the connection: " + net.Status); yield break; }
-            string summary = "fps " + fps.ToString("0") + " while walking (software rendering), " + errors + " error(s)";
-            if (errors > 0) { yield return Fail(summary + "\n" + errorText); yield break; }
+            // Exceptions fail the check; other logged errors don't, but the first ones go in the report (and Discord).
+            string summary = "fps " + fps.ToString("0") + " while walking (software rendering), " + exceptions + " exception(s), " + (errors - exceptions) + " other error(s)";
+            if (exceptions > 0) { yield return Fail(summary + "\n" + errorText); yield break; }
+            if (errors > 0) summary += "\n" + errorText;
             Report("done", summary);
         }
 

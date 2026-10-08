@@ -62,6 +62,12 @@ namespace Shadowfall
 
     public static class Factory
     {
+        /// <summary>
+        /// CreatePrimitive adds a collider the WebGL build's code stripping can't see we need (nothing in the scene uses
+        /// one): naming the types here keeps them, with Assets/link.xml.
+        /// </summary>
+        internal static readonly System.Type[] KeepColliders = { typeof(SphereCollider), typeof(CapsuleCollider), typeof(BoxCollider), typeof(MeshCollider) };
+
         public static GameObject Prim(PrimitiveType type, Transform parent, Vector3 localPos, Vector3 scale, Color color,
             bool keepCollider = false, Material material = null)
         {

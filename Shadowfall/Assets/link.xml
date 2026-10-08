@@ -1,0 +1,13 @@
+<!--
+  Keeps classes the WebGL build's code stripping would otherwise remove. The game builds most of its world at runtime
+  (GameObject.CreatePrimitive, AddComponent), which the stripper can't see: without these, creating a sphere logs
+  "Can't add component because class 'SphereCollider' doesn't exist!" (and colliders added from code would be missing).
+-->
+<linker>
+  <assembly fullname="UnityEngine.PhysicsModule">
+    <type fullname="UnityEngine.SphereCollider" preserve="all" />
+    <type fullname="UnityEngine.CapsuleCollider" preserve="all" />
+    <type fullname="UnityEngine.BoxCollider" preserve="all" />
+    <type fullname="UnityEngine.MeshCollider" preserve="all" />
+  </assembly>
+</linker>
