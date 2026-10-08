@@ -197,6 +197,7 @@ also teach `Music.Want()` when it applies.
 | Stylized Nature MegaKit (free edition) | Quaternius | CC0 | Trees, boulders, pebbles, bushes, ferns, flowers, mushrooms |
 | Resource Bits | Kay Lousberg | CC0 | Ore nuggets on mining rocks |
 | Nature Kit, Fantasy Town Kit, Graveyard Kit, UI Pack RPG Expansion | Kenney | CC0 | Stumps, tents, campfires, town props, graveyard, zombie, pumpkins, hay bales, the elves' shovels, UI skin, cursors |
+| Food Kit | Kenney | CC0 | The Heroes' Feast after a held siege: the food, plates, mugs and wine |
 | Holiday Kit | Kenney | CC0 | Winterfest: the decorated tree, snowmen, presents, sled, reindeer, lights, snow piles |
 | Ultimate Monsters, Ultimate Animated Animals | Quaternius | CC0 | Goblins, warchief, golem, wolves |
 | game-icons.net | Lorc, Delapouite, DarkZaitzev, Faithtoken, Sbed | CC BY 3.0 | All UI icons (recolored), achievement badges |

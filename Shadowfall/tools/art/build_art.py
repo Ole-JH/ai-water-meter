@@ -111,6 +111,15 @@ MODELS = [
     *[(f"Props/{n.replace('.gltf', '')}", f"{n}.glb", "dungeon", None) for n in [
         "barrel_large.gltf", "barrel_small_stack.gltf", "crates_stacked.gltf", "box_stacked.gltf",
         "torch_lit.gltf", "torch_mounted.gltf", "banner_red.gltf", "chest"]],
+    # --- The Heroes' Feast after a siege: KayKit Dungeon tavern furniture and tableware, Kenney Food Kit (CC0)
+    *[(f"Feast/{n}", f"{n}.gltf.glb", "dungeon", None) for n in [
+        "table_long_tablecloth", "stool",
+        "plate", "keg_decorated", "candle_lit"]],
+    *[(f"Feast/{n}", f"{n}.glb", "food-kit", None) for n in [
+        "turkey", "whole-ham", "meat-ribs", "meat-cooked", "meat-sausage", "loaf", "loaf-round", "loaf-baguette",
+        "cheese", "cheese-cut", "pie", "cake", "grapes", "apple", "pear", "orange", "watermelon", "pot-stew", "mug", "glass-wine",
+        "wine-red", "wine-white", "plate-dinner",
+        "cutting-board", "skewer"]],
     # --- Graveyard (Kenney Graveyard Kit, CC0)
     *[(f"Graveyard/{n}", f"{n}.glb", "graveyard", None) for n in [
         "gravestone-cross", "gravestone-round", "gravestone-bevel", "gravestone-broken", "gravestone-decorative",

@@ -250,7 +250,7 @@ namespace Shadowfall
                 if (ArtLibrary.Spawn("Seasonal/hay-bale", t, hb - at, 0.55f, ArtLibrary.Fit.Height, a2, false) != null) bales.Add(hb);
             }
             var cask = TownLife.Walkable(at + new Vector3(5f, 0f, 1.6f));
-            ArtLibrary.Spawn("Props/barrel_large", t, cask - at, 1.1f, ArtLibrary.Fit.Height, 0f, false);
+            if (ArtLibrary.Spawn("Feast/keg_decorated", t, cask - at, 1.3f, ArtLibrary.Fit.Height, 90f, true) == null) ArtLibrary.Spawn("Props/barrel_large", t, cask - at, 1.1f, ArtLibrary.Fit.Height, 0f, false);
             ArtLibrary.Spawn("Props/barrel_small_stack", t, cask - at + new Vector3(0.9f, 0f, 0.8f), 1f, ArtLibrary.Fit.Height, 30f, false);
             // the townsfolk: some sat at the benches, the rest dancing and cheering round the fire
             var life = SiegeLife.Get();
