@@ -80,8 +80,9 @@ The settings are in the game menu (++esc++ → **Settings**):
     | Grass | Off, Near, Far | Grass blades up to 30 or 60 paces away |
     | Small details | Off, On | Flowers, ferns, pebbles, mushrooms |
     | Effects | Low, High | Particles, blood stains and the colour grade |
+    | View distance | Near, Normal, Far | How far out the land is drawn before the haze: Near draws far fewer trees and rocks (the biggest help in the forests) |
 
-    *Low* is 75% resolution, no shadows, grass or small details and few lights; *Medium* (the default) 100% resolution, hard
+    *Low* is 75% resolution, no shadows, grass or small details, few lights and a near view distance; *Medium* (the default) 100% resolution, hard
     shadows, near grass and some lights; *High* adds soft far shadows, far grass and many lights. Slow on a laptop? Lower
     *Resolution* first. The resolution is remembered by the browser and used from the first frame next time.
 - **UI scale** makes the whole interface bigger or smaller (70–150%), applied when you let go of the slider.

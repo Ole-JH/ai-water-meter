@@ -28,6 +28,7 @@ namespace Shadowfall
                 Items = new[]
                 {
                     "No more elite champions waiting just outside the gate: elites never spawn near towns or among the beginner wolves, and the pack by Hollowmere's north gate is a gentle level 1-2.",
+                    "New graphics option, View distance: Near draws far fewer trees and rocks in the forests (on by default with Low).",
                 },
             },
             new Entry

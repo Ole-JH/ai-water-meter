@@ -116,7 +116,17 @@ namespace Shadowfall
             Help = "Spell and weather particles, blood stains and the colour grade. Low halves the particles and turns the colour grade off.",
         };
 
-        public static readonly Option[] Options = { Resolution, FrameRate, Shadows, ShadowRange, Lights, Grass, Details, Effects };
+        public static readonly Option ViewDistance = new Option
+        {
+            Key = "sf_g_view", Name = "View distance", Choices = new[] { "Near", "Normal", "Far" }, Presets = new[] { 0, 1, 2 },
+            Help = "How far out the land is drawn before it fades into the haze. Near draws far fewer trees and rocks: " +
+                   "the biggest help out in the forests on a slow machine.",
+        };
+
+        public static readonly Option[] Options = { Resolution, FrameRate, Shadows, ShadowRange, Lights, Grass, Details, Effects, ViewDistance };
+
+        /// <summary>The haze (and with it the camera's far plane) as a share of the full distance.</summary>
+        public static float ViewScale => ViewDistance.Value == 0 ? 0.62f : ViewDistance.Value == 1 ? 0.82f : 1f;
 
         /// <summary>The resolution choices as a multiple of the page's (CSS) pixels; Native = the screen's own ratio.</summary>
         static readonly float[] ResolutionScale = { 0.6f, 0.75f, 1f, 1.5f, 99f };

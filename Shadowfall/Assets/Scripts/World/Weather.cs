@@ -307,6 +307,11 @@ namespace Shadowfall
             RenderSettings.fogColor = Color.Lerp(fog, murk, Mathf.Max(Fog, Cloud * 0.5f));
             RenderSettings.fogStartDistance = Mathf.Lerp(RenderSettings.fogStartDistance, 4f, Fog);
             RenderSettings.fogEndDistance = Mathf.Lerp(RenderSettings.fogEndDistance, 34f, Fog);
+            // the View distance option: closer haze, and nothing drawn past it (the far plane follows below)
+            float view = GameSettings.ViewScale;
+            RenderSettings.fogStartDistance *= Mathf.Lerp(view, 1f, 0.4f);
+            // (never closer than 45 m from the camera: the hero is up to 32 m away; thick weather fog stays as it is)
+            RenderSettings.fogEndDistance = Mathf.Max(Mathf.Min(RenderSettings.fogEndDistance, 45f), RenderSettings.fogEndDistance * view);
             var cam = GameManager.I != null ? GameManager.I.Cam : null;
             if (cam != null)
             {
