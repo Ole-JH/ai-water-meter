@@ -101,9 +101,53 @@ function clientError(req, res) {
   });
 }
 
+// ------------------------------------------------------------------ the update's progress, in the chat
+
+// The auto-deploy (tools/autodeploy.sh) tells the running server how a new version is coming along, and the server
+// tells the players: POST /deploy-status with the DEPLOY_STATUS_TOKEN from server/.env (without one: switched off).
+const DEPLOY_TOKEN = process.env.DEPLOY_STATUS_TOKEN || "";
+let lastDeployDone = null; // { msg, at }: told to heroes who come back in shortly after the restart
+
+function deployMessage(stage, what, secs) {
+  const subj = what ? `: ${what}` : "";
+  switch (stage) {
+    case "new": return `[Update] A new version of Shadowfall is on its way${subj}. Play on; we'll tell you before anything happens.`;
+    case "build": return "[Update] Building the new version... this takes a few minutes. Play on meanwhile.";
+    case "check": return "[Update] Testing the new version...";
+    case "restart": return `[Update] The new version is ready! The server restarts in ${secs} seconds: you'll drop out for a moment and come back in by yourself (reload the page if you don't).`;
+    case "countdown": return `[Update] Restarting in ${secs} seconds...`;
+    case "failed": return "[Update] The new version didn't pass its checks, so nothing changes. Carry on!";
+    case "done": return `[Update] The new version is live${subj}. Welcome back!`;
+    default: return "";
+  }
+}
+
+function deployStatus(req, res) {
+  if (!DEPLOY_TOKEN) { req.resume(); res.writeHead(404); return res.end(); }
+  let body = "";
+  req.setEncoding("utf8");
+  req.on("data", (d) => { body += d; if (body.length > 4096) req.destroy(); });
+  req.on("end", () => {
+    let m;
+    try { m = JSON.parse(body); } catch { m = {}; }
+    if (String(req.headers["x-deploy-token"] || "") !== DEPLOY_TOKEN) { res.writeHead(403); return res.end(); }
+    const stage = String(m.stage || ""), what = String(m.msg || "").replace(/[<>]/g, "").slice(0, 160), secs = Math.max(0, Math.min(600, m.secs | 0));
+    const msg = deployMessage(stage, what, secs);
+    if (!msg) { res.writeHead(400); return res.end(); }
+    res.writeHead(204);
+    res.end();
+    log(`deploy status: ${stage}${what ? " (" + what + ")" : ""}`);
+    broadcast({ t: "sys", msg });
+    if (stage === "done") lastDeployDone = { msg, at: now() };
+    if (stage === "restart" && secs > 10) // a last word before it goes
+      for (const left of [10, 5]) setTimeout(() => broadcast({ t: "sys", msg: deployMessage("countdown", "", left) }), (secs - left) * 1000);
+  });
+}
+
 const server = http.createServer((req, res) => {
   const url = new URL(req.url, "http://localhost");
   if (url.pathname === "/client-error" && req.method === "POST") return clientError(req, res);
+  if (url.pathname === "/deploy-status" && req.method === "POST") return deployStatus(req, res);
   if (url.pathname === "/healthz") {
     res.writeHead(200, { "Content-Type": "application/json" });
     let online = 0, dungeons = 0;
@@ -755,6 +799,8 @@ function completeLogin(s) {
   sendInv(s);
   safeSend(s, JSON.stringify(weather.message()));
   invasions.sendTo(s);
+  // back in after an update's restart: say it's done (the broadcast went out before they were in)
+  if (lastDeployDone && now() - lastDeployDone.at < 180) safeSend(s, JSON.stringify({ t: "sys", msg: lastDeployDone.msg }));
   worldBosses.sendTo(s);
   guilds.entered(s);
   bounties.send(s);

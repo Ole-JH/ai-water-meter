@@ -39,20 +39,26 @@ namespace Shadowfall
 
         float R(float a, float b) => a + (float)rng.NextDouble() * (b - a);
 
-        /// <summary>Finds a free plot inside the walls, clear of houses and the gateways, and builds it.</summary>
+        /// <summary>
+        /// Finds a quiet plot inside the walls: walkable, clear of houses, the gateways, the square and every street (no
+        /// cobbles, gravel or road on it or a step round it), as far towards the walls as can be. Builds it there.
+        /// </summary>
         bool Place(Settlement t)
         {
             var grid = WorldGrid.Instance;
             if (grid == null) return false;
             var r = t.Rect;
             var tries = new List<Vector3>();
-            float[] fx = { 0.22f, 0.78f, 0.5f, 0.3f, 0.7f }, fz = { 0.78f, 0.22f, 0.5f, 0.7f, 0.3f };
-            foreach (var a in fx) foreach (var b in fz) tries.Add(new Vector3(r.xMin + r.width * a, 0f, r.yMin + r.height * b));
+            for (float x = r.xMin + 7f; x <= r.xMax - 7f; x += 2f)
+                for (float z = r.yMin + 6f; z <= r.yMax - 6f; z += 2f)
+                    tries.Add(new Vector3(x, 0f, z));
+            // the edges of town first: a graveyard keeps out of the way
+            tries.Sort((a, b) => Factory.FlatDistance(b, t.Center).CompareTo(Factory.FlatDistance(a, t.Center)));
             for (int pass = 0; pass < 2; pass++)
                 foreach (var c in tries)
                 {
-                    if (Factory.FlatDistance(c, t.Center) < 9f) continue; // not on the square
-                    if (!Clear(c, grid, t, pass == 0 ? 1.5f : 0.4f)) continue;
+                    if (Factory.FlatDistance(c, t.Center) < 10f) continue; // not on the square
+                    if (!Clear(c, grid, t, pass == 0 ? 1.5f : 0.6f)) continue;
                     Centre = c;
                     Build(t);
                     return true;
@@ -62,11 +68,14 @@ namespace Shadowfall
 
         static bool Clear(Vector3 c, WorldGrid grid, Settlement t, float houseGap)
         {
-            for (float x = -W / 2 - 0.5f; x <= W / 2 + 0.5f; x += 1f)
-                for (float z = -D / 2 - 0.5f; z <= D / 2 + 0.5f; z += 1f)
+            var ground = GroundSurface.Current;
+            for (float x = -W / 2 - 1f; x <= W / 2 + 1f; x += 1f)
+                for (float z = -D / 2 - 1f; z <= D / 2 + 1f; z += 1f)
                 {
                     var p = c + new Vector3(x, 0f, z);
                     if (!t.Contains(p.x, p.z) || !grid.IsWalkable(p)) return false;
+                    // no street, path or square under it (or right beside it)
+                    if (ground != null && ground.RoadWeight(p.x, p.z) + ground.Weight(p.x, p.z, GroundSurface.Cobble) + ground.Weight(p.x, p.z, GroundSurface.Gravel) > 0.25f) return false;
                 }
             foreach (var h in WorldGenerator.HouseBounds)
             {

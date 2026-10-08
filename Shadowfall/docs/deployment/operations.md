@@ -72,6 +72,14 @@ a time, so a long client build is never started twice.
 whole build output of the last build is in `.autodeploy/build.log`). To skip the browser check (not recommended), put
 `AUTODEPLOY_CHECK=0` in `.deploy.env`.
 
+**Players hear about it in chat.** Each step is posted to the running game server, which tells everyone online:
+a new version is on its way (with the commit's subject), building, testing, the restart countdown (20 seconds by
+default, with reminders at 10 and 5; `AUTODEPLOY_RESTART_S` in `.deploy.env`, `0` to restart at once), and that it's
+live (also told to those who log back in over the next three minutes) or that it failed its checks and nothing
+changes. The script and the server share a secret, `DEPLOY_STATUS_TOKEN`, which the script writes into `server/.env`
+the first time it runs (so the messages start from the deploy after that one); without it the server ignores the
+posts.
+
 With auto-deploy on you don't need `task update` or `task release` any more: push, and the host takes it from there.
 
 ## Restoring a backup

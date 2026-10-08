@@ -96,6 +96,7 @@ container is running and the machine's CPU, memory and disk. See [Monitoring →
 | `WORLD_BOSS_MINUTES` | `90` | About how often a [world boss](../gameplay/world.md#world-bosses) rises (75-125% of this, only with heroes online). `0` = never (admins can still raise one) |
 | `AUCTION_HOURS` | `48` | How long an [auction](../gameplay/progression.md#auction-house) listing stays up |
 | `RIFT_MINUTES` | `10` | The time limit of a [greater rift](../gameplay/world.md#greater-rifts) |
+| `DEPLOY_STATUS_TOKEN` | (made by the auto-deploy) | Lets the auto-deploy tell players about an update's progress in chat ([operations](operations.md)). Empty: no update messages |
 | `INVASION_MINUTES` | `45` | About how often a [town invasion](../gameplay/world.md#town-invasions) starts (75-125% of this, only with heroes near a walled town). `0` = never (admins can still start one) |
 | `INVASION_WARN_S` | `90` | How long the scouts' warning runs before the first wave (counting only while heroes are near the town) |
 | `INVASION_FIRE_S` | `18` | About how often the raiders' archers set a roof alight during a siege's waves |

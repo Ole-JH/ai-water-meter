@@ -117,6 +117,9 @@ Server → client:
 
 ## Server → client
 
+An update's progress (the auto-deploy posts it to `POST /deploy-status`, see [operations](../deployment/operations.md)) reaches players as ordinary `sys` chat lines starting with `[Update]`.
+
+
 | `t` | Fields | Purpose |
 | --- | --- | --- |
 | `needworld` | — | Ask this client to upload the world map |

@@ -969,7 +969,7 @@ async function main() {
   if (db.url) console.log("Testing against PostgreSQL");
   writeLegacyCharacter("Oldtimer", "oldpass", { level: 7, gold: 99, look: "Mage", x: 144, z: 150 });
   const server = spawn(process.execPath, [path.join(__dirname, "..", "server.js")], {
-    env: { ...process.env, PORT: String(PORT), DATA_DIR, PUBLIC_DIR, ELITE_CHANCE: "0", INVASION_MINUTES: "0", INVASION_GATHER_S: "1", INVASION_WARN_S: "2", INVASION_ABANDON_S: "3", INVASION_SIEGE_RATE: "15", WORLD_BOSS_MINUTES: "0", WORLD_BOSS_SLAM_S: "1", RIFT_COLLAPSE_S: "2", ADMINS: "alice", METRICS_PORT: String(METRICS_PORT), DATABASE_URL: db.url },
+    env: { ...process.env, PORT: String(PORT), DATA_DIR, PUBLIC_DIR, ELITE_CHANCE: "0", INVASION_MINUTES: "0", INVASION_GATHER_S: "1", INVASION_WARN_S: "2", INVASION_ABANDON_S: "3", INVASION_SIEGE_RATE: "15", WORLD_BOSS_MINUTES: "0", WORLD_BOSS_SLAM_S: "1", RIFT_COLLAPSE_S: "2", ADMINS: "alice", DEPLOY_STATUS_TOKEN: "deploytest", METRICS_PORT: String(METRICS_PORT), DATABASE_URL: db.url },
     stdio: ["ignore", "pipe", "pipe"],
   });
   let serverLog = "";
@@ -1003,6 +1003,16 @@ async function main() {
 
     const b = await connect("Bob", "secret2");
     assert.ok(b.find("welcome"), "Bob logs in");
+
+    // The auto-deploy's progress, told to the players in chat (only with the deploy token)
+    const deploy = (body, token) => fetch(`http://localhost:${PORT}/deploy-status`, { method: "POST", headers: { "Content-Type": "application/json", ...(token ? { "X-Deploy-Token": token } : {}) }, body: JSON.stringify(body) });
+    assert.strictEqual((await deploy({ stage: "build" })).status, 403, "deploy status needs the token");
+    assert.strictEqual((await deploy({ stage: "build" }, "wrong")).status, 403, "the right token");
+    assert.strictEqual((await deploy({ stage: "new", msg: "Better feasts" }, "deploytest")).status, 204, "the auto-deploy posts its progress");
+    assert.strictEqual((await deploy({ stage: "restart", secs: 30 }, "deploytest")).status, 204, "and the restart's countdown");
+    await sleep(150);
+    assert.ok(b.all("sys").some((m) => /^\[Update\] A new version of Shadowfall is on its way: Better feasts/.test(m.msg)), "players hear an update is coming");
+    assert.ok(b.all("sys").some((m) => /restarts in 30 seconds/.test(m.msg)), "and when the server restarts");
 
     // Stand next to the wolves north of town
     state(a, 144, 187);

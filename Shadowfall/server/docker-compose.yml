@@ -30,6 +30,9 @@ services:
       MAIL_FROM: ${MAIL_FROM:-}
       PUBLIC_URL: ${PUBLIC_URL:-}       # the game's address, for the link in reset emails
       TRUST_PROXY: ${TRUST_PROXY:-0}    # 1 behind a reverse proxy (client addresses for login rate limits)
+      # The auto-deploy posts its progress here and the server tells the players in chat (tools/autodeploy.sh writes
+      # one into server/.env the first time it runs). Empty: no update messages.
+      DEPLOY_STATUS_TOKEN: ${DEPLOY_STATUS_TOKEN:-}
     expose:
       - "9464"
     depends_on:
