@@ -168,8 +168,8 @@ namespace Shadowfall
             MemLog.Note("world: ScatterDetail");
             BuildGround();
             MemLog.Note("world: BuildGround");
-            // (?nobatch=1, for measuring: the combined copy of every prop is a big share of the memory)
-            if (art && !Application.absoluteURL.Contains("nobatch=1")) StaticBatchingUtility.Combine(deco.gameObject);
+            // (?nobatch=1, for measuring)
+            if (art && !Application.absoluteURL.Contains("nobatch=1")) CombineInSquares();
             MemLog.Note("world: ");
 
             Random.state = oldState;
@@ -929,6 +929,28 @@ namespace Shadowfall
         /// <summary>Grass, flowers, bushes, mushrooms and pebbles. Purely visual: never blocks tiles.</summary>
         /// <summary>The small scattered props (flowers, pebbles, tufts): switched off by Settings > Graphics > Small details.</summary>
         public static Transform DetailRoot { get; private set; }
+
+        /// <summary>
+        /// Static batching, a square of the map at a time. One call over all the decoration needed about 540 MB of
+        /// working memory for a moment (the game's memory never shrinks again, and iOS can't grow it that far: the game
+        /// stuck at 90% loading there); square by square the peak is a small part of that, for the same batches.
+        /// </summary>
+        void CombineInSquares()
+        {
+            const int Square = 48;
+            int n = Mathf.CeilToInt(Mathf.Max(W, H) / (float)Square);
+            var squares = new System.Collections.Generic.List<GameObject>[n * n];
+            foreach (var mf in deco.GetComponentsInChildren<MeshFilter>())
+            {
+                if (mf.sharedMesh == null || mf.GetComponent<MeshRenderer>() == null) continue;
+                var p = mf.transform.position;
+                int sx = Mathf.Clamp((int)(p.x / Square), 0, n - 1), sz = Mathf.Clamp((int)(p.z / Square), 0, n - 1);
+                var list = squares[sz * n + sx] ?? (squares[sz * n + sx] = new System.Collections.Generic.List<GameObject>());
+                list.Add(mf.gameObject);
+            }
+            foreach (var list in squares)
+                if (list != null && list.Count > 1) StaticBatchingUtility.Combine(list.ToArray(), deco.gameObject);
+        }
 
         static WorldGenerator current;
         bool grassBuilt, detailsBuilt;
