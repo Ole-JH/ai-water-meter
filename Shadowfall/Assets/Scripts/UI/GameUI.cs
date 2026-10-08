@@ -1183,6 +1183,15 @@ namespace Shadowfall
                     if (e != null && !e.IsDead) Dot(r, toMap(e.transform.position), e.Def.Boss ? new Color(1f, 0.5f, 0f) : e.Elite ? Enemy.ChampionColor : new Color(0.9f, 0.15f, 0.1f), e.Def.Boss ? 10 : e.Elite ? 8 : 5);
             foreach (var rp in RemotePlayer.ById.Values)
                 if (rp != null && !net.IsPartyMember(rp.Id)) Dot(r, toMap(rp.transform.position), new Color(0.3f, 0.6f, 1f), 7);
+            MapPing.Draw(toMap, r, false);
+            if (Event.current.type == EventType.MouseDown && Event.current.button == 0 && Event.current.alt && InCircle(r, Event.current.mousePosition, 0f))
+            {
+                // back from the (maybe turned) minimap to the world
+                var d = Event.current.mousePosition - r.center;
+                float mx = d.x / r.width * span, my = -d.y / r.height * span;
+                MapPing.Send(new Vector3(pp.x + mx * ca + my * sa, 0f, pp.z - mx * sa + my * ca));
+                Event.current.Use();
+            }
             // Party members in the same place as us (near or far): an arrow in their color, facing where they face.
             foreach (var m in net.Party)
             {
@@ -2007,7 +2016,9 @@ namespace Shadowfall
                     // names appear once you've been nearby (or anywhere in the zone)
                     if (!ZoneKnown(centers[i], 30f) && (Player.I == null || Player.I.Achievements.Get("zone." + zones[i]) == 0)) continue;
                     var c = toMap(centers[i]);
-                    UISkin.Shadowed(new Rect(c.x - 120, c.y - 12, 240, 26), zones[i], UISkin.HeadingCenter, new Color(1f, 0.92f, 0.75f), 2);
+                    bool here = WorldGenerator.ZoneAt(p.transform.position) == zones[i];
+                    UISkin.Shadowed(new Rect(c.x - 140, c.y - 14, 280, 30), zones[i], here ? UISkin.V(UISkin.HeadingCenter, fontSize: UISkin.HeadingCenter.fontSize + 4) : UISkin.HeadingCenter,
+                        here ? UISkin.Gold : new Color(1f, 0.92f, 0.75f, 0.85f), 2);
                 }
                 // The outer towns (Hollowmere is labelled above) and the waystones
                 for (int i = 1; i < WorldGenerator.Towns.Length; i++)
@@ -2026,8 +2037,25 @@ namespace Shadowfall
                         var c = toMap(def.Entrance);
                         UISkin.Shadowed(new Rect(c.x - 100, c.y + 6, 200, 20), def.Name, UISkin.SmallCenter, new Color(1f, 0.7f, 0.45f), 2);
                     }
+                // what you've found: shops, healers, the stash, auction house, bounty boards and dungeon doors
                 foreach (var it in Interactable.All)
-                    if (it is Npc npc && npc.Marker(p, out _) != null && Exploration.Seen(npc.Position)) mark(npc.Position, new Color(1f, 0.85f, 0.1f), 9);
+                {
+                    if (it == null || !Exploration.Seen(it.Position)) continue;
+                    if (it is Npc qn && qn.Marker(p, out _) != null) { mark(qn.Position, new Color(1f, 0.85f, 0.1f), 9); continue; }
+                    string icon = MapIcon(it, out string label);
+                    if (icon == null) continue;
+                    var m = toMap(it.Position);
+                    if (!r.Contains(m)) continue;
+                    var ir = new Rect(m.x - 9, m.y - 9, 18, 18);
+                    bool over = ir.Contains(Event.current.mousePosition);
+                    GUI.color = new Color(0.05f, 0.03f, 0.02f, over ? 0.9f : 0.65f);
+                    GUI.DrawTexture(new Rect(m.x - 12, m.y - 12, 24, 24), UISkin.Circle);
+                    GUI.color = Color.white;
+                    UISkin.IconInSlot(over ? new Rect(m.x - 12, m.y - 12, 24, 24) : ir, UISkin.Icon(icon), Color.white, 0);
+                    if (it is DungeonEntrance de)
+                        UISkin.Shadowed(new Rect(m.x - 100, m.y + 10, 200, 20), de.Def.Name, UISkin.SmallCenter, new Color(1f, 0.7f, 0.45f), 2);
+                    if (over) tooltip = label;
+                }
             }
             if (AdminTools.ShowEnemies)
                 foreach (var e in Enemy.ById.Values)
@@ -2057,9 +2085,17 @@ namespace Shadowfall
                 if (r.Contains(ig)) UISkin.Shadowed(new Rect(ig.x - 110, ig.y + 8, 220, 20), "Under attack!", UISkin.SmallCenter, Invasion.Color, 2);
             }
             mark(p.transform.position, Color.white, 11);
+            MapPing.Draw(toMap, r, true);
 
-            string hint = AdminTools.IsAdmin && !underground ? "Click or M to close   -   Admin: right-click to teleport there" : "Click anywhere or press M to close";
+            string hint = (AdminTools.IsAdmin && !underground ? "Click or M to close   -   Admin: right-click to teleport there" : "Click anywhere or press M to close") +
+                          (net.InParty ? "   -   Alt+click to ping your party" : "");
             UISkin.Shadowed(new Rect(r.x, r.yMax - 28, r.width, 24), hint, UISkin.SmallCenter, UISkin.Cream);
+            if (Event.current.type == EventType.MouseDown && Event.current.button == 0 && Event.current.alt && r.Contains(Event.current.mousePosition))
+            {
+                var mp = Event.current.mousePosition;
+                MapPing.Send(new Vector3(o.x + (mp.x - r.x) / r.width * mw, 0f, o.z + (1f - (mp.y - r.y) / r.height) * mh));
+                Event.current.Use();
+            }
             int click = ClickedIn(new Rect(0, 0, VW, VH));
             if (click == 1 && AdminTools.IsAdmin && !underground && r.Contains(Event.current.mousePosition))
             {
@@ -2069,6 +2105,34 @@ namespace Shadowfall
                 showMap = false;
             }
             else if (click >= 0) showMap = false;
+        }
+
+        /// <summary>The world map's icon for a place you've found (null: not shown), and what hovering it says.</summary>
+        static string MapIcon(Interactable it, out string label)
+        {
+            label = it.DisplayName;
+            switch (it)
+            {
+                case Npc npc when npc.Role == NpcRole.Healer:
+                    label = "<b>" + npc.DisplayName + "</b>\nHealer";
+                    return "heal";
+                case Npc npc when npc.Role == NpcRole.Vendor && npc.Shop != null:
+                    label = "<b>" + npc.DisplayName + "</b>\n" + (string.IsNullOrEmpty(npc.Title) ? npc.Shop.Kind + " goods" : npc.Title);
+                    switch (npc.Shop.Kind)
+                    {
+                        case VendorKind.Weapons: return "sword";
+                        case VendorKind.Armor: return "helm";
+                        case VendorKind.Food: return "cooked_fish";
+                        case VendorKind.Curios: return "gem";
+                        case VendorKind.Companions: return "companions";
+                        default: return "gold";
+                    }
+                case StashChest _: label = "<b>Stash</b>\nYour own chest, the same in every town"; return "stash";
+                case AuctionPodium _: label = "<b>Auction House</b>"; return "trade";
+                case BountyBoard _: label = "<b>Bounty Board</b>\nToday's bounties"; return "quests";
+                case DungeonEntrance de: label = "<b>" + de.Def.Name + "</b>\nDungeon, level " + de.Def.MinLevel + "+"; return "ach_stairs";
+                default: return null;
+            }
         }
 
         /// <summary>True when any of the area around a point has been explored.</summary>

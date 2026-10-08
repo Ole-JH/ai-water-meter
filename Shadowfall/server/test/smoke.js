@@ -921,6 +921,11 @@ async function main() {
     await sleep(300);
     assert.strictEqual(d.all("chat").find((m) => m.ch === "p")?.msg, "group up", "party chat reaches members");
     assert.strictEqual(d.find("qshare")?.k, "wolves", "quests can be shared with the party");
+    b.ws.send(JSON.stringify({ t: "pping", x: 150.5, z: 140.25 }));
+    b.ws.send(JSON.stringify({ t: "pping", x: 1, z: 1 })); // too soon: dropped
+    await sleep(200);
+    const pings = d.all("ping");
+    assert.ok(pings.length === 1 && pings[0].x === 150.5 && pings[0].name === "Bob" && pings[0].di === 0, "map pings reach the party, not too often");
 
     // ---- achievements: announced to the party once, and titles only for what you've earned
     b.ws.send(JSON.stringify({ t: "ach", id: "first_blood" }));

@@ -41,7 +41,8 @@ Every time you enter the world the camera starts in the classic view.
 | ++l++ | Quest log |
 | ++y++ | Achievements and titles ([Achievements & titles](achievements.md)) |
 | ++o++ | Your guild: message of the day and members ([Guilds](world.md#guilds)) |
-| ++m++ | World map |
+| ++m++ | World map: the zones you've found (the one you're in in gold), towns, waystones, and icons for the shops, healers, stash, auction house, bounty boards and dungeon doors you've come across (hover one for its name) |
+| ++alt++ + click on the world map or minimap | Ping that spot for your party: it ripples on their maps and a pillar of light stands there for a few seconds |
 | **R** / **N** button on the minimap | The minimap turns with the camera (R, the default) or keeps north up (N); the gold **N** on the rim always points north |
 | ++f1++ or ++h++ | Help |
 | ++f10++ | Admin panel (admins only, see [Admin module](../deployment/admin.md)) |

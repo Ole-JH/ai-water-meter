@@ -54,6 +54,7 @@ namespace Shadowfall
         public float x, z, tx, tz, dmg;
         public bool hasSave;
         public string el;       // "kill": the elite's name when an elite died (better loot)
+        public int di;          // "ping": the dungeon instance it was pinged in (0 = overworld)
         public double now;      // server clock (ms since 1970) in "welcome", for the day/night cycle
         public string ch;       // chat channel: "" = everyone, "p" = party, "w" = whisper to you, "wto" = your whisper
         public NetPartyMember[] pm; // "party": members (id = leader)
@@ -178,6 +179,8 @@ namespace Shadowfall
 
     /// <summary>Party commands: pinvite (name), paccept, pdecline, pleave, pkick (id), pshare (q).</summary>
     [Serializable] public class PartyCmd { public string t, name, q; public int id; }
+    /// <summary>A map ping for the party (server-space position).</summary>
+    [Serializable] public class PingCmd { public string t = "pping"; public float x, z; }
     [Serializable] public class TradeCmd { public string t; public int id, gold; public int[] slots; }
     /// <summary>Loot on the ground that only we can see (gold or an item; id = what to send to pick it up).</summary>
     [Serializable] public class NetDrop { public int id, gold; public float x, z; public Item item; }

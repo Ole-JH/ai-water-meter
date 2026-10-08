@@ -1037,6 +1037,16 @@ const partyHandlers = {
     leaveParty(target, "was removed from the party.");
   },
 
+  /** A map ping: relayed to the rest of the party (at most about one a second). */
+  pping(s, m) {
+    const p = partyOf(s);
+    const x = Number(m.x), z = Number(m.z), now = Date.now();
+    if (!p || !s.inWorld || !Number.isFinite(x) || !Number.isFinite(z) || now - (s.lastPing || 0) < 600) return;
+    s.lastPing = now;
+    const data = JSON.stringify({ t: "ping", id: s.id, name: s.name, x: r2(x), z: r2(z), di: s.inst || 0 });
+    for (const o of partyMembers(p)) if (o !== s) safeSend(o, data);
+  },
+
   pshare(s, m) {
     const p = partyOf(s);
     const q = String(m.q || "");

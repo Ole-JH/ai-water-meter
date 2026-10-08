@@ -271,6 +271,12 @@ namespace Shadowfall
         public void KickFromParty(int id) => PartySend("pkick", id: id);
         public void ShareQuest(QuestDef q) => PartySend("pshare", q: q.Id);
 
+        /// <summary>Pings a spot (client space) for the party (see <see cref="MapPing"/>).</summary>
+        public void Ping(Vector3 world)
+        {
+            if (State == ConnState.InWorld) Send(new PingCmd { x = world.x - Offset.x, z = world.z - Offset.z });
+        }
+
         public void AnswerPartyInvite(bool accept)
         {
             PartySend(accept ? "paccept" : "pdecline");
@@ -557,6 +563,9 @@ namespace Shadowfall
                     GameUI.Log(m.name + " invites you to join a party.", PartyColor);
                     break;
                 case "qshare": HandleQuestShare(m); break;
+                case "ping":
+                    if (m.di == DungeonId) MapPing.Add(new Vector3(m.x, 0f, m.z) + Offset, GameUI.MemberColor(m.id), m.name);
+                    break;
 
                 case "sys":
                     if (m.msg != null && m.msg.StartsWith("[admin] ")) AdminTools.LastResult = m.msg.Substring(8);

@@ -24,6 +24,16 @@ namespace Shadowfall
         {
             new Entry
             {
+                Id = 66, Date = "2026-10-08", Title = "Over here!",
+                Items = new[]
+                {
+                    "Alt+click the world map or minimap to ping a spot for your party: it ripples on their maps, a pillar of light marks it and a bell rings.",
+                    "The world map shows the shops, healers, stashes, auction house, bounty boards and dungeon doors you've found.",
+                    "The zone you're in stands out on the world map.",
+                },
+            },
+            new Entry
+            {
                 Id = 65, Date = "2026-10-08", Title = "Points well spent",
                 Items = new[]
                 {
