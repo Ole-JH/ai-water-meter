@@ -125,6 +125,11 @@ Click a gem in your bags, then click an item (in the bags or worn) with an empty
 
 Weapon and armor merchants in every walled town (Gorrin in Hollowmere) have a **Salvage & Reforge Gear** button.
 
+Every walled town's smith (Gorrin, Halvard, Tariq, Bryn) works at an anvil by a hearth of coals, with a quench bucket
+and a pile of salvaged materials. What you salvage or reforge is done there while you watch: the piece is laid on the
+anvil and hammered. Salvaged gear shatters and its materials fly onto the pile. A reforged property burns off in red,
+the new one is stamped in gold, and the piece hisses in the bucket. The property's row in the window glows gold.
+
 **Salvaging** breaks a piece of gear in your bags into materials; any gems socketed in it come back to your bags.
 **Salvage All Common & Magic Gear** does every common and magic piece at once.
 

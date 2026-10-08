@@ -51,6 +51,7 @@ namespace Shadowfall
             StashChest.Spawn();
             Waystone.SpawnAll();
             Rift.SpawnStone();
+            ForgeStation.BuildAll();               // anvils and hearths by the smiths
             gameObject.AddComponent<Ambience>();
             Music.Ensure();
             Weather.Ensure();

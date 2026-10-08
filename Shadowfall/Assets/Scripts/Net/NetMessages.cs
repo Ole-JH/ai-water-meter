@@ -59,6 +59,7 @@ namespace Shadowfall
         // "dungeon": id (0 = back in the overworld at x, z), l = depth, k = name, plus the generated layout
         public int w, h, seed;
         public int d, n, df;           // "dungeon": which dungeon (DungeonDef index), how many levels, difficulty
+        public int j;                  // "iok" reforge: which property was reforged
         public float lb;               // "kill": loot bonus from the dungeon difficulty
         public bool admin;             // "welcome": this account is an admin
         public string cells;

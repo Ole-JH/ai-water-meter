@@ -679,6 +679,18 @@ namespace Shadowfall
             return "!";
         }
 
+        /// <summary>Where this NPC's work is (a blacksmith's anvil, see ForgeStation): they face it while working.</summary>
+        public Vector3? WorkSpot;
+        float busyUntil;
+
+        /// <summary>Does a piece of work at <paramref name="at"/> now (the forge: a hammer blow), facing it.</summary>
+        public void Work(Vector3 at, string clip = "1H_Melee_Attack_Chop")
+        {
+            busyUntil = Time.time + 1.2f;
+            Factory.Face(transform, at);
+            if (view != null) view.Action(clip, 1.1f);
+        }
+
         void Update()
         {
             if (view != null) view.UpdateLocomotion(0f);
@@ -686,6 +698,7 @@ namespace Shadowfall
             var p = Player.I;
             float dist = p != null ? Factory.FlatDistance(p.transform.position, transform.position) : 999f;
             Chatter(p, dist);
+            if (Time.time < busyUntil) return; // at the anvil for us
             if (dist < 6f)
                 Factory.Face(transform, p.transform.position, Time.deltaTime * 4f);
             else if (Working()) { }
@@ -713,6 +726,7 @@ namespace Shadowfall
         bool Working()
         {
             if (!work.TryGetValue(DisplayName, out var w) || DayNight.Hour < w.from || DayNight.Hour >= w.to) return false;
+            if (WorkSpot.HasValue) Factory.Face(transform, WorkSpot.Value, Time.deltaTime * 4f);
             if (Time.time < workAt) return true;
             workAt = Time.time + w.every * Random.Range(0.8f, 1.3f);
             if (view != null)
@@ -724,7 +738,8 @@ namespace Shadowfall
             if (w.sound != null && p != null && Factory.FlatDistance(p.transform.position, transform.position) < 18f)
             {
                 Sfx.Play(w.sound, transform.position + Vector3.up, 0.3f, 0.12f, 18f);
-                if (w.sound == "anvil" && SpellFx.Ready) SpellFx.Hit(transform.position + transform.forward * 0.8f + Vector3.up * 0.9f, new Color(1f, 0.6f, 0.2f), false, 10);
+                if (w.sound == "anvil" && SpellFx.Ready)
+                    SpellFx.Hit(WorkSpot.HasValue ? WorkSpot.Value + Vector3.up * 0.8f : transform.position + transform.forward * 0.8f + Vector3.up * 0.9f, new Color(1f, 0.6f, 0.2f), false, 10);
             }
             return true;
         }

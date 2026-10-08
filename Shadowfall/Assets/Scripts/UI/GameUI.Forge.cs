@@ -11,6 +11,14 @@ namespace Shadowfall
         bool forgeOpen;
         int forgeSelected = -1;
 
+        /// <summary>The piece just sent to the smith (salvage or reforge): what the forge's show needs once the server answers.</summary>
+        public static (Color color, bool weapon, string oldText) ForgePending;
+        static int forgeFlashRow = -1;
+        static float forgeFlashAt;
+
+        /// <summary>The server reforged property <paramref name="row"/>: its row glows gold for a moment.</summary>
+        public static void ForgeFlash(int row) { forgeFlashRow = row; forgeFlashAt = Time.time; }
+
         public void OpenForge() { forgeOpen = true; forgeSelected = -1; dialogNpc = null; Sfx.Play2D("anvil", 0.5f); }
 
         void DrawForge(Player p)
@@ -72,11 +80,22 @@ namespace Shadowfall
                     {
                         var mod = sel.Mods[m];
                         bool can = Forge.CanReforge(sel, m);
+                        float flash = m == forgeFlashRow ? 1f - (Time.time - forgeFlashAt) / 2.2f : 0f;
+                        if (flash > 0f)
+                        {
+                            GUI.color = new Color(1f, 0.82f, 0.3f, 0.45f * flash);
+                            GUI.DrawTexture(new Rect(x, y, w - 124, 34), UISkin.White);
+                            GUI.color = Color.white;
+                        }
                         GUI.Label(new Rect(x + 6, y + 6, w - 130, 24), "<color=#" + (can ? "3d5aa8" : "8a8070") + ">" + Item.StatText(mod.Stat, mod.Value) + "</color>" +
                             (sel.Reforged == m + 1 ? "  <i>(reforged)</i>" : ""), UISkin.InkRich);
                         var b = new Rect(x + w - 118, y, 118, 34);
                         GUI.enabled = can && Forge.CanAfford(p, sel);
-                        if (UISkin.Btn(b, "Reforge", UISkin.Button)) NetClient.I?.Op("reforge", i: forgeSelected, j: m);
+                        if (UISkin.Btn(b, "Reforge", UISkin.Button))
+                        {
+                            ForgePending = (sel.NameColor, sel.Slot == EquipSlot.Weapon, Item.StatText(mod.Stat, mod.Value));
+                            NetClient.I?.Op("reforge", i: forgeSelected, j: m);
+                        }
                         GUI.enabled = true;
                         if (!can && b.Contains(Event.current.mousePosition)) tooltip = "This piece has been reforged before: only the same property can be reforged again.";
                         y += 38;
@@ -91,6 +110,7 @@ namespace Shadowfall
                 }
                 if (UISkin.Btn(new Rect(x, y, 240, 40), "Salvage It", UISkin.Button))
                 {
+                    ForgePending = (sel.NameColor, sel.Slot == EquipSlot.Weapon, null);
                     NetClient.I?.Op("salvage", i: forgeSelected);
                     forgeSelected = -1;
                 }
@@ -99,7 +119,10 @@ namespace Shadowfall
             }
 
             if (UISkin.Btn(new Rect(x, r.yMax - 64, w, 42), "Salvage All Common & Magic Gear", UISkin.Button))
+            {
+                ForgePending = (new Color(0.55f, 0.55f, 0.6f), false, null);
                 NetClient.I?.Op("salvagejunk");
+            }
         }
     }
 }

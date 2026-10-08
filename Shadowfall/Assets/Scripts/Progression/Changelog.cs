@@ -24,6 +24,15 @@ namespace Shadowfall
         {
             new Entry
             {
+                Id = 39, Date = "2026-10-08", Title = "At the anvil",
+                Items = new[]
+                {
+                    "The smiths of the walled towns have a real forge: an anvil with a glowing ingot, a hearth of coals with smoke and embers, a quench bucket and a pile of salvaged scrap.",
+                    "Salvaging and reforging happen there while you watch. The smith hammers your piece. Salvaged gear shatters and its materials fly onto the pile. A reforged property burns away in red, the new one is stamped in gold, and the piece is quenched with a hiss.",
+                },
+            },
+            new Entry
+            {
                 Id = 38, Date = "2026-10-08", Title = "Giants worth gathering for",
                 Items = new[]
                 {

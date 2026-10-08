@@ -95,11 +95,22 @@ namespace Shadowfall
                     GameUI.Log((m.op == "salvage" ? "You salvage " + m.name : "You salvage " + m.n + " piece" + (m.n == 1 ? "" : "s") + " of gear") +
                         (m.items != null && m.items.Length > 0 ? ": " + string.Join(", ", m.items) + "." : "."), new Color(0.75f, 0.85f, 1f));
                     p.Achievements.Add("salvaged", m.op == "salvage" ? 1 : m.n);
+                    {
+                        var forge = ForgeStation.Near(p.transform.position);
+                        if (forge != null) forge.Salvage(GameUI.ForgePending.color, GameUI.ForgePending.weapon, m.items);
+                    }
                     break;
                 case "reforge":
                     Sfx.Play2D("anvil", 0.7f, 1.15f);
                     GameUI.Log("Reforged " + m.name + ": " + Item.StatText((Stat)m.n, int.TryParse(m.k, out var rv) ? rv : 0) + " (" + m.gold + " gold).", new Color(0.75f, 0.85f, 1f));
                     p.Achievements.Add("reforged");
+                    GameUI.ForgeFlash(m.j);
+                    {
+                        var forge = ForgeStation.Near(p.transform.position);
+                        if (forge != null)
+                            forge.Reforge(GameUI.ForgePending.color, GameUI.ForgePending.weapon, GameUI.ForgePending.oldText,
+                                Item.StatText((Stat)m.n, int.TryParse(m.k, out var nv) ? nv : 0));
+                    }
                     break;
                 case "fuse":
                     Sfx.Play2D("anvil", 0.6f);
