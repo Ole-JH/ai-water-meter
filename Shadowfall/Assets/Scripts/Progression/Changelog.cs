@@ -24,6 +24,16 @@ namespace Shadowfall
         {
             new Entry
             {
+                Id = 46, Date = "2026-10-08", Title = "Puddles and lightning",
+                Items = new[]
+                {
+                    "Puddles gather as the rain soaks the ground, with raindrops rippling on them. They shrink as it dries and freeze over in winter.",
+                    "In a thunderstorm, lightning sometimes strikes a tree near you. It burns for a while, then stands charred and bare.",
+                    "Your breath steams in the cold.",
+                },
+            },
+            new Entry
+            {
                 Id = 45, Date = "2026-10-08", Title = "Wanted",
                 Items = new[]
                 {

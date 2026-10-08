@@ -278,6 +278,7 @@ namespace Shadowfall
             nextBolt = Random.Range(7f, 22f) / Mathf.Max(0.5f, Intensity);
             flash = Random.Range(0.8f, 1.4f);
             thunderAt = Time.time + Random.Range(0.4f, 2.5f);
+            if (Random.value < 0.45f) WeatherDetail.Strike(p.transform.position); // now and then a tree near by is hit
         }
 
         /// <summary>After DayNight has set the light and fog for the hour: clouds, fog, snow glare and lightning on top.</summary>

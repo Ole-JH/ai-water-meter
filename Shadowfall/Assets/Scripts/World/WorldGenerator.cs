@@ -66,6 +66,9 @@ namespace Shadowfall
         float LV => (float)lr.NextDouble();
         string Pick(params string[] options) => options[vr.Next(options.Length)];
 
+        /// <summary>The living trees of the wilds (lightning can strike them: WeatherDetail).</summary>
+        public static readonly System.Collections.Generic.List<GameObject> Trees = new System.Collections.Generic.List<GameObject>();
+
         GameObject Art(string path, Vector3 pos, float size, ArtLibrary.Fit fit = ArtLibrary.Fit.Height, float yaw = 0f, bool shadows = true) =>
             art ? ArtLibrary.Spawn(path, deco, pos, size, fit, yaw, shadows, true, true) : null;
 
@@ -663,7 +666,11 @@ namespace Shadowfall
             {
                 LR(0f, dead ? 180f : 1f); // keep the layout RNG in step with the primitive version
                 if (dead) Art(Pick("Trees/Dead_1", "Trees/Dead_2", "Trees/Dead_3"), p, VR(4f, 6f), ArtLibrary.Fit.Height, VR(0, 360));
-                else Art(Pick("Trees/Pine_1", "Trees/Pine_2", "Trees/Pine_3", "Trees/Pine_1", "Trees/Broadleaf_1", "Trees/Broadleaf_2"), p, VR(5.5f, 8f), ArtLibrary.Fit.Height, VR(0, 360));
+                else
+                {
+                    var tree = Art(Pick("Trees/Pine_1", "Trees/Pine_2", "Trees/Pine_3", "Trees/Pine_1", "Trees/Broadleaf_1", "Trees/Broadleaf_2"), p, VR(5.5f, 8f), ArtLibrary.Fit.Height, VR(0, 360));
+                    if (tree != null) Trees.Add(tree); // (no RNG: the layout stays the same)
+                }
                 return;
             }
             var trunk = new Color(0.3f, 0.22f, 0.15f);

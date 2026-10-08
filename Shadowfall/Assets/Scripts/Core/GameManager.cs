@@ -58,6 +58,7 @@ namespace Shadowfall
             gameObject.AddComponent<Ambience>();
             Music.Ensure();
             Weather.Ensure();
+            WeatherDetail.Ensure();
             SeasonalTown.Ensure();
 
             gameObject.AddComponent<NetClient>();

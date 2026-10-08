@@ -313,7 +313,9 @@ picked from what fits the season: clear skies, clouds, rain, thunderstorms or fo
 the weather.
 
 - **Rain** darkens and soaks the ground (it dries out slowly afterwards), splashes on the ground and drums on your ears.
-  **Thunderstorms** add lightning flashes and thunder.
+  **Thunderstorms** add lightning flashes and thunder, and now and then a bolt strikes a tree near you: it burns for
+  a while and stands charred and bare afterwards. Puddles gather in the hollows as the rain soaks the ground, with
+  raindrop rings on them, and shrink as it dries; in winter they're frozen over. In the cold your breath steams.
 - **Fog** closes in until you can barely see the next house.
 - **Snow** falls where it's cold: everywhere in winter, and in the north (Whisperwood) in spring and autumn. It **piles up**
   while it snows and melts slowly when it stops (in winter it never quite goes). Storms in winter are blizzards.
