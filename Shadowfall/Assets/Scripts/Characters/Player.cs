@@ -357,7 +357,9 @@ namespace Shadowfall
                 Level++;
                 Achievements.Max("level", Level);
                 StatPoints += 5;
+                float lifeBefore = MaxHealth, manaBefore = MaxMana;
                 RecalculateStats();
+                LevelUpReadout(Mathf.RoundToInt(MaxHealth - lifeBefore), Mathf.RoundToInt(MaxMana - manaBefore));
                 Health = MaxHealth;
                 Mana = MaxMana;
                 GameUI.Banner("LEVEL UP!  You are now level " + Level, new Color(1f, 0.85f, 0.2f));
@@ -1742,6 +1744,9 @@ namespace Shadowfall
             }
             NetClient.I?.Op("equip", i: index);
             Sfx.Play2D("equip", 0.6f);
+            Avatar.ShowOff();                      // the figure in the character window turns to show it off
+            GameUI.EquipGlint(item.Slot);          // and its slot glints
+            SpellFx.Hit(transform.position + Vector3.up * 1.2f, item.NameColor, false, 10);
         }
 
         public void Unequip(EquipSlot slot)
@@ -2051,6 +2056,33 @@ namespace Shadowfall
                 yield return null;
             }
             body.localScale = full;
+        }
+
+        /// <summary>A level gained: a golden flash, and what it brought rising off the hero one line after another.</summary>
+        void LevelUpReadout(int life, int mana)
+        {
+            GameUI.ScreenFlash(new Color(1f, 0.85f, 0.4f), 0.6f);
+            StartCoroutine(Readout(new[]
+            {
+                life > 0 ? "+" + life + " life" : null,
+                mana > 0 ? "+" + mana + " mana" : null,
+                "+5 attribute points",
+                "+1 talent point",
+            }));
+            Avatar.ShowOff();
+        }
+
+        System.Collections.IEnumerator Readout(string[] lines)
+        {
+            yield return new WaitForSeconds(0.5f);
+            var gold = new Color(1f, 0.88f, 0.45f);
+            foreach (var l in lines)
+            {
+                if (l == null) continue;
+                GameUI.Float(transform.position + Vector3.up * 2.6f, l, gold, 1.05f, false);
+                Sfx.Play2D("ui_click", 0.3f, 1.4f);
+                yield return new WaitForSeconds(0.28f);
+            }
         }
 
         /// <summary>When we last died (the death screen fades in from it).</summary>

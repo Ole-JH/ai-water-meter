@@ -1672,10 +1672,31 @@ namespace Shadowfall
             if (pb.Spent > 0 && UISkin.Btn(new Rect(r.x + 32, y + 4, 130, 26), "Reset points", UISkin.Button)) p.ResetParagon();
         }
 
+        static EquipSlot glintSlot;
+        static float glintAt = -10f;
+
+        /// <summary>Something was just put on in <paramref name="slot"/>: its square in the character window glints.</summary>
+        public static void EquipGlint(EquipSlot slot) { glintSlot = slot; glintAt = Time.unscaledTime; }
+
         void DrawEquipSlot(Player p, Rect r, EquipSlot slot, bool labelLeft)
         {
             var item = p.Inventory.GetEquipped(slot);
             DrawItemSlot(r, item, p, SlotIcon(slot));
+            float g = (Time.unscaledTime - glintAt) / 0.6f;
+            if (slot == glintSlot && g < 1f && item != null)
+            {
+                // a bright band sweeping across the square, and a border in the item's colour fading out
+                float bx = r.x - 16f + (r.width + 16f) * g;
+                GUI.color = new Color(1f, 1f, 1f, 0.45f * (1f - g));
+                GUI.DrawTexture(new Rect(Mathf.Max(r.x, bx), r.y, Mathf.Max(0f, Mathf.Min(16f, r.xMax - bx)), r.height), UISkin.White);
+                var c = item.NameColor;
+                GUI.color = new Color(c.r, c.g, c.b, 1f - g);
+                GUI.DrawTexture(new Rect(r.x - 2, r.y - 2, r.width + 4, 2), UISkin.White);
+                GUI.DrawTexture(new Rect(r.x - 2, r.yMax, r.width + 4, 2), UISkin.White);
+                GUI.DrawTexture(new Rect(r.x - 2, r.y, 2, r.height), UISkin.White);
+                GUI.DrawTexture(new Rect(r.xMax, r.y, 2, r.height), UISkin.White);
+                GUI.color = Color.white;
+            }
             if (item != null && r.Contains(Event.current.mousePosition))
                 tooltip = item.Tooltip(p) + "\n<color=#998877>Click to unequip</color>";
             if (item == null && r.Contains(Event.current.mousePosition))

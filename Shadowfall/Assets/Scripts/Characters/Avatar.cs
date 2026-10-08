@@ -19,7 +19,15 @@ namespace Shadowfall
         CharacterView view;
         string look, weapon;
         bool helm, built;
-        float turn;
+        float turn, showT = -1f;
+
+        /// <summary>New gear (or a level): the figure turns round once to show it off, and cheers.</summary>
+        public static void ShowOff()
+        {
+            if (I == null) return;
+            I.showT = 0f;
+            I.view?.Cheer();
+        }
 
         /// <summary>The rendered avatar (full body, transparent background), or null when no hero is in the world.</summary>
         public static Texture Texture => I != null && I.view != null && I.rt != null ? I.rt : null;
@@ -104,7 +112,14 @@ namespace Shadowfall
             view.UpdateLocomotion(0f);
             // A slow, gentle sway so the figure feels alive.
             turn += Time.unscaledDeltaTime;
-            view.Root.transform.localRotation = Quaternion.Euler(0f, Mathf.Sin(turn * 0.6f) * 14f, 0f);
+            float spin = 0f;
+            if (showT >= 0f)
+            {
+                showT += Time.unscaledDeltaTime / 1.1f;
+                spin = Mathf.SmoothStep(0f, 360f, Mathf.Clamp01(showT));
+                if (showT >= 1f) showT = -1f;
+            }
+            view.Root.transform.localRotation = Quaternion.Euler(0f, Mathf.Sin(turn * 0.6f) * 14f + spin, 0f);
         }
 
         /// <summary>Dungeons use close fog; the studio camera renders without it.</summary>

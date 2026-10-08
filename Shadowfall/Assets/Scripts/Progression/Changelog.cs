@@ -24,6 +24,15 @@ namespace Shadowfall
         {
             new Entry
             {
+                Id = 52, Date = "2026-10-08", Title = "Level up, gear up",
+                Items = new[]
+                {
+                    "A level up flashes gold, and what it brought (life, mana, attribute and talent points) rises off you line by line.",
+                    "Putting on gear glints its slot in the character window, and your figure there turns round to show it off.",
+                },
+            },
+            new Entry
+            {
                 Id = 51, Date = "2026-10-08", Title = "A livelier screen",
                 Items = new[]
                 {
