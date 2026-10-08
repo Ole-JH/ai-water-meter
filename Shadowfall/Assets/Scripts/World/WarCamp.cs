@@ -69,6 +69,14 @@ namespace Shadowfall
                 if (!Free(p)) continue;
                 ArtLibrary.Spawn("Props/banner_red", root, p, 2.6f, ArtLibrary.Fit.Height, Quaternion.LookRotation(toGate).eulerAngles.y + R(-15f, 15f));
             }
+            // Torches on poles around the camp (they burn day and night; after dark they're what you see of it)
+            for (int i = 0; i < 4; i++)
+            {
+                var p = camp + Quaternion.Euler(0f, i * 90f + 45f, 0f) * Vector3.forward * 6.5f;
+                if (!Free(p)) continue;
+                Factory.Prim(PrimitiveType.Cylinder, root, p + Vector3.up * 1.1f, new Vector3(0.08f, 1.1f, 0.08f), new Color(0.3f, 0.2f, 0.12f));
+                PropFire.Add(root, p + Vector3.up * 2.3f, new Color(1f, 0.6f, 0.25f), 0.35f, false);
+            }
             // Supplies: crates and barrels, a weapon rack's worth of spears stuck in the ground
             string[] stores = { "Props/barrel_small_stack", "Props/crates_stacked", "Props/barrel_large" };
             for (int i = 0; i < 4; i++)

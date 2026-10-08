@@ -832,9 +832,7 @@ namespace Shadowfall
                     if (targetIsMe && p != null && !p.IsDead) p.TakeDamage(m.dmg, e);
                     else if (m.tid < 0 && e != null && Invasion.Active) // an invader battering the town gate
                     {
-                        Rampart.Struck(targetPos);
-                        Sfx.Play("chop", targetPos + Vector3.up, 0.8f, 0.1f, 40f);
-                        SpellFx.Hit(targetPos + Vector3.up * 1.2f, new Color(0.75f, 0.55f, 0.3f), false, 6); // splinters
+                        Rampart.Struck(targetPos, e.Def.Name == "Battering Ram" ? 1f : e.Def.Scale >= 1.3f || e.Elite ? 0.5f : 0.25f);
                     }
                     break;
 

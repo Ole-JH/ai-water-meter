@@ -470,6 +470,11 @@ namespace Shadowfall
 
         float nextVoice;
 
+        /// <summary>A raider in a war camp jeering (SiegeLife).</summary>
+        public void Cheer() { if (view != null && !IsDead) view.Cheer(); }
+        /// <summary>Busy with something: sharpening a blade, checking a strap.</summary>
+        public void Busy() { if (view != null && !IsDead) view.Interact(); }
+
         public void PlayAttack(Vector3 targetPos)
         {
             attackAnim = 0f;

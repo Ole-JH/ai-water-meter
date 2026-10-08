@@ -207,10 +207,23 @@ namespace Shadowfall
             return go;
         }
 
-        /// <summary>An invader swung at the gate (the hit's splinters are played by the caller).</summary>
-        public static void Struck(Vector3 at)
+        /// <summary>
+        /// An invader swung at the gate (<paramref name="force"/> 0..1: a raider's blow is small, the battering ram's is 1):
+        /// the gate shakes, splinters and dust fly, the thud carries across the town and the ground shakes under you if
+        /// you're close.
+        /// </summary>
+        public static void Struck(Vector3 at, float force = 0.25f)
         {
             if (gate != null && Factory.FlatDistance(at, gate.transform.position) < 6f) gate.Shake();
+            Sfx.Play("chop", at + Vector3.up, 0.6f + force * 0.4f, 0.1f, 40f);
+            if (force >= 0.5f) Sfx.Play(force >= 1f ? "boom" : "hit_heavy", at + Vector3.up, 0.5f + force * 0.4f, 0.08f, force >= 1f ? 140f : 70f);
+            SpellFx.Hit(at + Vector3.up * 1.2f, new Color(0.75f, 0.55f, 0.3f), false, Mathf.RoundToInt(6 + force * 10)); // splinters
+            if (force >= 0.5f) SpellFx.Dust(at, 0.6f + force, new Color(0.7f, 0.62f, 0.5f));
+            var p = Player.I;
+            if (p == null) return;
+            float d = Factory.FlatDistance(p.transform.position, at);
+            float reach = 12f + force * 28f;
+            if (d < reach) CameraRig.Shake(Mathf.Lerp(0.05f + force * 0.25f, 0f, d / reach));
         }
 
         /// <summary>Remote heroes stand on the walkway when the server says they're on a wall.</summary>

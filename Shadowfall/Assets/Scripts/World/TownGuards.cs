@@ -20,7 +20,32 @@ namespace Shadowfall
         public Vector3 Head => transform.position + Vector3.up * 2.25f;
 
         CharacterView view;
+        CharacterLook look;
         Vector3 target;
+        // what they shout (one voice at a time across the line, so it doesn't turn into a babble)
+        static float nextShout;
+        static readonly string[] archerCalls = { "Loose!", "Mark your targets!", "Nock! Draw! Loose!", "Keep them off the gate!", "Another one, left side!" };
+        static readonly string[] soldierCalls = { "Hold the line!", "Shields up!", "For the town!", "Push them back!", "Stand fast, lads!", "Not one step back!" };
+        static readonly string[] hurtCalls = { "Argh!", "I'm hit!", "Still standing!", "Is that all you've got?" };
+        static readonly string[] downCalls = { "Man down!", "We lost one! Close the gap!", "Medic! Get him out of here!" };
+
+        static void Shout(TownGuards who, string[] lines, float chance)
+        {
+            if (who == null || Time.time < nextShout || Random.value > chance) return;
+            var p = Player.I;
+            if (p == null || Factory.FlatDistance(p.transform.position, who.transform.position) > 35f) return;
+            nextShout = Time.time + Random.Range(3f, 6f);
+            Speech.Say(who.transform, 2.5f, lines[Random.Range(0, lines.Length)]);
+        }
+
+        /// <summary>A guard near <paramref name="at"/> that's still standing (to call out a fall).</summary>
+        static TownGuards Nearest(Vector3 at)
+        {
+            TownGuards best = null;
+            float bd = 15f;
+            foreach (var g in All.Values) if (g != null && g.dieAt < 0f && Factory.FlatDistance(g.transform.position, at) < bd) { bd = Factory.FlatDistance(g.transform.position, at); best = g; }
+            return best;
+        }
         float climbT = -1f, dieAt = -1f, speed;
         Vector3 lastPos;
 
@@ -53,6 +78,7 @@ namespace Shadowfall
                 ? new CharacterLook { Model = "Characters/RogueHooded", Height = 1.85f, Tint = new Color(0.85f, 0.95f, 1.1f) }
                 : new CharacterLook { Model = "Characters/Knight", Height = 1.95f, Tint = new Color(0.85f, 0.9f, 1.1f), Weapon = "sword" };
             tg.view = CharacterView.Create(go.transform, look);
+            tg.look = look;
             if (tg.Archer)
             {
                 // climbs up the inside of the wall onto the walkway, from just behind it
@@ -83,19 +109,25 @@ namespace Shadowfall
                     Projectile.FireVisual(from, at + Vector3.up, 16f, new Color(0.85f, 0.75f, 0.55f), 0.3f, 30f)
                         .WithTrail(SpellFx.Trail.Arrow).WithShape(Projectile.Shape.Arrow).OverWalls(); // down from the wall walk
                     Sfx.Play("bow", from, 0.35f, 0.1f, 30f);
+                    Shout(tg, archerCalls, 0.3f);
                     break;
                 case "swing":
                     tg.Face(at);
                     if (tg.view != null) tg.view.Attack(0.8f);
                     Sfx.Play("swing", tg.transform.position + Vector3.up, 0.35f, 0.12f, 25f);
+                    Shout(tg, soldierCalls, 0.3f);
                     break;
                 case "hurt":
                     if (tg.view != null) tg.view.Hit();
                     Sfx.Play("hit_armor", tg.transform.position + Vector3.up, 0.3f, 0.15f, 25f);
+                    Shout(tg, hurtCalls, 0.2f);
                     break;
                 case "die":
                     All.Remove(tg.Id);
                     tg.Fall();
+                    nextShout = 0f;
+                    Shout(Nearest(tg.transform.position), downCalls, 1f);
+                    if (!tg.Archer) SiegeLife.GuardDown(tg.transform.position, tg.look); // carried back to the healer
                     break;
             }
         }

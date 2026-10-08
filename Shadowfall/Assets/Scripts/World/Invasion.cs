@@ -27,6 +27,7 @@ namespace Shadowfall
             Current = iv == null || iv.phase == "none" ? null : iv;
             Rampart.Sync(); // the gate, the ladders and the helpers
             WarCamp.Sync(); // the raiders' camp outside the gate
+            SiegeLife.Sync(); // refugees, the scout, the wounded
             TownGuards.Sync(Current != null ? Current.gd : null, Current == null || Current.phase == "won" || Current.phase == "lost");
             if (Current == null) return;
             if (Current.phase == "gather" || Current.phase == "warn") { countdownFrom = Current.left; countdownAt = Time.time; }

@@ -120,6 +120,10 @@ namespace Shadowfall
             if (p == null) return "login";
             UpdateFight(p);
             if (Time.time < fightUntil) return fightIsBoss ? "boss" : "combat";
+            // a siege we're at: the battle music, the boss music for the warlord's wave
+            var iv = Invasion.Current;
+            if (iv != null && iv.phase == "wave" && !iv.paused && Factory.FlatDistance(p.transform.position, Invasion.Gate) < 150f)
+                return iv.wave >= iv.waves ? "boss" : "combat";
             if (Dungeon.Active) return "dungeon";
             if (WorldGenerator.InTown(p.transform.position)) return "town";
             string zone = WorldGenerator.ZoneAt(p.transform.position);
