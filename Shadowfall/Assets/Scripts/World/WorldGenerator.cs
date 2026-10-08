@@ -162,7 +162,9 @@ namespace Shadowfall
             MemLog.Note("world: BuildRegions");
             surface.Bake();
             MemLog.Note("world: surface.Bake");
-            ScatterDetail();
+            // Small details and grass blades only if they're switched on (phones start on Low: neither); switched on
+            // later, they're built then (BuildLate). Both are purely visual and come after everything that shapes the map.
+            if (GameSettings.Details.Value > 0) ScatterDetail();
             MemLog.Note("world: ScatterDetail");
             BuildGround();
             MemLog.Note("world: BuildGround");
@@ -171,6 +173,7 @@ namespace Shadowfall
             MemLog.Note("world: ");
 
             Random.state = oldState;
+            current = this; // from now on, grass or details switched on are built on the spot (BuildLate)
             Rampart.Sync(); // the town gates (and the runner that keeps them)
         }
 
@@ -927,9 +930,29 @@ namespace Shadowfall
         /// <summary>The small scattered props (flowers, pebbles, tufts): switched off by Settings > Graphics > Small details.</summary>
         public static Transform DetailRoot { get; private set; }
 
+        static WorldGenerator current;
+        bool grassBuilt, detailsBuilt;
+
+        void BuildGrassNow()
+        {
+            if (grassBuilt || !fancyGround) return;
+            grassBuilt = true;
+            surface.BuildGrass(root, grid, Seed ^ 0x6a55);
+        }
+
+        /// <summary>Grass or small details switched on after starting without them (GameSettings.Apply): build them now.</summary>
+        public static void BuildLate()
+        {
+            var w = current;
+            if (w == null || w.root == null) return;
+            if (GameSettings.Grass.Value > 0 && !w.grassBuilt && GroundSurface.GrassRoot == null) w.BuildGrassNow();
+            if (GameSettings.Details.Value > 0 && !w.detailsBuilt && DetailRoot == null) w.ScatterDetail();
+        }
+
         void ScatterDetail()
         {
-            if (!art) return;
+            if (!art || detailsBuilt) return;
+            detailsBuilt = true;
             // Under the decoration (so they are batched with it) but in a group of their own the settings can hide.
             var decoration = deco;
             DetailRoot = Factory.Empty("Details", deco, Vector3.zero);
@@ -1017,7 +1040,7 @@ namespace Shadowfall
             if (fancyGround && surface.BuildGround(root) != null)
             {
                 surface.BuildWater(root);
-                surface.BuildGrass(root, grid, Seed ^ 0x6a55);
+                if (GameSettings.Grass.Value > 0) BuildGrassNow();
                 return;
             }
 

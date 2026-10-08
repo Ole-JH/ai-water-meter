@@ -28,10 +28,13 @@ namespace Shadowfall
         /// The graphics preset (Low / Medium / High). Choosing one sets every option on the Graphics page; changing an
         /// option afterwards makes it "Custom" (<see cref="IsCustom"/>). New players start on Medium (on Low on phones and tablets).
         /// </summary>
+        /// <summary>A phone or tablet (or ?mobile=1, to try a phone's start on a desktop).</summary>
+        public static bool Phone => Application.isMobilePlatform || Application.absoluteURL.Contains("mobile=1");
+
         public static int Quality
         {
             // phones and tablets start on Low (75% resolution, no shadows), everyone else on Medium
-            get { if (quality < 0) quality = Mathf.Clamp(Load("sf_quality", Application.isMobilePlatform ? 0 : 1), 0, 2); return quality; }
+            get { if (quality < 0) quality = Mathf.Clamp(Load("sf_quality", Phone ? 0 : 1), 0, 2); return quality; }
             set
             {
                 quality = Mathf.Clamp(value, 0, 2);
@@ -254,6 +257,7 @@ namespace Shadowfall
             QualitySettings.antiAliasing = 0;
             if (Sun != null) Sun.shadows = SunShadows;
             ColorGrade.Refresh();
+            WorldGenerator.BuildLate(); // grass or details switched on after a start without them
             if (GroundSurface.GrassRoot != null) GroundSurface.GrassRoot.SetActive(Grass.Value > 0);
             if (WorldGenerator.DetailRoot != null) WorldGenerator.DetailRoot.gameObject.SetActive(Details.Value > 0);
             int cap = FrameRate.Value == 0 ? 30 : FrameRate.Value == 1 ? 60 : 0;
