@@ -593,6 +593,25 @@ async function riftTests(a) {
   await sleep(150);
 }
 
+/** The admin window's newer buttons: server status, rifts by tier, forge materials, every mount. */
+async function adminContentTests(a) {
+  const result = async (cmd) => { const n = a.all("sys").length; a.ws.send(JSON.stringify({ t: "adm", ...cmd })); await sleep(300); return a.all("sys").slice(n).map((m) => m.msg).join("\n"); };
+  assert.match(await result({ c: "status" }), /\[admin\] \d+ online \| invasion: .* \| world boss: .* auction listing.* guild.* rift record: tier/, "status sums up the live content");
+  assert.match(await result({ c: "riftbest", n: 7 }), /best rift tier is now 7/, "admins can set their best rift tier");
+  assert.strictEqual(a.all("rinfo").at(-1).k, "7", "and the client hears of it");
+  await result({ c: "rift", n: 12 });
+  assert.strictEqual(a.all("dungeon").at(-1).k, "Greater Rift  -  Tier 12", "admins open any tier from anywhere");
+  a.ws.send(JSON.stringify({ t: "dleave" }));
+  await sleep(200);
+  await result({ c: "give", what: "materials" });
+  const got = a.all("inv").at(-1).bag.map((x) => x.Name).concat(a.all("drops").flatMap((d) => d.drops.map((x) => x.item && x.item.Name)));
+  assert.ok(["Scrap Iron", "Arcane Dust", "Veiled Crystal", "Forgotten Soul"].every((n) => got.includes(n)), "admins can give themselves forge materials");
+  assert.match(await result({ c: "give", what: "mounts" }), /You now own .*stag/, "and every mount");
+  assert.ok(a.all("inv").at(-1).comp.includes("mount:warhorse"), "the mounts are theirs");
+  state(a, 144, 150);
+  await sleep(150);
+}
+
 async function guildTests(a, b) {
   const say = async (c, msg) => { c.ws.send(JSON.stringify({ t: "chat", msg })); await sleep(600); }; // chat: two lines a second
   await say(a, "/guild create Hollow Guard HG");
@@ -947,6 +966,7 @@ async function main() {
     await riftTests(a);
     await bountyTests(a);
     await auctionTests(a, b);
+    await adminContentTests(a);
 
     const danaId = d.find("welcome").id;
     d.ws.send(JSON.stringify({ t: "vanish", dur: 3 }));

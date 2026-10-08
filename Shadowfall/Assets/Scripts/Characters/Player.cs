@@ -392,6 +392,9 @@ namespace Shadowfall
             NetClient.I?.SaveNow();
         }
 
+        /// <summary>Admin: one paragon level now (from level 30 on, like earned ones).</summary>
+        public void AdminParagonLevel() => AddParagonXp(Mathf.Max(1, Paragon.XpToNext - Paragon.Xp));
+
         /// <summary>Puts a paragon point into Might, Toughness, Precision or Swiftness.</summary>
         public void SpendParagon(int index)
         {
@@ -909,7 +912,7 @@ namespace Shadowfall
             }
             if (Time.time < CooldownEnd[index] || Time.time < globalCooldownEnd) return;
             Dismount();
-            if (Mana < a.ManaCost)
+            if (Mana < a.ManaCost && !AdminTools.NoCooldowns)
             {
                 if (!silent || Time.frameCount % 30 == 0) GameUI.Float(transform.position + Vector3.up * 2.5f, "Not enough mana", new Color(0.4f, 0.6f, 1f), 0.8f);
                 if (!silent) Sfx.Play2D("ui_error", 0.4f);
@@ -925,10 +928,10 @@ namespace Shadowfall
             }
 
             CancelRecall(null);
-            Mana -= a.ManaCost;
+            if (!AdminTools.NoCooldowns) Mana -= a.ManaCost;
             float cd = a.Cooldown;
             if (a.Id == AbilityId.Teleport) cd -= 1.2f * Tal("blink");
-            CooldownEnd[index] = Time.time + Mathf.Max(0.3f, cd);
+            CooldownEnd[index] = Time.time + (AdminTools.NoCooldowns ? 0f : Mathf.Max(0.3f, cd));
             globalCooldownEnd = Time.time + 0.3f;
             StopGathering();
             if (action == Action.Move || action == Action.Interact) { action = Action.None; StopMoving(); }
@@ -1342,7 +1345,7 @@ namespace Shadowfall
             }
             var used = Inventory.TakeOne(index); // the server takes it too
             NetClient.I?.Op("use", i: index);
-            potionReadyAt = Time.time + PotionCooldown;
+            potionReadyAt = AdminTools.NoCooldowns ? 0f : Time.time + PotionCooldown;
             Sfx.Play2D("potion", 0.6f, Random.Range(0.92f, 1.08f));
             if (used.HealAmount > 0)
             {
@@ -1488,7 +1491,7 @@ namespace Shadowfall
             if (path.Count > 0 || Factory.FlatDistance(transform.position, recallFrom) > 0.3f) { CancelRecall("Recall interrupted"); return; }
             if (Time.time - recallStart < RecallTime) return;
             CancelRecall(null);
-            recallReadyAt = Time.time + RecallCooldown;
+            recallReadyAt = AdminTools.NoCooldowns ? 0f : Time.time + RecallCooldown;
             bool fromDungeon = Dungeon.Active;
             returnPoint = fromDungeon ? (Vector3?)null : transform.position;
             SpellFx.Column(transform.position, new Color(0.5f, 0.7f, 1f), 1f, 6f, 0.6f);

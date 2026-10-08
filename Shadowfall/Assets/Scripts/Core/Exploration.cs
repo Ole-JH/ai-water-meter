@@ -187,18 +187,22 @@ namespace Shadowfall
     public static class AdminTools
     {
         public static bool IsAdmin;
-        static bool reveal, enemies, dungeons, god, fast;
+        /// <summary>The server's answer to the last admin command (shown at the bottom of the admin window).</summary>
+        public static string LastResult = "";
+        static bool reveal, enemies, dungeons, god, fast, noCooldowns;
 
         public static bool RevealMap { get => IsAdmin && reveal; set => reveal = value; }
         public static bool ShowEnemies { get => IsAdmin && enemies; set => enemies = value; }
         public static bool ShowDungeons { get => IsAdmin && dungeons; set => dungeons = value; }
         public static bool God { get => IsAdmin && god; set => god = value; }
         public static bool Fast { get => IsAdmin && fast; set { fast = value; Player.I?.RecalculateStats(); } }
+        /// <summary>Abilities, potions and recall are ready again at once, and abilities cost no mana.</summary>
+        public static bool NoCooldowns { get => IsAdmin && noCooldowns; set => noCooldowns = value; }
 
         public static void Reset()
         {
             IsAdmin = false;
-            reveal = enemies = dungeons = god = fast = false;
+            reveal = enemies = dungeons = god = fast = noCooldowns = false;
         }
 
         public static void Send(AdminCmd cmd)

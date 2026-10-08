@@ -10,10 +10,11 @@ namespace Shadowfall
     public partial class GameUI
     {
         bool showAdmin;
-        int adminTab, spawnType, spawnLevel = 5, spawnCount = 1, adminDifficulty;
+        int adminTab, spawnType, spawnLevel = 5, spawnCount = 1, adminDifficulty, adminGate, adminRiftTier = 1;
         bool spawnElite;
         string announceText = "";
-        static readonly string[] adminTabs = { "Map & Hero", "Dungeons", "World", "Players" };
+        static readonly string[] adminTabs = { "Hero", "Dungeons", "World", "Events", "Players" };
+        static readonly string[] adminGates = { "Any gate", "North", "South", "East", "West" };
         static readonly string[] monsterTypes =
         {
             "Dire Wolf", "Goblin", "Goblin Shaman", "Bandit", "Skeleton", "Skeleton Archer", "Zombie", "Rock Golem",
@@ -31,18 +32,19 @@ namespace Shadowfall
 
         void DrawAdmin(Player p)
         {
-            var r = new Rect(14, 110, 470, 680);
+            var r = new Rect(14, 110, 470, 740);
             if (UISkin.Window(r, "Admin")) { showAdmin = false; return; }
             Block(r);
             float x = r.x + 22, w = r.width - 44, y = r.y + 56;
 
             // Tabs
-            float tw = (w - 3 * 6) / 4f;
+            float tw = (w - (adminTabs.Length - 1) * 6) / adminTabs.Length;
             for (int i = 0; i < adminTabs.Length; i++)
                 if (UISkin.Btn(new Rect(x + i * (tw + 6), y, tw, 32), i == adminTab ? "> " + adminTabs[i] : adminTabs[i], UISkin.V(UISkin.Button, fontSize: 13)))
                 {
                     adminTab = i;
-                    if (i == 3) AdminTools.Send(new AdminCmd { c = "who" });
+                    if (i == 4) AdminTools.Send(new AdminCmd { c = "who" });
+                    if (i == 3) AdminTools.Send(new AdminCmd { c = "status" });
                 }
             y += 46;
 
@@ -51,8 +53,13 @@ namespace Shadowfall
                 case 0: AdminMapHero(p, x, y, w); break;
                 case 1: AdminDungeons(x, y, w); break;
                 case 2: AdminWorld(p, x, y, w); break;
+                case 3: AdminEvents(p, x, y, w); break;
                 default: AdminPlayers(x, y, w); break;
             }
+
+            // The server's answer to the last command
+            if (!string.IsNullOrEmpty(AdminTools.LastResult))
+                UISkin.Shadowed(new Rect(x, r.yMax - 64, w, 52), AdminTools.LastResult, UISkin.V(UISkin.Small, wordWrap: true), UISkin.Muted);
         }
 
         void Section(ref float y, float x, float w, string title)
@@ -76,6 +83,9 @@ namespace Shadowfall
             Section(ref y, x, w, "Hero");
             if (Toggle(new Rect(x, y, w / 2, 28), AdminTools.God, "God mode")) AdminTools.God = !AdminTools.God;
             if (Toggle(new Rect(x + w / 2, y, w / 2, 28), AdminTools.Fast, "Run fast")) AdminTools.Fast = !AdminTools.Fast;
+            y += 32;
+            if (Toggle(new Rect(x, y, w, 28), AdminTools.NoCooldowns, "No cooldowns (abilities, potions, recall; no mana cost)"))
+                AdminTools.NoCooldowns = !AdminTools.NoCooldowns;
             y += 38;
             float bw = (w - 12) / 3f;
             if (AdminButton(new Rect(x, y, bw, 34), "+1000 gold")) Give("gold");
@@ -94,6 +104,78 @@ namespace Shadowfall
             if (AdminButton(new Rect(x, y, bw, 34), "10 potions")) Give("potions");
             if (AdminButton(new Rect(x + bw + 6, y, bw, 34), "Recall ready")) p.ResetRecallCooldown();
             if (AdminButton(new Rect(x + 2 * (bw + 6), y, bw, 34), "Save now")) NetClient.I?.SaveNow();
+            y += 40;
+            if (AdminButton(new Rect(x, y, bw, 34), "Forge materials")) Give("materials");
+            if (AdminButton(new Rect(x + bw + 6, y, bw, 34), "All mounts")) Give("mounts");
+            GUI.enabled = p.Level >= ParagonBoard.MaxLevel;
+            if (AdminButton(new Rect(x + 2 * (bw + 6), y, bw, 34), "+1 paragon")) p.AdminParagonLevel();
+            GUI.enabled = true;
+            y += 40;
+            UISkin.Shadowed(new Rect(x, y, w, 40), "Paragon levels start at level " + ParagonBoard.MaxLevel + ". Forge materials: scrap, dust, crystals and souls for reforging.",
+                UISkin.V(UISkin.Small, wordWrap: true), UISkin.Muted);
+        }
+
+        void AdminEvents(Player p, float x, float y, float w)
+        {
+            if (AdminButton(new Rect(x + w - 150, y - 4, 150, 28), "Server status")) AdminTools.Send(new AdminCmd { c = "status" });
+            Section(ref y, x, w, "Town invasion");
+            UISkin.Shadowed(new Rect(x, y - 4, w, 20), Invasion.Current != null ? Invasion.Current.town + ": " + Invasion.Status : "None right now",
+                UISkin.Small, Invasion.Current != null ? Invasion.Color : UISkin.Muted);
+            y += 20;
+            float gw = (w - 24) / 5f;
+            for (int i = 0; i < adminGates.Length; i++)
+                if (AdminButton(new Rect(x + i * (gw + 6), y, gw, 28), (i == adminGate ? "> " : "") + adminGates[i])) adminGate = i;
+            y += 34;
+            int walled = 0;
+            foreach (var t in WorldGenerator.Towns) if (t.Walled) walled++;
+            float tw = (w - (walled - 1) * 6) / Mathf.Max(1, walled);
+            int k = 0;
+            foreach (var t in WorldGenerator.Towns)
+            {
+                if (!t.Walled) continue;
+                if (AdminButton(new Rect(x + k++ * (tw + 6), y, tw, 32), t.Name.Split(' ')[0]))
+                    AdminTools.Send(new AdminCmd { c = "invasion", town = t.Name, gate = adminGate == 0 ? "" : adminGates[adminGate].ToLowerInvariant() });
+            }
+            y += 38;
+            float hw = (w - 6) / 2f;
+            GUI.enabled = Invasion.Current != null;
+            if (AdminButton(new Rect(x, y, hw, 32), "Go to the gate") && Invasion.Current != null)
+                AdminTools.Send(new AdminCmd { c = "tp", x = Invasion.Current.gx, z = Invasion.Current.gz - 4f });
+            if (AdminButton(new Rect(x + hw + 6, y, hw, 32), "End it")) AdminTools.Send(new AdminCmd { c = "invasion", stop = true });
+            GUI.enabled = true;
+            y += 46;
+
+            Section(ref y, x, w, "World boss");
+            UISkin.Shadowed(new Rect(x, y - 4, w, 20), WorldBoss.Up ? WorldBoss.Current.name + ": " + WorldBoss.Status : "None up right now",
+                UISkin.Small, WorldBoss.Up ? WorldBoss.Color : UISkin.Muted);
+            y += 20;
+            float bw = (w - 6) / 2f;
+            for (int i = 0; i < WorldBoss.Names.Length; i++)
+            {
+                string label = WorldBoss.Names[i].Replace("The ", "").Replace(" the Mountain", "").Replace(" the Dune Reaver", "");
+                if (AdminButton(new Rect(x + (i % 2) * (bw + 6), y + (i / 2) * 38, bw, 32), label))
+                    AdminTools.Send(new AdminCmd { c = "worldboss", name = WorldBoss.Names[i] });
+            }
+            y += ((WorldBoss.Names.Length + 1) / 2) * 38;
+            GUI.enabled = WorldBoss.Up;
+            if (AdminButton(new Rect(x, y, hw, 32), "Go to it") && WorldBoss.Up)
+                AdminTools.Send(new AdminCmd { c = "tp", x = WorldBoss.Position.x, z = WorldBoss.Position.z - 8f });
+            if (AdminButton(new Rect(x + hw + 6, y, hw, 32), "Put it to sleep")) AdminTools.Send(new AdminCmd { c = "worldboss", stop = true });
+            GUI.enabled = true;
+            y += 46;
+
+            Section(ref y, x, w, "Greater rift  -  your best tier " + Rift.Best);
+            UISkin.Shadowed(new Rect(x, y + 4, 40, 24), "Tier", UISkin.Label, UISkin.Cream);
+            if (AdminButton(new Rect(x + 44, y, 34, 32), "-")) adminRiftTier = Mathf.Max(1, adminRiftTier - (Event.current.shift ? 10 : 1));
+            UISkin.Shadowed(new Rect(x + 80, y + 4, 44, 24), adminRiftTier.ToString(), UISkin.LabelCenter, UISkin.Gold);
+            if (AdminButton(new Rect(x + 126, y, 34, 32), "+")) adminRiftTier = Mathf.Min(150, adminRiftTier + (Event.current.shift ? 10 : 1));
+            float rw = (w - 172 - 6) / 2f;
+            if (AdminButton(new Rect(x + 172, y, rw, 32), "Open rift")) AdminTools.Send(new AdminCmd { c = "rift", n = adminRiftTier });
+            if (AdminButton(new Rect(x + 172 + rw + 6, y, rw, 32), "Set as best")) AdminTools.Send(new AdminCmd { c = "riftbest", n = adminRiftTier });
+            y += 46;
+
+            Section(ref y, x, w, "Daily bounties");
+            if (AdminButton(new Rect(x, y, hw, 32), "New bounties now")) AdminTools.Send(new AdminCmd { c = "bounties" });
         }
 
         /// <summary>Items and gold come from the server (admin command "give").</summary>

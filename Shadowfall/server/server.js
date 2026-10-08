@@ -1225,7 +1225,7 @@ async function adminResetPassword(s, name) {
     `They choose "Forgot password?" > "I have a code" and enter it with their account name.`;
 }
 
-const ADMIN_COMMANDS = new Set(["tp", "tpto", "summon", "dungeon", "regen", "spawn", "killall", "time", "elites", "announce", "kick", "who", "resetpw", "give", "weather", "season", "invasion", "worldboss", "bounties"]);
+const ADMIN_COMMANDS = new Set(["tp", "tpto", "summon", "dungeon", "regen", "spawn", "killall", "time", "elites", "announce", "kick", "who", "resetpw", "give", "weather", "season", "invasion", "worldboss", "bounties", "rift", "riftbest", "status"]);
 
 function runAdmin(s, c, a) {
   a = a || {};
@@ -1326,6 +1326,30 @@ function runAdmin(s, c, a) {
       return a.stop ? invasions.stop() : invasions.start(a.town || "", a.gate);
     case "worldboss":
       return a.stop ? worldBosses.stop() : worldBosses.start(a.name || "");
+    case "rift": { // a greater rift of this tier now (walks the admin to the Rift Stone first)
+      if (!s.ledger) return "Not in the world.";
+      const tier = Math.max(1, Math.min(150, a.n | 0 || 1));
+      if (tier > (s.ledger.riftBest || 0) + 1) { s.ledger.riftBest = tier - 1; ledgerChanged(s); }
+      if (s.inst) leaveInstance(s, false);
+      teleport(s, rifts.STONE.x, rifts.STONE.z + 2);
+      rifts.open(s, tier);
+      return `Opening a tier ${tier} rift.`;
+    }
+    case "riftbest": { // the highest tier cleared, which decides what can be opened
+      if (!s.ledger) return "Not in the world.";
+      s.ledger.riftBest = Math.max(0, Math.min(150, a.n | 0));
+      ledgerChanged(s);
+      rifts.info(s);
+      return `Your best rift tier is now ${s.ledger.riftBest}; tiers up to ${s.ledger.riftBest + 1} are open to you.`;
+    }
+    case "status": {
+      const online = [...sessions.values()].filter((o) => o.inWorld).length;
+      const top = rifts.board()[0];
+      return [`${online} online`, `invasion: ${invasions.active() || "none"}`, `world boss: ${worldBosses.active() || "none"}`,
+        `${auctions.count()} auction listing(s)`, `${guilds.count()} guild(s)`,
+        `rift record: ${top ? `tier ${top.tier} by ${top.names.join(", ")}` : "none"}`, `elite chance ${Math.round(ELITE_CHANCE * 100)}%`,
+        `${SEASONS[weather.season()]}, ${weather.kind}`].join(" | ");
+    }
     case "bounties": // new bounties now (testing)
       bounties.roll(s);
       bounties.send(s);
@@ -1357,8 +1381,15 @@ function runAdmin(s, c, a) {
         : what === "set" ? [I.randomEquipment(lvl, 1, I.Rarity.Set, null, heroClass(s))]
         : what === "gems" ? Array.from({ length: 5 }, () => I.randomGem(20))
         : what === "potions" ? [{ ...I.healthPotion(), Count: 10 }, { ...I.manaPotion(), Count: 10 }]
-        : what === "gold" ? [] : null;
-      if (!items) return "Usage: give gold|legendary|set|gems|potions";
+        : what === "materials" ? [["Scrap Iron", 40], ["Arcane Dust", 20], ["Veiled Crystal", 10], ["Forgotten Soul", 3]].map(([n, c]) => ({ ...I.material(n), Count: c }))
+        : what === "gold" || what === "mounts" ? [] : null;
+      if (!items) return "Usage: give gold|legendary|set|gems|potions|materials|mounts";
+      if (what === "mounts") {
+        const ids = Object.keys(I.GAMEDATA.companions).filter((k) => k.startsWith("mount:") && !s.ledger.companions.includes(k));
+        s.ledger.companions.push(...ids);
+        ledgerChanged(s);
+        return ids.length ? `You now own ${ids.map((k) => k.slice(6)).join(", ")} (V to ride).` : "You already own every mount.";
+      }
       if (what === "gold") s.ledger.gold += Math.max(1, Math.min(1e6, parseInt(a.n, 10) || 1000));
       const drops = give(s, items);
       if (drops.length) safeSend(s, JSON.stringify({ t: "drops", drops }));
@@ -1399,12 +1430,15 @@ function adminFromChat(s, line) {
     case "resetpw": return runAdmin(s, "resetpw", { name: w[0] });
     case "give": return runAdmin(s, "give", { what: w[0], n: w[1] });
     case "bounties": return runAdmin(s, "bounties");
+    case "rift": return runAdmin(s, "rift", { n: w[0] });
+    case "riftbest": return runAdmin(s, "riftbest", { n: w[0] });
+    case "status": return runAdmin(s, "status");
     case "worldboss": return runAdmin(s, "worldboss", w[0] === "stop" ? { stop: true } : { name: rest });
     case "invasion": {
       const gate = ["north", "south", "east", "west"].includes((w[w.length - 1] || "").toLowerCase()) ? w.pop().toLowerCase() : undefined;
       return runAdmin(s, "invasion", w[0] === "stop" ? { stop: true } : { town: w.join(" "), gate });
     }
-    default: return "Admin commands: tp x z, tpto name, summon name, dungeon <id|0-6> [depth], regen, spawn <type> [level] [count] [elite], killall [radius], time dawn|day|dusk|night, elites <0-1>, announce text, kick name, who, resetpw <account or character>, give gold [n]|legendary|set|gems|potions, weather clear|cloudy|rain|storm|fog [minutes], season spring|summer|autumn|winter, invasion [town] [north|south|east|west] | invasion stop, worldboss [name] | worldboss stop";
+    default: return "Admin commands: tp x z, tpto name, summon name, dungeon <id|0-6> [depth], regen, spawn <type> [level] [count] [elite], killall [radius], time dawn|day|dusk|night, elites <0-1>, announce text, kick name, who, resetpw <account or character>, give gold [n]|legendary|set|gems|potions|materials|mounts, weather clear|cloudy|rain|storm|fog [minutes], season spring|summer|autumn|winter, invasion [town] [north|south|east|west] | invasion stop, worldboss [name] | worldboss stop, bounties, rift <tier>, riftbest <tier>, status";
   }
 }
 

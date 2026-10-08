@@ -556,6 +556,7 @@ namespace Shadowfall
                 case "qshare": HandleQuestShare(m); break;
 
                 case "sys":
+                    if (m.msg != null && m.msg.StartsWith("[admin] ")) AdminTools.LastResult = m.msg.Substring(8);
                     GameUI.Log(m.msg, new Color(1f, 0.85f, 0.4f));
                     break;
                 case "invasion": Invasion.Set(m.iv); break;
