@@ -38,8 +38,15 @@ namespace Shadowfall
         static readonly Color Flame = new Color(1f, 0.5f, 0.15f);
 
         /// <summary>The server's list of burning quarters (sent when one starts or ends, and at login).</summary>
+        static NetSack[] lastList;
+
+        /// <summary>Lays out again what the server last said (once back from a dungeon: nothing is built down there).</summary>
+        public static void Resync() => Set(lastList);
+
         public static void Set(NetSack[] list)
         {
+            lastList = list;
+            if (Dungeon.Active) return; // laid out on the way back up (the town's grid isn't the one loaded now)
             if (runner == null) runner = new GameObject("Sack").AddComponent<Sack>();
             var keep = new HashSet<string>();
             if (list != null)
@@ -112,11 +119,12 @@ namespace Shadowfall
                 float size = Mathf.Clamp(Mathf.Max(h.size.x, h.size.z) * 0.3f, 1.6f, 3.4f); // a house fire, not a campfire
                 // Fires on the building itself (points taken from its model): the highest is the big blaze with the
                 // house's one light; the others along the roof and out of the upper walls
-                for (int j = 0; j < spots.Length; j++)
+                int nSpots = Mathf.Min(spots.Length, Lite ? 2 : 4); // the heaviest scene in the game: a few flames a house
+                for (int j = 0; j < nSpots; j++)
                 {
                     var at = spots[j];
                     Light light = null;
-                    if (j == 0 && n % 2 == 0) // a light every other house (forward lights are dear; LightCull does the rest)
+                    if (j == 0 && n % 2 == 0 && n < (Lite ? 8 : 16)) // a light every other house, the nearest eight at most (forward lights are dear; LightCull does the rest)
                     {
                         light = new GameObject("FireLight").AddComponent<Light>();
                         light.transform.SetParent(b.Root, false);
@@ -154,13 +162,32 @@ namespace Shadowfall
             var town = WorldGenerator.TownAt(b.At - Factory.Flat(b.At - CenterOf(s.k)).normalized * 6f);
             if (town != null)
             {
+                // at the town's square (always open ground, and where people look for news), on its far side from the fire
                 var away = Factory.Flat(CenterOf(s.k) - b.At).normalized;
-                var spot = TownLife.Walkable(town.Center + away * Mathf.Min(town.Rect.width, town.Rect.height) * 0.25f);
+                var spot = OpenNear(town.Center + away * 4f + Vector3.Cross(Vector3.up, away) * 3f);
                 RebuildReeve.Create(b.Root, spot, s.k, b.At);
             }
             var hero = Player.I;
             if (hero != null && Factory.FlatDistance(hero.transform.position, b.At) < b.Radius + 40f)
                 Sfx.Play("boom", b.At + Vector3.up * 2f, 0.6f, 0.1f, 80f);
+        }
+
+        /// <summary>The nearest walkable spot with walkable ground all round it (somewhere a hero can walk up to).</summary>
+        static Vector3 OpenNear(Vector3 p)
+        {
+            var grid = WorldGrid.Instance;
+            if (grid == null) return p;
+            for (float r = 0f; r <= 8f; r += 1f)
+                for (int a = 0; a < (r == 0f ? 1 : 12); a++)
+                {
+                    var c = p + Quaternion.Euler(0f, a * 30f, 0f) * Vector3.forward * r;
+                    bool open = true;
+                    for (int dx = -1; dx <= 1 && open; dx++)
+                        for (int dz = -1; dz <= 1 && open; dz++)
+                            if (!grid.IsWalkable(c + new Vector3(dx, 0f, dz))) open = false;
+                    if (open) return new Vector3(c.x, 0f, c.z);
+                }
+            return TownLife.Walkable(p);
         }
 
         /// <summary>
@@ -326,7 +353,7 @@ namespace Shadowfall
                 else if (roll < 0.8) Arrow(root, p, rng);
                 else if (roll < 0.89)
                 {
-                    PropFire.Add(root, p + Vector3.up * 0.1f, Flame, R(0.35f, 0.75f), rng.NextDouble() < 0.3); // burning wreckage in the street
+                    if (!Lite || rng.NextDouble() < 0.4) PropFire.Add(root, p + Vector3.up * 0.1f, Flame, R(0.35f, 0.75f), rng.NextDouble() < 0.3); // burning wreckage in the street
                     Plank(p, true);
                 }
                 else if (roll < 0.95) ImpactMarks.Place(p, ImpactMarks.Kind.Scorch, R(0.8f, 2.2f), s.left);

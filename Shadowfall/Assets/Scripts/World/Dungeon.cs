@@ -84,6 +84,9 @@ namespace Shadowfall
             if (overworld != null) WorldGrid.Instance = overworld;
             overworld = null;
             grid = null;
+            // back in the overworld: what happened at the towns meanwhile (a siege, a sack) is laid out afresh
+            Sack.Resync();
+            Invasion.Set(Invasion.Current);
         }
 
         // =====================================================================================

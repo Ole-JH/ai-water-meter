@@ -11,7 +11,7 @@ namespace Shadowfall
     public class TownGraveyard
     {
         const int Rows = 3;
-        float W = 10f, D = 7f;       // the plot, along x and z (smaller beside a church if that's all the room there is)
+        float W = 10f, D = 8.5f;       // the plot, along x and z (smaller beside a church if that's all the room there is)
         int Cols => Mathf.Clamp(Mathf.FloorToInt((W - 2.4f) / 1.5f) + 1, 3, 5);
 
         static readonly Dictionary<string, TownGraveyard> byTown = new Dictionary<string, TownGraveyard>();
@@ -63,7 +63,7 @@ namespace Shadowfall
                 Build(t);
                 return true;
             }
-            W = 10f; D = 7f;
+            W = 10f; D = 8.5f;
             for (int pass = 0; pass < 2; pass++)
                 foreach (var c in tries)
                 {
@@ -161,6 +161,8 @@ namespace Shadowfall
         public void Dig(Vector3 at)
         {
             if (root == null) return;
+            foreach (var d in mounds) if (Factory.FlatDistance(d, at) < 0.3f) return; // (a full graveyard: that one's dug already)
+            mounds.Add(at);
             var earth = new Color(0.36f, 0.27f, 0.19f);
             Factory.PrimAt(PrimitiveType.Cube, root, at + Vector3.up * 0.12f, new Vector3(0.9f, 0.25f, 1.7f), earth);
             var w = new Color(0.5f, 0.38f, 0.25f);
@@ -172,6 +174,7 @@ namespace Shadowfall
             SpellFx.Dust(at, 0.6f, earth);
         }
 
+        readonly List<Vector3> mounds = new List<Vector3>();
         int dug;
         /// <summary>At least <paramref name="n"/> fresh graves of this session (the server's count, for those who weren't here).</summary>
         public int Ensure(int n)

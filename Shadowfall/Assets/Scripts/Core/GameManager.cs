@@ -168,6 +168,10 @@ namespace Shadowfall
             foreach (var l in FindObjectsByType<LootDrop>(FindObjectsSortMode.None)) Destroy(l.gameObject);
             Enemy.ById.Clear();
             RemotePlayer.ById.Clear();
+            // the siege and its aftermath as this session saw them: the server sends them afresh on the way back in
+            Invasion.Set(null);
+            Sack.Set(null);
+            SiegeAftermath.Set(null);
             var rig = Cam != null ? Cam.GetComponent<CameraRig>() : null;
             if (rig != null) rig.Target = null;
         }

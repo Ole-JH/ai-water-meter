@@ -324,11 +324,11 @@ one of the walled towns (Hollowmere, Frosthaven, Saltreach or Emberwatch), usual
   banner on his back). Kill the bearer and the raiders' nerve breaks: four in ten turn and run for their camp, and the
   rest hit a quarter softer.
 - **Battle music** plays at a siege, and the boss music for the warlord's wave.
-- **The town holds** when every wave is dead: every hero who hurt at least one invader (or lit a beacon) gets
+- **The town holds** when every wave is dead: every hero who did their part (three blows on invaders, a beacon lit, or the buckets) and is still at the town gets
   experience (about a sixth of a level) and a boss's share of loot at their feet: gold, a guaranteed rare and a gem,
   with a chance at set and legendary items. Invaders also give 30% more experience each. Then:
-    - **a victory feast** for five minutes: bells ring, a long banquet table is laid in the square with a roast, bread,
-      cheese and ale, townsfolk sit at its benches, bunting and lanterns hang over the square, a roast turns on a spit
+    - **a victory feast** for five minutes: bells ring, two long clothed tables are laid in the square with a turkey, a ham, ribs, bread,
+      cheese, fruit, pies and wine, a plate and mug at every seat, townsfolk sit on the stools along them, bunting and lanterns hang over the square, a roast turns on a spit
       over the bonfire, a barkeep pours from the ale cask, a minstrel sings, a ring of dancers goes round the fire,
       cups are raised in toasts and fireworks burst overhead. Click the table to eat: the **Heroes'
       Feast**, +25% experience for fifteen minutes (it survives a reload). Each hero can eat once a feast, so it can't

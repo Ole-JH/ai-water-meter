@@ -63,11 +63,15 @@ namespace Shadowfall
             }
         }
 
+        /// <summary>
+        /// The siege is over: the people who only belong to it (refugees, the scout and his cart, bucket carriers) go. The
+        /// rest see their own work out and leave by themselves: the dead being carried and mourned, and everyone the
+        /// aftermath put there (the feast, the carpenters, the captives), which SiegeAftermath takes away.
+        /// </summary>
         void Clear()
         {
-            if (bodies.Exists(x => x.Who != null)) { warnedFor = null; return; } // the dead are still being seen to
-            foreach (var e in extras) if (e != null) Destroy(e.gameObject);
-            extras.Clear();
+            foreach (var e in extras) if (e != null && e.SiegeOnly) Destroy(e.gameObject);
+            extras.RemoveAll(e => e == null || e.SiegeOnly);
             wounded = 0;
             warnedFor = null;
         }
@@ -93,7 +97,7 @@ namespace Shadowfall
                 if (grid != null && !grid.IsWalkable(from)) continue;
                 string model = models[i % models.Length];
                 var look = new CharacterLook { Model = model, Height = i == 3 ? 1.2f : R(1.75f, 1.9f), Anims = model.EndsWith("Keeper") ? AnimSet.Kenney : AnimSet.KayKit, Tint = new Color(R(0.8f, 1f), R(0.75f, 0.9f), R(0.6f, 0.8f)) };
-                var e = Extra.Make(this, "Refugee", look, from, R(4.2f, 5.4f));
+                var e = Extra.Make(this, "Refugee", look, from, R(4.2f, 5.4f)); e.SiegeOnly = true;
                 e.Delay = 2f + i * R(1.5f, 3f);
                 e.Walk(inside + across * R(-3f, 3f));
                 e.Line = Pick(fleeing);
@@ -102,12 +106,12 @@ namespace Shadowfall
             var cartFrom = gate + outward * 20f;
             if (grid == null || grid.IsWalkable(cartFrom))
             {
-                var cart = Extra.Make(this, "Cart", null, cartFrom, 3.2f);
+                var cart = Extra.Make(this, "Cart", null, cartFrom, 3.2f); cart.SiegeOnly = true;
                 BuildCart(cart.transform);
                 cart.Delay = 6f;
                 cart.Walk(inside);
                 cart.OnArrive = x => x.FadeOut(3f);
-                var driver = Extra.Make(this, "Carter", new CharacterLook { Model = "Characters/Keeper", Height = 1.8f, Anims = AnimSet.Kenney, Tint = new Color(0.9f, 0.8f, 0.65f) }, cartFrom - outward * 1.6f, 3.2f);
+                var driver = Extra.Make(this, "Carter", new CharacterLook { Model = "Characters/Keeper", Height = 1.8f, Anims = AnimSet.Kenney, Tint = new Color(0.9f, 0.8f, 0.65f) }, cartFrom - outward * 1.6f, 3.2f); driver.SiegeOnly = true;
                 driver.Delay = 6f;
                 driver.Walk(inside - outward * 1.6f);
                 driver.Line = "Whoa! Make room, make room!";
@@ -120,7 +124,7 @@ namespace Shadowfall
             var scoutFrom = gate + outward * 28f + across * R(-4f, 4f);
             if (crier != null && (grid == null || grid.IsWalkable(scoutFrom)))
             {
-                var scout = Extra.Make(this, "Scout", new CharacterLook { Model = "Characters/Rogue", Height = 1.85f, Tint = new Color(1f, 0.72f, 0.68f) }, scoutFrom, 9f, MountDef.Get("horse"));
+                var scout = Extra.Make(this, "Scout", new CharacterLook { Model = "Characters/Rogue", Height = 1.85f, Tint = new Color(1f, 0.72f, 0.68f) }, scoutFrom, 9f, MountDef.Get("horse")); scout.SiegeOnly = true;
                 scout.Delay = 1f;
                 scout.Walk(TownLife.Walkable(crier.transform.position + crier.transform.forward * 2.5f));
                 scout.Line = "Raiders! Raiders at the " + iv.gate + " gate!";
@@ -234,6 +238,8 @@ namespace Shadowfall
         /// Sends two militiamen out of a house for each body they can reach now (one outside a shut gate waits until the
         /// gate is open or broken, at the latest when the siege is over), a few seconds apart.
         /// </summary>
+        readonly List<Vector3> probe = new List<Vector3>();
+
         void FetchBodies()
         {
             if (Time.time < nextFetch || bodies.Count == 0) return;
@@ -244,8 +250,13 @@ namespace Shadowfall
             {
                 if (b.Sent || b.Who == null || Time.time - b.Since < R(2f, 5f)) continue;
                 var near = TownLife.Walkable(Vector3.MoveTowards(b.Who.transform.position, b.Town.Center, 12f));
-                var probe = new List<Vector3>();
-                if (grid != null && !grid.FindPath(near, b.Who.transform.position, probe, 6000)) continue; // behind a shut gate: later
+                probe.Clear();
+                if (grid != null && !grid.FindPath(near, b.Who.transform.position, probe, 6000))
+                {
+                    // behind a shut gate: later, after the others (one try a round: a path search is dear)
+                    bodies.Remove(b); bodies.Add(b);
+                    return;
+                }
                 b.Sent = true;
                 Carry(b.Who, b.Town);
                 return; // one pair at a time
@@ -327,7 +338,7 @@ namespace Shadowfall
             string model = Pick(models);
             var door = Rampart.DoorNear(stand, 30f, rng); // out of a neighbour's house with a bucket
             if (door != null) from = TownLife.Walkable(door.Step);
-            var e = Extra.Make(this, "Bucket carrier", new CharacterLook { Model = model, Height = R(1.75f, 1.9f), Anims = model.EndsWith("Keeper") ? AnimSet.Kenney : AnimSet.KayKit, Tint = new Color(R(0.85f, 1f), R(0.8f, 0.95f), R(0.7f, 0.9f)) }, from, R(3.8f, 4.6f));
+            var e = Extra.Make(this, "Bucket carrier", new CharacterLook { Model = model, Height = R(1.75f, 1.9f), Anims = model.EndsWith("Keeper") ? AnimSet.Kenney : AnimSet.KayKit, Tint = new Color(R(0.85f, 1f), R(0.8f, 0.95f), R(0.7f, 0.9f)) }, from, R(3.8f, 4.6f)); e.SiegeOnly = true;
             e.Delay = R(0.5f, 3f);
             e.Walk(stand);
             if (rng.NextDouble() < 0.5) e.Line = Pick(new[] { "Water! More water!", "Keep the buckets coming!", "Fire! Fire on the roof!", "Form a line!" });
@@ -363,6 +374,7 @@ namespace Shadowfall
             public string Line;
             public System.Action<Extra> OnArrive;
             public bool Lying, Tending;
+            public bool SiegeOnly;  // only there while the siege lasts (Clear takes it away)
             public bool Hidden;            // still indoors: shown (and the door swung) when Delay runs out
             public HouseDoors.Door Door;
             float nextFidget;

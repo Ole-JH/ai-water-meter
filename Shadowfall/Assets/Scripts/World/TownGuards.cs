@@ -24,6 +24,7 @@ namespace Shadowfall
         // Mustering (seen from the start of a siege): out of a house's door, through the streets to the gate; an archer
         // to the foot of a siege ladder, where he waits until the militia have it standing, then up it and along the walk.
         enum Way { None, Waiting, Walking, AtLadder, Climbing, OnWalk }
+        float waitedAt; // how long an archer has stood at the foot of his ladder
         Way way;
         readonly List<Vector3> approach = new List<Vector3>();
         SiegeLadder ladder;
@@ -175,7 +176,8 @@ namespace Shadowfall
                     if (ladder == null) { way = Way.None; return false; }
                     Face(ladder.Walk.Foot);
                     view?.UpdateLocomotion(0f);
-                    if (!ladder.Raised) return true;
+                    waitedAt += dt;
+                    if (!ladder.Raised && waitedAt < 25f) return true; // (a ladder nobody puts up: up it anyway in the end)
                     transform.position = ladder.Walk.Foot;
                     climbK = -Random.Range(0f, 1.2f); // not all up the rungs at once
                     way = Way.Climbing;

@@ -29,7 +29,7 @@ namespace Shadowfall
             WarCamp.Sync(); // the raiders' camp outside the gate
             SiegeLife.Sync(); // refugees, the scout, the wounded
             SiegeWorks.Sync(); // the beacons and burning roofs
-            TownGuards.Sync(Current != null ? Current.gd : null, Current == null || Current.phase == "won" || Current.phase == "lost");
+            TownGuards.Sync(Current != null ? Current.gd : null, Current == null || Current.phase == "won" || Current.phase == "lost" || Dungeon.Active); // (in a dungeon they just go: nobody died)
             if (Current == null) return;
             if (Current.phase == "gather" || Current.phase == "warn") { countdownFrom = Current.left; countdownAt = Time.time; }
             if (iv.phase == "warn" && (was == null || was.phase != "warn" || was.town != iv.town))

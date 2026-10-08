@@ -108,7 +108,7 @@ namespace Shadowfall
                     if (rng.NextDouble() < 0.06)
                         foreach (var t in b.Talkers)
                             if (t != null && Factory.FlatDistance(p.transform.position, t.transform.position) < 30f && rng.NextDouble() < 0.5)
-                                Speech.Say(t.transform, 2.5f, t.name.StartsWith("Reeve") ? Pick(reeveLines) : Pick(orders));
+                                Speech.Say(t.transform, 2.5f, t.name.StartsWith("Master Mason") ? Pick(reeveLines) : Pick(orders));
                 }
             }
         }
@@ -234,8 +234,8 @@ namespace Shadowfall
                 Factory.PrimAt(PrimitiveType.Cylinder, t, c + Vector3.up * 2f, new Vector3(0.16f, 2f, 0.16f), wood * 0.8f);
                 PropFire.Add(t, c + Vector3.up * 4.1f, new Color(1f, 0.75f, 0.35f), 0.25f, false); // a lantern on top
             }
-            foreach (var (p0, p1) in new[] { (corners[0], corners[3]), (corners[1], corners[2]), (corners[0], corners[1]), (corners[2], corners[3]), (corners[0], corners[2]), (corners[1], corners[3]) })
-                FeastArt.Bunting(t, p0 + Vector3.up * 3.8f, p1 + Vector3.up * 3.8f, flags, Factory.FlatDistance(p0, p1) > 9.5f);
+            foreach (var (p0, p1) in new[] { (corners[0], corners[3]), (corners[0], corners[1]), (corners[2], corners[3]), (corners[0], corners[2]), (corners[1], corners[3]) })
+                FeastArt.Bunting(t, p0 + Vector3.up * 3.8f, p1 + Vector3.up * 3.8f, flags, Factory.FlatDistance(p0, p1) > 9.5f && Factory.FlatDistance((p0 + p1) / 2f, fire) > 4f); // (no lantern over the bonfire's smoke)
             // braziers at the table's ends, hay bales by the fire to sit on
             foreach (float x in new[] { -4.5f, 4.5f })
             {
@@ -391,6 +391,7 @@ namespace Shadowfall
         {
             try
             {
+                FeastUntil = 0f; FeastXp = 1.25f; // this hero's own buff, not the last one's
                 var v = PlayerPrefs.GetString(Key(p), "");
                 if (string.IsNullOrEmpty(v)) return;
                 var parts = v.Split('|');
@@ -411,7 +412,13 @@ namespace Shadowfall
             public override string HoverText => "Victory Feast\n<eat and drink: +25% experience for 15 minutes, once>";
             public override Color LabelColor => UISkin.Gold;
             public override float LabelHeight => 1.8f;
-            public void Init(string town) { DisplayName = "Victory Feast"; InteractRange = 2.6f; AddClickCollider(1.6f, 1.2f); }
+            public void Init(string town)
+            {
+                DisplayName = "Victory Feast"; InteractRange = 2.6f;
+                var box = gameObject.AddComponent<BoxCollider>(); // the whole length of the table answers a click
+                box.size = new Vector3(6.8f, 1.2f, 2f);
+                box.center = new Vector3(0f, 0.6f, 0f);
+            }
             public override void Interact(Player p)
             {
                 p.FaceTowards(transform.position);
@@ -503,7 +510,7 @@ namespace Shadowfall
                         b.People.Add(clearer);
                     }
                 }
-                var reeve = life.Person("Reeve Halden", "Characters/Keeper", TownLife.Walkable(yard + inward * 2f), 1.9f);
+                var reeve = life.Person("Master Mason", "Characters/Keeper", TownLife.Walkable(yard + inward * 2f), 1.9f);
                 reeve.FaceAt = yard;
                 reeve.Party = "point";
                 b.People.Add(reeve);
