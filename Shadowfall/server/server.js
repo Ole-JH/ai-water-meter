@@ -319,7 +319,7 @@ function spawnFrom(sp) {
     if (!walkable(x, z)) continue;
     const type = sp.types[Math.floor(Math.random() * sp.types.length)];
     const m = spawnMonster(type, randInt(sp.minL, sp.maxL), x, z, sp);
-    if (!m.def.boss && Math.random() < ELITE_CHANCE) makeElite(m);
+    if (!m.def.boss && eliteAllowed(sp, x, z) && Math.random() < ELITE_CHANCE) makeElite(m);
     return m;
   }
   return null;
@@ -330,6 +330,20 @@ function spawnFrom(sp) {
 // =====================================================================================
 
 let ELITE_CHANCE = Number(process.env.ELITE_CHANCE ?? 0.18); // admins can change it at runtime
+
+/**
+ * Elites stay out of the newcomers' way: none from the beginner packs (level 4 and under) and none within
+ * ELITE_TOWN_MARGIN of a town, so a fresh hero's first walk out of the gate isn't into a champion.
+ */
+const ELITE_TOWN_MARGIN = 45;
+function eliteAllowed(sp, x, z) {
+  if (sp.maxL <= 4) return false;
+  for (const t of TOWNS) {
+    const dx = Math.max(t.x0 - x, 0, x - t.x1), dz = Math.max(t.z0 - z, 0, z - t.z1);
+    if (dx * dx + dz * dz < ELITE_TOWN_MARGIN * ELITE_TOWN_MARGIN) return false;
+  }
+  return true;
+}
 const AFFIXES = ["Fast", "Vampiric", "Fire Enchanted", "Teleporter", "Shielding", "Mighty", "Extra Health"];
 const NAME_A = ["Grim", "Blood", "Rot", "Skull", "Ash", "Gore", "Bone", "Black", "Iron", "Venom", "Dread", "Hollow", "Grave", "Thorn"];
 const NAME_B = ["maw", "fang", "hide", "claw", "bane", "heart", "eye", "tooth", "grin", "spine", "shade", "gut", "jaw", "skull"];

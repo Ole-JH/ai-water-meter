@@ -196,7 +196,7 @@ The numbers live in `BALANCE` in `server/content.js` (monsters) and `Player.Reca
 
 ## Elite monsters
 
-About one in eight monsters in the open world spawns as an **elite champion** (dungeons have more, see above): a named monster (for example *Gorefang the Cruel*) shown with a blue name, a glowing aura and its affixes under its health bar. Elites are bigger, two levels higher, have about three times the health and hit harder. They give three times the XP or more, and always drop gold plus one or two magic items, sometimes rare. Only elites in dungeons and the Crypt of the Lich can drop set pieces or legendaries.
+About one in eight monsters in the open world spawns as an **elite champion** (dungeons have more, see above): a named monster (for example *Gorefang the Cruel*) shown with a blue name, a glowing aura and its affixes under its health bar. Elites are bigger, two levels higher, have about three times the health and hit harder. They give three times the XP or more, and always drop gold plus one or two magic items, sometimes rare. Only elites in dungeons and the Crypt of the Lich can drop set pieces or legendaries. Elites keep away from newcomers: none spawn within 45 m of a town or in the beginner packs (level 4 and under), and the wolves just outside Hollowmere's north gate are a gentle level 1–2.
 
 | Affix | Effect |
 | --- | --- |

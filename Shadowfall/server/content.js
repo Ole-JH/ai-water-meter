@@ -57,7 +57,7 @@ const map = (v) => {
 // [x, z, count, minLevel, maxLevel, [types], radius?, respawnSeconds?]   (design coordinates, see map())
 const DESIGN_SPAWNERS = [
   // Whisperwood (north)
-  [80, 117, 4, 1, 3, ["Dire Wolf"]],
+  [80, 117, 5, 1, 2, ["Dire Wolf"]], // just outside the north gate: the first fights, gentle (and never elites, see server.js)
   [100, 120, 5, 2, 4, ["Dire Wolf"]],
   [60, 118, 4, 2, 4, ["Dire Wolf"]],
   [90, 128, 4, 3, 5, ["Dire Wolf"]],

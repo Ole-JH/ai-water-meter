@@ -1203,6 +1203,9 @@ async function main() {
       const e = await connect("Erin", "secret5", hash2, bytes2, BUILD_B); // the world was replaced above
       state(e, 144, 187);
       await sleep(1200);
+      assert.ok(view(e).m.length > 0 && !view(e).m.some((m) => m.el), "no elites in the beginner packs by the town gate, even at 100%");
+      state(e, 134, 240); // out in the woods, well away from town
+      await sleep(1200);
       const champ = view(e).m.find((m) => m.el);
       assert.ok(champ, "elite monsters appear in snapshots");
       assert.ok(champ.af.split(",").length >= 1, "elites have affixes");

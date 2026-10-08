@@ -24,6 +24,14 @@ namespace Shadowfall
         {
             new Entry
             {
+                Id = 73, Date = "2026-10-08", Title = "A gentler first step",
+                Items = new[]
+                {
+                    "No more elite champions waiting just outside the gate: elites never spawn near towns or among the beginner wolves, and the pack by Hollowmere's north gate is a gentle level 1-2.",
+                },
+            },
+            new Entry
+            {
                 Id = 72, Date = "2026-10-08", Title = "Lamplight",
                 Items = new[]
                 {
