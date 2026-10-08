@@ -129,7 +129,7 @@ namespace Shadowfall
         public int age, pl;            // seconds since it rose; armour plates left (BossPresence)
     }
 
-    /// <summary>A town invasion (server/invasion.js): phase none | gather | wave | won | lost.</summary>
+    /// <summary>A town invasion (server/invasion.js): phase none | warn | gather | wave | won | lost.</summary>
     [Serializable]
     public class NetInvasion
     {
@@ -138,6 +138,7 @@ namespace Shadowfall
         public int wave, waves, left;  // left: invaders alive (wave), or seconds until the first wave (gather)
         public int hp;                 // the gate's integrity, 0..100
         public NetGuard[] gd;          // the town's guards (TownGuards)
+        public bool paused;            // nobody near the town: the countdown and the siege stand still
     }
 
     /// <summary>A quarter burning after a lost siege: town k, gate g (x, z), everything inside the walls within r of it, left seconds.</summary>

@@ -82,7 +82,7 @@ namespace Shadowfall
         }
 
         /// <summary>Seconds until the first wave (while they gather).</summary>
-        public static int Countdown => Current == null ? 0 : Mathf.Max(0, Mathf.CeilToInt(countdownFrom - (Time.time - countdownAt)));
+        public static int Countdown => Current == null ? 0 : Current.paused ? Mathf.CeilToInt(countdownFrom) : Mathf.Max(0, Mathf.CeilToInt(countdownFrom - (Time.time - countdownAt)));
 
         /// <summary>The tracker's text, e.g. "Wave 2/3 - 9 invaders - gate 74%".</summary>
         public static string Status
@@ -91,6 +91,9 @@ namespace Shadowfall
             {
                 var c = Current;
                 if (c == null) return "";
+                // nobody near the town: the raiders wait (and give up after a few minutes of it)
+                if (c.paused && c.phase == "warn") return "Raiders sighted near the " + c.gate + " gate - they wait until defenders come";
+                if (c.paused && (c.phase == "wave" || c.phase == "gather")) return "The raiders wait at the " + c.gate + " gate: nobody is defending";
                 switch (c.phase)
                 {
                     case "warn": return "Raiders sighted! They attack the " + c.gate + " gate in " + Countdown + " s";

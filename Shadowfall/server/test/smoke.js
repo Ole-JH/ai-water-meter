@@ -506,7 +506,10 @@ async function invasionTests(a, b) {
   await sleep(150);
   assert.strictEqual(b.all("invasion").at(-1).iv.phase, "none", "only admins start invasions");
 
-  // Nobody answers: the invaders march on the gate by themselves, batter it down and sack the town.
+  // Nobody answers: the invaders march on the gate by themselves, batter it down and sack the town. (Bob is in it, out of
+  // their reach: with nobody at all in town the siege would stand still.)
+  state(b, 478.5, 144.5);
+  await sleep(150);
   a.ws.send(JSON.stringify({ t: "adm", c: "invasion", town: "Saltreach", gate: "west" }));
   let last;
   for (let i = 0; i < 120 && (last = b.all("invasion").at(-1).iv).phase !== "lost"; i++) await sleep(500); // (the guards hold them up a while)
@@ -561,12 +564,27 @@ async function invasionTests(a, b) {
   const warned = b.all("invasion").at(-1)?.iv;
   assert.ok(warned && warned.phase === "warn" && warned.town === "Frosthaven" && warned.left > 0, "raiders are sighted before they attack");
   assert.ok(b.all("sys").some((m) => /Scouts sight raiders massing near Frosthaven/.test(m.msg)), "and everyone is warned");
+  assert.strictEqual(warned.paused, true, "with nobody in Frosthaven the countdown stands still");
+  await sleep(2200); // longer than INVASION_WARN_S=2
+  assert.strictEqual(b.all("invasion").at(-1).iv.phase, "warn", "so no attack comes while nobody is there");
+  state(b, 144.5, 470.5); // into Frosthaven
   let attacked;
   for (let i = 0; i < 20 && (attacked = b.all("invasion").at(-1).iv).phase === "warn"; i++) await sleep(250);
   assert.ok(attacked.phase === "wave" && attacked.wave === 1, "then the first wave falls at once, no gathering");
   assert.strictEqual(attacked.gate, warned.gate, "on the gate that was named");
   a.ws.send(JSON.stringify({ t: "adm", c: "invasion", stop: true }));
   await sleep(200);
+
+  // A siege of a town nobody is in stands still, and the raiders give up after a while (INVASION_ABANDON_S=3): no sack
+  a.ws.send(JSON.stringify({ t: "adm", c: "invasion", town: "Saltreach", gate: "west" }));
+  await sleep(1500);
+  const waiting = b.all("invasion").at(-1).iv;
+  assert.ok(waiting.town === "Saltreach" && waiting.paused === true && waiting.hp === 100, "nobody in Saltreach: the siege waits, the gate untouched");
+  let gone;
+  for (let i = 0; i < 20 && (gone = b.all("invasion").at(-1).iv).phase !== "none"; i++) await sleep(250);
+  assert.strictEqual(gone.phase, "none", "with nobody there the raiders withdraw");
+  assert.ok(b.all("sys").some((m) => /raiders outside its west gate lose heart and withdraw/.test(m.msg)), "and the town is spared");
+  assert.ok(!(b.all("sack").at(-1)?.sk || []).length, "nothing burns");
   state(b, 146, 150);
   state(a, 144, 150);
   await sleep(150);
@@ -898,7 +916,7 @@ async function main() {
   if (db.url) console.log("Testing against PostgreSQL");
   writeLegacyCharacter("Oldtimer", "oldpass", { level: 7, gold: 99, look: "Mage", x: 144, z: 150 });
   const server = spawn(process.execPath, [path.join(__dirname, "..", "server.js")], {
-    env: { ...process.env, PORT: String(PORT), DATA_DIR, PUBLIC_DIR, ELITE_CHANCE: "0", INVASION_MINUTES: "0", INVASION_GATHER_S: "1", INVASION_WARN_S: "2", INVASION_SIEGE_RATE: "15", WORLD_BOSS_MINUTES: "0", WORLD_BOSS_SLAM_S: "1", RIFT_COLLAPSE_S: "2", ADMINS: "alice", METRICS_PORT: String(METRICS_PORT), DATABASE_URL: db.url },
+    env: { ...process.env, PORT: String(PORT), DATA_DIR, PUBLIC_DIR, ELITE_CHANCE: "0", INVASION_MINUTES: "0", INVASION_GATHER_S: "1", INVASION_WARN_S: "2", INVASION_ABANDON_S: "3", INVASION_SIEGE_RATE: "15", WORLD_BOSS_MINUTES: "0", WORLD_BOSS_SLAM_S: "1", RIFT_COLLAPSE_S: "2", ADMINS: "alice", METRICS_PORT: String(METRICS_PORT), DATABASE_URL: db.url },
     stdio: ["ignore", "pipe", "pipe"],
   });
   let serverLog = "";

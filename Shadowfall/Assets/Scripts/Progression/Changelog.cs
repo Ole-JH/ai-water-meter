@@ -28,6 +28,7 @@ namespace Shadowfall
                 Items = new[]
                 {
                     "The scouts' warning is the time to get there: when it runs out, the first wave falls on the gate at once, with no extra minute of gathering. The militia put the ladders up during the warning.",
+                    "No heroes, no siege: the scouts' countdown and the siege itself only run while someone is in or near the town. With nobody there the raiders wait, and after three minutes of it they give up and the town is spared.",
                     "A sacked quarter now burns for twelve minutes, and the reeve's help counts for much more: timber or stone puts the fires out a minute and a half sooner, coin a minute, and both pay more experience.",
                 },
             },

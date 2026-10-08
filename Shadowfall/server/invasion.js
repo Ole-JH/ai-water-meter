@@ -24,6 +24,9 @@ const SACK_S = Number(process.env.SACK_S ?? 720); // how long the quarter behind
 // Scouts see the raiders coming: an invasion the server starts by itself is announced this long before they gather
 // (phase "warn"), so heroes further away have time to come and defend
 const WARN_S = Number(process.env.INVASION_WARN_S ?? 90);
+// Nobody near the town: the warning's countdown and the siege stand still (the raiders wait, the gate isn't battered);
+// after this long with nobody about they give up and scatter, and the town isn't sacked
+const ABANDON_S = Number(process.env.INVASION_ABANDON_S ?? 180);
 const STAGING = 24;         // how far outside the gate the invaders gather
 const PLAYERS_NEAR = 110;   // players this close to a town count towards it (choosing the town, scaling the waves)
 // The town's guards: archers up on the wall walk beside the gate and soldiers holding a line outside it. They help a
@@ -42,6 +45,7 @@ module.exports = function createInvasions(ctx) {
   let inv = null;
   let pending = null; // { town, gate, at }: scouted, the gathering starts at "at"
   let nextId = 1;
+  let lastTick = 0;
   let nextAt = minutes > 0 ? now() + rand(0.3, 0.6) * minutes * 60 : Infinity;
 
   const walled = TOWNS.filter((t) => t.walled);
@@ -283,14 +287,14 @@ module.exports = function createInvasions(ctx) {
     if (!inv && pending) {
       const g = pending.gate;
       return { town: pending.town.name, gate: g.name, phase: "warn", gx: r2(g.x), gz: r2(g.z), wave: 0, waves: WAVES,
-        left: Math.max(0, Math.ceil(pending.at - now())), hp: 100, gd: [] };
+        left: Math.max(0, Math.ceil(pending.at - now())), hp: 100, gd: [], paused: !!pending.paused };
     }
     if (!inv) return { phase: "none" };
     const left = inv.phase === "gather" ? Math.max(0, Math.ceil(inv.waveAt - now())) : 0;
     const live = inv.phase === "won" || inv.phase === "lost" ? [] : inv.guards.filter((g) => g.hp > 0);
     return { town: inv.town.name, gate: inv.gate.name, phase: inv.phase, gx: r2(inv.gate.x), gz: r2(inv.gate.z),
       wave: inv.wave, waves: WAVES, left: inv.phase === "wave" ? alive() : left, hp: Math.max(0, Math.round(inv.integrity)),
-      gd: live.map((g) => ({ i: g.id, k: g.k, x: r2(g.x), z: r2(g.z), hp: Math.ceil(g.hp), mh: g.mhp })) };
+      gd: live.map((g) => ({ i: g.id, k: g.k, x: r2(g.x), z: r2(g.z), hp: Math.ceil(g.hp), mh: g.mhp })), paused: !!inv.paused };
   }
 
   function send() {
@@ -327,13 +331,41 @@ module.exports = function createInvasions(ctx) {
     nextAt = minutes > 0 ? now() + minutes * 60 * rand(0.75, 1.25) : Infinity;
   }
 
+  /**
+   * Is anyone about to defend o.town (o = the scouted raid or the siege)? Nobody: it stands still (o.paused, shown to
+   * players) and the time is added to its clocks; after ABANDON_S of nobody it's given up. Returns "on", "paused" or "gone".
+   */
+  function attended(o, dt, shift) {
+    const nobody = near(o.town).length === 0;
+    if (nobody !== !!o.paused) {
+      o.paused = nobody;
+      o.empty = 0;
+      log(`${nobody ? "Nobody near" : "Heroes back at"} ${o.town.name}: the raid ${nobody ? "waits" : "goes on"}`);
+      send();
+    }
+    if (!nobody) return "on";
+    o.empty += dt;
+    shift(dt);
+    return o.empty >= ABANDON_S ? "gone" : "paused";
+  }
+
   function tick(t) {
+    const dt = lastTick ? Math.min(1, t - lastTick) : 0;
+    lastTick = t;
     let burntOut = false;
     for (const [name, k] of sacks) if (t >= k.until) { sacks.delete(name); burntOut = true; broadcast({ t: "sys", msg: `The fires in ${name} are out. Its merchants are back at their stalls.` }); }
     if (burntOut) sendSacks();
     if (!inv) {
       if (pending) {
-        if (t >= pending.at) {
+        const p0 = pending, how = attended(p0, dt, (d) => { p0.at += d; });
+        if (how === "gone") {
+          pending = null;
+          broadcast({ t: "sys", msg: `With nobody in ${p0.town.name} to plunder or fight, the raiders massing near it scatter.` });
+          send();
+          nextAt = t + 5 * 60;
+          return;
+        }
+        if (how === "on" && t >= pending.at) {
           const p = pending;
           pending = null;
           if (sacks.has(p.town.name) || begin(p.town, p.gate.name, true)) { send(); nextAt = t + 5 * 60; }
@@ -350,6 +382,20 @@ module.exports = function createInvasions(ctx) {
       if (t - inv.endedAt > RESULT_S) { inv = null; send(); }
       return;
     }
+    const how = attended(inv, dt, (d) => { inv.waveAt += d; inv.began += d; });
+    if (how === "gone") {
+      for (const id of inv.ids) monsters.delete(id);
+      inv.ids.clear();
+      const name = inv.town.name;
+      broadcast({ t: "sys", msg: `With nobody in ${name} to fight, the raiders outside its ${inv.gate.name} gate lose heart and withdraw. The town is spared.` });
+      log(`Invasion of ${name} abandoned: nobody near`);
+      metrics.inc({ town: name, result: "abandoned" });
+      inv = null;
+      send();
+      nextAt = minutes > 0 ? t + minutes * 60 * rand(0.75, 1.25) : Infinity;
+      return;
+    }
+    if (how === "paused") return;
     if (inv.phase === "gather") {
       if (t >= inv.waveAt) { inv.phase = "wave"; spawnWave(); send(); }
       else if (t - inv.sentAt > 2) send();
@@ -374,6 +420,7 @@ module.exports = function createInvasions(ctx) {
   /** An invader with nobody to fight: march on the gate, then batter it. */
   function idle(m, t) {
     if (!inv || m.invasion !== inv.id || inv.phase !== "wave") return false;
+    if (inv.paused) { m.path = []; m.sieging = false; return true; } // nobody about: they wait where they are
     if (fightGuard(m, t)) return true; // no hero near: the guards before the gate
     const g = inv.gate, d = dist(m.x, m.z, g.x, g.z);
     if (d < 3.5) {

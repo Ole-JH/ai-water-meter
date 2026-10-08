@@ -824,7 +824,7 @@ const M = {
   auctions: metrics.counter("shadowfall_auction_total", "Auction house events, by op (listed, sold, expired)."),
   rifts: metrics.counter("shadowfall_rifts_opened_total", "Greater rifts opened, by tier (20 = 20 and up)."),
   duels: metrics.counter("shadowfall_duels_total", "Duels that ended, by result (won, draw)."),
-  invasions: metrics.counter("shadowfall_invasions_total", "Town invasions that ended, by town and result (won = beaten off, lost = the town was sacked)."),
+  invasions: metrics.counter("shadowfall_invasions_total", "Town invasions that ended, by town and result (won = beaten off, lost = the town was sacked, abandoned = nobody came and the raiders withdrew)."),
   tick: metrics.histogram("shadowfall_tick_duration_seconds", "Time spent in one simulation tick.", [0.001, 0.0025, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25]),
 };
 // Start at zero so dashboards show a flat line rather than "no data" until the first event.

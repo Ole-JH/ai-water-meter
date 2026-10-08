@@ -97,6 +97,8 @@ container is running and the machine's CPU, memory and disk. See [Monitoring →
 | `AUCTION_HOURS` | `48` | How long an [auction](../gameplay/progression.md#auction-house) listing stays up |
 | `RIFT_MINUTES` | `10` | The time limit of a [greater rift](../gameplay/world.md#greater-rifts) |
 | `INVASION_MINUTES` | `45` | About how often a [town invasion](../gameplay/world.md#town-invasions) starts (75-125% of this, only with heroes near a walled town). `0` = never (admins can still start one) |
+| `INVASION_WARN_S` | `90` | How long the scouts' warning runs before the first wave (counting only while heroes are near the town) |
+| `INVASION_ABANDON_S` | `180` | With nobody near the town, a warning or siege stands still; after this long of it the raiders give up and the town is spared |
 | `ELITE_CHANCE` | `0.18` | Chance that a new open-world monster spawns as an elite (admins can change it at runtime) |
 | `DROP_PRIVILEGES` | `1` | Start as root only to `chown` the data volume, then run as the `node` user (uid/gid from `APP_UID`/`APP_GID`, default 1000) |
 | `SMTP_URL`, `MAIL_FROM`, `PUBLIC_URL` | empty | Optional password reset emails (see [Accounts & passwords](accounts.md#reset-emails-optional)) |

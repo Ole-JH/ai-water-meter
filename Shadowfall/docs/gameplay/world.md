@@ -270,6 +270,10 @@ one of the walled towns (Hollowmere, Frosthaven, Saltreach or Emberwatch), usual
   militia put the ladders up meanwhile.
 - When the countdown runs out **the first wave falls on the gate** straight away: the marker turns to a pulsing red one
   and the gate shuts.
+- **No heroes, no siege.** The countdown only runs while someone is in or near the town (about 110 m from its middle,
+  outside the walls included). With nobody there the raiders wait: the countdown stands still, and during a siege they
+  stop where they are and leave the gate alone. If nobody comes for three minutes they give up and withdraw, and the
+  town is spared (nobody is rewarded either).
 - **Three waves march on the gate**, one after another, the last led by a **warlord** (a three-affix champion with
   extra health). The next wave comes when the last is nearly dead, or after 75 seconds.
 - The invaders are monsters of the land around that gate, at about the level of the heroes near the town, and there
