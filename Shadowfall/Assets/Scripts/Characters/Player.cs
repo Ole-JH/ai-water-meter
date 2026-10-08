@@ -46,6 +46,8 @@ namespace Shadowfall
         /// <summary>The attribute that powers this class's weapon attacks.</summary>
         public int PrimaryStat => Look == "Rogue" ? TotDex : Look == "Mage" ? TotInt : TotStr;
         public readonly ParagonBoard Paragon = new ParagonBoard();
+        /// <summary>Running speed before items, talents and mounts (m/s). Was 6.2, which felt like sprinting.</summary>
+        public const float BaseRunSpeed = 5.3f;
         public float MeleeMultiplier => (1f + PrimaryStat / 50f) * (1f + 0.06f * Tal("brute")) * BuffDamage * Paragon.Damage;
         public float SpellMultiplier => (1f + TotInt / 40f) * (1f + (Level - 1) * 0.06f) * (1f + 0.06f * Tal("arcane")) * BuffDamage * Paragon.Damage;
         public bool Whirling => Time.time < whirlUntil;
@@ -274,7 +276,7 @@ namespace Shadowfall
             MinDamage = weapon != null ? weapon.MinDamage : 1;
             MaxDamage = weapon != null ? weapon.MaxDamage : 3;
             AttackSpeed = baseAps * (1f + ItemStat(Stat.AttackSpeed) / 100f) * Paragon.Speed;
-            MoveSpeed = 6.2f * (1f + ItemStat(Stat.MoveSpeed) / 100f + 0.04f * Tal("swiftness")) * Paragon.Speed * (AdminTools.Fast ? 2.2f : 1f);
+            MoveSpeed = BaseRunSpeed * (1f + ItemStat(Stat.MoveSpeed) / 100f + 0.04f * Tal("swiftness")) * Paragon.Speed * (AdminTools.Fast ? 2.2f : 1f);
             LifeOnHit = ItemStat(Stat.LifeOnHit);
             HealthRegen = 0.6f + Level * 0.12f + ItemStat(Stat.HealthRegen);
             ManaRegen = (2f + TotInt * 0.06f + ItemStat(Stat.ManaRegen)) * (1f + 0.12f * Tal("manafont"));
@@ -1428,6 +1430,15 @@ namespace Shadowfall
                 : null;
             if (why != null) { GameUI.Float(transform.position + Vector3.up * 2.5f, why, Color.gray, 0.85f); return; }
             Mount(id);
+        }
+
+        /// <summary>The browser check (GameCheck) rides a mount for its screenshot, owned or not.</summary>
+        public void PreviewMount(string id)
+        {
+            var def = MountDef.Get(id);
+            if (def == null) return;
+            if (mountRig != null) mountRig.Remove();
+            mountRig = new MountRig(transform, view, def);
         }
 
         public void Mount(string id)

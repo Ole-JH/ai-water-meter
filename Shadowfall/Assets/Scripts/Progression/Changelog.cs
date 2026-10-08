@@ -27,6 +27,7 @@ namespace Shadowfall
                 Id = 35, Date = "2026-10-08", Title = "The auction house",
                 Items = new[]
                 {
+                    "Heroes run a little slower (5.3 instead of 6.2 metres a second): it felt like sprinting. Mounts slow down by the same amount.",
                     "Every general goods merchant now has an Auction House: put items from your bags up for sale at your price, or browse, search and buy what others sell.",
                     "Sales pay out at once, or at your next login if you're away (the house keeps 5%). Unsold items come back after 48 hours. Two new achievements.",
                 },

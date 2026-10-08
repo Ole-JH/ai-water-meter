@@ -134,4 +134,4 @@ fi
 rm -f "$state/failed"
 log "Deployed $short${build:+ (with a new client build)}."
 # shellcheck disable=SC2046
-notify "deployed $short: $subject${build:+ (new client build)}" $(shots 'well|waystone')
+notify "deployed $short: $subject${build:+ (new client build)}" $(shots 'well|waystone|mount')

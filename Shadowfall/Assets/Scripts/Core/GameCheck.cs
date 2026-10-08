@@ -37,7 +37,9 @@ namespace Shadowfall
 
         void OnLog(string message, string stack, LogType type)
         {
-            if (type != LogType.Error && type != LogType.Exception && type != LogType.Assert) return;
+            // Missing models are only warnings in the game (it falls back to primitives), but the check reports them.
+            bool missingModel = type == LogType.Warning && message.Contains("Missing model");
+            if (type != LogType.Error && type != LogType.Exception && type != LogType.Assert && !missingModel) return;
             errors++;
             if (type != LogType.Error) exceptions++;
             if (errors <= 5) errorText.Append(type).Append(": ").Append(message).Append('\n');
@@ -129,6 +131,11 @@ namespace Shadowfall
                 Report("walked", name + " in " + (Time.realtimeSinceStartup - t0).ToString("0.0") + " s");
                 yield return Shot(name);
             }
+
+            // Ride a horse for a moment: shows the mount model (or the box it falls back to).
+            hero.PreviewMount("horse");
+            yield return Shot("mount");
+            hero.Dismount();
 
             float fps = walkTime > 0f ? frames / walkTime : 0f;
             if (net.State != NetClient.ConnState.InWorld) { yield return Fail("lost the connection: " + net.Status); yield break; }
