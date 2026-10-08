@@ -399,6 +399,10 @@ namespace Shadowfall
                 float w = Mathf.Min(240f, bubbleStyle.CalcSize(content).x + 6f);
                 float h = bubbleStyle.CalcHeight(content, w);
                 var r = new Rect(g.x - w / 2 - 14, g.y - h - 46, w + 28, h + 20);
+                // kept on screen (a speaker at the edge still gets a whole bubble; its tail keeps pointing at them)
+                r.x = Mathf.Clamp(r.x, 6f, VW - r.width - 6f);
+                r.y = Mathf.Max(r.y, 6f);
+                if (g.x < 0f || g.x > VW) continue; // off screen to the side: don't float a bubble with nobody under it
                 GUI.color = new Color(1, 1, 1, a);
                 UISkin.Box(r, UISkin.Tooltip);
                 GUI.color = new Color(0.05f, 0.04f, 0.03f, a * 0.95f); // a little tail pointing at the speaker
@@ -1608,7 +1612,7 @@ namespace Shadowfall
                     continue;
                 }
                 BetterOrWorse(cr, item, p);
-                if (p.NewItems.Contains(item.Signature))
+                if (p.NewItems.Count > 0 && p.NewItems.Contains(item.Signature))
                 {
                     if (hoverSlot == i) p.NewItems.Remove(item.Signature); // seen
                     else NewSparkle(cr, i);

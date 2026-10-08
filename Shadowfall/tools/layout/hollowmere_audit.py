@@ -32,7 +32,7 @@ for y in (129.5,134.5,155.5,160.5):
   add(140.7,y,0.15,"bunting pole","summer"); add(148.3,y,0.15,"bunting pole","summer")
 for x in (129.5,134.5,155.5,160.5):
   add(x,140.7,0.15,"bunting pole","summer"); add(x,148.3,0.15,"bunting pole","summer")
-add(139.5,149.5,1.0,"maypole","summer"); add(139.5,138.8,1.0,"bonfire","summer")
+add(139.5,149.5,1.0,"maypole","summer")  # ribbons end 2 m out, above head height; add(139.5,138.8,1.0,"bonfire","summer")
 for x,z in [(137.6,137.6),(150.4,150.4),(137.6,150.4)]: add(x,z,0.3,"candle lantern","summer")
 for x,z in [(137.4,137.6),(150.6,137.4),(137.6,150.5),(131.5,127.6)]: add(x,z,0.6,"hay bale","autumn")
 add(139.5,149.5,1.6,"xmas tree","winter")

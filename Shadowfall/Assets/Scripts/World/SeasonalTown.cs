@@ -405,7 +405,8 @@ namespace Shadowfall
             {
                 float a = i * Mathf.PI * 2f / n;
                 var top = new Vector3(0f, 5.8f, 0f);
-                var bottom = new Vector3(Mathf.Cos(a) * 2.6f, 0.9f, Mathf.Sin(a) * 2.6f);
+                // ends ~2 m out above head height: clear of the path to the waystone (tools/layout/hollowmere_audit.py)
+                var bottom = new Vector3(Mathf.Cos(a) * 2f, 1.9f, Mathf.Sin(a) * 2f);
                 var side = Vector3.Cross((bottom - top).normalized, Vector3.up).normalized * 0.09f;
                 var c = colors[i % colors.Length];
                 int v = verts.Count;

@@ -27,6 +27,8 @@ namespace Shadowfall
                 Id = 70, Date = "2026-10-08", Title = "Lighter on the frame rate",
                 Items = new[]
                 {
+                    "Speech bubbles stay on the screen when the speaker is at its edge.",
+                    "The maypole's ribbons no longer sweep across the path to Hollowmere's waystone.",
                     "Hoof dust, glowing weapons, dungeon dust and the seasons' blossom, haze and frost now come from one steady emitter each instead of a stream of new ones: smoother frame rates while riding, in dungeons and out in the wilds.",
                 },
             },
