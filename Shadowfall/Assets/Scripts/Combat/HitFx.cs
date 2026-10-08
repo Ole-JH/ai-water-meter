@@ -17,7 +17,7 @@ namespace Shadowfall
         /// <summary>Freezes (or slows) the game for a moment of real time; never stacks up.</summary>
         public static void Stop(float seconds, float scale = 0.02f)
         {
-            if (GameCheck.Requested) return; // the browser check measures the frame rate: no freezes there
+            if (GameCheck.Requested || !GameSettings.HitPauses) return; // the browser check measures the frame rate: no freezes there
             if (runner == null) runner = new GameObject("HitFx").AddComponent<Runner>();
             float until = Time.unscaledTime + Mathf.Min(seconds, 1.2f);
             // one at a time: the one that lasts longer wins (a crit's freeze must not stretch over a boss's slow death)

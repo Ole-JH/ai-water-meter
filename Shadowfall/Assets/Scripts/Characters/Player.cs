@@ -229,7 +229,7 @@ namespace Shadowfall
         {
             if (IsDead || AdminTools.God) return;
             Health = Mathf.Max(1f, Health - amount);
-            GameUI.Float(transform.position + Vector3.up * 2.4f, "-" + amount, new Color(1f, 0.35f, 0.3f), 0.9f);
+            GameUI.Damage(transform.position + Vector3.up * 2.4f, "-" + amount, new Color(1f, 0.35f, 0.3f), 0.9f, false, true);
             Sfx.Play("hit_flesh", transform.position + Vector3.up, 0.6f, 0.1f);
             CameraRig.Shake(0.06f);
             view?.Hit();
@@ -516,7 +516,7 @@ namespace Shadowfall
                 nextBanner = Time.time + 1f;
                 GuildBanner.Sync(view != null ? view.Root.transform : transform, Guild.Current != null ? Guild.Current.hb : "");
                 var weapon = Inventory.GetEquipped(EquipSlot.Weapon);
-                WeaponGlow.Sync(view != null ? view.Weapon : null, weapon != null && weapon.Rarity >= Rarity.Set ? Item.RarityColor(weapon.Rarity) : (Color?)null);
+                WeaponGlow.Sync(view != null ? view.Weapon : null, weapon != null && weapon.Rarity >= Rarity.Legendary ? Item.RarityColor(weapon.Rarity) : (Color?)null);
             }
             UpdateZone();
             UpdateSnow(dt);

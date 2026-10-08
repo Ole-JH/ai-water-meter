@@ -109,8 +109,18 @@ namespace Shadowfall
             }
         }
 
+        static string SetHex => ColorUtility.ToHtmlStringRGB(RarityColor(Rarity.Set));
+
         public static Color RarityColor(Rarity r)
         {
+            if (GameSettings.ColorBlindLoot)
+                switch (r) // apart by hue and brightness for red/green colour blindness (Okabe-Ito leaning)
+                {
+                    case Rarity.Magic: return new Color(0.35f, 0.6f, 1f);
+                    case Rarity.Rare: return new Color(1f, 0.95f, 0.35f);
+                    case Rarity.Legendary: return new Color(1f, 0.4f, 0.85f);
+                    case Rarity.Set: return new Color(0.3f, 0.95f, 0.95f);
+                }
             switch (r)
             {
                 case Rarity.Magic: return new Color(0.45f, 0.55f, 1f);
@@ -190,14 +200,14 @@ namespace Shadowfall
                 if (set != null)
                 {
                     int have = player != null ? ItemPowers.SetCount(player, set.Id) : 0;
-                    sb.Append("\n<color=#4cf259><b>").Append(set.Name).Append("</b> (").Append(have).Append("/4)</color>\n");
+                    sb.Append("\n<color=#" + SetHex + "><b>").Append(set.Name).Append("</b> (").Append(have).Append("/4)</color>\n");
                     foreach (var kv in set.Pieces)
                     {
                         bool worn = player != null && player.Inventory.GetEquipped(kv.Key) is Item w && w.Set == set.Id;
-                        sb.Append(worn ? "<color=#4cf259>  " : "<color=#777777>  ").Append(kv.Value).Append("</color>\n");
+                        sb.Append(worn ? "<color=#" + SetHex + ">  " : "<color=#777777>  ").Append(kv.Value).Append("</color>\n");
                     }
-                    sb.Append(have >= 2 ? "<color=#4cf259>" : "<color=#777777>").Append("(2) ").Append(set.Bonus2).Append("</color>\n");
-                    sb.Append(have >= 4 ? "<color=#4cf259>" : "<color=#777777>").Append("(4) ").Append(set.Bonus4).Append("</color>\n");
+                    sb.Append(have >= 2 ? "<color=#" + SetHex + ">" : "<color=#777777>").Append("(2) ").Append(set.Bonus2).Append("</color>\n");
+                    sb.Append(have >= 4 ? "<color=#" + SetHex + ">" : "<color=#777777>").Append("(4) ").Append(set.Bonus4).Append("</color>\n");
                     sb.Append("<color=#999999>").Append(set.Class).Append(" set</color>\n");
                 }
                 if (player != null && RequiredLevel > player.Level)

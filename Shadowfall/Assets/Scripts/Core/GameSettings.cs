@@ -145,6 +145,48 @@ namespace Shadowfall
             set { showCommon = value ? 1 : 0; Store("sf_common_loot", showCommon); }
         }
 
+        // ---- comfort: how hard the game hits your eyes
+
+        static float shake = -1f;
+
+        /// <summary>Multiplier on camera shake (0 = none .. 1 = full).</summary>
+        public static float ShakeScale
+        {
+            get { if (shake < 0f) { try { shake = PlayerPrefs.GetFloat("sf_shake", 1f); } catch (System.Exception) { shake = 1f; } } return shake; }
+            set { shake = Mathf.Clamp01(value); try { PlayerPrefs.SetFloat("sf_shake", shake); PlayerPrefs.Save(); } catch (System.Exception) { } }
+        }
+
+        static int hitPauses = -1, flashes = -1, damageNumbers = -1, colorBlind = -1;
+
+        /// <summary>The freeze-frame on crits and killing blows, and a boss's slow-motion death.</summary>
+        public static bool HitPauses
+        {
+            get { if (hitPauses < 0) hitPauses = Load("sf_hitpause", 1); return hitPauses == 1; }
+            set { hitPauses = value ? 1 : 0; Store("sf_hitpause", hitPauses); }
+        }
+
+        /// <summary>Full-screen flashes (dying, lightning, level up...).</summary>
+        public static bool Flashes
+        {
+            get { if (flashes < 0) flashes = Load("sf_flashes", 1); return flashes == 1; }
+            set { flashes = value ? 1 : 0; Store("sf_flashes", flashes); }
+        }
+
+        /// <summary>0 = all damage numbers, 1 = crits and hits on you only, 2 = none.</summary>
+        public static int DamageNumbers
+        {
+            get { if (damageNumbers < 0) damageNumbers = Mathf.Clamp(Load("sf_dmgnum", 0), 0, 2); return damageNumbers; }
+            set { damageNumbers = Mathf.Clamp(value, 0, 2); Store("sf_dmgnum", damageNumbers); }
+        }
+        public static readonly string[] DamageNumberNames = { "All", "Big only", "Off" };
+
+        /// <summary>Loot colours told apart without red/green: set items turn teal, legendaries magenta.</summary>
+        public static bool ColorBlindLoot
+        {
+            get { if (colorBlind < 0) colorBlind = Load("sf_cbloot", 0); return colorBlind == 1; }
+            set { colorBlind = value ? 1 : 0; Store("sf_cbloot", colorBlind); }
+        }
+
         static int minimapRotate = -1;
 
         /// <summary>The minimap turns with the camera (true), or keeps north up. Toggled on the minimap itself.</summary>

@@ -533,8 +533,8 @@ namespace Shadowfall
             NoteHit();
             Health = Mathf.Max(0f, Health - dmg);
             LastDamagedTime = Time.time;
-            GameUI.Float(transform.position + Vector3.up * (Height + 0.2f), crit ? dmg + "!" : dmg.ToString(),
-                crit ? new Color(1f, 0.85f, 0.2f) : Color.white, DamageSize(dmg, crit), crit);
+            GameUI.Damage(transform.position + Vector3.up * (Height + 0.2f), crit ? dmg + "!" : dmg.ToString(),
+                crit ? new Color(1f, 0.85f, 0.2f) : Color.white, DamageSize(dmg, crit), crit, crit);
             var gore = Gore.KindOf(Def.Name);
             bool bones = gore == Gore.Kind.Bone, stone = gore == Gore.Kind.Stone;
             SpellFx.Hit(Center, bones ? new Color(0.9f, 0.88f, 0.8f) : stone ? new Color(0.6f, 0.55f, 0.5f) : new Color(0.55f, 0.03f, 0.03f), !bones && !stone, crit ? 16 : 9);

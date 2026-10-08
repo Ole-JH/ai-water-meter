@@ -86,6 +86,12 @@ The settings are in the game menu (++esc++ → **Settings**):
 - **Label common items**: when off, plain white gear on the ground has no label unless you hold ++alt++ or hover it.
 - **Gore**: *Off* (no blood), *Normal* (blood sprays and stains the ground for about three minutes), *Extra* (more of everything, chunks on every kill, stains last twice as long).
 - **Volume**.
+- **Comfort & effects...** tones down what hits the eyes:
+  - *Screen shake*, 0–100%.
+  - *Damage numbers*: *All*, *Big only* (crits and damage you take), or *Off*.
+  - *Hit pauses*: the freeze-frame on crits and killing blows.
+  - *Screen flashes* from lightning, dying and levelling up.
+  - *Colour-blind loot colours*: set items turn teal and legendaries pink, so no colour depends on telling red from green.
 
 Settings are remembered in your browser.
 

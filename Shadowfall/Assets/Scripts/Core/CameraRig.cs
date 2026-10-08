@@ -36,7 +36,8 @@ namespace Shadowfall
 
         public static void Shake(float amount)
         {
-            if (I != null) I.shake = Mathf.Max(I.shake, amount);
+            amount *= GameSettings.ShakeScale;
+            if (I != null && amount > 0f) I.shake = Mathf.Max(I.shake, amount);
         }
 
         /// <summary>Jump straight to the hero (after a teleport) instead of gliding there.</summary>

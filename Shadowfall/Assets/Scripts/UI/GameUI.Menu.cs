@@ -5,7 +5,7 @@ namespace Shadowfall
     /// <summary>The Esc game menu: resume, settings, help and logging out.</summary>
     public partial class GameUI
     {
-        enum MenuPage { None, Main, Settings, Graphics, ConfirmLogout, Account }
+        enum MenuPage { None, Main, Settings, Graphics, Comfort, ConfirmLogout, Account }
         MenuPage menu = MenuPage.None;
 
         bool logoutToSelect;
@@ -26,6 +26,7 @@ namespace Shadowfall
                 case MenuPage.Main: DrawMenuMain(p); break;
                 case MenuPage.Settings: DrawMenuSettings(); break;
                 case MenuPage.Graphics: DrawMenuGraphics(); break;
+                case MenuPage.Comfort: DrawMenuComfort(); break;
                 case MenuPage.ConfirmLogout: DrawMenuLogout(p); break;
                 case MenuPage.Account: DrawMenuAccount(); break;
             }
@@ -106,7 +107,7 @@ namespace Shadowfall
 
         void DrawMenuSettings()
         {
-            const float w = 560, h = 550;
+            const float w = 560, h = 600;
             var r = new Rect((VW - w) / 2, (VH - h) / 2, w, h);
             if (UISkin.Window(r, "Settings")) { menu = MenuPage.Main; return; }
             float x = r.x + 34, y = r.y + 66;
@@ -172,12 +173,62 @@ namespace Shadowfall
             y += 40;
             if (Toggle(new Rect(x, y, w - 68, 30), GameSettings.ShowCommonLoot, "Label common (white) items on the ground  -  otherwise hold Alt"))
                 GameSettings.ShowCommonLoot = !GameSettings.ShowCommonLoot;
+            y += 46;
+            if (UISkin.Btn(new Rect(x, y, 260, 38), "Comfort & effects...", UISkin.Button)) menu = MenuPage.Comfort;
+            if (new Rect(x, y, 260, 38).Contains(Event.current.mousePosition))
+                tooltip = "Screen shake, hit pauses, screen flashes, damage numbers and colour-blind loot colours.";
             y += 52;
 
             if (UISkin.Btn(new Rect(r.x + (w - 200) / 2, r.yMax - 70, 200, 46), "Back", UISkin.Button)) menu = MenuPage.Main;
         }
 
         float uiScaleDraft = -1f;
+
+        /// <summary>Settings > Comfort: toning down the effects that hit the eyes.</summary>
+        void DrawMenuComfort()
+        {
+            const float w = 600, h = 470;
+            var r = new Rect((VW - w) / 2, (VH - h) / 2, w, h);
+            if (UISkin.Window(r, "Comfort & effects")) { menu = MenuPage.Settings; return; }
+            Block(r);
+            float x = r.x + 34, y = r.y + 66;
+            var label = UISkin.V(UISkin.Label, fontSize: 17);
+
+            UISkin.Shadowed(new Rect(x, y, 150, 26), "Screen shake", label, UISkin.Cream);
+            float s = GUI.HorizontalSlider(new Rect(x + 160, y + 8, 280, 20), GameSettings.ShakeScale, 0f, 1f);
+            if (Mathf.Abs(s - GameSettings.ShakeScale) > 0.001f) GameSettings.ShakeScale = Mathf.Round(s * 20f) / 20f;
+            UISkin.Shadowed(new Rect(x + 454, y, 70, 26), GameSettings.ShakeScale < 0.01f ? "Off" : Mathf.RoundToInt(GameSettings.ShakeScale * 100) + "%", label, UISkin.Gold);
+            if (new Rect(x, y, w - 68, 30).Contains(Event.current.mousePosition)) tooltip = "How much the view shakes from heavy blows, explosions and bosses landing.";
+            y += 52;
+
+            UISkin.Shadowed(new Rect(x, y + 6, 150, 26), "Damage numbers", label, UISkin.Cream);
+            for (int i = 0; i < GameSettings.DamageNumberNames.Length; i++)
+            {
+                bool on = GameSettings.DamageNumbers == i;
+                if (UISkin.Btn(new Rect(x + 160 + i * 118, y, 110, 38), on ? "> " + GameSettings.DamageNumberNames[i] + " <" : GameSettings.DamageNumberNames[i], UISkin.Button) && !on)
+                    GameSettings.DamageNumbers = i;
+            }
+            if (new Rect(x, y, w - 68, 40).Contains(Event.current.mousePosition))
+                tooltip = "<b>All</b>: every hit shows its number.\n<b>Big only</b>: only critical hits and the damage you take.\n<b>Off</b>: no damage numbers.";
+            y += 58;
+
+            if (Toggle(new Rect(x, y, w - 68, 30), GameSettings.HitPauses, "Hit pauses  -  the game freezes for a blink on crits and killing blows"))
+                GameSettings.HitPauses = !GameSettings.HitPauses;
+            y += 42;
+            if (Toggle(new Rect(x, y, w - 68, 30), GameSettings.Flashes, "Screen flashes  -  lightning, dying, levelling up"))
+                GameSettings.Flashes = !GameSettings.Flashes;
+            y += 42;
+            if (Toggle(new Rect(x, y, w - 68, 30), GameSettings.ColorBlindLoot, "Colour-blind loot colours  -  set items teal, legendaries pink"))
+                GameSettings.ColorBlindLoot = !GameSettings.ColorBlindLoot;
+            y += 40;
+            // a sample of the rarity colours as they are now
+            var names = new[] { "Common", "Magic", "Rare", "Set", "Legendary" };
+            var rar = new[] { Rarity.Common, Rarity.Magic, Rarity.Rare, Rarity.Set, Rarity.Legendary };
+            for (int i = 0; i < names.Length; i++)
+                UISkin.Shadowed(new Rect(x + 30 + i * 104, y, 100, 24), names[i], UISkin.V(UISkin.Label, fontSize: 15), Item.RarityColor(rar[i]));
+
+            if (UISkin.Btn(new Rect(r.x + (w - 200) / 2, r.yMax - 70, 200, 46), "Back", UISkin.Button)) menu = MenuPage.Settings;
+        }
 
         /// <summary>Settings > Graphics: every option with its choices; hovering a row explains it.</summary>
         void DrawMenuGraphics()

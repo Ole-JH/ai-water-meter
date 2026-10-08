@@ -24,6 +24,16 @@ namespace Shadowfall
         {
             new Entry
             {
+                Id = 62, Date = "2026-10-08", Title = "Easy on the eyes",
+                Items = new[]
+                {
+                    "Settings > Comfort & effects: turn down screen shake, switch off hit pauses and screen flashes, and show all, big or no damage numbers.",
+                    "Colour-blind loot colours: set items teal, legendaries pink.",
+                    "Legendary weapons now glow in your hand too, not just set weapons.",
+                },
+            },
+            new Entry
+            {
                 Id = 61, Date = "2026-10-08", Title = "Weapons with weight",
                 Items = new[]
                 {

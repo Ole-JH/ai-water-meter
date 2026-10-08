@@ -191,7 +191,7 @@ namespace Shadowfall
             int dmg = Mathf.Max(1, Mathf.RoundToInt(amount)); // their armor is applied on their side
             Health = Mathf.Max(1f, Health - dmg * 0.8f);
             LastDamagedTime = Time.time;
-            GameUI.Float(transform.position + Vector3.up * 2.2f, crit ? dmg + "!" : dmg.ToString(), crit ? new Color(1f, 0.85f, 0.2f) : Color.white, crit ? 1.5f : 1f);
+            GameUI.Damage(transform.position + Vector3.up * 2.2f, crit ? dmg + "!" : dmg.ToString(), crit ? new Color(1f, 0.85f, 0.2f) : Color.white, crit ? 1.5f : 1f, false, crit);
             SpellFx.Hit(Center, new Color(0.55f, 0.03f, 0.03f), true, crit ? 14 : 8);
             Sfx.Play(crit ? "hit_heavy" : "hit_flesh", Center, 0.5f, 0.12f);
             NetClient.I?.SendDuelHit(rp != null ? rp.Id : 0, dmg);

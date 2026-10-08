@@ -52,7 +52,7 @@ namespace Shadowfall
             LastDamagedTime = Time.time;
 
             Color c = Faction == Faction.Player ? new Color(1f, 0.25f, 0.2f) : crit ? new Color(1f, 0.85f, 0.2f) : Color.white;
-            GameUI.Float(transform.position + Vector3.up * (Height + 0.2f), crit ? dmg + "!" : dmg.ToString(), c, DamageSize(dmg, crit), crit || Faction == Faction.Player);
+            GameUI.Damage(transform.position + Vector3.up * (Height + 0.2f), crit ? dmg + "!" : dmg.ToString(), c, DamageSize(dmg, crit), crit || Faction == Faction.Player, crit || Faction == Faction.Player);
 
             OnDamaged(source, dmg);
             if (Health <= 0f)

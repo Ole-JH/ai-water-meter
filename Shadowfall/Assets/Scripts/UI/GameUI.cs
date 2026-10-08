@@ -88,6 +88,14 @@ namespace Shadowfall
         // Static API used by gameplay code
         // =====================================================================================
 
+        /// <summary>A damage number, if the comfort settings want it (<paramref name="big"/>: a crit or a hit on you).</summary>
+        public static void Damage(Vector3 worldPos, string text, Color color, float size, bool shake, bool big)
+        {
+            int mode = GameSettings.DamageNumbers;
+            if (mode == 2 || (mode == 1 && !big)) return;
+            Float(worldPos, text, color, size, shake);
+        }
+
         public static void Float(Vector3 worldPos, string text, Color color, float size = 1f) => Float(worldPos, text, color, size, false);
 
         /// <summary>A floating number or word: pops out, arcs off to one side and fades; <paramref name="shake"/> for crits and hits on us.</summary>
@@ -2009,7 +2017,7 @@ namespace Shadowfall
         static float flashAt = -10f, flashFor = 1f;
 
         /// <summary>A full-screen flash of <paramref name="color"/> fading out over <paramref name="seconds"/>.</summary>
-        public static void ScreenFlash(Color color, float seconds) { flashColor = color; flashAt = Time.unscaledTime; flashFor = Mathf.Max(0.05f, seconds); }
+        public static void ScreenFlash(Color color, float seconds) { if (!GameSettings.Flashes) return; flashColor = color; flashAt = Time.unscaledTime; flashFor = Mathf.Max(0.05f, seconds); }
 
         void DrawScreenFlash()
         {
