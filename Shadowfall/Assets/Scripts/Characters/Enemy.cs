@@ -139,8 +139,10 @@ namespace Shadowfall
         Vector3 netPos;
         float armor, attackAnim = -1f, deathTime, curSpeed, walkPhase;
         bool dying;
-        Vector3 lastHitDir;
+        Vector3 lastHitDir, fling;
         bool lastHitBig;
+        float lastHitMine = -10f;
+        FrostBite frost;
         float nextDrip;
         HumanoidModel humanoid;
         CharacterView view;
@@ -290,6 +292,14 @@ namespace Shadowfall
             float dt = Time.deltaTime;
             if (dying)
             {
+                if (fling.sqrMagnitude > 0.01f)
+                {
+                    var next = transform.position + fling * dt;
+                    if (WorldGrid.Instance == null || WorldGrid.Instance.IsWalkable(next)) transform.position = next;
+                    else fling = Vector3.zero;
+                    fling = Vector3.MoveTowards(fling, Vector3.zero, 18f * dt);
+                }
+                if (frost != null) frost.Active = false;
                 // corpses lie in their blood for a while before sinking away
                 float linger = WorldBoss.Is(Def.Name) ? BossPresence.Linger : 7f; // a world boss lies where it fell a while
                 if (Time.time - deathTime > linger) transform.position += Vector3.down * dt * 0.8f;
@@ -297,6 +307,11 @@ namespace Shadowfall
                 return;
             }
 
+            if (Slowed || frost != null)
+            {
+                if (frost == null) frost = FrostBite.On(gameObject, Radius + 0.25f);
+                frost.Active = Slowed;
+            }
             if (Shielded && Time.time >= nextShieldPulse)
             {
                 nextShieldPulse = Time.time + 0.45f;
@@ -450,10 +465,11 @@ namespace Shadowfall
             }
             float mitigated = amount * 100f / (100f + Mathf.Max(0f, Armor));
             int dmg = Mathf.Max(1, Mathf.RoundToInt(mitigated));
+            NoteHit();
             Health = Mathf.Max(0f, Health - dmg);
             LastDamagedTime = Time.time;
             GameUI.Float(transform.position + Vector3.up * (Height + 0.2f), crit ? dmg + "!" : dmg.ToString(),
-                crit ? new Color(1f, 0.85f, 0.2f) : Color.white, crit ? 1.5f : 1f);
+                crit ? new Color(1f, 0.85f, 0.2f) : Color.white, DamageSize(dmg, crit), crit);
             var gore = Gore.KindOf(Def.Name);
             bool bones = gore == Gore.Kind.Bone, stone = gore == Gore.Kind.Stone;
             SpellFx.Hit(Center, bones ? new Color(0.9f, 0.88f, 0.8f) : stone ? new Color(0.6f, 0.55f, 0.5f) : new Color(0.55f, 0.03f, 0.03f), !bones && !stone, crit ? 16 : 9);
@@ -463,6 +479,13 @@ namespace Shadowfall
             Gore.Hit(Center, lastHitDir, gore, crit ? 1f : Mathf.Clamp01(dmg / Mathf.Max(1f, MaxHealth) * 3f));
             Sfx.Play(crit ? "hit_heavy" : Voice(Def, "hit"), Center, crit ? 0.7f : 0.5f, 0.12f);
             view?.Hit();
+            // the body flashes and rocks back; a crit of ours freezes the moment and kicks the camera
+            HitFlash.On(gameObject, model).Hit(lastHitDir, crit ? 1f : Mathf.Clamp01(dmg / Mathf.Max(1f, MaxHealth) * 4f));
+            if (source is Player)
+            {
+                lastHitMine = Time.time;
+                if (crit) { HitFx.Stop(0.05f); CameraRig.Shake(0.07f); }
+            }
             if (source is Player) NetClient.I?.SendHit(NetId, dmg, crit);
         }
 
@@ -491,6 +514,21 @@ namespace Shadowfall
             var deathVoice = Voice(Def, "die");
             if (deathVoice != null) Sfx.Play(deathVoice, Center, Def.Boss ? 1f : 0.6f, 0.1f, Def.Boss ? 80f : 40f);
             if (Def.Boss) Sfx.Play2D("gong", 0.7f);
+            bool mine = Time.time - lastHitMine < 0.8f;
+            if (Def.Boss) HitFx.Stop(0.9f, 0.25f);          // a boss falls in slow motion
+            else if (mine) HitFx.Stop(lastHitBig ? 0.07f : 0.035f); // a killing blow of ours lands with a jolt
+            // a big killing blow throws the body back
+            if (lastHitBig && !Def.Boss && Time.time - LastDamagedTime < 0.6f)
+            {
+                var d = Factory.Flat(lastHitDir);
+                fling = (d.sqrMagnitude > 0.001f ? d.normalized : -transform.forward) * Mathf.Lerp(7f, 4f, Mathf.Clamp01(Height / 4f));
+            }
+            // an elite goes out in a burst of its aura's colour
+            if (Elite && eliteLight != null)
+            {
+                SpellFx.Explosion(Center, eliteLight.color, 1.6f, false);
+                Sfx.Play("explosion", Center, 0.5f, 0.1f, 40f);
+            }
             if (Rift.Inside) RiftFx.Mote(Center, Elite ? 4 : 1); // its essence flies to the rift's orb
             if (SpellFx.Ready) SpellFx.Dust(transform.position, Def.Boss ? 2.5f : 1.2f);
             else FxPulse.Burst(Center, Factory.Shade(Def.Color, 0.6f), 0.8f, 0.3f);

@@ -24,6 +24,18 @@ namespace Shadowfall
         {
             new Entry
             {
+                Id = 48, Date = "2026-10-08", Title = "Hits that land",
+                Items = new[]
+                {
+                    "Monsters flash and rock back when you hit them. Your crits freeze the moment for a heartbeat and kick the camera.",
+                    "Damage numbers pop out and arc away, bigger for bigger hits. Crits and hits on you shake.",
+                    "Health bars show a pale chip of what your last hits took before it drains away.",
+                    "A big killing blow throws the body back, elites die in a burst of their aura's colour, and a boss falls in slow motion.",
+                    "Slowed monsters frost over, with ice at their feet.",
+                },
+            },
+            new Entry
+            {
                 Id = 47, Date = "2026-10-08", Title = "Deeper dungeons",
                 Items = new[]
                 {

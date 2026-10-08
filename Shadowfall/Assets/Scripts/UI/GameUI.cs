@@ -47,7 +47,7 @@ namespace Shadowfall
         Texture2D cursorDefault, cursorAttack, cursorInteract;
 
         // ---- feedback
-        struct FloatText { public Vector3 Pos; public string Text; public Color Color; public float Time, Size; }
+        struct FloatText { public Vector3 Pos; public string Text; public Color Color; public float Time, Size, Drift; public bool Shake; }
         struct LogLine { public string Text; public Color Color; public float Time; }
         static readonly List<FloatText> floats = new List<FloatText>();
         static readonly List<LogLine> log = new List<LogLine>();
@@ -86,9 +86,13 @@ namespace Shadowfall
         // Static API used by gameplay code
         // =====================================================================================
 
-        public static void Float(Vector3 worldPos, string text, Color color, float size = 1f)
+        public static void Float(Vector3 worldPos, string text, Color color, float size = 1f) => Float(worldPos, text, color, size, false);
+
+        /// <summary>A floating number or word: pops out, arcs off to one side and fades; <paramref name="shake"/> for crits and hits on us.</summary>
+        public static void Float(Vector3 worldPos, string text, Color color, float size, bool shake)
         {
-            floats.Add(new FloatText { Pos = worldPos + new Vector3(Random.Range(-0.3f, 0.3f), 0, 0), Text = text, Color = color, Time = Time.time, Size = size });
+            floats.Add(new FloatText { Pos = worldPos + new Vector3(Random.Range(-0.3f, 0.3f), 0, 0), Text = text, Color = color, Time = Time.time, Size = size,
+                Drift = Random.Range(-1f, 1f), Shake = shake });
             if (floats.Count > 80) floats.RemoveAt(0);
         }
 
@@ -601,12 +605,17 @@ namespace Shadowfall
             return false;
         }
 
-        void Plate(Rect r, float frac, Color c)
+        void Plate(Rect r, float frac, Color c, float chip = 0f)
         {
             GUI.color = new Color(0, 0, 0, 0.8f);
             GUI.DrawTexture(new Rect(r.x - 1, r.y - 1, r.width + 2, r.height + 2), UISkin.White);
             GUI.color = Factory.Shade(c, 0.3f);
             GUI.DrawTexture(r, UISkin.White);
+            if (chip > frac)
+            {
+                GUI.color = new Color(1f, 0.95f, 0.85f, 0.9f); // the chip: what the last hits took
+                GUI.DrawTexture(new Rect(r.x, r.y, r.width * Mathf.Clamp01(chip), r.height), UISkin.White);
+            }
             GUI.color = c;
             GUI.DrawTexture(new Rect(r.x, r.y, r.width * Mathf.Clamp01(frac), r.height), UISkin.White);
             GUI.color = new Color(1, 1, 1, 0.25f);
@@ -627,7 +636,7 @@ namespace Shadowfall
                 bool hurt = e.Health < e.MaxHealth;
                 if (!focus && !hurt) continue;
                 float bw = e.Def.Boss ? 120 : e.Elite ? 96 : 64;
-                Plate(new Rect(g.x - bw / 2, g.y, bw, 7), e.Health / e.MaxHealth, e.Shielded ? new Color(0.4f, 0.8f, 1f) : new Color(0.85f, 0.12f, 0.1f));
+                Plate(new Rect(g.x - bw / 2, g.y, bw, 7), e.Health / e.MaxHealth, e.Shielded ? new Color(0.4f, 0.8f, 1f) : new Color(0.85f, 0.12f, 0.1f), e.ChipHealth / e.MaxHealth);
                 if (focus)
                     UISkin.Shadowed(new Rect(g.x - 160, g.y - 22, 320, 22), e.DisplayName + "  " + e.Level + (e.Slowed ? "  <color=#88ccff>slowed</color>" : ""),
                         UISkin.SmallCenter, e.Elite ? Enemy.ChampionColor : LevelColor(e.Level, p.Level));
@@ -722,8 +731,13 @@ namespace Shadowfall
                 var f = floats[i];
                 float age = Time.time - f.Time;
                 if (age > 1.3f) { floats.RemoveAt(i); continue; }
-                if (!WorldToGui(f.Pos + Vector3.up * age * 1.4f, out var g)) continue;
-                UISkin.FloatText.fontSize = Mathf.RoundToInt(19 * f.Size * (age < 0.12f ? 1.35f : 1f));
+                // up fast and slowing, drifting to its side; a pop at the start that settles with an overshoot
+                float rise = 1.9f * age - 0.55f * age * age;
+                if (!WorldToGui(f.Pos + Vector3.up * rise, out var g)) continue;
+                g.x += f.Drift * 34f * Mathf.Sqrt(age);
+                float pop = age < 0.18f ? 1f + 0.55f * Mathf.Sin(age / 0.18f * Mathf.PI) : 1f;
+                if (f.Shake && age < 0.3f) { g.x += Mathf.Sin(age * 90f) * 3f * (1f - age / 0.3f); g.y += Mathf.Cos(age * 77f) * 2f * (1f - age / 0.3f); }
+                UISkin.FloatText.fontSize = Mathf.RoundToInt(19 * f.Size * pop);
                 var c = f.Color;
                 c.a = age > 0.9f ? 1f - (age - 0.9f) / 0.4f : 1f;
                 UISkin.Shadowed(new Rect(g.x - 160, g.y - 16, 320, 32), f.Text, UISkin.FloatText, c, 2);
