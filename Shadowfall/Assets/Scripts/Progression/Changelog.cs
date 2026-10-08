@@ -29,6 +29,7 @@ namespace Shadowfall
                 {
                     "No more elite champions waiting just outside the gate: elites never spawn near towns or among the beginner wolves, and the pack by Hollowmere's north gate is a gentle level 1-2.",
                     "New graphics option, View distance: Near draws far fewer trees and rocks in the forests (on by default with Low).",
+                    "Roofs, crates and stonework no longer glare white under the sun: the models are matte, as they were painted.",
                     "The world map isn't black any more where you haven't been: the land shows faintly, like an old chart (roads, rivers, lakes and forests), with the region names written in faintly until you find them.",
                 },
             },

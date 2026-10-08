@@ -91,9 +91,24 @@ namespace Shadowfall
             {
                 r.shadowCastingMode = castShadows ? ShadowCastingMode.On : ShadowCastingMode.Off;
                 foreach (var m in r.sharedMaterials)
-                    if (m != null && instanced.Add(m)) m.enableInstancing = true;
+                    if (m != null && instanced.Add(m)) { m.enableInstancing = true; Matte(m); }
             }
             return pivot.gameObject;
+        }
+
+        static readonly int RoughnessId = Shader.PropertyToID("roughnessFactor"), MetallicId = Shader.PropertyToID("metallicFactor"),
+            GlossId = Shader.PropertyToID("_Glossiness"), MetalId = Shader.PropertyToID("_Metallic");
+
+        /// <summary>
+        /// The low-poly models are painted flat: a glossy or metallic setting from the file only turns roofs, crates and
+        /// stone into a white glare under the sun seen from above. Once per material: rough, barely metallic.
+        /// </summary>
+        static void Matte(Material m)
+        {
+            if (m.HasProperty(RoughnessId)) m.SetFloat(RoughnessId, Mathf.Max(0.8f, m.GetFloat(RoughnessId)));
+            if (m.HasProperty(MetallicId)) m.SetFloat(MetallicId, Mathf.Min(0.1f, m.GetFloat(MetallicId)));
+            if (m.HasProperty(GlossId)) m.SetFloat(GlossId, Mathf.Min(0.2f, m.GetFloat(GlossId)));
+            if (m.HasProperty(MetalId)) m.SetFloat(MetalId, Mathf.Min(0.1f, m.GetFloat(MetalId)));
         }
 
         public static Bounds WorldBounds(GameObject go)
