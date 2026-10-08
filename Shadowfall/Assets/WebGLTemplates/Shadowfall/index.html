@@ -239,6 +239,23 @@
       }, 300);
     }
 
+    // ---- Frame cap (Settings > Graphics > Frame rate, SF_SetFrameCap in ShadowfallDisplay.jslib)
+    // The game always runs on the browser's animation frames (Unity's own frame-rate cap times frames with setTimeout,
+    // which misses the screen's refresh and on a 60 Hz screen often lands at 30). A cap skips whole screen refreshes
+    // instead: 30 on a 60 Hz screen draws every other one, 60 on a 120 Hz screen likewise.
+    window.sfFrameCap = 0;
+    (function () {
+      var raf = window.requestAnimationFrame.bind(window), last = 0;
+      window.requestAnimationFrame = function (cb) {
+        return raf(function step(t) {
+          var cap = window.sfFrameCap;
+          if (cap > 0 && last > 0 && t - last < 750 / cap) return raf(step); // too soon: wait for the next refresh
+          last = t;
+          cb(t);
+        });
+      };
+    })();
+
     // ---- Unity
     var config = {
       dataUrl: "Build/{{{ DATA_FILENAME }}}",
@@ -259,6 +276,8 @@
       // The in-game Resolution setting (Settings > Graphics), remembered here. Default: one game pixel per page pixel,
       // not the screen's 2x on a Retina display, which is four times the pixels to draw.
       devicePixelRatio: renderRatio(),
+      // Laptops with two graphics chips: ask for the fast one.
+      webglContextAttributes: { powerPreference: "high-performance" },
     };
     function renderRatio() {
       var scale = 1;

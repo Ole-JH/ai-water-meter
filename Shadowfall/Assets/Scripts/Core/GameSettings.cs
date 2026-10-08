@@ -186,6 +186,7 @@ namespace Shadowfall
 
 #if UNITY_WEBGL && !UNITY_EDITOR
         [System.Runtime.InteropServices.DllImport("__Internal")] static extern void SF_SetRenderScale(float scale);
+        [System.Runtime.InteropServices.DllImport("__Internal")] static extern void SF_SetFrameCap(int fps);
 #else
         static void SF_SetRenderScale(float scale) { }
 #endif
@@ -198,8 +199,16 @@ namespace Shadowfall
             if (Sun != null) Sun.shadows = Shadows.Value == 0 ? LightShadows.None : Shadows.Value == 1 ? LightShadows.Hard : LightShadows.Soft;
             if (GroundSurface.GrassRoot != null) GroundSurface.GrassRoot.SetActive(Grass.Value > 0);
             if (WorldGenerator.DetailRoot != null) WorldGenerator.DetailRoot.gameObject.SetActive(Details.Value > 0);
-            // In the browser -1 follows the display; 30 skips every other frame.
-            Application.targetFrameRate = FrameRate.Value == 0 ? 30 : FrameRate.Value == 1 ? 60 : -1;
+            int cap = FrameRate.Value == 0 ? 30 : FrameRate.Value == 1 ? 60 : 0;
+#if UNITY_WEBGL && !UNITY_EDITOR
+            // In the browser Unity's own cap (targetFrameRate) times frames with setTimeout, out of step with the screen:
+            // a 60 Hz screen then often shows 30. So the game runs on every animation frame (-1) and the page skips
+            // whole screen refreshes to keep under the cap (index.html).
+            Application.targetFrameRate = -1;
+            SF_SetFrameCap(cap);
+#else
+            Application.targetFrameRate = cap == 0 ? -1 : cap;
+#endif
             SF_SetRenderScale(ResolutionMultiplier); // the page also reads it at the next start (see the WebGL template)
         }
     }

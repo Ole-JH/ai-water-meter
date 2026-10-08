@@ -24,6 +24,16 @@ namespace Shadowfall
         {
             new Entry
             {
+                Id = 36, Date = "2026-10-08", Title = "Smoother in the browser",
+                Items = new[]
+                {
+                    "The game now draws in step with your screen. Before, the 60 frames-a-second limit was timed apart from the screen's refresh, and many screens ended up showing only 30, whatever the graphics settings.",
+                    "The Frame rate setting still caps it: 30 draws every other refresh of a 60 Hz screen, 60 every other one of a 120 Hz screen.",
+                    "Laptops with two graphics chips now get the faster one.",
+                },
+            },
+            new Entry
+            {
                 Id = 35, Date = "2026-10-08", Title = "The auction house",
                 Items = new[]
                 {

@@ -9,6 +9,12 @@ var ShadowfallDisplay = {
     var ratio = Math.min(screenRatio, scale);
     try { Module.devicePixelRatio = ratio; } catch (e) {}
     if (typeof window.sfSetPixelRatio === "function") window.sfSetPixelRatio(ratio);
+  },
+
+  // The most frames a second (0: as many as the screen shows). The page's requestAnimationFrame wrapper (index.html)
+  // skips screen refreshes to keep under it.
+  SF_SetFrameCap: function (fps) {
+    window.sfFrameCap = fps;
   }
 };
 mergeInto(LibraryManager.library, ShadowfallDisplay);

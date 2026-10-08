@@ -69,7 +69,7 @@ The settings are in the game menu (++esc++ → **Settings**):
     | Option | Choices | What it does |
     | --- | --- | --- |
     | Resolution | 60%, 75%, 100%, 150%, Native | Pixels drawn, compared with the page's size. *Native* uses every pixel of a Retina / high-DPI screen (up to 4x the work). The biggest setting for speed |
-    | Frame rate | 30, 60, Unlimited | The most frames a second. 30 halves the work and saves battery |
+    | Frame rate | 30, 60, Unlimited | The most frames a second. 30 halves the work and saves battery. In the browser the game always draws in step with the screen's refresh and skips whole refreshes to stay under the cap (Unity's own cap would time frames apart from the screen and often show 30 on a 60 Hz screen) |
     | Shadows | Off, Hard, Soft | Sun and moon shadows |
     | Shadow distance | Short, Medium, Far | How far away shadows are drawn |
     | Lights | Few, Some, Many | How many lanterns, torches and spells light an object at once, and how far away lights still shine |
