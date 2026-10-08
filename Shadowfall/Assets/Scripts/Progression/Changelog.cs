@@ -27,7 +27,7 @@ namespace Shadowfall
                 Id = 78, Date = "2026-10-08", Title = "Burned out",
                 Items = new[]
                 {
-                    "Losing a town to invaders now hurts: they set fire to the quarter behind the gate they broke, and it burns for five minutes.",
+                    "Losing a town to invaders now hurts: they set fire to the quarter behind the gate they broke, and it burns for five minutes, its streets strewn with the wreckage of the fight.",
                     "Its people run for it, merchants, smiths, healers, quest givers and the auctioneer included: nothing can be bought, sold, salvaged, reforged or auctioned in that quarter until the fires are out. Shops in the rest of the town still trade.",
                     "The townsfolk keep indoors while it burns, and a burned town isn't attacked again until it's over.",
                     "A button for every chat command: point at the chat for Say, Party, Guild, Whisper, Reply, Who, Invite and Emotes; the guild window can now found a guild, invite, set the message, promote, demote, hand over the lead, kick and leave.",

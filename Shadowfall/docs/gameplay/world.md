@@ -295,7 +295,10 @@ the minimap counts down to the attack.
 - **The town is sacked** when the gate breaks, or when nobody stops the siege within 12 minutes: the invaders plunder
   the market and withdraw, and nobody is rewarded. Worse, **they set fire to the quarter behind the broken gate** (inside
   the walls, a little more than half the town's width from the gate) for **five minutes**:
-    - its houses burn, roofs ablaze and smoke rising;
+    - its houses burn, flames all over the roofs and out of the upper walls, smoke rising;
+    - the wreckage of the fight lies about: the gate's planks thrown inward, toppled barrels and spilled crates, charred
+      timber, rubble, arrows in the ground, a fallen banner, scorch marks and burning wreckage, and a battlefield of
+      arrows and broken timber outside the gate;
     - its people run for it: the merchants, smiths, healers, quest givers and the auctioneer of that quarter are gone,
       and nothing there can be bought, sold, salvaged, reforged, hired, turned in or put up for auction;
     - the townsfolk keep indoors.
