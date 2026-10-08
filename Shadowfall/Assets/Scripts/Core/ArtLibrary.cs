@@ -20,10 +20,33 @@ namespace Shadowfall
         {
             if (cache.TryGetValue(path, out var go)) return go;
             go = Resources.Load<GameObject>("Art/" + path);
+            if (go != null) DropTextureCopies(go);
             if (go == null && warned.Add(path))
                 Debug.LogWarning("[Shadowfall] Missing model Art/" + path + " (is the glTFast package installed?) - using primitives.");
             cache[path] = go;
             return go;
+        }
+
+        static readonly HashSet<Texture> released = new HashSet<Texture>();
+
+        /// <summary>
+        /// The build marks model textures readable (headless builds have no GPU to keep them on), which keeps a full
+        /// copy of every texture in the game's memory as well as on the GPU. Nothing reads their pixels in the game, so
+        /// the copy is let go when a model is first loaded: phones (iOS above all) can't afford it.
+        /// </summary>
+        static void DropTextureCopies(GameObject prefab)
+        {
+            foreach (var r in prefab.GetComponentsInChildren<Renderer>(true))
+                foreach (var m in r.sharedMaterials)
+                {
+                    if (m == null) continue;
+                    foreach (int id in m.GetTexturePropertyNameIDs())
+                    {
+                        var t = m.GetTexture(id) as Texture2D;
+                        if (t == null || !released.Add(t) || !t.isReadable) continue;
+                        try { t.Apply(false, true); } catch (System.Exception) { }
+                    }
+                }
         }
 
         public enum Fit { Height, Width, Largest }

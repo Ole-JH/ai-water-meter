@@ -40,29 +40,50 @@ namespace Shadowfall
             ErrorReporter.Install();               // players' exceptions to the server (logs, Grafana)
             Application.runInBackground = true; // keep the connection alive in a background tab/window
 
+            MemLog.Note("start");
             SetupCamera();
             SetupLighting();
 
             World = new WorldGenerator();
+            MemLog.Note("new world");
             World.Generate();
+            MemLog.Note("World.Generate");
             GridHash = WorldGrid.Instance.Hash();
+            MemLog.Note("GridHash = WorldGrid.Instance.Hash");
             TownLife.Spawn(null);                  // visual only: after the hash, so it can never affect it
+            MemLog.Note("TownLife.Spawn");
             DungeonEntrance.SpawnAll();
+            MemLog.Note("DungeonEntrance.SpawnAll");
             StashChest.Spawn();
+            MemLog.Note("StashChest.Spawn");
             Waystone.SpawnAll();
+            MemLog.Note("Waystone.SpawnAll");
             Rift.SpawnStone();
+            MemLog.Note("Rift.SpawnStone");
             ForgeStation.BuildAll();               // anvils and hearths by the smiths
+            MemLog.Note("ForgeStation.BuildAll");
             GuildBoard.Spawn();
+            MemLog.Note("GuildBoard.Spawn");
             BountyBoard.SpawnAll();
+            MemLog.Note("BountyBoard.SpawnAll");
             TownCrier.SpawnAll();
+            MemLog.Note("TownCrier.SpawnAll");
             AuctionPodium.BuildAll();              // auctioneers by the general merchants (after the forges: they keep clear)
+            MemLog.Note("AuctionPodium.BuildAll");
             gameObject.AddComponent<Ambience>();
+            MemLog.Note("gameObject.AddComponent<Ambience>");
             Music.Ensure();
+            MemLog.Note("Music.Ensure");
             Weather.Ensure();
+            MemLog.Note("Weather.Ensure");
             WeatherDetail.Ensure();
+            MemLog.Note("WeatherDetail.Ensure");
             AmbientSounds.Ensure();
+            MemLog.Note("AmbientSounds.Ensure");
             NatureLife.Ensure();
+            MemLog.Note("NatureLife.Ensure");
             SeasonalTown.Ensure();
+            MemLog.Note("SeasonalTown.Ensure");
 
             gameObject.AddComponent<NetClient>();
             gameObject.AddComponent<GameUI>();

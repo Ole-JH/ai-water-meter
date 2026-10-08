@@ -130,26 +130,45 @@ namespace Shadowfall
             fancyGround = GroundSurface.Supported;
 
             PaintBase();
+            MemLog.Note("world: PaintBase");
             PaintRoads();
+            MemLog.Note("world: PaintRoads");
             BuildLake(new Vector2(Map(55), Map(125)), 11f, 0);
+            MemLog.Note("world: BuildLake");
             BuildLake(new Vector2(Map(112), Map(138)), 9f, 1);
+            MemLog.Note("world: BuildLake");
             BuildLake(new Vector2(Map(140), Map(122)), 8f, 1);   // north-east woods
             BuildLake(new Vector2(Map(28), Map(130)), 8f, 1);    // north-west, by the quarry
             BuildLake(new Vector2(Map(132), Map(40)), 7f, 0);    // south-east, a murky graveyard mere
             BuildRegionLakes();
+            MemLog.Note("world: BuildRegionLakes");
             BuildBorder();
+            MemLog.Note("world: BuildBorder");
             BuildTown();
+            MemLog.Note("world: BuildTown");
             BuildForest();
+            MemLog.Note("world: BuildForest");
             BuildGoblinCamp();
+            MemLog.Note("world: BuildGoblinCamp");
             BuildGraveyard();
+            MemLog.Note("world: BuildGraveyard");
             BuildCrypt();
+            MemLog.Note("world: BuildCrypt");
             BuildQuarry();
+            MemLog.Note("world: BuildQuarry");
             BuildOuterTowns();
+            MemLog.Note("world: BuildOuterTowns");
             BuildRegions();
+            MemLog.Note("world: BuildRegions");
             surface.Bake();
+            MemLog.Note("world: surface.Bake");
             ScatterDetail();
+            MemLog.Note("world: ScatterDetail");
             BuildGround();
-            if (art) StaticBatchingUtility.Combine(deco.gameObject);
+            MemLog.Note("world: BuildGround");
+            // (?nobatch=1, for measuring: the combined copy of every prop is a big share of the memory)
+            if (art && !Application.absoluteURL.Contains("nobatch=1")) StaticBatchingUtility.Combine(deco.gameObject);
+            MemLog.Note("world: ");
 
             Random.state = oldState;
             Rampart.Sync(); // the town gates (and the runner that keeps them)
