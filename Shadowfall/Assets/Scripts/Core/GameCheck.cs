@@ -137,6 +137,10 @@ namespace Shadowfall
             yield return Shot("mount");
             hero.Dismount();
 
+            // Every model lined up, and the towns from above, for judging how things look (PhotoTour.cs).
+            Report("photos");
+            yield return gameObject.AddComponent<PhotoTour>().Run(Shot);
+
             float fps = walkTime > 0f ? frames / walkTime : 0f;
             if (net.State != NetClient.ConnState.InWorld) { yield return Fail("lost the connection: " + net.Status); yield break; }
             // Exceptions fail the check; other logged errors don't, but the first ones go in the report (and Discord).

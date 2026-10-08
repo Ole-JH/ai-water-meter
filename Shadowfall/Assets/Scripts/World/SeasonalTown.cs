@@ -221,7 +221,7 @@ namespace Shadowfall
             StreetBunting(SummerFlags);
             root.gameObject.AddComponent<Maypole>().Build(new Vector3(139.5f, 0, 149.5f), SummerFlags);
             // A bonfire on the square, lit at dusk.
-            var fireAt = new Vector3(149.5f, 0, 138.5f);
+            var fireAt = new Vector3(139.5f, 0, 138.8f); // south-west of the well (the stash chest stands south-east)
             var logs = ArtLibrary.Spawn("Nature/campfire_logs", root, fireAt, 1.4f, ArtLibrary.Fit.Width);
             if (logs != null) foreach (var c in logs.GetComponentsInChildren<Collider>()) Destroy(c);
             var light = Glow(fireAt + Vector3.up * 1.2f, new Color(1f, 0.6f, 0.25f), 12f, 2.2f);
@@ -272,10 +272,10 @@ namespace Shadowfall
             Prop("present-a-rectangle", 140.2f, 150.6f, 0.45f, 70f);
             // Snowmen around town.
             var rng = new System.Random(5);
-            foreach (var at in new[] { new Vector2(150.5f, 138.5f), new Vector2(133.5f, 149.5f), new Vector2(158.5f, 147.5f), new Vector2(129.5f, 141.2f),
+            foreach (var at in new[] { new Vector2(150.5f, 138.5f), new Vector2(133.5f, 149.5f), new Vector2(159.6f, 150.6f), new Vector2(127.6f, 141.2f),
                                        new Vector2(147.5f, 128.5f), new Vector2(139.4f, 157.5f) })
                 Prop(rng.Next(2) == 0 ? "snowman" : "snowman-hat", at.x, at.y, 1.5f, rng.Next(360));
-            Prop("sled", 155.5f, 157.3f, 1.4f, 30f, ArtLibrary.Fit.Width);
+            Prop("sled", 153.2f, 157.8f, 1.4f, 30f, ArtLibrary.Fit.Width);
             Prop("reindeer", 165.5f, 127.5f, 1.6f, 200f);
             foreach (var at in new[] { new Vector2(141.2f, 170.5f), new Vector2(147.8f, 170.5f), new Vector2(141.2f, 118.5f), new Vector2(147.8f, 118.5f) })
                 Prop("candy-cane-red", at.x, at.y, 1.6f, 0f);

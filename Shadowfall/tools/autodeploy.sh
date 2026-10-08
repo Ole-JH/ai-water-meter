@@ -25,7 +25,7 @@ flock -n 9 || exit 0
 
 log() { echo "$(date '+%Y-%m-%d %H:%M:%S') $*"; }
 
-# notify "message" [screenshot.png...]: a Discord message, with up to 4 images attached.
+# notify "message" [screenshot.png...]: a Discord message, with up to 10 images attached.
 notify() {
   url="$(cd server && sh ../tools/port-of.sh DISCORD_WEBHOOK_URL "")"
   [ -n "$url" ] || return 0
@@ -34,7 +34,7 @@ notify() {
   printf '{"content":"%s"}' "$msg" > "$state/discord.json"
   n=0; files=""
   for f in "$@"; do
-    [ -f "$f" ] && [ $n -lt 4 ] || continue
+    [ -f "$f" ] && [ $n -lt 10 ] || continue
     files="$files -F files[$n]=@$f"; n=$((n + 1))
   done
   set -f # no globbing of files[0]=...
@@ -52,7 +52,7 @@ check_reason() {
   echo "$stage: $detail" | sed 's/\\n/ /g; s/\\"/"/g'
 }
 
-shots() { ls "$state"/check/*.png 2>/dev/null | grep -E -- "$1" | head -n 4; }
+shots() { ls "$state"/check/*.png 2>/dev/null | grep -E -- "$1" | head -n 10; }
 
 branch="${AUTODEPLOY_BRANCH:-$(git rev-parse --abbrev-ref HEAD)}"
 git fetch -q origin "$branch" || { log "git fetch failed"; exit 1; }
@@ -135,3 +135,14 @@ rm -f "$state/failed"
 log "Deployed $short${build:+ (with a new client build)}."
 # shellcheck disable=SC2046
 notify "deployed $short: $subject${build:+ (new client build)}" $(shots 'well|waystone|mount')
+# The photo tour (every model lined up, the towns from above), ten pictures a message.
+if [ -n "$build" ]; then
+  photos="$(ls "$state"/check/*models-*.png "$state"/check/*town-*.png 2>/dev/null)"
+  part=1
+  while [ -n "$photos" ]; do
+    batch="$(echo "$photos" | head -n 10)"; photos="$(echo "$photos" | tail -n +11)"
+    # shellcheck disable=SC2086
+    notify "photo tour of $short, part $part" $batch
+    part=$((part + 1))
+  done
+fi

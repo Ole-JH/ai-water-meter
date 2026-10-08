@@ -483,7 +483,8 @@ namespace Shadowfall
 
             // ---- crafting stations and people
             CraftingStation.Create(SkillType.Smithing, new Vector3(155.5f, 0, 130.5f), root);
-            CraftingStation.Create(SkillType.Cooking, new Vector3(138.5f, 0, 150.5f), root);
+            // The cooking fire by the tavern (it stood where the maypole and the winter tree go up)
+            CraftingStation.Create(SkillType.Cooking, new Vector3(134.5f, 0, 151.0f), root);
 
             Npc.Create("Captain Aldric", "Captain of the Guard", NpcRole.QuestGiver, new Vector3(148.5f, 0, 168.5f), new Color(0.6f, 0.15f, 0.12f),
                 "Stay sharp, traveller. These are dark days for Hollowmere.", npcs, true, null, false);
@@ -523,8 +524,9 @@ namespace Shadowfall
                 {
                     posts.Add(new Vector3(141.4f, 0, d));
                     posts.Add(new Vector3(147.6f, 0, d));
-                    posts.Add(new Vector3(d, 0, 141.4f));
-                    posts.Add(new Vector3(d, 0, 147.6f));
+                    float ex = d == 121.5f ? 119.4f : d; // (121.5, 147.6) would stand inside the blue house
+                    posts.Add(new Vector3(ex, 0, 141.4f));
+                    posts.Add(new Vector3(ex, 0, 147.6f));
                 }
                 foreach (var lp in posts)
                 {

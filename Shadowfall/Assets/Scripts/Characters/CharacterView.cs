@@ -152,6 +152,9 @@ namespace Shadowfall
         };
 
         public static CharacterLook ForNpc(string name) => npcs.TryGetValue(name, out var l) ? l : null;
+        /// <summary>Every monster and NPC with a look of its own (the browser check's photo tour lines them up).</summary>
+        public static IEnumerable<string> MonsterNames => monsters.Keys;
+        public static IEnumerable<string> NpcNames => npcs.Keys;
     }
 
     /// <summary>

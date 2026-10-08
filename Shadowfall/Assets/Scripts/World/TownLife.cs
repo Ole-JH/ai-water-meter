@@ -31,7 +31,7 @@ namespace Shadowfall
             new Vector3(134.5f, 0, 161.6f), new Vector3(128.6f, 0, 149.5f), new Vector3(153.5f, 0, 161.6f), new Vector3(161.4f, 0, 151.5f),
             new Vector3(128.8f, 0, 165.5f), new Vector3(128.6f, 0, 134.5f),
         };
-        static readonly Vector3[] Meeting = { new Vector3(140.5f, 0, 140.6f), new Vector3(148.4f, 0, 140.6f), new Vector3(148.4f, 0, 148.6f), new Vector3(144.5f, 0, 147.4f) };
+        static readonly Vector3[] Meeting = { new Vector3(140.5f, 0, 140.6f), new Vector3(148.4f, 0, 140.6f), new Vector3(147.2f, 0, 149.8f), new Vector3(144.5f, 0, 147.4f) }; // (not on the Rift Stone at 149.5, 149.5)
 
         public struct Job
         {

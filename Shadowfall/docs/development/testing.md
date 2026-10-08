@@ -76,6 +76,14 @@ Results go to `.autodeploy/check/`: `01-spawn.png`, `02-well.png`, `03-waystone.
 `result.json` with the verdict, every step, the game's logged errors and the browser console. `CHECK_TIMEOUT_S` (default
 480) limits the whole run; software rendering is slow, so the frame rate it reports is no measure of a real machine.
 
+After the walk, the check takes a **photo tour** (`PhotoTour.cs`): every monster, boss, NPC, hero class and mount lined
+up five at a time under studio light with their names in a caption (`models-*.png`; a model that failed to load is
+marked *MISSING MODEL*), and each walled town and Hollowmere's square from above (`town-*.png`). After a deploy,
+auto-deploy posts them to Discord after the deploy message, ten to a message.
+
+`tools/layout/hollowmere_audit.py` checks Hollowmere's fixed placements (buildings, NPCs, props, festival decorations,
+villagers' spots) for overlaps and things in the streets, and draws a top-down map.
+
 Run the runner without Docker against any server: `cd tools/browser-check && npm install && CHECK_URL=http://localhost:7341/ node check.js`.
 
 ## Playtesting multiplayer locally
