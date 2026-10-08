@@ -85,7 +85,7 @@ The settings are in the game menu (++esc++ → **Settings**):
     *Low* is 75% resolution, no shadows, grass or small details, few lights and a near view distance; *Medium* (the default) 100% resolution, hard
     shadows, near grass and some lights; *High* adds soft far shadows, far grass and many lights. Slow on a laptop? Lower
     *Resolution* first. The resolution is remembered by the browser and used from the first frame next time.
-- **UI scale** makes the whole interface bigger or smaller (70–150%), applied when you let go of the slider.
+- **UI scale** makes the whole interface bigger or smaller (70–150%), applied when you let go of the slider. However big you make it, the interface never grows past what fits the screen, so on a small screen every window still fits (just smaller). On phones and tablets it's drawn a quarter bigger for fingers; hold the phone sideways.
 - **Show FPS** puts a frame counter at the top of the screen.
 - **Label common items**: when off, plain white gear on the ground has no label unless you hold ++alt++ or hover it.
 - **Gore**: *Off* (no blood), *Normal* (blood sprays and stains the ground for about three minutes), *Extra* (more of everything, chunks on every kill, stains last twice as long).

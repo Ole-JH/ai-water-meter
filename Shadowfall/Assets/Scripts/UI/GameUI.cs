@@ -177,7 +177,7 @@ namespace Shadowfall
 
         void Update()
         {
-            scale = Mathf.Max(0.4f, Screen.height / RefHeight * GameSettings.UiScale);
+            scale = UiScaleNow();
             var mp = GameInput.MousePosition;
             var guiMouse = new Vector2(mp.x / scale, (Screen.height - mp.y) / scale);
             bool over = false;
@@ -255,11 +255,40 @@ namespace Shadowfall
         // OnGUI
         // =====================================================================================
 
+        /// <summary>Phones and tablets (in their browser): the interface is drawn bigger, for fingers.</summary>
+        public static bool Touch => Application.isMobilePlatform;
+
+        /// <summary>
+        /// How big the interface is drawn: by the screen's height and the player's UI scale (bigger on touch screens),
+        /// but never so big that the virtual screen gets narrower or shorter than the windows need: on a small
+        /// screen (a phone, a short laptop at UI scale 150%) everything still fits, just smaller.
+        /// </summary>
+        static float UiScaleNow()
+        {
+            float user = GameSettings.UiScale * (Touch ? 1.25f : 1f);
+            float s = Screen.height / RefHeight * user;
+            float minW = Touch ? 1024f : 1150f, minH = Touch ? 800f : 820f;
+            s = Mathf.Min(s, Screen.width / minW, Screen.height / minH);
+            return Mathf.Max(0.3f, s);
+        }
+
+        /// <summary>A phone held upright: the game is a landscape game, say so.</summary>
+        void DrawTurnSideways()
+        {
+            if (!Touch || Screen.height <= Screen.width) return;
+            var r = new Rect(20, VH * 0.35f, VW - 40, 120);
+            GUI.color = new Color(0f, 0f, 0f, 0.75f);
+            GUI.DrawTexture(r, UISkin.White);
+            GUI.color = Color.white;
+            UISkin.Shadowed(new Rect(r.x, r.y + 20, r.width, 40), "Turn your phone sideways", UISkin.V(UISkin.HeadingCenter, fontSize: 30), UISkin.Gold, 2);
+            UISkin.Shadowed(new Rect(r.x, r.y + 66, r.width, 30), "Shadowfall is made for a wide screen.", UISkin.V(UISkin.LabelCenter, fontSize: 20), UISkin.Cream, 2);
+        }
+
         void OnGUI()
         {
             UISkin.Init();
             if (Event.current.type == EventType.Repaint) blockRects.Clear(); // collected while painting, read by Update
-            scale = Mathf.Max(0.4f, Screen.height / RefHeight * GameSettings.UiScale);
+            scale = UiScaleNow();
             VW = Screen.width / scale;
             VH = Screen.height / scale;
             GUI.matrix = Matrix4x4.TRS(Vector3.zero, Quaternion.identity, new Vector3(scale, scale, 1f));
@@ -323,6 +352,7 @@ namespace Shadowfall
             if (p.IsDead) DrawDeath(p);
             DrawScreenFlash();
             DrawFlyers();
+            DrawTurnSideways();
             DrawAchievementToasts();
             if (menu != MenuPage.None) DrawGameMenu(p);
 
@@ -1906,7 +1936,8 @@ namespace Shadowfall
         void DrawCharacter(Player p)
         {
             bool paragon = p.Level >= ParagonBoard.MaxLevel;
-            var r = new Rect(14, paragon ? 100 : 140, 470, paragon ? 790 : 600);
+            float ch = Mathf.Min(paragon ? 790 : 600, VH - 16);
+            var r = new Rect(14, Mathf.Clamp(paragon ? 100 : 140, 8, VH - ch - 8), 470, ch);
             if (UISkin.Window(r, p.DisplayName + "  -  Level " + p.Level + (paragon ? " (Paragon " + p.Paragon.Level + ")" : "") + " " + p.Look)) showChar = false;
             Block(r);
 
