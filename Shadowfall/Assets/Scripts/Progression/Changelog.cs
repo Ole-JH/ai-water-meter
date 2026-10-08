@@ -29,6 +29,7 @@ namespace Shadowfall
                 {
                     "Townsfolk wave when you walk up to them, and villagers standing about give you a wave as you pass (now and then, not every time).",
                     "Pigeons peck about the town squares by day and burst up when someone runs through; crows in the wilds now take off from other heroes and monsters too.",
+                    "Houses and gate towers in every town are a quarter bigger, so they no longer look like dollhouses next to the heroes.",
                 },
             },
             new Entry

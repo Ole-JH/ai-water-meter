@@ -72,6 +72,9 @@ namespace Shadowfall
         /// <summary>The living trees of the wilds (lightning can strike them: WeatherDetail).</summary>
         public static readonly System.Collections.Generic.List<GameObject> Trees = new System.Collections.Generic.List<GameObject>();
 
+        /// <summary>Town houses and gate towers next to the heroes (1 = fitted to their plot).</summary>
+        const float BuildingScale = 1.25f;
+
         GameObject Art(string path, Vector3 pos, float size, ArtLibrary.Fit fit = ArtLibrary.Fit.Height, float yaw = 0f, bool shadows = true) =>
             art ? ArtLibrary.Spawn(path, deco, pos, size, fit, yaw, shadows, true, true) : null;
 
@@ -436,7 +439,7 @@ namespace Shadowfall
             foreach (var g in new[] { new Vector2(141, y0), new Vector2(147, y0), new Vector2(141, y1), new Vector2(147, y1),
                                       new Vector2(x0, 141), new Vector2(x0, 147), new Vector2(x1, 141), new Vector2(x1, 147) })
             {
-                if (Art("Buildings/building_tower_A_blue", new Vector3(g.x + 0.5f, 0, g.y + 0.5f), 5.2f, ArtLibrary.Fit.Height, VR(0, 4) * 90f) != null) continue;
+                if (Art("Buildings/building_tower_A_blue", new Vector3(g.x + 0.5f, 0, g.y + 0.5f), 5.2f * BuildingScale, ArtLibrary.Fit.Height, VR(0, 4) * 90f) != null) continue;
                 Factory.Prim(PrimitiveType.Cube, deco, new Vector3(g.x + 0.5f, 2f, g.y + 0.5f), new Vector3(1.4f, 4f, 1.4f), wood * 0.85f);
                 var torchC = new Color(1f, 0.6f, 0.2f);
                 var tc = Factory.Prim(PrimitiveType.Sphere, deco, new Vector3(g.x + 0.5f, 4.3f, g.y + 0.5f), Vector3.one * 0.3f, torchC, false, Mat.Glow(torchC));
@@ -603,7 +606,9 @@ namespace Shadowfall
         {
             var c = new Vector3(r.center.x, 0, r.center.y);
             grid.BlockRect(r.xMin, r.yMin, r.xMax - 1, r.yMax - 1);
-            if (Art(model, c, Mathf.Min(r.width, r.height) - 0.4f, ArtLibrary.Fit.Width, yaw) != null)
+            // Fitted to the plot the houses stood shorter than the heroes' shoulders allowed for, so they are drawn
+            // a quarter larger; the eaves overhang the blocked plot a little, which reads as a porch, not a wall.
+            if (Art(model, c, (Mathf.Min(r.width, r.height) - 0.4f) * BuildingScale, ArtLibrary.Fit.Width, yaw) != null)
             {
                 // A few props in the yard (inside the blocked footprint).
                 Art(Pick("Props/barrel_large", "Props/barrel_small_stack"), new Vector3(r.xMin + 0.5f, 0, r.yMin + 0.5f), 1f, ArtLibrary.Fit.Height, VR(0, 360));
@@ -611,7 +616,7 @@ namespace Shadowfall
                 // Warm glow from the windows after dark
                 var glow = new GameObject("WindowLight").AddComponent<Light>();
                 glow.transform.SetParent(deco, false);
-                glow.transform.position = c + Vector3.up * 2.2f;
+                glow.transform.position = c + Vector3.up * 2.2f * BuildingScale;
                 glow.type = LightType.Point;
                 glow.color = new Color(1f, 0.7f, 0.35f);
                 glow.range = 7.5f;

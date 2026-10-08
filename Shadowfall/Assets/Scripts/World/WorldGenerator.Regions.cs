@@ -507,7 +507,7 @@ namespace Shadowfall
                                       new Vector2(x0, cy - 3), new Vector2(x0, cy + 3), new Vector2(x1, cy - 3), new Vector2(x1, cy + 3) })
             {
                 var gp = new Vector3(g.x + 0.5f, 0, g.y + 0.5f);
-                if (Art("Buildings/building_tower_A_blue", gp, 5.2f, ArtLibrary.Fit.Height, VR(0, 4) * 90f) != null) continue;
+                if (Art("Buildings/building_tower_A_blue", gp, 5.2f * BuildingScale, ArtLibrary.Fit.Height, VR(0, 4) * 90f) != null) continue;
                 Factory.Prim(PrimitiveType.Cube, deco, gp + Vector3.up * 2f, new Vector3(1.4f, 4f, 1.4f), st.Wood * 0.85f);
                 var torchC = new Color(1f, 0.6f, 0.2f);
                 var tc = Factory.Prim(PrimitiveType.Sphere, deco, gp + Vector3.up * 4.3f, Vector3.one * 0.3f, torchC, false, Mat.Glow(torchC));
