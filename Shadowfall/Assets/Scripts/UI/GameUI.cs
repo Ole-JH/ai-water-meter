@@ -850,10 +850,11 @@ namespace Shadowfall
             DrawCompanionFrame(p, below);
             partyTop = below + (p.CompanionInstance != null ? 58 : 0);
 
+            var bossNow = DrawBossBar(p);
             Combatant target = p.HoveredEnemy != null ? p.HoveredEnemy : p.AttackTarget;
-            if (target != null && !target.IsDead)
+            if (target != null && !target.IsDead && target != bossNow)
             {
-                var t = new Rect(354, 12, 320, 76);
+                var t = new Rect(354, bossNow != null ? 96 : 12, 320, 76);
                 UISkin.Box(t, UISkin.PanelPlain);
                 var e = target as Enemy;
                 bool boss = e != null && e.Def.Boss;
@@ -866,6 +867,81 @@ namespace Shadowfall
                 UISkin.Bar(new Rect(t.x + 16, t.y + 44, 288, 20), target.Health / target.MaxHealth, "Red",
                     Mathf.CeilToInt(target.Health) + " / " + Mathf.CeilToInt(target.MaxHealth), new Color(0.75f, 0.12f, 0.1f));
             }
+        }
+
+        // ---- the boss bar: a boss in the fight gets a wide bar across the top, with its phases marked
+
+        Enemy bossShown;
+        float bossTrail = 1f, bossPhaseFlash = -10f, bossLastFrac = 1f;
+
+        /// <summary>Which share of health a boss changes at: world bosses lose a plate at 75/50/25%, the Lich calls his dead at half.</summary>
+        static float[] BossPhases(Enemy e)
+        {
+            if (WorldBoss.Is(e.Def.Name)) return new[] { 0.75f, 0.5f, 0.25f };
+            if (e.Def.Name == "Lich King") return new[] { 0.5f };
+            return new float[0];
+        }
+
+        /// <summary>The nearest living boss that's in the fight (hurt, or on us) within 30 m; draws its bar. Returns it (or null).</summary>
+        Enemy DrawBossBar(Player p)
+        {
+            Enemy boss = null;
+            float best = 30f;
+            foreach (var e in Enemy.ById.Values)
+            {
+                if (e == null || e.IsDead || !e.Def.Boss) continue;
+                bool fighting = e.Health < e.MaxHealth - 0.5f || p.AttackTarget == e || Time.time - e.LastDamagedTime < 15f;
+                float d = Factory.FlatDistance(e.transform.position, p.transform.position);
+                if (fighting && d < best) { best = d; boss = e; }
+            }
+            if (boss != bossShown) { bossShown = boss; bossTrail = boss != null ? boss.Health / boss.MaxHealth : 1f; bossLastFrac = bossTrail; }
+            if (boss == null) return null;
+
+            float w = Mathf.Min(640f, VW - 720f), x = (VW - w) / 2f, y = 14f;
+            if (w < 360f) { w = Mathf.Min(VW - 40f, 560f); x = (VW - w) / 2f; y = 96f; } // narrow screens: below the hero frame
+            float frac = Mathf.Clamp01(boss.Health / boss.MaxHealth);
+            var phases = BossPhases(boss);
+            foreach (var ph in phases) if (bossLastFrac > ph && frac <= ph) { bossPhaseFlash = Time.unscaledTime; Sfx.Play2D("gong", 0.35f, 0.9f); }
+            bossLastFrac = frac;
+            // the lost health lingers a moment in a pale chip, then drains
+            bossTrail = frac >= bossTrail ? frac : Mathf.MoveTowards(bossTrail, frac, Time.unscaledDeltaTime * 0.25f);
+
+            bool world = WorldBoss.Is(boss.Def.Name);
+            var accent = world ? WorldBoss.Color : new Color(1f, 0.45f, 0.2f);
+            UISkin.Shadowed(new Rect(x, y, w, 26), boss.DisplayName, UISkin.V(UISkin.HeadingCenter, fontSize: 20), accent, 2);
+            UISkin.Shadowed(new Rect(x, y + 2, w, 22), "Level " + boss.Level, UISkin.V(UISkin.Small, alignment: TextAnchor.MiddleRight), UISkin.Cream);
+            var bar = new Rect(x, y + 30, w, 18);
+            GUI.color = new Color(0.05f, 0.02f, 0.02f, 0.9f);
+            GUI.DrawTexture(new Rect(bar.x - 2, bar.y - 2, bar.width + 4, bar.height + 4), UISkin.White);
+            GUI.color = new Color(1f, 0.9f, 0.75f, 0.85f);
+            GUI.DrawTexture(new Rect(bar.x, bar.y, bar.width * bossTrail, bar.height), UISkin.White);
+            float rage = world && frac < 0.25f ? 0.5f + 0.5f * Mathf.Sin(Time.unscaledTime * 8f) : 0f;
+            GUI.color = Color.Lerp(new Color(0.72f, 0.1f, 0.08f), new Color(1f, 0.25f, 0.1f), rage);
+            GUI.DrawTexture(new Rect(bar.x, bar.y, bar.width * frac, bar.height), UISkin.White);
+            GUI.color = new Color(1f, 1f, 1f, 0.12f); // a little shine on top
+            GUI.DrawTexture(new Rect(bar.x, bar.y, bar.width * frac, bar.height * 0.4f), UISkin.White);
+            // phase marks: a notch and a diamond above it; passed ones go dark, the one just passed flashes
+            float flash = Mathf.Clamp01(1f - (Time.unscaledTime - bossPhaseFlash) / 0.8f);
+            foreach (var ph in phases)
+            {
+                float mx = bar.x + bar.width * ph;
+                bool passed = frac <= ph;
+                GUI.color = passed ? new Color(0.25f, 0.2f, 0.18f, 0.9f) : new Color(1f, 0.9f, 0.6f, 0.95f);
+                GUI.DrawTexture(new Rect(mx - 1, bar.y - 4, 2, bar.height + 8), UISkin.White);
+                GUI.DrawTexture(new Rect(mx - 3, bar.y - 8, 6, 6), UISkin.White);
+            }
+            if (flash > 0f) Outline(bar, accent, flash, 2f + 4f * (1f - flash));
+            GUI.color = Color.white;
+            UISkin.Shadowed(bar, Mathf.CeilToInt(boss.Health) + " / " + Mathf.CeilToInt(boss.MaxHealth) + "   (" + Mathf.CeilToInt(frac * 100f) + "%)",
+                UISkin.V(UISkin.SmallCenter, fontSize: 13), Color.white, 1);
+            // under the bar: the world boss's armour plates, or its rage
+            if (world && WorldBoss.Current != null)
+            {
+                string under = frac < 0.25f ? "ENRAGED" : "Armour plates: " + new string('#', Mathf.Max(0, WorldBoss.Current.pl)).Replace("#", "[] ");
+                UISkin.Shadowed(new Rect(x, bar.yMax + 4, w, 18), under, UISkin.V(UISkin.SmallCenter, fontSize: 13),
+                    frac < 0.25f ? new Color(1f, 0.35f, 0.2f, 0.6f + 0.4f * rage) : UISkin.Cream);
+            }
+            return boss;
         }
 
         readonly float[] barLastCd = new float[8], barCasts = { -10f, -10f, -10f, -10f, -10f, -10f, -10f, -10f }, barReady = { -10f, -10f, -10f, -10f, -10f, -10f, -10f, -10f };

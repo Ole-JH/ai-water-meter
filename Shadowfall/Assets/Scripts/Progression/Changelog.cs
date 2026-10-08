@@ -24,6 +24,14 @@ namespace Shadowfall
         {
             new Entry
             {
+                Id = 74, Date = "2026-10-08", Title = "Big fights, big bars",
+                Items = new[]
+                {
+                    "Bosses in a fight get a wide health bar across the top of the screen, with their phases marked: a gong and a flash as each one passes. World bosses show their armour plates, and their rage.",
+                },
+            },
+            new Entry
+            {
                 Id = 73, Date = "2026-10-08", Title = "A gentler first step",
                 Items = new[]
                 {
