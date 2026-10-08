@@ -11,16 +11,24 @@ namespace Shadowfall
     /// </summary>
     public class SiegeAftermath : MonoBehaviour
     {
-        public const float FeastXp = 1.1f, FeastSeconds = 600f;
+        /// <summary>The Heroes' Feast's experience factor (the server says: 1.25).</summary>
+        public static float FeastXp = 1.25f;
         static SiegeAftermath I;
 
         /// <summary>The Heroes' Feast runs until (Time.time); the hero's experience is 10% more meanwhile.</summary>
         public static float FeastUntil;
-        public static bool Feasting => Time.time < FeastUntil;
+        public static bool Feasting
+        {
+            get
+            {
+                var p = Player.I;
+                if (p != null && loadedFor != p) { loadedFor = p; Load(p); }
+                return Time.time < FeastUntil;
+            }
+        }
 
         class Built { public string Key; public GameObject Root; public float Until; public readonly List<SiegeLife.Extra> People = new List<SiegeLife.Extra>(); }
         readonly Dictionary<string, Built> built = new Dictionary<string, Built>();
-        readonly HashSet<string> feastsJoined = new HashSet<string>();
         NetAfter last;
         float nextCheck, nextCheer, nextHammer;
         readonly System.Random rng = new System.Random();
@@ -67,15 +75,6 @@ namespace Shadowfall
                 if (!b.Key.StartsWith("fe|") || b.Root == null) continue;
                 var fire = b.Root.transform.position;
                 float d = Factory.FlatDistance(p.transform.position, fire);
-                if (d < 12f && !feastsJoined.Contains(b.Key))
-                {
-                    feastsJoined.Add(b.Key);
-                    FeastUntil = Time.time + FeastSeconds;
-                    GameUI.Banner("Heroes' Feast: +10% experience for 10 minutes", UISkin.Gold);
-                    GameUI.Log("The town toasts its defenders. You eat and drink your fill: +10% experience for ten minutes.", UISkin.Gold);
-                    Sfx.Play2D("levelup", 0.5f, 1.2f);
-                    p.Achievements.Add("feasts");
-                }
                 if (d < 30f && Time.time >= nextCheer && b.People.Count > 0)
                 {
                     nextCheer = Time.time + R(3f, 6f);
@@ -163,51 +162,147 @@ namespace Shadowfall
         Built Feast(Vector3 square, string town)
         {
             var b = new Built();
-            var at = TownLife.Walkable(square + new Vector3(2f, 0f, 2f));
+            var grid = WorldGrid.Instance;
+            // the banquet table: a long trestle across the square, wherever there's room for it near the middle
+            Vector3 at = TownLife.Walkable(square);
+            foreach (var o in new[] { new Vector3(0f, 0f, -4f), new Vector3(0f, 0f, 4f), new Vector3(-4f, 0f, 0f), new Vector3(4f, 0f, 0f), new Vector3(3f, 0f, -5f), new Vector3(-3f, 0f, 5f), new Vector3(0f, 0f, -6f) })
+            {
+                var c = square + o;
+                bool free = true;
+                for (float x = -3.5f; x <= 3.5f && free; x += 1f)
+                    for (float z = -1.5f; z <= 1.5f && free; z += 1f)
+                        if (grid != null && !grid.IsWalkable(c + new Vector3(x, 0f, z))) free = false;
+                if (free) { at = c; break; }
+            }
             b.Root = new GameObject("VictoryFeast");
             b.Root.transform.position = at;
             var t = b.Root.transform;
-            // the bonfire: a stack of logs, a big fire, its light
+            var wood = new Color(0.55f, 0.38f, 0.22f);
+            var cloth = new Color(0.82f, 0.78f, 0.68f);
+            Factory.PrimAt(PrimitiveType.Cube, t, at + Vector3.up * 0.82f, new Vector3(6.4f, 0.1f, 1.3f), wood);
+            Factory.PrimAt(PrimitiveType.Cube, t, at + Vector3.up * 0.875f, new Vector3(6.2f, 0.02f, 1.1f), cloth); // the cloth
+            Factory.PrimAt(PrimitiveType.Cube, t, at + Vector3.up * 0.7f + Vector3.forward * 0.62f, new Vector3(6.2f, 0.3f, 0.02f), new Color(0.6f, 0.12f, 0.1f)); // a red skirt to the front
+            foreach (float x in new[] { -2.8f, 0f, 2.8f }) Factory.PrimAt(PrimitiveType.Cube, t, at + new Vector3(x, 0.4f, 0f), new Vector3(0.12f, 0.8f, 1.1f), wood * 0.8f);
+            foreach (float z in new[] { -1.15f, 1.15f }) // benches either side
+            {
+                Factory.PrimAt(PrimitiveType.Cube, t, at + new Vector3(0f, 0.45f, z), new Vector3(6f, 0.08f, 0.38f), wood * 0.9f);
+                foreach (float x in new[] { -2.6f, 0f, 2.6f }) Factory.PrimAt(PrimitiveType.Cube, t, at + new Vector3(x, 0.22f, z), new Vector3(0.1f, 0.44f, 0.3f), wood * 0.7f);
+            }
+            // the food: a roast in the middle, loaves, cheeses, fruit bowls, tankards and candles all along
+            Factory.PrimAt(PrimitiveType.Sphere, t, at + new Vector3(0f, 1f, 0f), new Vector3(0.7f, 0.3f, 0.45f), new Color(0.6f, 0.32f, 0.15f));
+            Factory.PrimAt(PrimitiveType.Cylinder, t, at + new Vector3(0f, 0.9f, 0f), new Vector3(0.9f, 0.02f, 0.9f), new Color(0.75f, 0.75f, 0.7f));
+            for (int k = 0; k < 14; k++)
+            {
+                float x = -2.9f + k * 0.45f + R(-0.08f, 0.08f), z = R(-0.35f, 0.35f);
+                if (Mathf.Abs(x) < 0.6f) continue;
+                int kind = k % 5;
+                var food = Factory.PrimAt(kind == 0 || kind == 3 ? PrimitiveType.Cylinder : PrimitiveType.Sphere, t, at + new Vector3(x, kind == 3 ? 1.0f : 0.95f, z),
+                    kind == 0 ? new Vector3(0.12f, 0.1f, 0.12f) : kind == 1 ? new Vector3(0.28f, 0.14f, 0.18f) : kind == 2 ? new Vector3(0.22f, 0.12f, 0.22f) : kind == 3 ? new Vector3(0.05f, 0.12f, 0.05f) : new Vector3(0.18f, 0.1f, 0.18f),
+                    kind == 0 ? new Color(0.65f, 0.55f, 0.35f) : kind == 1 ? new Color(0.78f, 0.5f, 0.24f) : kind == 2 ? new Color(0.95f, 0.8f, 0.35f) : kind == 3 ? new Color(0.95f, 0.92f, 0.8f) : new Color(0.75f, 0.2f, 0.2f));
+                if (kind == 3) PropFire.Add(t, food.transform.position + Vector3.up * 0.1f, new Color(1f, 0.75f, 0.35f), 0.08f, false); // a candle
+            }
+            var table = b.Root.AddComponent<FeastTable>();
+            table.Init(town);
+            // the bonfire, a little way off, and its light
+            var fire = TownLife.Walkable(at + Vector3.forward * 5.5f);
             for (int i = 0; i < 6; i++)
-                Factory.Prim(PrimitiveType.Cylinder, t, at + Vector3.up * 0.35f, new Vector3(0.22f, 0.9f, 0.22f), new Color(0.35f, 0.24f, 0.14f))
+                Factory.PrimAt(PrimitiveType.Cylinder, t, fire + Vector3.up * 0.35f, new Vector3(0.22f, 0.9f, 0.22f), new Color(0.35f, 0.24f, 0.14f))
                     .transform.rotation = Quaternion.Euler(60f, i * 60f, 0f);
-            PropFire.Add(t, at + Vector3.up * 0.7f, new Color(1f, 0.6f, 0.2f), 1.6f, true);
+            PropFire.Add(t, fire + Vector3.up * 0.7f, new Color(1f, 0.6f, 0.2f), 1.6f, true);
             var l = new GameObject("FeastLight").AddComponent<Light>();
             l.transform.SetParent(t, false);
-            l.transform.position = at + Vector3.up * 2.2f;
+            l.transform.position = fire + Vector3.up * 2.2f;
             l.type = LightType.Point;
             l.color = new Color(1f, 0.65f, 0.3f);
             l.range = 14f;
             l.intensity = 2f;
-            // trestle tables with food and drink either side
-            var wood = new Color(0.55f, 0.38f, 0.22f);
-            foreach (float side in new[] { -1f, 1f })
-            {
-                var c = TownLife.Walkable(at + new Vector3(side * 5.5f, 0f, 0f));
-                Factory.Prim(PrimitiveType.Cube, t, c + Vector3.up * 0.8f, new Vector3(1f, 0.08f, 3f), wood);
-                foreach (float z in new[] { -1.2f, 1.2f }) Factory.Prim(PrimitiveType.Cube, t, c + new Vector3(0f, 0.4f, z), new Vector3(0.9f, 0.8f, 0.1f), wood * 0.8f);
-                for (int k = 0; k < 5; k++)
-                {
-                    var food = Factory.Prim(k % 2 == 0 ? PrimitiveType.Cylinder : PrimitiveType.Sphere, t, c + new Vector3(R(-0.3f, 0.3f), 0.92f, -1.2f + k * 0.6f),
-                        k % 2 == 0 ? new Vector3(0.14f, 0.1f, 0.14f) : new Vector3(0.22f, 0.16f, 0.22f), k % 2 == 0 ? new Color(0.7f, 0.6f, 0.4f) : new Color(0.75f, 0.45f, 0.2f));
-                    food.name = k % 2 == 0 ? "Tankard" : "Loaf";
-                }
-            }
-            // banners of the town, and the townsfolk round the fire
+            // the townsfolk: some sat at the benches, the rest dancing and cheering round the fire
             var life = SiegeLife.Get();
             string[] models = { "Characters/Keeper", "Characters/RogueHooded", "Characters/Mage", "Characters/Rogue", "Characters/Knight" };
-            for (int i = 0; i < 9; i++)
+            for (int i = 0; i < 11; i++)
             {
-                float ang = i * 40f + R(-8f, 8f);
-                var spot = TownLife.Walkable(at + Quaternion.Euler(0f, ang, 0f) * Vector3.forward * R(3f, 4.2f));
-                string model = models[i % models.Length];
-                var e = life.Person("Villager", model, spot, i == 4 ? 1.2f : R(1.75f, 1.95f));
-                e.FaceAt = at;
-                e.Party = i % 3 == 0 ? "dance" : i % 3 == 1 ? "cheer" : "clap";
+                string model = models[(i + rng.Next(3)) % models.Length];
+                SiegeLife.Extra e;
+                if (i < 5)
+                {
+                    float z = i % 2 == 0 ? -1.2f : 1.2f;
+                    var seat = at + new Vector3(-2.4f + i * 1.2f + R(-0.2f, 0.2f), 0f, z);
+                    e = life.Person("Villager", model, seat, R(1.75f, 1.95f));
+                    e.FaceAt = at + new Vector3(seat.x - at.x, 0f, 0f);
+                    e.Party = "sit";
+                }
+                else
+                {
+                    var spot = TownLife.Walkable(fire + Quaternion.Euler(0f, i * 52f + R(-10f, 10f), 0f) * Vector3.forward * R(2.6f, 4f));
+                    e = life.Person("Villager", model, spot, i == 8 ? 1.2f : R(1.75f, 1.95f));
+                    e.FaceAt = fire;
+                    e.Party = rng.NextDouble() < 0.45 ? "dance" : rng.NextDouble() < 0.5 ? "cheer" : "clap";
+                }
                 b.People.Add(e);
             }
             Sfx.Play("bell", at + Vector3.up * 3f, 0.8f, 0.05f, 80f);
             return b;
+        }
+
+        /// <summary>Our plate at a victory feast ("fed"): +25% experience for fifteen minutes, kept over a reload.</summary>
+        public static void Fed(NetMsg m)
+        {
+            var p = Player.I;
+            if (p == null) return;
+            FeastXp = m.mul > 1f ? m.mul : 1.25f;
+            FeastUntil = Time.time + m.s;
+            Save(p);
+            GameUI.Banner("Heroes' Feast: +" + Mathf.RoundToInt((FeastXp - 1f) * 100f) + "% experience for " + (m.s / 60) + " minutes", UISkin.Gold);
+            GameUI.Log("You eat and drink your fill at the victory feast: +" + Mathf.RoundToInt((FeastXp - 1f) * 100f) + "% experience for " + (m.s / 60) + " minutes.", UISkin.Gold);
+            Sfx.Play2D("levelup", 0.5f, 1.2f);
+            p.Achievements.Add("feasts");
+        }
+
+        static string Key(Player p) => "sf_feast_" + p.DisplayName;
+        static void Save(Player p)
+        {
+            try
+            {
+                double end = (System.DateTime.UtcNow - new System.DateTime(1970, 1, 1)).TotalSeconds + (FeastUntil - Time.time);
+                PlayerPrefs.SetString(Key(p), end.ToString("R", System.Globalization.CultureInfo.InvariantCulture) + "|" + FeastXp.ToString(System.Globalization.CultureInfo.InvariantCulture));
+                PlayerPrefs.Save();
+            }
+            catch (System.Exception) { }
+        }
+
+        /// <summary>A Heroes' Feast still running from before a reload (per character).</summary>
+        static void Load(Player p)
+        {
+            try
+            {
+                var v = PlayerPrefs.GetString(Key(p), "");
+                if (string.IsNullOrEmpty(v)) return;
+                var parts = v.Split('|');
+                double end = double.Parse(parts[0], System.Globalization.CultureInfo.InvariantCulture);
+                double left = end - (System.DateTime.UtcNow - new System.DateTime(1970, 1, 1)).TotalSeconds;
+                if (left <= 0) return;
+                FeastUntil = Time.time + (float)left;
+                if (parts.Length > 1) FeastXp = float.Parse(parts[1], System.Globalization.CultureInfo.InvariantCulture);
+            }
+            catch (System.Exception) { }
+        }
+
+        static Player loadedFor;
+
+        /// <summary>The feast's table: click it to eat (the server lets each hero eat once a feast).</summary>
+        public class FeastTable : Interactable
+        {
+            public override string HoverText => "Victory Feast\n<eat and drink: +25% experience for 15 minutes, once>";
+            public override Color LabelColor => UISkin.Gold;
+            public override float LabelHeight => 1.8f;
+            public void Init(string town) { DisplayName = "Victory Feast"; InteractRange = 2.6f; AddClickCollider(1.6f, 1.2f); }
+            public override void Interact(Player p)
+            {
+                p.FaceTowards(transform.position);
+                p.PlayInteract();
+                Sfx.Play("potion", transform.position + Vector3.up, 0.5f, 0.1f);
+                NetClient.I?.Eat();
+            }
         }
 
         // ------------------------------------------------------------------ the carpenters at the gate
@@ -227,12 +322,12 @@ namespace Shadowfall
             // scaffolding: poles either side, two planked platforms
             foreach (float s in new[] { -2.4f, 2.4f })
                 foreach (float d in new[] { 0f, 1.2f })
-                    Factory.Prim(PrimitiveType.Cube, tr, at + across * s + inward * d + Vector3.up * 2f, new Vector3(0.12f, 4f, 0.12f), wood);
+                    Factory.PrimAt(PrimitiveType.Cube, tr, at + across * s + inward * d + Vector3.up * 2f, new Vector3(0.12f, 4f, 0.12f), wood);
             foreach (float h in new[] { 1.4f, 2.9f })
-                Factory.Prim(PrimitiveType.Cube, tr, at + inward * 0.6f + Vector3.up * h, Abs(across * 5f + inward * 1.3f) + Vector3.up * 0.08f, wood * 0.9f);
+                Factory.PrimAt(PrimitiveType.Cube, tr, at + inward * 0.6f + Vector3.up * h, Abs(across * 5f + inward * 1.3f) + Vector3.up * 0.08f, wood * 0.9f);
             // fresh planks stacked by it, a sawhorse
             var pile = at + inward * 3f + across * 3.5f;
-            for (int i = 0; i < 6; i++) Factory.Prim(PrimitiveType.Cube, tr, pile + Vector3.up * (0.08f + i * 0.1f), Abs(across * 0.3f + inward * 2.4f) + Vector3.up * 0.08f, new Color(0.78f, 0.62f, 0.4f));
+            for (int i = 0; i < 6; i++) Factory.PrimAt(PrimitiveType.Cube, tr, pile + Vector3.up * (0.08f + i * 0.1f), Abs(across * 0.3f + inward * 2.4f) + Vector3.up * 0.08f, new Color(0.78f, 0.62f, 0.4f));
             var life = SiegeLife.Get();
             var c1 = life.Person("Carpenter", "Characters/Barbarian", TownLife.Walkable(at + inward * 1.2f + across * 1.4f), 1.9f);
             var c2 = life.Person("Carpenter", "Characters/Keeper", TownLife.Walkable(at + inward * 1.2f - across * 1.4f), 1.85f);
@@ -247,36 +342,30 @@ namespace Shadowfall
 
         // ------------------------------------------------------------------ graves for the fallen guards
 
+        /// <summary>
+        /// The siege's dead in the town's graveyard (TownGraveyard): any the hero didn't see carried there are dug now, and
+        /// if so the townsfolk come to mourn them a while.
+        /// </summary>
         Built Graves(Vector3 gate, string town, int n, int seed)
         {
-            var t = WorldGenerator.TownNamed(town);
-            if (t == null || n <= 0) return null;
-            var outward = Factory.Flat(gate - t.Center).normalized;
-            var along = Vector3.Cross(Vector3.up, outward);
-            var r = new System.Random(seed * 7919 + n);
-            float Rr(float a, float b2) => a + (float)r.NextDouble() * (b2 - a);
-            var b = new Built();
-            b.Root = new GameObject("Graves");
-            var tr = b.Root.transform;
-            var grid = WorldGrid.Instance;
-            float side = r.NextDouble() < 0.5 ? -1f : 1f; // to one side of the road out of the gate
-            int placed = 0;
-            for (int i = 0; placed < n && i < n * 3; i++)
+            var yard = TownGraveyard.For(town);
+            if (yard == null || n <= 0) return null;
+            int made = yard.Ensure(n);
+            var b = new Built { Root = new GameObject("Graves " + town) };
+            b.Root.transform.position = yard.Centre;
+            if (made > 0)
             {
-                int row = placed / 4, col = placed % 4;
-                var p = gate + outward * (7f + row * 2.4f) + along * side * (6f + col * 1.6f) + new Vector3(Rr(-0.2f, 0.2f), 0f, Rr(-0.2f, 0.2f));
-                if (grid != null && !grid.IsWalkable(p)) { placed++; continue; }
-                placed++;
-                var earth = new Color(0.35f, 0.27f, 0.2f);
-                Factory.Prim(PrimitiveType.Cube, tr, p + Vector3.up * 0.12f, Abs(outward * 1.8f + along * 0.8f) + Vector3.up * 0.25f, earth);
-                var cross = Factory.Empty("Cross", tr, p - outward * 0.95f);
-                cross.rotation = Quaternion.LookRotation(outward) * Quaternion.Euler(Rr(-6f, 6f), 0f, Rr(-6f, 6f));
-                var w = new Color(0.5f, 0.38f, 0.25f);
-                Factory.Prim(PrimitiveType.Cube, cross, cross.position + Vector3.up * 0.55f, new Vector3(0.09f, 1.1f, 0.09f), w).transform.rotation = cross.rotation;
-                Factory.Prim(PrimitiveType.Cube, cross, cross.position + Vector3.up * 0.8f, new Vector3(0.55f, 0.09f, 0.09f), w).transform.rotation = cross.rotation;
-                // a helmet hung on some, flowers on others
-                if (r.NextDouble() < 0.4) Factory.Prim(PrimitiveType.Sphere, cross, cross.position + Vector3.up * 1.12f, new Vector3(0.24f, 0.18f, 0.24f), new Color(0.55f, 0.56f, 0.6f));
-                else Factory.Prim(PrimitiveType.Sphere, tr, p + Vector3.up * 0.28f + outward * 0.3f, new Vector3(0.18f, 0.08f, 0.18f), new Color(0.9f, 0.85f, 0.4f));
+                var life = SiegeLife.Get();
+                string[] models = { "Characters/Keeper", "Characters/RogueHooded", "Characters/Mage", "Characters/Rogue" };
+                int k = Mathf.Min(6, 2 + made);
+                for (int i = 0; i < k; i++)
+                {
+                    var spot = TownLife.Walkable(yard.Centre + Quaternion.Euler(0f, R(0f, 360f), 0f) * Vector3.forward * R(2.5f, 4f));
+                    var m = life.Person("Mourner", models[rng.Next(models.Length)], spot, R(1.7f, 1.9f));
+                    m.FaceAt = yard.Centre;
+                    m.Party = rng.NextDouble() < 0.4 ? "sit" : "bow";
+                    m.FadeOut(R(150f, 260f));
+                }
             }
             return b;
         }
@@ -290,7 +379,7 @@ namespace Shadowfall
             b.Root.transform.position = camp;
             var tr = b.Root.transform;
             // a stake, and the captives sat round it, roped
-            Factory.Prim(PrimitiveType.Cylinder, tr, camp + Vector3.up * 1f, new Vector3(0.18f, 1f, 0.18f), new Color(0.35f, 0.25f, 0.15f));
+            Factory.PrimAt(PrimitiveType.Cylinder, tr, camp + Vector3.up * 1f, new Vector3(0.18f, 1f, 0.18f), new Color(0.35f, 0.25f, 0.15f));
             var life = SiegeLife.Get();
             string[] models = { "Characters/Keeper", "Characters/RogueHooded", "Characters/Rogue", "Characters/Mage" };
             for (int i = 0; i < n; i++)
@@ -301,7 +390,7 @@ namespace Shadowfall
                 e.Party = "sit";
                 b.People.Add(e);
                 // the rope from them to the stake
-                var rope = Factory.Prim(PrimitiveType.Cube, tr, Vector3.Lerp(at, camp, 0.5f) + Vector3.up * 0.6f, new Vector3(0.03f, 0.03f, 1.1f), new Color(0.75f, 0.65f, 0.45f));
+                var rope = Factory.PrimAt(PrimitiveType.Cube, tr, Vector3.Lerp(at, camp, 0.5f) + Vector3.up * 0.6f, new Vector3(0.03f, 0.03f, 1.1f), new Color(0.75f, 0.65f, 0.45f));
                 rope.transform.rotation = Quaternion.LookRotation(camp - at);
             }
             b.Root.AddComponent<CaptiveCries>().Init(b.People, pleas);
@@ -381,16 +470,16 @@ namespace Shadowfall
                 b.DisplayName = "Siege Record";
                 b.InteractRange = 2.4f;
                 var wood = new Color(0.42f, 0.3f, 0.18f);
-                foreach (float x in new[] { -0.7f, 0.7f }) Factory.Prim(PrimitiveType.Cube, go.transform, at + go.transform.right * x + Vector3.up * 0.95f, new Vector3(0.12f, 1.9f, 0.12f), wood);
-                var board = Factory.Prim(PrimitiveType.Cube, go.transform, at + Vector3.up * 1.4f, new Vector3(1.5f, 0.95f, 0.08f), new Color(0.3f, 0.22f, 0.14f));
+                foreach (float x in new[] { -0.7f, 0.7f }) Factory.PrimAt(PrimitiveType.Cube, go.transform, at + go.transform.right * x + Vector3.up * 0.95f, new Vector3(0.12f, 1.9f, 0.12f), wood);
+                var board = Factory.PrimAt(PrimitiveType.Cube, go.transform, at + Vector3.up * 1.4f, new Vector3(1.5f, 0.95f, 0.08f), new Color(0.3f, 0.22f, 0.14f));
                 board.transform.rotation = go.transform.rotation;
                 // pinned notices, a carved shield on top
                 for (int i = 0; i < 4; i++)
                 {
-                    var n = Factory.Prim(PrimitiveType.Cube, go.transform, at + go.transform.right * (-0.45f + i * 0.3f) + Vector3.up * (1.3f + (i % 2) * 0.2f) + go.transform.forward * 0.05f, new Vector3(0.24f, 0.3f, 0.01f), new Color(0.9f, 0.86f, 0.72f));
+                    var n = Factory.PrimAt(PrimitiveType.Cube, go.transform, at + go.transform.right * (-0.45f + i * 0.3f) + Vector3.up * (1.3f + (i % 2) * 0.2f) + go.transform.forward * 0.05f, new Vector3(0.24f, 0.3f, 0.01f), new Color(0.9f, 0.86f, 0.72f));
                     n.transform.rotation = go.transform.rotation * Quaternion.Euler(0f, 0f, (i - 1.5f) * 4f);
                 }
-                Factory.Prim(PrimitiveType.Cube, go.transform, at + Vector3.up * 2.05f, new Vector3(0.45f, 0.5f, 0.1f), new Color(0.6f, 0.15f, 0.12f)).transform.rotation = go.transform.rotation;
+                Factory.PrimAt(PrimitiveType.Cube, go.transform, at + Vector3.up * 2.05f, new Vector3(0.45f, 0.5f, 0.1f), new Color(0.6f, 0.15f, 0.12f)).transform.rotation = go.transform.rotation;
                 b.AddClickCollider(0.8f, 2.2f);
             }
         }

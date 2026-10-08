@@ -228,6 +228,8 @@ namespace Shadowfall
         public void LightBeacon(int i) { if (State == ConnState.InWorld) Send(new BeaconCmd { i = i }); }
         /// <summary>A bucket of water on burning roof id.</summary>
         public void Douse(int id) { if (State == ConnState.InWorld) Send(new DouseCmd { id = id }); }
+        /// <summary>A plate at a victory feast's table (once a feast).</summary>
+        public void Eat() { if (State == ConnState.InWorld) Send(new FeastCmd()); }
 
         // =====================================================================================
         // Outgoing gameplay messages
@@ -647,6 +649,7 @@ namespace Shadowfall
                 case "gev": SiegeWorks.Event(m); break;
                 case "doused": SiegeWorks.Doused(m); break;
                 case "chron": SiegeChronicle.Set(m.rec); break;
+                case "fed": SiegeAftermath.Fed(m); break;
                 case "after": SiegeAftermath.Set(new NetAfter { fe = m.fe, rp = m.rp, gr = m.gr, cp = m.cp }); break;
                 case "rescued":
                     if (Player.I != null)

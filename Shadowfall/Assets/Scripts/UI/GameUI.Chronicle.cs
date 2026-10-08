@@ -61,7 +61,7 @@ namespace Shadowfall
             if (SiegeAftermath.Feasting)
             {
                 int left = Mathf.CeilToInt(SiegeAftermath.FeastUntil - Time.time);
-                UISkin.Shadowed(new Rect(x, y, 300, 20), "Heroes' Feast: +10% experience  " + (left / 60) + ":" + (left % 60).ToString("00"), UISkin.Small, UISkin.Gold);
+                UISkin.Shadowed(new Rect(x, y, 300, 20), "Heroes' Feast: +" + Mathf.RoundToInt((SiegeAftermath.FeastXp - 1f) * 100f) + "% experience  " + (left / 60) + ":" + (left % 60).ToString("00"), UISkin.Small, UISkin.Gold);
                 y += 22;
             }
             var cp = SiegeAftermath.Captives;

@@ -10,7 +10,8 @@ namespace Shadowfall
     /// <item>The scouts' warning: farmers and a cart flee from the raiders' side into town, and a wounded scout gallops in
     /// to the town crier with the news.</item>
     /// <item>The war camp's raiders jeer, dance and sharpen their blades while they mass; their chief shouts taunts.</item>
-    /// <item>A guard who falls is carried back into town by two militiamen and laid down by the healer in the square.</item>
+    /// <item>A guard who falls is carried by two militiamen to the town's graveyard (TownGraveyard) and buried, and the
+    /// townsfolk come out to mourn him a few minutes.</item>
     /// </list>
     /// Only built near the hero (the town under attack within ~200 m).
     /// </summary>
@@ -22,13 +23,12 @@ namespace Shadowfall
         static readonly string[] fleeing = { "They burned our farm!", "Open the gate! Let us in!", "Run! They're right behind us!", "The raiders! Hundreds of them!", "My cows... leave them, run!" };
         static readonly string[] taunts = { "Your walls won't save you!", "We'll burn it all!", "Hide, little townsfolk!", "Sharpen your blades, lads!", "Tonight we feast in their halls!", "Bring out your gold!" };
         static readonly string[] chiefTaunts = { "When the horns sound, leave nothing standing!", "Their gate is rotten wood. Break it!", "Whoever brings me the bell gets double shares!" };
-        static readonly string[] carriers = { "Easy with him!", "Make way! Wounded!", "Hold on, friend, nearly there.", "Get him to the healer!" };
+        static readonly string[] carriers = { "Easy with him!", "Make way! Wounded!", "Gently. Gently now.", "Bring him home." };
 
         readonly System.Random rng = new System.Random();
         readonly List<Extra> extras = new List<Extra>();
         string warnedFor;  // the siege we ran the warning's scenes for
         float nextTaunt, nextChief;
-        Extra healer;
         int wounded;
 
         public static SiegeLife Get()
@@ -67,7 +67,6 @@ namespace Shadowfall
         {
             foreach (var e in extras) if (e != null) Destroy(e.gameObject);
             extras.Clear();
-            healer = null;
             wounded = 0;
             warnedFor = null;
         }
@@ -203,9 +202,9 @@ namespace Shadowfall
             return pick;
         }
 
-        // ------------------------------------------------------------------ a fallen guard carried to the healer
+        // ------------------------------------------------------------------ a fallen guard carried to the graveyard
 
-        /// <summary>A guard fell at <paramref name="at"/> (TownGuards): two militiamen carry him to the healer.</summary>
+        /// <summary>A guard fell at <paramref name="at"/> (TownGuards): two militiamen carry him to the graveyard.</summary>
         public static void GuardDown(Vector3 at, CharacterLook look)
         {
             var iv = Invasion.Current;
@@ -214,50 +213,71 @@ namespace Shadowfall
             Get().Carry(at, look, town);
         }
 
+        static readonly string[] mourning = { "Rest now, friend.", "He held the gate for us.", "Gone... just like that.", "We'll not forget you.", "Who'll tell his mother?", "May the gods keep you." };
+
         void Carry(Vector3 at, CharacterLook look, Settlement town)
         {
-            if (wounded >= 6) return; // the infirmary is full; the rest are seen to off-screen
-            var square = TownLife.Walkable(town.Center + new Vector3(3f + (wounded % 3) * 1.6f, 0f, -3f - (wounded / 3) * 2f));
-            if (healer == null)
-            {
-                healer = Person("Healer", "Characters/Mage", TownLife.Walkable(town.Center + new Vector3(5f, 0f, -1.5f)), 1.8f);
-                healer.Line = "Bring them here! Gently!";
-                healer.Tending = true;
-                healer.FaceAt = square;
-            }
-            var bed = square;
+            if (wounded >= 10) return; // the rest are seen to out of sight
+            var yard = TownGraveyard.For(town.Name);
+            if (yard == null) return;
+            var bed = yard.NextGrave();
+            yard.Dug(); // counted now, so the server's tally later doesn't dig it again
             wounded++;
             var militiaLook = new CharacterLook { Model = "Characters/RogueHooded", Height = 1.8f, Tint = new Color(0.75f, 0.85f, 1f) };
             // two men run out of a house near the gate for him
             var near = Vector3.MoveTowards(at, town.Center, 12f);
             var door = Rampart.DoorNear(near, 25f, rng);
             var start = TownLife.Walkable(door != null ? door.Step : near);
-            var a = Extra.Make(this, "Militia", militiaLook, start, R(3.6f, 4.6f));
-            var b = Extra.Make(this, "Militia", militiaLook, TownLife.Walkable(start + Vector3.right), R(3.6f, 4.6f));
-            var body = Extra.Make(this, "Wounded guard", look, at, 0f);
+            var a = Extra.Make(this, "Militia", militiaLook, start, R(3.2f, 4.2f));
+            var b = Extra.Make(this, "Militia", militiaLook, TownLife.Walkable(start + Vector3.right), R(3.2f, 4.2f));
+            var body = Extra.Make(this, "Fallen guard", look, at, 0f);
             body.Lying = true;
-            a.Delay = R(0.8f, 2.5f);
+            a.Delay = R(1f, 4f);
             b.Delay = a.Delay + R(0.2f, 1.2f);
             a.Walk(at + Vector3.left * 0.7f);
             b.Walk(at + Vector3.right * 0.7f);
             a.Line = Pick(carriers);
             a.OnArrive = x =>
             {
-                // pick him up between them and go
+                // pick him up between them and carry him to the graveyard, slowly
                 body.CarriedBy = x;
-                x.Walk(bed + Vector3.left * 0.7f);
-                b.Walk(bed + Vector3.right * 0.7f);
-                x.OnArrive = y =>
-                {
-                    body.CarriedBy = null;
-                    body.transform.position = bed;
-                    y.Delay = 3f;
-                    y.FadeOut(4f);
-                    b.FadeOut(4f);
-                    body.FadeOut(120f); // he lies there being tended a while, then he's on his feet (out of sight)
-                };
+                x.Speed = b.Speed = R(1.6f, 2f);
+                x.Walk(TownLife.Walkable(bed + Vector3.left * 1.1f));
+                b.Walk(TownLife.Walkable(bed + Vector3.right * 1.1f));
+                x.OnArrive = y => StartCoroutine(Bury(yard, bed, body, y, b, town));
             };
             b.OnArrive = null;
+        }
+
+        /// <summary>He's laid in the grave and covered; the bearers stand a while, and townsfolk come to mourn, then go home.</summary>
+        System.Collections.IEnumerator Bury(TownGraveyard yard, Vector3 bed, Extra body, Extra a, Extra b, Settlement town)
+        {
+            body.CarriedBy = null;
+            body.transform.position = bed;
+            body.transform.rotation = Quaternion.Euler(0f, R(0f, 360f), 0f);
+            foreach (var x in new[] { a, b }) if (x != null) { x.FaceAt = bed; x.Party = "bow"; }
+            yield return new WaitForSeconds(R(4f, 7f));
+            yard.Dig(bed);
+            body.FadeOut(0f);
+            // mourners from the houses about: three or four, in their own time
+            var near = Player.I != null && Factory.FlatDistance(Player.I.transform.position, bed) < 80f;
+            if (near)
+            {
+                string[] models = { "Characters/Keeper", "Characters/RogueHooded", "Characters/Mage", "Characters/Rogue" };
+                int n = 3 + rng.Next(2);
+                for (int i = 0; i < n; i++)
+                {
+                    var spot = TownLife.Walkable(bed + Quaternion.Euler(0f, 180f + (i - n / 2f) * 32f + R(-8f, 8f), 0f) * Vector3.forward * R(1.6f, 2.4f));
+                    var m = Person("Mourner", models[rng.Next(models.Length)], spot, i == n - 1 && rng.NextDouble() < 0.4 ? 1.2f : R(1.7f, 1.9f));
+                    m.FaceAt = bed;
+                    m.Party = rng.NextDouble() < 0.4 ? "sit" : "bow";
+                    m.Line = rng.NextDouble() < 0.5 ? Pick(mourning) : null;
+                    m.FadeOut(R(150f, 260f)); // a few minutes, then home
+                }
+            }
+            yield return new WaitForSeconds(R(40f, 90f));
+            if (a != null) a.FadeOut(R(0f, 4f));
+            if (b != null) b.FadeOut(R(2f, 8f));
         }
 
         // ------------------------------------------------------------------ the bucket line at a burning roof
@@ -279,7 +299,7 @@ namespace Shadowfall
 
         /// <summary>One of the townsfolk standing at <paramref name="at"/> (a feast, a carpenter, a captive).</summary>
         /// <summary>
-        /// One of the townsfolk who comes to stand at <paramref name="at"/> (a feast, a carpenter, the healer): out of a
+        /// One of the townsfolk who comes to stand at <paramref name="at"/> (a feast, a carpenter, a mourner): out of a
         /// house's front door nearby, in their own time and at their own pace. <paramref name="fromDoor"/> false: already
         /// there (a captive at the raiders' camp).
         /// </summary>

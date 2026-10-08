@@ -68,6 +68,7 @@ namespace Shadowfall
             MemLog.Note("BountyBoard.SpawnAll");
             TownCrier.SpawnAll();
             MemorialBoard.SpawnAll(); // the siege record, by each walled town's crier
+            TownGraveyard.SpawnAll(); // where a siege's fallen are buried
             MemLog.Note("TownCrier.SpawnAll");
             AuctionPodium.BuildAll();              // auctioneers by the general merchants (after the forges: they keep clear)
             MemLog.Note("AuctionPodium.BuildAll");

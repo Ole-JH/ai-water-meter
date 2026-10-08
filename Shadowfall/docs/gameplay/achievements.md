@@ -51,7 +51,7 @@ exploration count from the day achievements arrived.
 | **Splinters** | Destroy a battering ram. | 10 |  |
 | **Strike the Colours** | Kill the raiders' banner bearer and break their nerve. | 10 |  |
 | **No One Left Behind** | Free the captives the raiders took from a town. | 15 |  |
-| **Guest of Honour** | Join a victory feast after a siege. | 5 |  |
+| **Guest of Honour** | Eat at a victory feast after a siege. | 5 |  |
 
 ### Bosses
 

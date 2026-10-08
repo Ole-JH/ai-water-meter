@@ -24,6 +24,19 @@ namespace Shadowfall
         {
             new Entry
             {
+                Id = 83, Date = "2026-10-08", Title = "Feast, mourning and fire",
+                Items = new[]
+                {
+                    "The victory feast is a banquet table in the square for five minutes: click it to eat, once per feast, for +25% experience for fifteen minutes.",
+                    "Every walled town has a graveyard. Fallen guards are carried there and buried, and the townsfolk come out to mourn them a while.",
+                    "Guards, militia, bucket carriers and the feast's townsfolk come out of the houses instead of appearing from nowhere, each in their own time; archers wait for the ladders to stand before climbing.",
+                    "A sacked town burns much harder: house fires two to three times the size, flames up the walls and along the town wall itself, and twice the wreckage.",
+                    "The town crier tells the truth after a siege: the sack, the captives or the feast, not a stale call to arms.",
+                    "The Siege Record board by each crier now actually stands there (it was being built out of sight).",
+                },
+            },
+            new Entry
+            {
                 Id = 82, Date = "2026-10-08", Title = "Ready at the walls, ruined in defeat",
                 Items = new[]
                 {

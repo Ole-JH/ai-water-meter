@@ -111,6 +111,7 @@ namespace Shadowfall
         public int f;
         public NetChron[] rec;         // "chron": the walled towns' siege record (SiegeChronicle)
         public float pmul;             // "stock": the town's price factor (its prosperity), 1 = normal
+        public float mul;              // "fed": the Heroes' Feast's experience factor (s = its seconds)
         public NetAfterSpot[] fe, rp, gr, cp; // "after": a siege's feasts, repairs, graves, captives (SiegeAftermath)
     }
 
@@ -171,6 +172,7 @@ namespace Shadowfall
     [Serializable] public class NetAfterSpot { public string k, g; public float x, z; public int left, n, s, c; }
     [Serializable] public class BeaconCmd { public string t = "beacon"; public int i; }
     [Serializable] public class DouseCmd { public string t = "douse"; public int id; }
+    [Serializable] public class FeastCmd { public string t = "feast"; }
 
     // ---------------------------------------------------------------- client -> server
 

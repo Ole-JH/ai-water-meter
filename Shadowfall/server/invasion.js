@@ -52,7 +52,9 @@ const WARLORD_TAUNTS = ["Your gate is kindling, your walls are sand!", "I have b
 // After a siege. Won: a feast in the town square (FEAST_S; heroes who join it get the Heroes' Feast, see the client) and
 // carpenters at the gate. Won or lost: graves outside the wall for the guards who fell. Lost: the raiders drag
 // townsfolk off to their camp; free them (kill their captors) within CAPTIVE_S and the fires burn half as long again.
-const FEAST_S = Number(process.env.INVASION_FEAST_S ?? 600), REPAIR_S = 300, GRAVES_S = 2 * 3600;
+const FEAST_S = Number(process.env.INVASION_FEAST_S ?? 300), REPAIR_S = 300, GRAVES_S = 2 * 3600;
+// The feast's table in the square: every hero may eat from it once, for FEAST_BUFF_S of +FEAST_XP experience
+const FEAST_BUFF_S = 15 * 60, FEAST_XP = 1.25;
 const CAPTIVE_S = Number(process.env.INVASION_CAPTIVE_S ?? 600);
 // A town's prosperity (-3..3, remembered with its siege record): defending it raises it, losing it (or its captives,
 // or roofs left burning) lowers it, and it drifts back towards 0 one step every PROSPERITY_DRIFT_H hours. Its merchants
@@ -633,7 +635,7 @@ module.exports = function createInvasions(ctx) {
       const best = [...inv.defenders.entries()].sort((a, b) => b[1] - a[1]).map(([name]) => name);
       record(inv.town.name, "h", inv.gate.name, best);
       if (inv.lostFires >= 2) { shiftProsperity(inv.town.name, -1); saveChronicle(); } // the stores went up with the roofs
-      feasts.set(inv.town.name, { town: inv.town, until: now() + FEAST_S });
+      feasts.set(inv.town.name, { town: inv.town, until: now() + FEAST_S, eaten: new Set() });
       repairs.set(inv.town.name, { town: inv.town, gate: inv.gate, until: now() + REPAIR_S });
     } else {
       for (const id of inv.ids) monsters.delete(id); // they withdraw with their spoils
@@ -834,6 +836,18 @@ module.exports = function createInvasions(ctx) {
       if (sacks.size) safeSend(s, JSON.stringify(sackState()));
       safeSend(s, JSON.stringify(chronicleState()));
       if (feasts.size || repairs.size || graves.length || captives) safeSend(s, JSON.stringify(afterState()));
+    },
+    /** A hero eats at a victory feast's table (they must be by it, and only once a feast). Returns why not, or "". */
+    eat(s) {
+      for (const f of feasts.values()) {
+        const c = centre(f.town);
+        if (dist(s.x, s.z, c.x, c.z) > 14) continue;
+        if (f.eaten.has(s.name)) return "You've eaten your fill at this feast already.";
+        f.eaten.add(s.name);
+        safeSend(s, JSON.stringify({ t: "fed", k: f.town.name, s: FEAST_BUFF_S, mul: FEAST_XP }));
+        return "";
+      }
+      return "There's no feast here.";
     },
     /** The merchants' price factor where a hero stands (the town's prosperity): 1 outside the walled towns. */
     priceMul(x, z) {

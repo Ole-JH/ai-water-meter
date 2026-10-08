@@ -298,15 +298,18 @@ one of the walled towns (Hollowmere, Frosthaven, Saltreach or Emberwatch), usual
   percent of an invader's life a blow), so the heroes do the real work, and guard kills give nobody experience or loot
   unless a hero hurt the monster too. Invaders still go for heroes first; with no hero near they fight the soldiers
   (their archers and casters shoot at the wall's archers too), and only then batter the gate. Fallen guards are
-  replaced at the next wave. The guards call out as they fight; when a soldier falls, two militiamen carry him back to a
-  healer who tends the wounded in the square.
+  replaced at the next wave. The guards call out as they fight. Seen from the start, they come out of the houses near
+  the gate one by one and walk to their posts; each archer waits at the foot of a siege ladder until the militia have
+  it standing, then climbs it and walks along the wall. When a soldier falls, two militiamen carry him to the town's
+  **graveyard** (a fenced plot inside the walls) and bury him, and townsfolk come out of their houses to mourn him a
+  few minutes before going home.
 - **Fire arrows.** Once the waves come, the raiders' archers and casters now and then set a roof behind the gate alight.
   A fire grows (the townsfolk's bucket line only slows it) and, left burning at full strength, spreads to the next roof.
   Click a burning roof to throw water on it: two buckets put out a fresh fire, and each pays a little experience. Roofs
   still burning at full strength when the siege ends cost the town its stores (its prosperity, below).
 - **The gate shuts** as soon as the first wave comes: nobody walks in or out there until it's over (recall or
   a waystone still gets you home).
-- **The militia put up ladders.** Two helpers carry a ladder each from the middle of town to the inside of the wall,
+- **The militia put up ladders.** Two helpers come out of houses near the middle of town and carry a ladder each to the inside of the wall,
   a few paces either side of the gate, stand them up and lay a plank walkway along the top. Click a ladder to climb up.
   On the wall you walk along the walkway (click along it), and you can attack from up there: ranged attacks and spells
   fly over the wall, and anything right below is in reach of a melee swing. Click outside the wall to **jump down among
@@ -323,9 +326,10 @@ one of the walled towns (Hollowmere, Frosthaven, Saltreach or Emberwatch), usual
 - **The town holds** when every wave is dead: every hero who hurt at least one invader (or lit a beacon) gets
   experience (about a sixth of a level) and a boss's share of loot at their feet: gold, a guaranteed rare and a gem,
   with a chance at set and legendary items. Invaders also give 30% more experience each. Then:
-    - **a victory feast**: bells ring, a bonfire burns in the square with tables of food and drink, and the townsfolk
-      dance, cheer and toast the defenders for ten minutes. Join it (walk up to the fire) for the **Heroes' Feast**:
-      +10% experience for ten minutes;
+    - **a victory feast** for five minutes: bells ring, a long banquet table is laid in the square with a roast, bread,
+      cheese and ale, townsfolk sit at its benches and dance round a bonfire. Click the table to eat: the **Heroes'
+      Feast**, +25% experience for fifteen minutes (it survives a reload). Each hero can eat once a feast, so it can't
+      be stretched;
     - carpenters mend the gate behind scaffolding for a few minutes.
 - **The town is sacked** when the gate breaks, or when nobody stops the siege within 12 minutes: the invaders plunder
   the market and withdraw, and nobody is rewarded. Worse, **they set fire to the quarter behind the broken gate** (inside
@@ -355,7 +359,8 @@ one of the walled towns (Hollowmere, Frosthaven, Saltreach or Emberwatch), usual
   broken gate, tied to a stake and calling for help, with a few raiders (and a slaver) standing guard. The tracker and
   the world map show where. Kill the captors within ten minutes and the captives run home, the fires burn half as long
   again, and everyone who fought the captors gets experience. Leave them and they're carried off into the wilds.
-- **Graves** are dug outside the wall by the gate for every guard who fell, won or lost, and stay for a couple of hours.
+- **Graves** are dug in the town's graveyard for every guard who fell, won or lost (if you weren't there to see them
+  carried in, the townsfolk mourn them when you arrive).
 
 ### The siege record and prosperity
 

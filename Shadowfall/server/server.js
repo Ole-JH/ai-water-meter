@@ -2454,6 +2454,13 @@ const handlers = {
   },
 
   /** Lighting a beacon by a besieged gate (invasion.js). */
+  /** Eating at a victory feast's table in a town square (invasion.js): once a feast per hero. */
+  feast(s) {
+    if (!s.inWorld || s.dead || s.inst) return;
+    const why = invasions.eat(s);
+    if (why) safeSend(s, JSON.stringify({ t: "sys", msg: why }));
+  },
+
   beacon(s, m) {
     if (!s.inWorld || s.dead || s.inst) return;
     const why = invasions.light(s, m.i);

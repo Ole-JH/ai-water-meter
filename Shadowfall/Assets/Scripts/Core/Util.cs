@@ -88,6 +88,14 @@ namespace Shadowfall
             return go;
         }
 
+        /// <summary>A primitive at a world position, kept there under <paramref name="parent"/> (wherever the parent is).</summary>
+        public static GameObject PrimAt(PrimitiveType type, Transform parent, Vector3 worldPos, Vector3 scale, Color color)
+        {
+            var go = Prim(type, null, worldPos, scale, color);
+            go.transform.SetParent(parent, true);
+            return go;
+        }
+
         public static Transform Empty(string name, Transform parent, Vector3 localPos)
         {
             var t = new GameObject(name).transform;

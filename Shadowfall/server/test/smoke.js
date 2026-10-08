@@ -497,7 +497,15 @@ async function invasionTests(a, b) {
   // The town remembers: its record, the defenders' names, a feast in the square and cheaper prices
   const holl = (b.all("chron").at(-1)?.rec || []).find((c) => c.k === "Hollowmere Village");
   assert.ok(holl && holl.h === 1 && holl.last === "h" && holl.d[0] === "Alice" && holl.p === 1, "the siege record: held once, by Alice, and the town prospers");
-  assert.ok((b.all("after").at(-1)?.fe || []).some((f) => f.k === "Hollowmere Village" && f.left > 500), "a feast in the square");
+  assert.ok((b.all("after").at(-1)?.fe || []).some((f) => f.k === "Hollowmere Village" && f.left > 250), "a feast in the square");
+  state(b, 144.5, 146);
+  await sleep(150);
+  b.ws.send(JSON.stringify({ t: "feast" }));
+  await sleep(200);
+  b.ws.send(JSON.stringify({ t: "feast" }));
+  await sleep(200);
+  assert.ok(b.all("fed").length === 1 && b.find("fed").s === 900 && b.find("fed").mul === 1.25, "a hero eats at the feast's table once: +25% experience for 15 minutes");
+  assert.ok(b.all("sys").some((m) => /eaten your fill/.test(m.msg)), "and only once a feast");
   assert.ok((b.all("after").at(-1)?.rp || []).some((f) => f.k === "Hollowmere Village" && f.g === "south"), "carpenters mend the gate");
   state(b, 146, 150);
   await sleep(150);

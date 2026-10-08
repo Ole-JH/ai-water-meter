@@ -99,7 +99,7 @@ container is running and the machine's CPU, memory and disk. See [Monitoring →
 | `INVASION_MINUTES` | `45` | About how often a [town invasion](../gameplay/world.md#town-invasions) starts (75-125% of this, only with heroes near a walled town). `0` = never (admins can still start one) |
 | `INVASION_WARN_S` | `90` | How long the scouts' warning runs before the first wave (counting only while heroes are near the town) |
 | `INVASION_FIRE_S` | `18` | About how often the raiders' archers set a roof alight during a siege's waves |
-| `INVASION_FEAST_S` | `600` | How long a victory feast lasts in the town square |
+| `INVASION_FEAST_S` | `300` | How long a victory feast's table stays in the town square |
 | `INVASION_CAPTIVE_S` | `600` | How long heroes have to free a sacked town's captives (`0` = no captives) |
 | `INVASION_ABANDON_S` | `180` | With nobody near the town, a warning or siege stands still; after this long of it the raiders give up and the town is spared |
 | `ELITE_CHANCE` | `0.18` | Chance that a new open-world monster spawns as an elite (admins can change it at runtime) |

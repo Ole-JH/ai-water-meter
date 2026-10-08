@@ -98,6 +98,7 @@ Server → client:
 | `tcancel` | — | Cancel the trade |
 | `iop` | `op` + `i`, `j`, `slot`, `n`, `id`, `k`, `name`, `to` | An item or gold action, carried out by the server: `equip i`, `unequip slot`, `use i`, `drop i`, `pickup id`, `sort`, `stash i`, `unstash i`, `socket i` (into `to` = `eq` `slot` or `bag` `j`), `fuse`, `sell i`, `sellcommon`, `vendor k`, `buy k i n name`, `craft name`, `gather name`, `quest k`, `hire k`, `respec`, `chest i`, `rebuild k` (`wood`, `stone` or `gold` for the reeve of a burning town you stand in). Answered by `iok` or `ierr`, then `inv` |
 | `beacon` | `i` | Light beacon `i` by a besieged gate (within 4.5 m of it, while the siege is on). Announced to everyone; the state's `bc` shows who lit it |
+| `feast` | | Eat at a victory feast's table (within 14 m of the town's middle, once a feast). Answered by `fed`, or a `sys` saying why not |
 | `douse` | `id` | A bucket of water on burning roof `id` of a besieged town (within 14 m of it, once every 1.2 s). Answered by `doused` (`id`, `xp`) |
 | `adm` | `c` + arguments | Admin command (`tp`, `tpto`, `summon`, `dungeon`, `regen`, `spawn`, `killall`, `time`, `elites`, `announce`, `kick`, `who`, `resetpw`, `give`); refused unless the account is an admin. See [Admin module](../deployment/admin.md) |
 | `chat` | `msg` | Chat to everyone. Commands handled by the server: `/who`, `/p` (party), `/w name` (whisper), `/invite name`, `/leave`, `/a` (admin). `/r` is turned into `/w` by the client |
@@ -154,6 +155,7 @@ Server → client:
 | `chron` | `rec[]` | At login and after every siege: each walled town's record `{k,h,f,sp,last,ago,g,d,p}`: held, fell, spared, the last result and how many seconds ago, the gate, the last defenders, prosperity -3..3 |
 | `after` | `fe[]`, `rp[]`, `gr[]`, `cp[]` | A siege's aftermath, when it changes: victory feasts `{k,x,z,left}`, gate repairs `{k,g,x,z,left}`, graves `{k,g,x,z,n,s}` (count, seed), captives at the raiders' camp `{k,x,z,n,left,c}` (`c` captors left) |
 | `rescued` | `k`, `xp` | You helped free town `k`'s captives |
+| `fed` | `k`, `s`, `mul` | You ate at town `k`'s victory feast: experience times `mul` for `s` seconds |
 | `weather` | `s`, `sky`, `i`, `left` | At login and on every change: season `s` (0 spring, 1 summer, 2 autumn, 3 winter), `sky` (`clear`, `cloudy`, `rain`, `storm`, `fog`; rain and storms fall as snow where it's cold), intensity `i` (0..1), seconds `left` in the season |
 | `admwho` | `items[]` | Admin player list: `id\|name\|level\|where` |
 | `sys` | `msg` | System message (joins, leaves, boss kills, `/who`) |
