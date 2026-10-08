@@ -646,6 +646,18 @@ namespace Shadowfall
                 case "sack": Sack.Set(m.sk); break;
                 case "gev": SiegeWorks.Event(m); break;
                 case "doused": SiegeWorks.Doused(m); break;
+                case "chron": SiegeChronicle.Set(m.rec); break;
+                case "after": SiegeAftermath.Set(new NetAfter { fe = m.fe, rp = m.rp, gr = m.gr, cp = m.cp }); break;
+                case "rescued":
+                    if (Player.I != null)
+                    {
+                        Player.I.AddXp(m.xp);
+                        Player.I.Achievements.Add("rescued");
+                        GameUI.Banner("The captives are free!", new Color(0.55f, 1f, 0.55f));
+                        GameUI.Log("You helped free the captives of " + m.k + ": " + m.xp + " experience, and the town's gratitude.", new Color(0.55f, 1f, 0.55f));
+                        Sfx.Play2D("quest_done", 0.8f);
+                    }
+                    break;
                 case "wboss": WorldBoss.Set(m.wb); break;
                 case "dreq": Duel.Challenged(m.id, m.name); break;
                 case "duelring": DuelRing.OnRing(m); break;
@@ -800,6 +812,8 @@ namespace Shadowfall
                 ach.Add("kills");
                 ach.Add(AchievementDatabase.KillGroup(def.Name));
                 if (!string.IsNullOrEmpty(m.el)) ach.Add("elites");
+                if (def.Name == "Battering Ram") ach.Add("rams");
+                if (m.el == "Banner Bearer") ach.Add("banners");
                 if (def.Boss)
                 {
                     ach.Once("boss", def.Name);

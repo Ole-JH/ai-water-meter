@@ -270,6 +270,13 @@ namespace Shadowfall
             return e;
         }
 
+        /// <summary>One of the townsfolk standing at <paramref name="at"/> (a feast, a carpenter, a captive).</summary>
+        public Extra Person(string name, string model, Vector3 at, float height)
+        {
+            var look = new CharacterLook { Model = model, Height = height, Anims = model.EndsWith("Keeper") ? AnimSet.Kenney : AnimSet.KayKit, Tint = new Color(R(0.85f, 1f), R(0.8f, 0.95f), R(0.7f, 0.9f)) };
+            return Extra.Make(this, name, look, at, 3.5f);
+        }
+
         // ------------------------------------------------------------------ the extras
 
         /// <summary>One of the townsfolk (or a cart) walking a path, saying a line, maybe riding; fades away when told.</summary>
@@ -280,6 +287,12 @@ namespace Shadowfall
             public System.Action<Extra> OnArrive;
             public bool Lying, Tending;
             public Vector3? FaceAt;
+            public string Party;   // an emote kept up while standing about: dance, cheer, clap, sit
+            float nextParty;
+
+            public void Cheer() => view?.Cheer();
+            /// <summary>Up from sitting or dancing (a captive set free).</summary>
+            public void StandUp() { Party = null; view?.StopEmote(); }
             public Extra CarriedBy;
             CharacterView view;
             MountRig mount;
@@ -337,6 +350,17 @@ namespace Shadowfall
                     return;
                 }
                 if (Delay > 0f) { Delay -= dt; view?.UpdateLocomotion(0f); mount?.Tick(0f); return; }
+                if (!string.IsNullOrEmpty(Party) && at >= path.Count)
+                {
+                    if (FaceAt.HasValue) Factory.Face(transform, FaceAt.Value, dt * 4f);
+                    if (view != null && !view.Emoting && Time.time >= nextParty)
+                    {
+                        nextParty = Time.time + Random.Range(0.5f, 3f);
+                        view.Emote(EmoteDef.Get(Party));
+                    }
+                    if (view != null && !view.Emoting) view.UpdateLocomotion(0f);
+                    return;
+                }
                 float moved = 0f;
                 if (at < path.Count)
                 {

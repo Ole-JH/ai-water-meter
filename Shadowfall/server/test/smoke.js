@@ -494,6 +494,16 @@ async function invasionTests(a, b) {
   assert.ok(!b.find("invwin"), "heroes who didn't fight get nothing");
   assert.strictEqual(b.all("invasion").at(-1).iv.phase, "won", "everyone sees the town hold");
   assert.ok(b.all("sys").some((m) => /Hollowmere Village holds! 1 defender/.test(m.msg)), "the victory is announced");
+  // The town remembers: its record, the defenders' names, a feast in the square and cheaper prices
+  const holl = (b.all("chron").at(-1)?.rec || []).find((c) => c.k === "Hollowmere Village");
+  assert.ok(holl && holl.h === 1 && holl.last === "h" && holl.d[0] === "Alice" && holl.p === 1, "the siege record: held once, by Alice, and the town prospers");
+  assert.ok((b.all("after").at(-1)?.fe || []).some((f) => f.k === "Hollowmere Village" && f.left > 500), "a feast in the square");
+  assert.ok((b.all("after").at(-1)?.rp || []).some((f) => f.k === "Hollowmere Village" && f.g === "south"), "carpenters mend the gate");
+  state(b, 146, 150);
+  await sleep(150);
+  b.ws.send(JSON.stringify({ t: "iop", op: "vendor", k: "General" }));
+  await sleep(250);
+  assert.strictEqual(b.all("stock").at(-1).pmul, 0.96, "a prosperous town's merchants charge 4% less");
 
   // A new one can be started once that one is over; an admin can call it off.
   a.ws.send(JSON.stringify({ t: "adm", c: "invasion", town: "Frost" }));
@@ -522,6 +532,21 @@ async function invasionTests(a, b) {
   const sk = b.all("sack").at(-1)?.sk || [];
   assert.ok(sk.some((k) => k.k === "Saltreach" && k.g === "west" && k.left > 700 && k.r > 10), "the quarter behind the broken gate is set on fire for twelve minutes");
   assert.ok(b.all("sys").some((m) => /west quarter on fire/.test(m.msg)), "and everyone hears of it");
+  const salt = (b.all("chron").at(-1)?.rec || []).find((c) => c.k === "Saltreach");
+  assert.ok(salt && salt.f === 1 && salt.last === "f" && salt.p === -2, "the record: Saltreach fell, and it is poorer for it");
+  // The raiders took captives to their camp: kill the captors and they go free, and the fires burn half as long
+  const cp = (b.all("after").at(-1)?.cp || [])[0];
+  assert.ok(cp && cp.k === "Saltreach" && cp.n >= 3 && cp.c >= 3 && cp.left > 500, "townsfolk are dragged off to the raiders' camp, guarded");
+  const fireLeft = sk.find((k) => k.k === "Saltreach").left;
+  state(a, cp.x, cp.z);
+  await sleep(200);
+  a.ws.send(JSON.stringify({ t: "adm", c: "killall", r: 20 }));
+  await sleep(600);
+  assert.ok(b.all("sys").some((m) => /captives of Saltreach are free/.test(m.msg)), "with the captors dead, the captives go free");
+  assert.ok(b.all("sack").at(-1).sk.find((k) => k.k === "Saltreach").left < fireLeft * 0.6, "and the fires burn half as long");
+  assert.strictEqual((b.all("chron").at(-1).rec || []).find((c) => c.k === "Saltreach").p, -1, "which the town remembers too");
+  state(a, 144.5, 150);
+  await sleep(150);
   const shop = async (x, z) => {
     state(b, x, z);
     await sleep(150);

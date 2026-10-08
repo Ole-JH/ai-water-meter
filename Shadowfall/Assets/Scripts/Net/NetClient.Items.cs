@@ -31,6 +31,7 @@ namespace Shadowfall
                     break;
                 case "stock":
                     VendorStock.OnStock(m.k, m.stock, m.restock);
+                    VendorStock.PriceMul = m.pmul > 0f ? m.pmul : 1f; // the town's prosperity
                     break;
                 case "iok":
                     SpawnDrops(m.drops); // what didn't fit in the bags

@@ -387,6 +387,7 @@ namespace Shadowfall
         public void AddXp(int amount)
         {
             if (amount <= 0) return;
+            if (SiegeAftermath.Feasting) amount = Mathf.RoundToInt(amount * SiegeAftermath.FeastXp); // the Heroes' Feast
             GameUI.Float(transform.position + Vector3.up * 2.9f, "+" + amount + " XP", new Color(0.75f, 0.5f, 1f), 0.9f);
             if (Level >= ParagonBoard.MaxLevel) { AddParagonXp(amount); return; }
             Xp += amount;

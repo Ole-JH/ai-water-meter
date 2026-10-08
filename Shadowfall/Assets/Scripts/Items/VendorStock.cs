@@ -48,8 +48,14 @@ namespace Shadowfall
             s.restockAt = Time.time + Mathf.Max(5, restockSeconds);
         }
 
+        /// <summary>The merchants' price factor where we shop: the town's prosperity (server/invasion.js), 1 = normal.</summary>
+        public static float PriceMul = 1f;
+
+        /// <summary>What a merchant here charges: the base price times the town's factor (the server charges the same).</summary>
+        public static int Price(Item it) => Mathf.Max(1, Mathf.FloorToInt(BasePrice(it) * PriceMul + 0.5f)); // (rounded as the server does)
+
         /// <summary>Buying costs more than the item sells for (the server charges the same: price() in server/items.js).</summary>
-        public static int Price(Item it)
+        public static int BasePrice(Item it)
         {
             if (it.Kind != ItemKind.Equipment) return it.Name.Contains("Potion") ? 25 : Mathf.Max(3, it.Value * 3);
             int mul = it.Rarity == Rarity.Rare ? 5 : 4;

@@ -83,6 +83,12 @@ namespace Shadowfall
             new AchievementDef { Id = "defend_first", Name = "Hold the Gate", Description = "Help beat off an invasion of a town.", Category = AchievementCategory.Combat, Icon = "ach_castle", Points = 10, Stat = "defended", Goal = 1 },
             new AchievementDef { Id = "defend_10", Name = "Shield of the Realm", Description = "Help beat off ten invasions.", Category = AchievementCategory.Combat, Icon = "ach_castle", Points = 25, Stat = "defended", Goal = 10, Title = "the Defender" },
             new AchievementDef { Id = "wall_jump", Name = "Over the Wall", Description = "Jump down from a town wall onto the invaders' side.", Category = AchievementCategory.Combat, Icon = "ach_castle", Points = 10, Stat = "wall_jump", Goal = 1 },
+            new AchievementDef { Id = "beacon", Name = "Light the Beacons", Description = "Light a beacon by a besieged gate.", Category = AchievementCategory.Combat, Icon = "ach_castle", Points = 5, Stat = "beacons", Goal = 1 },
+            new AchievementDef { Id = "buckets", Name = "Bucket Brigade", Description = "Throw 25 buckets of water on burning roofs in a siege.", Category = AchievementCategory.Combat, Icon = "ach_castle", Points = 10, Stat = "buckets", Goal = 25 },
+            new AchievementDef { Id = "ram", Name = "Splinters", Description = "Destroy a battering ram.", Category = AchievementCategory.Combat, Icon = "ach_castle", Points = 10, Stat = "rams", Goal = 1 },
+            new AchievementDef { Id = "banner", Name = "Strike the Colours", Description = "Kill the raiders' banner bearer and break their nerve.", Category = AchievementCategory.Combat, Icon = "ach_castle", Points = 10, Stat = "banners", Goal = 1 },
+            new AchievementDef { Id = "rescue", Name = "No One Left Behind", Description = "Free the captives the raiders took from a town.", Category = AchievementCategory.Combat, Icon = "ach_castle", Points = 15, Stat = "rescued", Goal = 1 },
+            new AchievementDef { Id = "feast", Name = "Guest of Honour", Description = "Join a victory feast after a siege.", Category = AchievementCategory.Combat, Icon = "ach_castle", Points = 5, Stat = "feasts", Goal = 1 },
             new AchievementDef { Id = "defend_all", Name = "Warden of the Walls", Description = "Defend Hollowmere, Frosthaven, Saltreach and Emberwatch from invasions.", Category = AchievementCategory.Combat, Icon = "ach_castle", Points = 25, Stat = "defended_town", Goal = 4 },
 
             // ---- dungeons

@@ -230,7 +230,7 @@ namespace Shadowfall
                 {
                     if (waystoneOpen != null) waystoneOpen = null;
                     else if (chooseDungeon >= 0) chooseDungeon = -1;
-                    else if (dialogNpc != null || craftStation != null || forgeOpen || riftOpen || auctionOpen || rebuildAt != null) { dialogNpc = null; craftStation = null; forgeOpen = false; riftOpen = false; auctionOpen = false; rebuildAt = null; }
+                    else if (dialogNpc != null || craftStation != null || forgeOpen || riftOpen || auctionOpen || rebuildAt != null || chronicleFor != null) { dialogNpc = null; craftStation = null; forgeOpen = false; riftOpen = false; auctionOpen = false; rebuildAt = null; chronicleFor = null; }
                     else if (showGuild) showGuild = false;
                     else if (guildBoardOpen) guildBoardOpen = false;
                     else if (tradeOpen) NetClient.I?.CancelTrade();
@@ -346,6 +346,7 @@ namespace Shadowfall
             if (guildBoardOpen) DrawGuildBoard(p);
             if (riftOpen) DrawRiftWindow(p);
             if (rebuildAt != null) DrawRebuild(p);
+            if (chronicleFor != null) DrawChronicle(p);
             if (showTalents) DrawTalents(p);
             if (showStash) DrawStash(p);
             if (tradeOpen) DrawTrade(p);
@@ -1620,6 +1621,7 @@ namespace Shadowfall
         void DrawQuestTracker(Player p)
         {
             float top = DrawInvasionTracker();
+            top += DrawAftermathTracker(342 + top);
             top += DrawWorldBossTracker(342 + top);
             top += DrawRiftTracker(342 + top);
             top += DrawBounties(342 + top);
@@ -2519,6 +2521,32 @@ namespace Shadowfall
                         tooltip = "<b>" + kv.Key.Name + "</b>\n" + string.Join("\n", list.ConvertAll(x => x.label.Replace("<b>", "").Replace("</b>", "")));
                 }
             }
+            // Each walled town's siege record: a shield by its name (green held, red fell, grey spared), the record on hover
+            foreach (var rec in SiegeChronicle.Records)
+            {
+                if (rec == null || rec.ago < 0) continue;
+                var town = WorldGenerator.TownNamed(rec.k);
+                if (town == null || !ZoneKnown(town.Center, 20f)) continue;
+                var c = toMap(town.Center);
+                var sr = new Rect(c.x - 8, c.y - 34, 16, 18);
+                if (!r.Contains(sr.center)) continue;
+                var col = rec.last == "h" ? new Color(0.45f, 0.9f, 0.45f) : rec.last == "f" ? new Color(0.95f, 0.4f, 0.3f) : new Color(0.7f, 0.7f, 0.7f);
+                GUI.color = new Color(0.05f, 0.03f, 0.02f, 0.8f);
+                GUI.DrawTexture(new Rect(sr.x - 2, sr.y - 2, sr.width + 4, sr.height + 4), UISkin.Circle);
+                GUI.color = col;
+                GUI.DrawTexture(sr, UISkin.Icon("ach_castle"));
+                GUI.color = Color.white;
+                if (sr.Contains(Event.current.mousePosition))
+                    tooltip = "<b>" + rec.k + "</b>\nHeld " + rec.h + ", fell " + rec.f + ", spared " + rec.sp + "\nLast " + SiegeChronicle.LastWord(rec)
+                        + "\n" + SiegeChronicle.ProsperityWord(rec.p) + (rec.p != 0 ? " (prices " + SiegeChronicle.PriceWord(rec.p) + ")" : "");
+            }
+            if (SiegeAftermath.Captives != null)
+            {
+                var cp = SiegeAftermath.Captives;
+                mark(new Vector3(cp.x, 0f, cp.z), new Color(1f, 0.75f, 0.4f), 12);
+                var c = toMap(new Vector3(cp.x, 0f, cp.z));
+                UISkin.Shadowed(new Rect(c.x - 100, c.y + 8, 200, 20), "Captives!", UISkin.SmallCenter, new Color(1f, 0.75f, 0.4f), 2);
+            }
             if (AdminTools.ShowEnemies)
                 foreach (var e in Enemy.ById.Values)
                     if (e != null && !e.IsDead) mark(e.transform.position, e.Def.Boss ? new Color(1f, 0.5f, 0f) : e.Elite ? Enemy.ChampionColor : new Color(0.9f, 0.15f, 0.1f), e.Def.Boss ? 10 : 6);
@@ -2846,6 +2874,15 @@ namespace Shadowfall
                         GUI.Label(new Rect(r.x + 200, y + 4, 244, 24), "New stock in " + Mathf.CeilToInt(shop.SecondsUntilRestock / 60f) + " min",
                             UISkin.V(UISkin.Ink14, alignment: TextAnchor.UpperRight));
                     y += 36;
+                    if (Mathf.Abs(VendorStock.PriceMul - 1f) > 0.001f)
+                    {
+                        // the town's prosperity, after its sieges (server/invasion.js)
+                        int pct = Mathf.RoundToInt(Mathf.Abs(1f - VendorStock.PriceMul) * 100f);
+                        GUI.Label(new Rect(r.x + 26, y - 6, 420, 22), VendorStock.PriceMul < 1f
+                            ? "<i>The town prospers after its defence: prices " + pct + "% lower.</i>"
+                            : "<i>Hard times since the raiders came: prices " + pct + "% higher.</i>", UISkin.InkRich);
+                        y += 20;
+                    }
                     if (!shop.Loaded) { GUI.Label(new Rect(r.x + 26, y, 420, 24), "<i>Unpacking the wares...</i>", UISkin.InkRich); y += 54; }
                     for (int i = 0; i < shop.Items.Count; i++)
                         y = ShopRow(p, r, y, shop, i);

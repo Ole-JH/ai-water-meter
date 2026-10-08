@@ -626,6 +626,36 @@
    "title": "",
    "points": 10
   },
+  "beacon": {
+   "name": "Light the Beacons",
+   "title": "",
+   "points": 5
+  },
+  "buckets": {
+   "name": "Bucket Brigade",
+   "title": "",
+   "points": 10
+  },
+  "ram": {
+   "name": "Splinters",
+   "title": "",
+   "points": 10
+  },
+  "banner": {
+   "name": "Strike the Colours",
+   "title": "",
+   "points": 10
+  },
+  "rescue": {
+   "name": "No One Left Behind",
+   "title": "",
+   "points": 15
+  },
+  "feast": {
+   "name": "Guest of Honour",
+   "title": "",
+   "points": 5
+  },
   "defend_all": {
    "name": "Warden of the Walls",
    "title": "",

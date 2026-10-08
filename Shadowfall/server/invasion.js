@@ -49,10 +49,20 @@ const ROUT_SHARE = 0.4, ROUT_DMG = 0.75;
 const WARLORD_TAUNTS = ["Your gate is kindling, your walls are sand!", "I have burned bigger towns than this before breakfast!",
   "Bring me their champion's head!", "Break it down! Leave nothing standing!", "Is this all the defence they have? Ha!"];
 
+// After a siege. Won: a feast in the town square (FEAST_S; heroes who join it get the Heroes' Feast, see the client) and
+// carpenters at the gate. Won or lost: graves outside the wall for the guards who fell. Lost: the raiders drag
+// townsfolk off to their camp; free them (kill their captors) within CAPTIVE_S and the fires burn half as long again.
+const FEAST_S = Number(process.env.INVASION_FEAST_S ?? 600), REPAIR_S = 300, GRAVES_S = 2 * 3600;
+const CAPTIVE_S = Number(process.env.INVASION_CAPTIVE_S ?? 600);
+// A town's prosperity (-3..3, remembered with its siege record): defending it raises it, losing it (or its captives,
+// or roofs left burning) lowers it, and it drifts back towards 0 one step every PROSPERITY_DRIFT_H hours. Its merchants
+// charge 4% less (or more) a step.
+const PROSPERITY_DRIFT_H = 6, PRICE_STEP = 0.04;
+
 module.exports = function createInvasions(ctx) {
   const { TOWNS, SPAWNERS, MONSTERS, monsters, sessions, spawnMonster, makeElite, findPath, nearestWalkable, moveAlongPath,
     speedOf, monsterAttack, broadcast, safeSend, rollLoot, dropFor, heroClass, deep, log, now, rand, dist, r2, metrics,
-    walkable, guardHit } = ctx;
+    walkable, guardHit, store } = ctx;
 
   const minutes = Number(process.env.INVASION_MINUTES ?? 45);
   let inv = null;
@@ -61,6 +71,137 @@ module.exports = function createInvasions(ctx) {
   let nextAt = minutes > 0 ? now() + rand(0.3, 0.6) * minutes * 60 : Infinity;
 
   const walled = TOWNS.filter((t) => t.walled);
+
+  // ------------------------------------------------------------------ the towns' siege record (persisted)
+
+  let chronicle = {}; // town name -> { h held, f fell, sp spared, last, at (ms), g gate, d defenders' names, p prosperity, pAt }
+  const saveChronicle = () => { if (store) store.setMeta("siege_chronicle", JSON.stringify(chronicle)).catch((e) => log(`siege chronicle save failed: ${e.message}`)); };
+  const recordOf = (name) => chronicle[name] || (chronicle[name] = { h: 0, f: 0, sp: 0, last: "", at: 0, g: "", d: [], p: 0, pAt: Date.now() });
+
+  /** A town's prosperity now (drifting back towards 0 with time). */
+  function prosperity(name) {
+    const c = chronicle[name];
+    if (!c) return 0;
+    const steps = Math.floor((Date.now() - (c.pAt || 0)) / (PROSPERITY_DRIFT_H * 3600 * 1000));
+    if (steps > 0) {
+      for (let i = 0; i < steps && c.p; i++) c.p -= Math.sign(c.p);
+      c.pAt = (c.pAt || Date.now()) + steps * PROSPERITY_DRIFT_H * 3600 * 1000;
+    }
+    return c.p;
+  }
+  function shiftProsperity(name, by) {
+    const c = recordOf(name);
+    prosperity(name);
+    c.p = Math.max(-3, Math.min(3, c.p + by));
+    c.pAt = Date.now();
+  }
+
+  /** How the siege ended for the record: "h" held, "f" fell, "sp" spared (nobody came). */
+  function record(name, result, gate, defenders) {
+    const c = recordOf(name);
+    c[result]++;
+    c.last = result;
+    c.at = Date.now();
+    c.g = gate;
+    if (defenders) c.d = defenders.slice(0, 8);
+    if (result === "h") shiftProsperity(name, 1);
+    if (result === "f") shiftProsperity(name, -2);
+    saveChronicle();
+    sendChronicle();
+  }
+
+  function chronicleState() {
+    const t = Date.now();
+    return { t: "chron", rec: walled.map((w) => {
+      const c = chronicle[w.name] || {};
+      return { k: w.name, h: c.h || 0, f: c.f || 0, sp: c.sp || 0, last: c.last || "", ago: c.at ? Math.round((t - c.at) / 1000) : -1, g: c.g || "", d: c.d || [], p: prosperity(w.name) };
+    }) };
+  }
+  function sendChronicle() {
+    const data = JSON.stringify(chronicleState());
+    for (const s of sessions.values()) if (s.inWorld) safeSend(s, data);
+  }
+
+  // ------------------------------------------------------------------ the aftermath: feasts, repairs, graves, captives
+
+  const feasts = new Map();  // town -> { town, until }
+  const repairs = new Map(); // town -> { town, gate, until }
+  let graves = [];           // { town, gate, n, seed, until }
+  let captives = null;       // { town, gate, x, z, n, until, ids, helpers }
+
+  function afterState() {
+    const t = now();
+    return { t: "after",
+      fe: [...feasts.values()].map((f) => ({ k: f.town.name, x: r2(centre(f.town).x), z: r2(centre(f.town).z), left: Math.ceil(f.until - t) })),
+      rp: [...repairs.values()].map((r) => ({ k: r.town.name, g: r.gate.name, x: r2(r.gate.x), z: r2(r.gate.z), left: Math.ceil(r.until - t) })),
+      gr: graves.map((g) => ({ k: g.town.name, g: g.gate.name, x: r2(g.gate.x), z: r2(g.gate.z), n: g.n, s: g.seed })),
+      cp: captives ? [{ k: captives.town.name, x: r2(captives.x), z: r2(captives.z), n: captives.n, left: Math.ceil(captives.until - t), c: captorsLeft() }] : [] };
+  }
+  function sendAfter() {
+    const data = JSON.stringify(afterState());
+    for (const s of sessions.values()) if (s.inWorld) safeSend(s, data);
+  }
+  const captorsLeft = () => { let n = 0; if (captives) for (const id of captives.ids) if (monsters.has(id)) n++; return n; };
+
+  /** The raiders of a lost siege drag townsfolk off to their camp, guarded. */
+  function takeCaptives(i) {
+    const n = 3 + Math.floor(Math.random() * 3);
+    const ids = new Set();
+    const guards = Math.min(8, 3 + i.players);
+    const types = i.types.filter((ty) => !MONSTERS[ty].ranged).length ? i.types.filter((ty) => !MONSTERS[ty].ranged) : i.types;
+    for (let k = 0; k < guards; k++) {
+      const a = (k / guards) * Math.PI * 2;
+      const spot = nearestWalkable(Math.floor(i.sx + Math.cos(a) * 3.5), Math.floor(i.sz + Math.sin(a) * 3.5), 3);
+      if (!spot) continue;
+      const m = spawnMonster(types[k % types.length], i.level, spot[0] + 0.5, spot[1] + 0.5, null);
+      m.captor = true;
+      m.leash = 22;
+      if (k === 0) { makeElite(m, 1); m.elite.name = "Slaver " + m.elite.name.split(" ")[0]; }
+      ids.add(m.id);
+    }
+    captives = { town: i.town, gate: i.gate, x: i.sx, z: i.sz, n, until: now() + CAPTIVE_S, ids, helpers: new Set() };
+    broadcast({ t: "sys", msg: `The raiders dragged ${n} townsfolk from ${i.town.name} back to their camp outside the ${i.gate.name} gate! Free them within ${Math.round(CAPTIVE_S / 60)} minutes and the town will be back on its feet sooner.` });
+    sendAfter();
+  }
+
+  function updateAftermath(t) {
+    let changed = false;
+    for (const [k, f] of feasts) if (t >= f.until) { feasts.delete(k); changed = true; }
+    for (const [k, r] of repairs) if (t >= r.until) { repairs.delete(k); changed = true; }
+    const before = graves.length;
+    graves = graves.filter((g) => t < g.until);
+    if (graves.length !== before) changed = true;
+    if (captives) {
+      const left = captorsLeft();
+      if (left === 0) {
+        const c = captives;
+        captives = null;
+        const k = sacks.get(c.town.name);
+        if (k) { k.until -= Math.max(0, (k.until - t) / 2); sendSacks(); }
+        shiftProsperity(c.town.name, 1);
+        saveChronicle();
+        sendChronicle();
+        for (const s of sessions.values()) {
+          if (!s.inWorld || !c.helpers.has(s.name)) continue;
+          safeSend(s, JSON.stringify({ t: "rescued", k: c.town.name, xp: Math.round(10 * Math.pow(s.lvl || 1, 1.5)) }));
+        }
+        const names = [...c.helpers].slice(0, 5);
+        broadcast({ t: "sys", msg: `The captives of ${c.town.name} are free${names.length ? `, thanks to ${names.join(", ")}` : ""}! They hurry home to fight the fires.` });
+        log(`Captives of ${c.town.name} freed by ${c.helpers.size}`);
+        changed = true;
+      } else if (t >= captives.until) {
+        const c = captives;
+        captives = null;
+        for (const id of c.ids) monsters.delete(id);
+        shiftProsperity(c.town.name, -1);
+        saveChronicle();
+        sendChronicle();
+        broadcast({ t: "sys", msg: `Nobody came for the captives of ${c.town.name}: the raiders carried them off into the wilds.` });
+        changed = true;
+      } else if (left !== captives.shown) { captives.shown = left; changed = true; }
+    }
+    if (changed) sendAfter();
+  }
   // Burning quarters: town name -> { town, gate, until }. The quarter is everything inside the walls within
   // sackRadius of the broken gate (a bit more than half the town's width).
   const sacks = new Map();
@@ -375,7 +516,7 @@ module.exports = function createInvasions(ctx) {
       m.nextAttack = t + m.def.cd * rand(0.9, 1.2);
       monsterAttack(m, null, ranged ? "shot" : "melee", 0, g.x, g.z);
       g.hp -= m.dmg * rand(0.8, 1.2);
-      if (g.hp <= 0) { g.hp = 0; guardEvent({ k: "die", id: g.id }); }
+      if (g.hp <= 0) { g.hp = 0; inv.fallen = (inv.fallen || 0) + 1; guardEvent({ k: "die", id: g.id }); }
       else guardEvent({ k: "hurt", id: g.id });
     }
     return true;
@@ -473,15 +614,25 @@ module.exports = function createInvasions(ctx) {
         const drops = s.ledger ? dropFor(s, s.x, s.z, loot, 0) : [];
         safeSend(s, JSON.stringify({ t: "invwin", k: inv.town.name, xp, drops }));
       }
-      broadcast({ t: "sys", msg: `${inv.town.name} holds! ${n} ${n === 1 ? "defender" : "defenders"} drove off the invaders.` });
+      broadcast({ t: "sys", msg: `${inv.town.name} holds! ${n} ${n === 1 ? "defender" : "defenders"} drove off the invaders. There's a feast in the square tonight!` });
       log(`Invasion of ${inv.town.name} beaten off by ${n}`);
+      const best = [...inv.defenders.entries()].sort((a, b) => b[1] - a[1]).map(([name]) => name);
+      record(inv.town.name, "h", inv.gate.name, best);
+      if (inv.lostFires >= 2) { shiftProsperity(inv.town.name, -1); saveChronicle(); } // the stores went up with the roofs
+      feasts.set(inv.town.name, { town: inv.town, until: now() + FEAST_S });
+      repairs.set(inv.town.name, { town: inv.town, gate: inv.gate, until: now() + REPAIR_S });
     } else {
       for (const id of inv.ids) monsters.delete(id); // they withdraw with their spoils
       inv.ids.clear();
       broadcast({ t: "sys", msg: `The invaders broke through the ${inv.gate.name} gate of ${inv.town.name}, plundered the market and set the ${inv.gate.name} quarter on fire! Its merchants have fled until the fires are out.` });
       log(`Invasion of ${inv.town.name} succeeded`);
       sack(inv.town, inv.gate);
+      record(inv.town.name, "f", inv.gate.name, null);
+      repairs.set(inv.town.name, { town: inv.town, gate: inv.gate, until: now() + SACK_S + REPAIR_S });
+      if (CAPTIVE_S > 0) takeCaptives(inv);
     }
+    if (inv.fallen) graves.push({ town: inv.town, gate: inv.gate, n: Math.min(12, inv.fallen), seed: inv.id, until: now() + GRAVES_S });
+    sendAfter();
     send();
     nextAt = minutes > 0 ? now() + minutes * 60 * rand(0.75, 1.25) : Infinity;
   }
@@ -510,6 +661,7 @@ module.exports = function createInvasions(ctx) {
     let burntOut = false;
     for (const [name, k] of sacks) if (t >= k.until) { sacks.delete(name); burntOut = true; broadcast({ t: "sys", msg: `The fires in ${name} are out. Its merchants are back at their stalls.` }); }
     if (burntOut) sendSacks();
+    updateAftermath(t);
     if (!inv) {
       if (t >= nextAt) {
         const why = WARN_S > 0 ? scout() : begin(null);
@@ -530,6 +682,7 @@ module.exports = function createInvasions(ctx) {
         : `With nobody in ${name} to fight, the raiders outside its ${inv.gate.name} gate lose heart and withdraw. The town is spared.` });
       log(`Invasion of ${name} abandoned: nobody near`);
       metrics.inc({ town: name, result: "abandoned" });
+      if (inv.phase !== "warn") record(name, "sp", inv.gate.name, null);
       inv = null;
       send();
       nextAt = minutes > 0 ? t + minutes * 60 * rand(0.75, 1.25) : Infinity;
@@ -647,16 +800,31 @@ module.exports = function createInvasions(ctx) {
   }
 
   function onDamage(m, s) {
+    if (m.captor) { if (captives && s && s.name) captives.helpers.add(s.name); return; }
     if (inv && m.invasion === inv.id && s && s.name) inv.defenders.set(s.name, (inv.defenders.get(s.name) || 0) + 1);
     m.sieging = false;
   }
 
   return {
     tick, idle, onDamage,
+    /** At start-up, once the store is open: the towns' siege record. */
+    async load() {
+      if (!store) return;
+      try { chronicle = JSON.parse((await store.getMeta("siege_chronicle")) || "{}") || {}; } catch { chronicle = {}; }
+    },
     sendTo(s) {
       if (inv) safeSend(s, JSON.stringify({ t: "invasion", iv: state() }));
       if (sacks.size) safeSend(s, JSON.stringify(sackState()));
+      safeSend(s, JSON.stringify(chronicleState()));
+      if (feasts.size || repairs.size || graves.length || captives) safeSend(s, JSON.stringify(afterState()));
     },
+    /** The merchants' price factor where a hero stands (the town's prosperity): 1 outside the walled towns. */
+    priceMul(x, z) {
+      const t = walled.find((w) => inside(w, x, z));
+      return t ? Math.round((1 - PRICE_STEP * prosperity(t.name)) * 100) / 100 : 1;
+    },
+    /** Tests: the chronicle and aftermath as players get them. */
+    _chronicle: () => chronicleState(),
     /** In a burning quarter (its merchants, smiths and auctioneers have fled): their trade is refused there. */
     sackedAt(x, z) {
       for (const k of sacks.values())

@@ -206,6 +206,8 @@ namespace Shadowfall
                 if (!string.IsNullOrEmpty(litBy)) return;
                 p.FaceTowards(transform.position);
                 NetClient.I?.LightBeacon(index);
+                p.PlayInteract();
+                p.Achievements.Add("beacons");
             }
         }
 
@@ -301,6 +303,7 @@ namespace Shadowfall
                 p.PlayInteract();
                 NetClient.I?.Douse(id);
                 Splash(Flame);
+                p.Achievements.Add("buckets");
             }
 
             public void GoOut()

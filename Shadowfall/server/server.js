@@ -597,7 +597,7 @@ function damageMonster(m, s, dmg) {
   if (now() < (m.shieldUntil || 0)) dmg = 0; // Shielding elites are immune for a moment
   m.hp -= dmg;
   m.threat.set(s.id, (m.threat.get(s.id) || 0) + dmg);
-  if (m.invasion) invasions.onDamage(m, s);
+  if (m.invasion || m.captor) invasions.onDamage(m, s);
   if (m.worldBoss) worldBosses.onDamage(m, s);
   if (m.state !== "chase" && !m.def.siege && !m.fleeing) { aggro(m, s.id); alertNearby(m, s.id); } // a ram doesn't fight back; the routed run
   if (m.hp <= 0) killMonster(m);
@@ -2136,7 +2136,7 @@ const itemOps = {
     const kind = String(m.k || "");
     if (!I.VENDOR_KINDS.includes(kind)) return false;
     const v = vendorFor(s, kind);
-    safeSend(s, JSON.stringify({ t: "stock", k: kind, stock: v.items, restock: Math.max(0, Math.round(v.restockAt - now())) }));
+    safeSend(s, JSON.stringify({ t: "stock", k: kind, stock: v.items, restock: Math.max(0, Math.round(v.restockAt - now())), pmul: invasions.priceMul(s.x, s.z) }));
     return false;
   },
   buy(s, m) {
@@ -2145,11 +2145,11 @@ const itemOps = {
     if (!inTownNow(s)) return ierr(s, "buy", "The merchants are in town.");
     const v = vendorFor(s, kind), it = v.items[m.i | 0];
     if (!it || (m.name && it.Name !== m.name)) {
-      safeSend(s, JSON.stringify({ t: "stock", k: kind, stock: v.items, restock: Math.max(0, Math.round(v.restockAt - now())) }));
+      safeSend(s, JSON.stringify({ t: "stock", k: kind, stock: v.items, restock: Math.max(0, Math.round(v.restockAt - now())), pmul: invasions.priceMul(s.x, s.z) }));
       return ierr(s, "buy", "That's no longer for sale.");
     }
     const n = I.isStackable(it) ? Math.max(1, Math.min(20, m.n | 0 || 1)) : 1;
-    const cost = I.price(it) * n;
+    const cost = Math.max(1, Math.round(I.price(it) * invasions.priceMul(s.x, s.z))) * n; // the town's prosperity (invasion.js)
     if (s.ledger.gold < cost) return ierr(s, "buy", "You don't have enough gold.");
     const bought = I.isStackable(it) ? { ...I.byName(it.Name), Count: n } : it;
     if (!I.fits(s.ledger.bag, [bought])) return ierr(s, "buy", "Your bags are full.");
@@ -2157,7 +2157,7 @@ const itemOps = {
     s.ledger.gold -= cost;
     if (!I.isStackable(it)) v.items.splice(m.i | 0, 1);
     iok(s, "buy", { name: it.Name, n, gold: cost });
-    safeSend(s, JSON.stringify({ t: "stock", k: kind, stock: v.items, restock: Math.max(0, Math.round(v.restockAt - now())) }));
+    safeSend(s, JSON.stringify({ t: "stock", k: kind, stock: v.items, restock: Math.max(0, Math.round(v.restockAt - now())), pmul: invasions.priceMul(s.x, s.z) }));
     return true;
   },
   craft(s, m) {
@@ -2593,7 +2593,7 @@ let tickCount = 0;
 // Town invasions (invasion.js): monsters attack a walled town's gate in waves now and then.
 const invasions = createInvasions({
   TOWNS, SPAWNERS, MONSTERS, monsters, sessions, spawnMonster, makeElite, findPath, nearestWalkable, moveAlongPath, speedOf,
-  monsterAttack, broadcast, safeSend, rollLoot: I.rollLoot, dropFor, heroClass, log, now, rand, dist, r2, metrics: M.invasions, walkable,
+  monsterAttack, broadcast, safeSend, rollLoot: I.rollLoot, dropFor, heroClass, log, now, rand, dist, r2, metrics: M.invasions, walkable, store,
   // a town guard's blow: no hero's threat (a kill by guards credits only the heroes who also hurt it)
   guardHit: (m, dmg) => { if (m.hp <= 0) return; m.hp -= dmg; if (m.hp <= 0) killMonster(m); },
   deep: (x, z) => x >= OLD_SIZE && z >= OLD_SIZE,
@@ -2788,6 +2788,7 @@ async function start() {
 
   await guilds.load();
   await rifts.load();
+  await invasions.load();
   await auctions.load();
   loadWorld();
   if (world) initSpawners();

@@ -109,6 +109,9 @@ namespace Shadowfall
         public string by;
         public float sx, sz;
         public int f;
+        public NetChron[] rec;         // "chron": the walled towns' siege record (SiegeChronicle)
+        public float pmul;             // "stock": the town's price factor (its prosperity), 1 = normal
+        public NetAfterSpot[] fe, rp, gr, cp; // "after": a siege's feasts, repairs, graves, captives (SiegeAftermath)
     }
 
     /// <summary>Our guild (server/guild.js): ranks are member, officer, leader.</summary>
@@ -161,6 +164,11 @@ namespace Shadowfall
     [Serializable] public class NetBeacon { public float x, z; public string l; }
     /// <summary>A burning roof: i = id, s = strength 0..100.</summary>
     [Serializable] public class NetFire { public int i, s; public float x, z; }
+    /// <summary>A walled town's siege record: h held, f fell, sp spared, last ("h"/"f"/"sp"), ago seconds, g gate, d defenders, p prosperity -3..3.</summary>
+    [Serializable] public class NetChron { public string k, last, g; public int h, f, sp, ago, p; public string[] d; }
+    /// <summary>A siege's aftermath ("after"): feasts, gate repairs, graves, captives at the raiders' camp.</summary>
+    [Serializable] public class NetAfter { public NetAfterSpot[] fe, rp, gr, cp; }
+    [Serializable] public class NetAfterSpot { public string k, g; public float x, z; public int left, n, s, c; }
     [Serializable] public class BeaconCmd { public string t = "beacon"; public int i; }
     [Serializable] public class DouseCmd { public string t = "douse"; public int id; }
 
