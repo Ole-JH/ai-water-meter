@@ -85,10 +85,20 @@ namespace Shadowfall
             float x = r.x + 26, y = r.y + 58, w = r.width - 52;
             if (g == null)
             {
-                GUI.Label(new Rect(x, y, w, 200),
-                    "You are not in a guild.\n\nFound one with <b>/guild create Name TAG</b> (1000 gold): a name of 3 to 24 letters and a tag of 2 to 4 letters, " +
-                    "shown before your name. Or ask an officer of a guild to <b>/ginvite</b> you.",
+                GUI.Label(new Rect(x, y, w, 70),
+                    "You are not in a guild. Found one for 1000 gold, or ask an officer of a guild to invite you.",
                     UISkin.V(UISkin.Rich, wordWrap: true));
+                y += 70;
+                UISkin.Shadowed(new Rect(x, y, w, 20), "Name (3 to 24 letters)", UISkin.Small, UISkin.Muted);
+                GUI.SetNextControlName("guild_name");
+                newGuildName = GUI.TextField(new Rect(x, y + 22, w, 32), newGuildName, 24, UISkin.Field);
+                y += 62;
+                UISkin.Shadowed(new Rect(x, y, w, 20), "Tag (2 to 4 letters, shown before your name)", UISkin.Small, UISkin.Muted);
+                GUI.SetNextControlName("guild_tag");
+                newGuildTag = GUI.TextField(new Rect(x, y + 22, 120, 32), newGuildTag, 4, UISkin.Field);
+                if (UISkin.Btn(new Rect(x + 130, y + 22, w - 130, 32), "Found the guild (1000 gold)", UISkin.Button) && newGuildName.Trim().Length >= 3 && newGuildTag.Trim().Length >= 2)
+                    NetClient.I?.SendChat("/guild create " + newGuildName.Trim() + " " + newGuildTag.Trim());
+                guildFieldFocused = GUI.GetNameOfFocusedControl().StartsWith("guild_");
                 return;
             }
             y += DrawBannerEditor(g, x, y, w);
@@ -99,7 +109,28 @@ namespace Shadowfall
             }
             UISkin.Shadowed(new Rect(x, y, w, 22), g.members.Length + " members, " + Guild.Online + " online  -  you are " + (g.rank == "leader" ? "the leader" : "a" + (g.rank == "officer" ? "n officer" : " member")),
                 UISkin.Small, UISkin.Muted);
-            y += 28;
+            y += 26;
+            bool officer = g.rank == "officer" || g.rank == "leader", leader = g.rank == "leader";
+            // invite (officers), the message of the day (officers)
+            if (officer)
+            {
+                GUI.SetNextControlName("guild_invite");
+                guildInvite = GUI.TextField(new Rect(x, y, w - 126, 30), guildInvite, 16, UISkin.Field);
+                if (UISkin.Btn(new Rect(x + w - 120, y, 120, 30), "Invite", UISkin.Button) && guildInvite.Trim().Length > 0)
+                {
+                    NetClient.I?.SendChat("/ginvite " + guildInvite.Trim());
+                    guildInvite = "";
+                }
+                y += 36;
+                GUI.SetNextControlName("guild_motd");
+                guildMotd = GUI.TextField(new Rect(x, y, w - 126, 30), guildMotd, 120, UISkin.Field);
+                if (UISkin.Btn(new Rect(x + w - 120, y, 120, 30), "Set message", UISkin.Button))
+                {
+                    NetClient.I?.SendChat("/gmotd " + guildMotd.Trim());
+                    guildMotd = "";
+                }
+                y += 36;
+            }
 
             var list = new System.Collections.Generic.List<NetGuildMember>(g.members);
             list.Sort((a, b) => a.on != b.on ? (a.on ? -1 : 1) : RankOrder(b.rank) != RankOrder(a.rank) ? RankOrder(b.rank) - RankOrder(a.rank) : string.Compare(a.name, b.name, System.StringComparison.Ordinal));
@@ -113,12 +144,41 @@ namespace Shadowfall
                 var c = m.on ? UISkin.Cream : new Color(0.6f, 0.58f, 0.55f);
                 UISkin.Shadowed(new Rect(0, i * rowH, 200, rowH), m.name, UISkin.Label, c);
                 UISkin.Shadowed(new Rect(200, i * rowH + 2, 100, rowH), m.rank == "member" ? "" : m.rank, UISkin.Small, m.rank == "leader" ? UISkin.Gold : Guild.Color);
-                UISkin.Shadowed(new Rect(300, i * rowH + 2, 110, rowH), m.on ? "level " + m.lvl : "offline", UISkin.Small, c);
+                UISkin.Shadowed(new Rect(285, i * rowH + 2, 80, rowH), m.on ? "level " + m.lvl : "offline", UISkin.Small, c);
+                // what our rank lets us do to theirs (the server checks again)
+                if (m.name == p.DisplayName) continue;
+                float bx = w - 18, by = i * rowH + 2;
+                var small = UISkin.V(UISkin.Button, fontSize: 11);
+                bool outranked = RankOrder(m.rank) < RankOrder(g.rank);
+                if (officer && outranked && UISkin.Btn(new Rect(bx -= 46, by, 44, rowH - 4), Pending("kick " + m.name) ? "Sure?" : "Kick", small))
+                    Confirm("kick " + m.name, "/gkick " + m.name);
+                if (leader && m.rank == "member" && UISkin.Btn(new Rect(bx -= 30, by, 28, rowH - 4), "+", small)) NetClient.I?.SendChat("/gpromote " + m.name);
+                if (leader && m.rank == "officer" && UISkin.Btn(new Rect(bx -= 30, by, 28, rowH - 4), "-", small)) NetClient.I?.SendChat("/gdemote " + m.name);
+                if (leader && UISkin.Btn(new Rect(bx -= 50, by, 48, rowH - 4), Pending("lead " + m.name) ? "Sure?" : "Lead", small))
+                    Confirm("lead " + m.name, "/gleader " + m.name);
             }
             GUI.EndScrollView();
-            GUI.Label(new Rect(x, r.yMax - 66, w, 50),
-                "<b>/g</b> text  guild chat  -  <b>/ginvite</b>, <b>/gkick</b>, <b>/gpromote</b>, <b>/gdemote</b>, <b>/gleader</b> name  -  <b>/gmotd</b> text  -  <b>/gleave</b>",
-                UISkin.V(UISkin.RichSmall, wordWrap: true));
+            // guild chat and leaving
+            float hw = (w - 6) / 2f;
+            if (UISkin.Btn(new Rect(x, r.yMax - 64, hw, 34), "Guild chat", UISkin.Button)) OpenChat("/g ");
+            if (UISkin.Btn(new Rect(x + hw + 6, r.yMax - 64, hw, 34), Pending("leave") ? "Click again to leave" : "Leave the guild", UISkin.Button)) Confirm("leave", "/gleave");
+            UISkin.Shadowed(new Rect(x, r.yMax - 26, w, 18), "+ promote to officer, - demote. In chat: /g text, /ginvite, /gkick, /gpromote, /gdemote, /gleader, /gmotd, /gleave",
+                UISkin.V(UISkin.Small, fontSize: 11), UISkin.Muted);
+            guildFieldFocused = GUI.GetNameOfFocusedControl().StartsWith("guild_");
+        }
+
+        string newGuildName = "", newGuildTag = "", guildInvite = "", guildMotd = "", confirm;
+        float confirmUntil;
+        bool guildFieldFocused;
+
+        bool Pending(string what) => confirm == what && Time.time < confirmUntil;
+
+        /// <summary>Things that can't be undone take a second click within three seconds.</summary>
+        void Confirm(string what, string command)
+        {
+            if (confirm == what && Time.time < confirmUntil) { NetClient.I?.SendChat(command); confirm = null; return; }
+            confirm = what;
+            confirmUntil = Time.time + 3f;
         }
 
         static int RankOrder(string rank) => rank == "leader" ? 2 : rank == "officer" ? 1 : 0;

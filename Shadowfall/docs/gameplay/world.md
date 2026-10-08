@@ -87,8 +87,9 @@ of Hollowmere's square hangs the banners of the five biggest guilds; click it fo
 banner, size and leader.
 
 A guild has a name, a tag of 2 to 4 letters shown before every member's name (*&lt;HG&gt; Ayla 24*), its own chat and a
-message of the day shown when members log in. ++o++ opens the guild window with the members, online first. Everything
-else is chat commands:
+message of the day shown when members log in. ++o++ opens the guild window with the members, online first, and a button
+for everything: found a guild (name and tag), invite, set the message of the day, promote (+), demote (-), make leader and
+kick (both take a second click), guild chat and leave. The same as chat commands:
 
 | Command | Who | What |
 | --- | --- | --- |

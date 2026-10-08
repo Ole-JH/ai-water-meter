@@ -30,7 +30,7 @@ namespace Shadowfall
         // ---- state read by gameplay code
         public bool MouseOverUI { get; private set; }
         public bool ChatOpen { get; private set; }
-        public bool KeyboardCaptured => ChatOpen || Player.I == null || tradeGoldFocused || (auctionOpen && auctionFieldFocused) || menu != MenuPage.None || (showAdmin && adminFieldFocused);
+        public bool KeyboardCaptured => ChatOpen || Player.I == null || tradeGoldFocused || (auctionOpen && auctionFieldFocused) || menu != MenuPage.None || (showAdmin && adminFieldFocused) || (showGuild && guildFieldFocused);
         public bool BlocksWorldInput => Player.I == null || Player.I.IsDead || showMap || menu != MenuPage.None;
 
         // ---- windows
@@ -1667,6 +1667,46 @@ namespace Shadowfall
 
         public void SetReplyTarget(string name) => replyTo = name;
 
+        /// <summary>The chat commands as buttons, above the chat when it's open or pointed at.</summary>
+        void DrawChatBar(Rect bar)
+        {
+            Block(bar);
+            var net = NetClient.I;
+            var buttons = new System.Collections.Generic.List<(string label, string tip, System.Action act)>
+            {
+                ("Say", "Talk to everyone nearby", () => ChatChannel("")),
+            };
+            if (net != null && net.InParty) buttons.Add(("Party", "Party chat (/p)", () => ChatChannel("/p ")));
+            if (Guild.Current != null) buttons.Add(("Guild", "Guild chat (/g)", () => ChatChannel("/g ")));
+            buttons.Add(("Whisper", "Whisper to someone by name (/w name)", () => ChatChannel("/w ")));
+            if (!string.IsNullOrEmpty(replyTo)) buttons.Add(("Reply", "Whisper back to " + replyTo + " (/r)", () => ChatChannel("/w " + replyTo + " ")));
+            buttons.Add(("Who", "Who's online (/who)", () => net?.SendChat("/who")));
+            buttons.Add(("Invite", "Invite someone to your party by name (/invite name)", () => ChatChannel("/invite ")));
+            buttons.Add(("Emotes", "Wave, bow, dance... (/e)", () => showEmotes = !showEmotes));
+            float bw = (bar.width - (buttons.Count - 1) * 4) / buttons.Count;
+            var style = UISkin.V(UISkin.Button, fontSize: 12);
+            for (int i = 0; i < buttons.Count; i++)
+            {
+                var b = new Rect(bar.x + i * (bw + 4), bar.y, bw, bar.height);
+                if (UISkin.Btn(b, buttons[i].label, style)) buttons[i].act();
+                if (b.Contains(Event.current.mousePosition)) tooltip = buttons[i].tip;
+            }
+        }
+
+        /// <summary>Opens the chat on a channel, keeping what was already typed.</summary>
+        void ChatChannel(string prefix)
+        {
+            string text = ChatOpen ? chatText : "";
+            foreach (var p in new[] { "/p ", "/g ", "/invite " })
+                if (text.StartsWith(p)) { text = text.Substring(p.Length); break; }
+            if (text.StartsWith("/w "))
+            {
+                int sp = text.IndexOf(' ', 3);
+                text = sp > 0 ? text.Substring(sp + 1) : "";
+            }
+            OpenChat(prefix + text);
+        }
+
         /// <summary>
         /// The chat box reads key events itself instead of using a focused GUI.TextField, whose focus handling
         /// is unreliable (in WebGL the box would open but never receive the typed characters).
@@ -1773,7 +1813,9 @@ namespace Shadowfall
             if (inWorld && x + w + 8 > OrbsLeft) bottom = VH - 200; // narrow screen: sit above the orbs
             float y = bottom - lines * lh;
             var area = new Rect(x - 8, y - 8, w + 16, lines * lh + 16);
-            bool live = ChatOpen || (inWorld && area.Contains(Event.current.mousePosition)); // names and links answer the mouse
+            var bar = new Rect(x - 8, area.y - 30, w + 16, 28); // the chat bar: every chat command as a button
+            bool live = ChatOpen || (inWorld && (area.Contains(Event.current.mousePosition) || bar.Contains(Event.current.mousePosition))); // names and links answer the mouse
+            if (live && inWorld) DrawChatBar(bar);
             if (live)
             {
                 GUI.color = new Color(1, 1, 1, 0.9f);

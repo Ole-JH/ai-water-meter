@@ -46,7 +46,8 @@ Every time you enter the world the camera starts in the classic view.
 | **R** / **N** button on the minimap | The minimap turns with the camera (R, the default) or keeps north up (N); the gold **N** on the rim always points north |
 | ++f1++ or ++h++ | Help |
 | ++f10++ | Admin panel (admins only, see [Admin module](../deployment/admin.md)) |
-| ++enter++ or ++slash++ | Chat. `/p` party, `/w name` whisper, `/r` reply, `/invite name`, `/leave`, `/who` |
+| ++enter++ or ++slash++ | Chat. `/p` party, `/g` guild, `/w name` whisper, `/r` reply, `/invite name`, `/leave`, `/who` |
+| Point at the chat | A bar of buttons above it for the same: Say, Party, Guild, Whisper, Reply, Who, Invite, Emotes (with chat open, a channel button switches what you're typing to that channel) |
 | ++esc++ | Close the open windows; with nothing open, the **game menu** (also the cog button at the bottom right): Resume, Settings, How to Play, What's New, Account, Character Select, Log Out (and Admin for admins) |
 | ++arrow-up++ / ++arrow-down++ in chat | Recall the messages you sent before |
 | ++shift++ + click an item (bags or worn) with the chat open | Link it in your message: everyone sees `[Item Name]` in its colour and can point at it for the full tooltip |

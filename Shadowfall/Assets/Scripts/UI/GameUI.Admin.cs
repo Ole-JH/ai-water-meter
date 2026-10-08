@@ -57,6 +57,8 @@ namespace Shadowfall
                 default: AdminPlayers(x, y, w); break;
             }
 
+            adminFieldFocused = GUI.GetNameOfFocusedControl().StartsWith("admin_"); // typing: the game keys stay quiet
+
             // The server's answer to the last command
             if (!string.IsNullOrEmpty(AdminTools.LastResult))
                 UISkin.Shadowed(new Rect(x, r.yMax - 64, w, 52), AdminTools.LastResult, UISkin.V(UISkin.Small, wordWrap: true), UISkin.Muted);
@@ -113,7 +115,36 @@ namespace Shadowfall
             y += 40;
             UISkin.Shadowed(new Rect(x, y, w, 40), "Paragon levels start at level " + ParagonBoard.MaxLevel + ". Forge materials: scrap, dust, crystals and souls for reforging.",
                 UISkin.V(UISkin.Small, wordWrap: true), UISkin.Muted);
+            y += 46;
+
+            // tp x z
+            Section(ref y, x, w, "Teleport");
+            float tw = (w - 12) / 4f;
+            UISkin.Shadowed(new Rect(x, y + 6, 20, 24), "X", UISkin.Label, UISkin.Muted);
+            GUI.SetNextControlName("admin_tpx");
+            tpX = GUI.TextField(new Rect(x + 20, y, tw - 20, 32), tpX, 6, UISkin.Field);
+            UISkin.Shadowed(new Rect(x + tw + 6, y + 6, 20, 24), "Z", UISkin.Label, UISkin.Muted);
+            GUI.SetNextControlName("admin_tpz");
+            tpZ = GUI.TextField(new Rect(x + tw + 26, y, tw - 20, 32), tpZ, 6, UISkin.Field);
+            if (AdminButton(new Rect(x + 2 * (tw + 6), y, tw, 32), "Go") && float.TryParse(tpX, out float gx) && float.TryParse(tpZ, out float gz))
+                AdminTools.Send(new AdminCmd { c = "tp", x = gx, z = gz });
+            if (AdminButton(new Rect(x + 3 * (tw + 6), y, tw, 32), "Where am I"))
+            {
+                tpX = p.transform.position.x.ToString("0");
+                tpZ = p.transform.position.z.ToString("0");
+            }
+            y += 38;
+            int towns = WorldGenerator.Towns.Length;
+            float cw = (w - (towns - 1) * 4) / Mathf.Max(1, towns);
+            for (int i = 0; i < towns; i++)
+            {
+                var t = WorldGenerator.Towns[i];
+                if (AdminButton(new Rect(x + i * (cw + 4), y, cw, 28), t.Name.Split(' ')[0]))
+                    AdminTools.Send(new AdminCmd { c = "tp", x = t.Center.x, z = t.Center.z });
+            }
         }
+
+        string tpX = "", tpZ = "", resetName = "";
 
         void AdminEvents(Player p, float x, float y, float w)
         {
@@ -143,7 +174,19 @@ namespace Shadowfall
                 AdminTools.Send(new AdminCmd { c = "tp", x = Invasion.Current.gx, z = Invasion.Current.gz - 4f });
             if (AdminButton(new Rect(x + hw + 6, y, hw, 32), "End it")) AdminTools.Send(new AdminCmd { c = "invasion", stop = true });
             GUI.enabled = true;
-            y += 46;
+            y += 38;
+            // As a lost siege: the quarter behind the chosen gate burns for five minutes (south when "Any gate")
+            UISkin.Shadowed(new Rect(x, y + 6, 90, 22), "Burn quarter:", UISkin.Small, UISkin.Muted);
+            float sw = (w - 90 - 80 - walled * 4) / Mathf.Max(1, walled);
+            k = 0;
+            foreach (var t in WorldGenerator.Towns)
+            {
+                if (!t.Walled) continue;
+                if (AdminButton(new Rect(x + 90 + k++ * (sw + 4), y, sw, 30), t.Name.Split(' ')[0]))
+                    AdminTools.Send(new AdminCmd { c = "sack", town = t.Name, gate = adminGate == 0 ? "south" : adminGates[adminGate].ToLowerInvariant() });
+            }
+            if (AdminButton(new Rect(x + w - 76, y, 76, 30), "Put out")) AdminTools.Send(new AdminCmd { c = "sack", town = "stop" });
+            y += 44;
 
             Section(ref y, x, w, "World boss");
             UISkin.Shadowed(new Rect(x, y - 4, w, 20), WorldBoss.Up ? WorldBoss.Current.name + ": " + WorldBoss.Status : "None up right now",
@@ -266,7 +309,6 @@ namespace Shadowfall
                 AdminTools.Send(new AdminCmd { c = "announce", text = announceText });
                 announceText = "";
             }
-            adminFieldFocused = GUI.GetNameOfFocusedControl() == "admin_announce";
         }
 
         bool adminFieldFocused;
@@ -291,7 +333,18 @@ namespace Shadowfall
                 y += 46;
                 if (y > Screen.height) break;
             }
-            UISkin.Shadowed(new Rect(x, y + 10, w, 40), "Chat commands: /a help", UISkin.Small, UISkin.Muted);
+            y += 8;
+            // resetpw <account or character>
+            Section(ref y, x, w, "Reset a password");
+            GUI.SetNextControlName("admin_resetpw");
+            resetName = GUI.TextField(new Rect(x, y, w - 156, 32), resetName, 40, UISkin.Field);
+            if (AdminButton(new Rect(x + w - 150, y, 150, 32), "Reset password") && resetName.Trim().Length > 0)
+            {
+                AdminTools.Send(new AdminCmd { c = "resetpw", name = resetName.Trim() });
+                resetName = "";
+            }
+            UISkin.Shadowed(new Rect(x, y + 36, w, 40), "Account or character name: a new password comes back here to hand over. Every admin command also has a chat form: /a help",
+                UISkin.V(UISkin.Small, wordWrap: true), UISkin.Muted);
         }
     }
 }
