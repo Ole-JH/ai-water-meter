@@ -31,6 +31,7 @@ namespace Shadowfall
                     "After dark the windows glow with the fire inside, and now and then someone walks past one. Each house goes to bed at its own hour and its lights go out until dawn.",
                     "Every walled town has real gates now: open all day, pulled to at night, and swung open with a creak for anyone who comes up to them (the night watch included).",
                     "Fixed the new front doors standing still: they now actually swing.",
+                    "Villagers chatting in the evening no longer stand inside each other: each pair stands a step apart, face to face.",
                 },
             },
             new Entry

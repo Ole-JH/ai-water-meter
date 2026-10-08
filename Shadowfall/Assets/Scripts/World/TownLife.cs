@@ -77,7 +77,8 @@ namespace Shadowfall
                 {
                     w.Work = Jobs[adult % Jobs.Length];
                     w.Seat = TavernSeats[adult % TavernSeats.Length];
-                    w.MeetAt = Meeting[adult % Meeting.Length];
+                    // Two villagers share each meeting spot: one stands either side of it, facing the other
+                    w.MeetAt = Meeting[adult % Meeting.Length] + new Vector3((adult / Meeting.Length) % 2 == 0 ? -0.75f : 0.75f, 0f, 0f);
                     w.NightOwl = adult == 1 || adult == 6;
                     adult++;
                 }
@@ -260,7 +261,7 @@ namespace Shadowfall
                     if (h < 6f || h >= (NightOwl ? 23.2f : 21.5f)) return "home";
                     if (h >= 12f && h < 13f) { place = Seat; there = Doing.Sitting; return "lunch"; }
                     if (h >= 20.5f) { place = Seat; there = Doing.Sitting; return "tavern"; }
-                    if (h >= 17f) { place = MeetAt + new Vector3((float)rng.NextDouble() * 1.4f - 0.7f, 0, (float)rng.NextDouble() * 1.4f - 0.7f); there = Doing.Chatting; return "evening"; }
+                    if (h >= 17f) { place = MeetAt + new Vector3(0f, 0f, (float)rng.NextDouble() * 0.4f - 0.2f); there = Doing.Chatting; return "evening"; }
                     if (h >= 7f) { place = Work.Spot; there = Doing.Working; return "work"; }
                     place = Work.Spot;
                     there = Doing.Working;
