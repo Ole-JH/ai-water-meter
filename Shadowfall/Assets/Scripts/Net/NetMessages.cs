@@ -27,6 +27,7 @@ namespace Shadowfall
         public float x, z, ry, hp, mhp;
         public int lvl, pl;    // pl: paragon level
         public bool mv, atk, dead;
+        public bool w;         // up on a town wall (Rampart)
         public string body, legs, weapon, helm, mdl, wk; // wk = weapon model kind
         public string gt;      // guild tag (empty = none)
         public string cp;      // companion following them (id, empty = none)
@@ -146,6 +147,7 @@ namespace Shadowfall
         public float x, z, ry, hp, mhp, mp, mmp;
         public int lvl, pl;    // pl: paragon level
         public bool mv, atk, dead;
+        public bool w;         // up on a town wall: ranged invaders can shoot us there
         public string body, legs, weapon, helm, mdl, wk; // wk = weapon model kind
         public string cp;      // active companion id
         public string mt;      // mount ridden (id, empty = on foot; the server checks we own it)

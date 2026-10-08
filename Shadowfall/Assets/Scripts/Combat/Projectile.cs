@@ -11,6 +11,7 @@ namespace Shadowfall
         float speed, life, damage, aoe, hitRadius;
         Color color;
         bool crit, visualOnly;
+        bool overWalls, startBlocked; // shot up at someone on a town wall; fired from on top of one (Rampart)
         System.Action<Combatant> onHit;
         ParticleSystem[] trails;
         SpellFx.Trail trailKind = SpellFx.Trail.Magic;
@@ -39,6 +40,20 @@ namespace Shadowfall
             p.onHit = onHit;
             p.size = size;
             return p;
+        }
+
+        /// <summary>Flies over walls (shot at a hero standing on a town wall).</summary>
+        public Projectile OverWalls(bool on = true) { overWalls = on; return this; }
+
+        void Start() => startBlocked = WorldGrid.Instance != null && !WorldGrid.Instance.IsWalkable(transform.position);
+
+        /// <summary>Hits a wall here. Shots fired from on top of a wall fly on until they're clear of it.</summary>
+        bool HitsWall()
+        {
+            bool blocked = !WorldGrid.Instance.IsWalkable(transform.position);
+            if (overWalls) return false;
+            if (startBlocked) { if (!blocked) startBlocked = false; return false; }
+            return blocked;
         }
 
         public enum Shape { Orb, Spear, Arrow, Axe }
@@ -142,7 +157,7 @@ namespace Shadowfall
 
             if (visualOnly)
             {
-                if (life <= 0f || !WorldGrid.Instance.IsWalkable(transform.position))
+                if (life <= 0f || HitsWall())
                 {
                     Impact(trailKind == SpellFx.Trail.Fire ? 1.6f : 0.8f);
                     if (trailKind == SpellFx.Trail.Fire) Sfx.Play("explosion", transform.position, 0.35f, 0.15f);
@@ -162,7 +177,7 @@ namespace Shadowfall
                 }
             }
 
-            if (life <= 0f || !WorldGrid.Instance.IsWalkable(transform.position)) Explode(null);
+            if (life <= 0f || HitsWall()) Explode(null);
         }
 
         void Explode(Combatant direct)

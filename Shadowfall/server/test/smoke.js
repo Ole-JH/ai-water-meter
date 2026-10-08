@@ -485,6 +485,41 @@ async function invasionTests(a, b) {
   await sleep(150);
 }
 
+/** Heroes on a town wall during a siege (the client's Rampart): archers outside can shoot them, nothing else can reach them. */
+async function wallTests(a, b) {
+  const bId = b.find("welcome").id;
+  const shotsAtB = () => b.all("matk").filter((m) => m.tid === bId).length;
+  state(a, 150.5, 108.5);
+  state(b, 150.5, 116.2, { w: true }); // on Hollowmere's south wall
+  a.ws.send(JSON.stringify({ t: "vanish", dur: 6 })); // the admin who spawns them stays out of it
+  await sleep(150);
+  const seen = b.all("matk").length;
+  a.ws.send(JSON.stringify({ t: "adm", c: "spawn", type: "Skeleton Archer", l: 1, n: 2 }));
+  await sleep(2500);
+  const shots = b.all("matk").slice(seen).filter((m) => m.tid === bId);
+  assert.ok(shots.length > 0 && shots.every((m) => m.k === "shot"), "archers outside shoot a hero up on the town wall");
+  const snap = a.all("snap").at(-1);
+  if (snap && snap.p) assert.ok(snap.p.some((x) => x.id === bId && x.w === true), "others see that hero on the wall");
+
+  state(b, 150.5, 117.5); // down off the wall, inside the town
+  await sleep(300);
+  const before = shotsAtB();
+  await sleep(2000);
+  assert.strictEqual(shotsAtB(), before, "inside the town, nothing reaches them");
+  a.ws.send(JSON.stringify({ t: "adm", c: "killall", r: 30 }));
+  await sleep(300);
+
+  state(b, 150.5, 116.2, { w: true });
+  const seen2 = b.all("matk").length;
+  a.ws.send(JSON.stringify({ t: "adm", c: "spawn", type: "Zombie", l: 1, n: 2 }));
+  await sleep(2000);
+  assert.ok(!b.all("matk").slice(seen2).some((m) => m.tid === bId), "melee monsters can't reach a hero on the wall");
+  a.ws.send(JSON.stringify({ t: "adm", c: "killall", r: 30 }));
+  state(b, 146, 150);
+  state(a, 144, 150);
+  await sleep(300);
+}
+
 async function auctionTests(a, b) {
   const iop = async (c, op, extra = {}) => { c.ws.send(JSON.stringify({ t: "iop", op, ...extra })); await sleep(200); };
   const listing = (c) => (c.all("auction").at(-1)?.items || []).map((x) => JSON.parse(x));
@@ -967,6 +1002,7 @@ async function main() {
     await bountyTests(a);
     await auctionTests(a, b);
     await adminContentTests(a);
+    await wallTests(a, b);
 
     const danaId = d.find("welcome").id;
     d.ws.send(JSON.stringify({ t: "vanish", dur: 3 }));

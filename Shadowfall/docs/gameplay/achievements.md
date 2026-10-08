@@ -40,6 +40,7 @@ exploration count from the day achievements arrived.
 | **Regular** | Finish all three bounties of a day, seven times. | 25 | the Bounty Hunter |
 | **Hold the Gate** | Help beat off an [invasion](world.md#town-invasions) of a town. | 10 |  |
 | **Shield of the Realm** | Help beat off ten invasions. | 25 | the Defender |
+| **Over the Wall** | Jump down from a town wall onto the invaders' side (see [invasions](world.md#town-invasions)). | 10 |  |
 | **Warden of the Walls** | Defend Hollowmere, Frosthaven, Saltreach and Emberwatch from invasions. | 25 |  |
 
 ### Bosses

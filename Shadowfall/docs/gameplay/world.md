@@ -224,16 +224,27 @@ the minimap counts down to the attack.
   three-affix champion with extra health). The next wave comes when the last is nearly dead, or after 75 seconds.
 - The invaders are monsters of the land around that gate, at about the level of the heroes near the town, and there
   are more of them the more heroes are around. They fight anyone they meet on the way, as usual; heroes inside the
-  walls are out of their reach but can shoot back from there.
-- **At the gate they batter it.** The tracker shows the gate's integrity: big monsters count double, the warlord four
-  times. Kill them before it breaks.
+  walls are out of their reach.
+- **The gate shuts** as soon as the monsters start gathering: nobody walks in or out there until it's over (recall or
+  a waystone still gets you home).
+- **The militia put up ladders.** Two helpers carry a ladder each from the middle of town to the inside of the wall,
+  a few paces either side of the gate, stand them up and lay a plank walkway along the top. Click a ladder to climb up.
+  On the wall you walk along the walkway (click along it), and you can attack from up there: ranged attacks and spells
+  fly over the wall, and anything right below is in reach of a melee swing. Click outside the wall to **jump down among
+  the invaders**, or inside to jump (or, near the ladder, climb) back down into town. Only the invaders' **archers and
+  casters can hit you on the wall**; the rest keep battering the gate.
+- **At the gate they batter it.** The gate shows it: it splinters and shakes with every blow, darkens and sags as it
+  weakens, and planks, bars and the brace break off one by one and fall into the town. The tracker shows its integrity:
+  big monsters count double, the warlord four times. Kill them before it breaks; when it does, what's left of it bursts
+  inward. Once the invasion is over the gate is mended and opened again, and the ladders come down.
 - **The town holds** when every wave is dead: every hero who hurt at least one invader gets experience (about a sixth of
   a level) and a boss's share of loot at their feet: gold, a guaranteed rare and a gem, with a chance at set and
   legendary items. Invaders also give 30% more experience each.
 - **The town is sacked** when the gate breaks, or when nobody stops the siege within 12 minutes: the invaders plunder
   the market and withdraw, and nobody is rewarded.
 
-Defending counts towards three [achievements](achievements.md#combat), one of them with the title *the Defender*.
+Defending counts towards four [achievements](achievements.md#combat), one of them with the title *the Defender*, and
+one for jumping down from the wall onto the invaders' side.
 
 ## Monsters
 

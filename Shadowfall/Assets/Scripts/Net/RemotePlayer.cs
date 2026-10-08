@@ -68,7 +68,7 @@ namespace Shadowfall
             Health = p.hp;
             Dead = p.dead;
             moving = p.mv;
-            netPos = new Vector3(p.x, 0, p.z);
+            netPos = new Vector3(p.x, Rampart.HeightFor(p.w), p.z);
             netRy = p.ry;
             bool full = !string.IsNullOrEmpty(p.name); // partial entries carry only what changes every tick
             if (full)

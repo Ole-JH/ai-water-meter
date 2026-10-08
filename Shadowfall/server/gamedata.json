@@ -577,6 +577,10 @@
    "name": "Shield of the Realm",
    "title": "the Defender"
   },
+  "wall_jump": {
+   "name": "Over the Wall",
+   "title": ""
+  },
   "defend_all": {
    "name": "Warden of the Walls",
    "title": ""

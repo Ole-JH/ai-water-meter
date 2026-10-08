@@ -8,6 +8,7 @@
 | ++"Left click"++ on a monster | Walk to it and attack until it dies |
 | ++shift++ + ++"Left click"++ | Attack in place, toward the cursor |
 | ++"Left click"++ on an NPC, tree, rock, fishing spot, anvil or campfire | Walk over and interact |
+| ++"Left click"++ on a ladder (during a town invasion) | Climb onto the wall. Up there, click along the wall to walk, outside it to jump down among the invaders, inside it to get back down ([invasions](world.md#town-invasions)) |
 | ++"Left click"++ on a loot label | Pick it up. Gold is picked up automatically when you walk over it |
 | ++"Right click"++ (hold) | Your class's second ability toward the cursor (Holy Bolt, Throwing Axe, Fireball or Multishot) |
 | ++"Right click"++ on another player | Their menu: invite to party, whisper, trade, challenge to a duel (anywhere on their character, not just the name) |

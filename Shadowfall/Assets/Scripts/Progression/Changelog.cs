@@ -24,6 +24,17 @@ namespace Shadowfall
         {
             new Entry
             {
+                Id = 37, Date = "2026-10-08", Title = "Hold the walls",
+                Items = new[]
+                {
+                    "Town gates shut when an invasion begins. Every blow shows: the gate splinters and shakes, darkens and sags as it weakens, and planks and bars break off and fall into the town until it gives way.",
+                    "The militia carry ladders to the inside of the wall either side of the gate and lay a walkway along the top. Climb up to shoot and cast down at the invaders. Only their archers and casters can hit you up there.",
+                    "Click outside the wall to jump down among the invaders, or inside to get back into town. New achievement: Over the Wall.",
+                    "Mounts show as real horses and stags again instead of boxes.",
+                },
+            },
+            new Entry
+            {
                 Id = 36, Date = "2026-10-08", Title = "Smoother in the browser",
                 Items = new[]
                 {

@@ -15,6 +15,9 @@ namespace Shadowfall
         /// <summary>World position of cell (0, 0): (0, 0) for the overworld, offset for dungeon grids.</summary>
         public Vector2Int Origin;
         readonly bool[] blocked;
+        // Cells blocked for a while (a town gate shut during an invasion, see Rampart). Kept apart from the map itself:
+        // never packed, hashed or uploaded, so the world stays the one the server knows.
+        readonly bool[] closed;
 
         // A* scratch buffers (reused between searches, invalidated by a stamp counter)
         readonly float[] gScore;
@@ -35,6 +38,7 @@ namespace Shadowfall
             Height = height;
             int n = width * height;
             blocked = new bool[n];
+            closed = new bool[n];
             gScore = new float[n];
             parent = new int[n];
             seenStamp = new int[n];
@@ -44,9 +48,11 @@ namespace Shadowfall
         }
 
         public bool InBounds(int x, int y) => x >= 0 && y >= 0 && x < Width && y < Height;
-        public bool IsBlocked(int x, int y) => !InBounds(x, y) || blocked[y * Width + x];
+        public bool IsBlocked(int x, int y) => !InBounds(x, y) || blocked[y * Width + x] || closed[y * Width + x];
         public bool IsBlocked(Vector2Int c) => IsBlocked(c.x, c.y);
         public void SetBlocked(int x, int y, bool value) { if (InBounds(x, y)) blocked[y * Width + x] = value; }
+        /// <summary>Blocks a cell for now (not part of the map: see <c>closed</c>).</summary>
+        public void SetClosed(int x, int y, bool value) { if (InBounds(x, y)) closed[y * Width + x] = value; }
 
         public Vector2Int WorldToCell(Vector3 p) => new Vector2Int(Mathf.FloorToInt(p.x) - Origin.x, Mathf.FloorToInt(p.z) - Origin.y);
         public Vector3 CellToWorld(Vector2Int c) => new Vector3(c.x + Origin.x + 0.5f, 0f, c.y + Origin.y + 0.5f);

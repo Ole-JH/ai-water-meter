@@ -378,7 +378,7 @@ namespace Shadowfall
             Send(new StateMsg
             {
                 x = p.transform.position.x - Offset.x, z = p.transform.position.z - Offset.z, ry = p.transform.eulerAngles.y,
-                hp = p.Health, mhp = p.MaxHealth, mp = p.Mana, mmp = p.MaxMana, lvl = p.Level, pl = p.Paragon.Level, mv = p.IsMoving, atk = p.IsAttacking, dead = p.IsDead,
+                hp = p.Health, mhp = p.MaxHealth, mp = p.Mana, mmp = p.MaxMana, lvl = p.Level, pl = p.Paragon.Level, mv = p.IsMoving, atk = p.IsAttacking, dead = p.IsDead, w = p.OnWall != null,
                 body = p.BodyHex, legs = p.LegsHex, weapon = p.WeaponHex, helm = p.HelmHex, mdl = p.Look, wk = p.WeaponKind ?? "", cp = p.ActiveCompanion ?? "", mt = p.Riding != null ? p.Riding.Id : "", ti = p.Achievements.Title != null ? p.Achievements.TitleFrom : "",
             });
         }
@@ -730,6 +730,7 @@ namespace Shadowfall
                     if (targetIsMe && p != null && !p.IsDead) p.TakeDamage(m.dmg, e);
                     else if (m.tid < 0 && e != null && Invasion.Active) // an invader battering the town gate
                     {
+                        Rampart.Struck(targetPos);
                         Sfx.Play("chop", targetPos + Vector3.up, 0.8f, 0.1f, 40f);
                         SpellFx.Hit(targetPos + Vector3.up * 1.2f, new Color(0.75f, 0.55f, 0.3f), false, 6); // splinters
                     }
@@ -742,7 +743,8 @@ namespace Shadowfall
                     bool boss = e.Def.Boss;
                     if (targetIsMe && p != null && !p.IsDead)
                         Projectile.Fire(e, from, p.transform.position + Vector3.up, 13f, m.dmg, e.Def.ProjectileColor,
-                            boss ? 0.7f : 0.35f, boss ? 1.8f : 0f, 18f).WithTrail(e.Def.Name == "Skeleton Archer" ? SpellFx.Trail.Arrow : SpellFx.Trail.Magic);
+                            boss ? 0.7f : 0.35f, boss ? 1.8f : 0f, 18f).WithTrail(e.Def.Name == "Skeleton Archer" ? SpellFx.Trail.Arrow : SpellFx.Trail.Magic)
+                            .OverWalls(p.OnWall != null); // shot up at us on a town wall
                     else
                         Projectile.FireVisual(from, to, 13f, e.Def.ProjectileColor, boss ? 0.7f : 0.35f, 18f)
                             .WithTrail(e.Def.Name == "Skeleton Archer" ? SpellFx.Trail.Arrow : SpellFx.Trail.Magic);

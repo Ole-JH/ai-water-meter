@@ -82,6 +82,7 @@ namespace Shadowfall
             // ---- town invasions
             new AchievementDef { Id = "defend_first", Name = "Hold the Gate", Description = "Help beat off an invasion of a town.", Category = AchievementCategory.Combat, Icon = "ach_castle", Points = 10, Stat = "defended", Goal = 1 },
             new AchievementDef { Id = "defend_10", Name = "Shield of the Realm", Description = "Help beat off ten invasions.", Category = AchievementCategory.Combat, Icon = "ach_castle", Points = 25, Stat = "defended", Goal = 10, Title = "the Defender" },
+            new AchievementDef { Id = "wall_jump", Name = "Over the Wall", Description = "Jump down from a town wall onto the invaders' side.", Category = AchievementCategory.Combat, Icon = "ach_castle", Points = 10, Stat = "wall_jump", Goal = 1 },
             new AchievementDef { Id = "defend_all", Name = "Warden of the Walls", Description = "Defend Hollowmere, Frosthaven, Saltreach and Emberwatch from invasions.", Category = AchievementCategory.Combat, Icon = "ach_castle", Points = 25, Stat = "defended_town", Goal = 4 },
 
             // ---- dungeons

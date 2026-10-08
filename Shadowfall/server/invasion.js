@@ -1,7 +1,8 @@
 // Town invasions. Every INVASION_MINUTES or so (default 45, 0 = never), monsters from the surrounding lands gather
 // outside a gate of a walled town where players are, and attack it in three waves. They march on the gate and batter
-// it; heroes they meet on the way are fought as usual (heroes inside the walls are out of their reach, but can shoot
-// back from there). Kill every wave, the last led by a warlord, and the town holds: everyone who hurt an invader gets
+// it; heroes they meet on the way are fought as usual. Heroes inside the walls are out of their reach, but the town's
+// militia put up ladders behind the wall during the gathering (the client's Rampart.cs): heroes on the wall can shoot
+// down from there, and only the invaders' archers and casters can shoot back. The gate is shut while it lasts. Kill every wave, the last led by a warlord, and the town holds: everyone who hurt an invader gets
 // experience and a boss's share of loot. If the gate falls (or the siege drags on for 12 minutes), the invaders
 // plunder the town and withdraw, and nobody is rewarded.
 //
@@ -131,7 +132,7 @@ module.exports = function createInvasions(ctx) {
   }
 
   function send() {
-    if (inv) inv.sentAt = now();
+    if (inv) { inv.sentAt = now(); inv.sentHp = inv.integrity; }
     const data = JSON.stringify({ t: "invasion", iv: state() });
     for (const s of sessions.values()) if (s.inWorld) safeSend(s, data);
   }
@@ -189,7 +190,8 @@ module.exports = function createInvasions(ctx) {
     if (inv.integrity <= 0 || t - inv.began > MAX_S) return end(false);
     if (inv.wave < WAVES && (n <= 2 || t - inv.waveAt > WAVE_GAP_S)) { spawnWave(); send(); return; }
     if (inv.wave >= WAVES && n === 0) return end(true);
-    if (t - inv.sentAt > 2) send();
+    // Every few points off the gate goes out at once (the gate shows its damage), the rest every two seconds.
+    if (t - inv.sentAt > 2 || (inv.sentHp - inv.integrity >= 2 && t - inv.sentAt > 0.4)) send();
   }
 
   /** An invader with nobody to fight: march on the gate, then batter it. */

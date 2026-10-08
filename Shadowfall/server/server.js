@@ -406,7 +406,20 @@ function alertNearby(m, sessionId) {
 const hidden = (s) => now() < (s.hiddenUntil || 0);
 
 function validTarget(m, s) {
-  return s && s.inWorld && !s.dead && !hidden(s) && (s.inst || 0) === m.inst && !(m.inst === 0 && inTown(s.x, s.z)) && dist(m.homeX, m.homeZ, s.x, s.z) < m.leash + 6;
+  return s && s.inWorld && !s.dead && !hidden(s) && (s.inst || 0) === m.inst && !(m.inst === 0 && safeInTown(m, s)) && dist(m.homeX, m.homeZ, s.x, s.z) < m.leash + 6;
+}
+
+/** Heroes in town are out of monsters' reach, except that ranged monsters can shoot those up on a town wall (Rampart). */
+const safeInTown = (m, s) => inTown(s.x, s.z) && !(s.onWall && m.def.ranged);
+
+/** Where a monster stands to shoot a hero on a town wall: just outside the wall below them. */
+function wallFoot(s) {
+  const t = TOWNS.find((w) => s.x >= w.x0 && s.x < w.x1 && s.z >= w.z0 && s.z < w.z1);
+  if (!t) return [s.x, s.z];
+  const dx = s.x - (t.x0 + t.x1) / 2, dz = s.z - (t.z0 + t.z1) / 2;
+  const [nx, nz] = Math.abs(dx) > Math.abs(dz) ? [Math.sign(dx), 0] : [0, Math.sign(dz)];
+  const spot = nearestWalkable(Math.floor(s.x + nx * 3), Math.floor(s.z + nz * 3), 2);
+  return spot ? [spot[0] + 0.5, spot[1] + 0.5] : [s.x + nx * 3, s.z + nz * 3];
 }
 
 function moveAlongPath(m, speed) {
@@ -445,7 +458,7 @@ function updateMonster(m, t) {
     case "idle": {
       let best = null, bestD = m.def.aggro * BALANCE.aggro;
       for (const s of sessions.values()) {
-        if (!s.inWorld || s.dead || hidden(s) || (s.inst || 0) !== m.inst || (m.inst === 0 && inTown(s.x, s.z))) continue;
+        if (!s.inWorld || s.dead || hidden(s) || (s.inst || 0) !== m.inst || (m.inst === 0 && safeInTown(m, s))) continue;
         const d = dist(m.x, m.z, s.x, s.z);
         if (d < bestD) { bestD = d; best = s; }
       }
@@ -483,7 +496,7 @@ function updateMonster(m, t) {
       if (m.elite) eliteAbilities(m, s, d, t);
       if (m.worldBoss && worldBosses.abilities(m, s, d, t)) break; // winding up a slam
 
-      const canHit = d <= m.def.range + 0.45 && (!m.def.ranged || lineOfSight(m.x, m.z, s.x, s.z, 0.1));
+      const canHit = d <= m.def.range + 0.45 && (!m.def.ranged || s.onWall || lineOfSight(m.x, m.z, s.x, s.z, 0.1));
       if (canHit) {
         m.path = [];
         m.ry = (Math.atan2(s.x - m.x, s.z - m.z) * 180) / Math.PI;
@@ -493,7 +506,9 @@ function updateMonster(m, t) {
         }
         break;
       }
-      if (lineOfSight(m.x, m.z, s.x, s.z)) m.path = [[s.x, s.z]];
+      if (s.onWall) { // up on a town wall: get within range below it
+        if (t >= m.repathAt || !m.path.length) { m.repathAt = t + rand(0.8, 1.2); const [fx, fz] = wallFoot(s); m.path = findPath(m.x, m.z, fx, fz, 4000); }
+      } else if (lineOfSight(m.x, m.z, s.x, s.z)) m.path = [[s.x, s.z]];
       else if (t >= m.repathAt || !m.path.length) {
         m.repathAt = t + rand(0.4, 0.7);
         m.path = findPath(m.x, m.z, s.x, s.z);
@@ -2203,6 +2218,7 @@ const handlers = {
     s.pl = Math.max(0, Math.min(100000, parseInt(m.pl, 10) || 0)); // paragon level
     if (m.dead && !s.dead) { M.deaths.inc(); deathPenalty(s); }
     s.mv = !!m.mv; s.atk = !!m.atk; s.dead = !!m.dead;
+    s.onWall = !!m.w && !s.inst && inTown(s.x, s.z); // up on a town wall (only ever inside a town's bounds)
     s.look = { body: String(m.body || "").slice(0, 6), legs: String(m.legs || "").slice(0, 6), weapon: String(m.weapon || "").slice(0, 6), helm: String(m.helm || "").slice(0, 6),
       mdl: HERO_MODELS.includes(m.mdl) ? m.mdl : "Knight",
       wk: ["sword", "axe", "mace", "dagger", "staff"].includes(m.wk) ? m.wk : "",
@@ -2431,7 +2447,7 @@ function tick() {
 const FULL_EVERY = 8, FAR_MONSTER = 25, FAR_PLAYER = 30;
 const jstr = JSON.stringify;
 const flags = (o) => (o.sl ? ',"sl":true' : "") + (o.st ? ',"st":true' : "") + (o.sh ? ',"sh":true' : "") + (o.mv ? ',"mv":true' : "") +
-  (o.atk ? ',"atk":true' : "") + (o.dead ? ',"dead":true' : "");
+  (o.atk ? ',"atk":true' : "") + (o.dead ? ',"dead":true' : "") + (o.onWall ? ',"w":true' : "");
 
 function sendSnapshots(t) {
   const online = [];

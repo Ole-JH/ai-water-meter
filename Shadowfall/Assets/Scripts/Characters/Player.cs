@@ -475,7 +475,8 @@ namespace Shadowfall
             if (leapT < 0f)
             {
                 UpdateAction(dt);
-                FollowPath(dt);
+                if (OnWall != null || hopT >= 0f) UpdateWall(dt);
+                else FollowPath(dt);
             }
             AutoPickupGold();
             UpdateZone();
@@ -609,6 +610,7 @@ namespace Shadowfall
 
         public void MoveTo(Vector3 point)
         {
+            if (OnWall != null || hopT >= 0f) { WallMove(point); return; }
             action = Action.Move;
             AttackTarget = null;
             interactTarget = null;
@@ -627,6 +629,13 @@ namespace Shadowfall
 
         public void SetInteract(Interactable target)
         {
+            if (OnWall != null || hopT >= 0f)
+            {
+                // From the walkway: down our own ladder, or down to whatever it is (then click it again).
+                if (target is SiegeLadder l && l.Walk == OnWall) { wallGoal = OnWall.LadderAt; wallJump = -2; }
+                else WallMove(target.Position);
+                return;
+            }
             StopGathering();
             action = Action.Interact;
             interactTarget = target;
@@ -637,6 +646,7 @@ namespace Shadowfall
         void SetPath(Vector3 goal)
         {
             pathGoal = goal;
+            if (OnWall != null || hopT >= 0f) { path.Clear(); return; } // up on a wall: no walking off it
             WorldGrid.Instance.FindPath(transform.position, goal, path);
         }
 
@@ -670,6 +680,9 @@ namespace Shadowfall
         /// <summary>Instantly moves the hero (entering or leaving a dungeon).</summary>
         public void TeleportTo(Vector3 pos)
         {
+            OnWall = null;
+            hopT = -1f;
+            hopOnto = null;
             path.Clear();
             action = Action.None;
             AttackTarget = null;
@@ -744,6 +757,144 @@ namespace Shadowfall
                     if (path.Count == 0) action = Action.None;
                     break;
             }
+        }
+
+        // =====================================================================================
+        // Town walls during an invasion (Rampart): up a ladder, along the walkway, and down either side
+        // =====================================================================================
+
+        /// <summary>The walkway we're standing on, up on a town wall (null: on the ground).</summary>
+        public WallWalk OnWall { get; private set; }
+        float wallGoal;
+        int wallJump;                 // when we get to wallGoal: 1 jump down outside, -1 jump down inside, -2 climb down the ladder
+        float hopT = -1f, hopDur;     // climbing or jumping: progress 0..1, and how long it takes
+        Vector3 hopFrom, hopTo;
+        bool hopClimb;
+        WallWalk hopOnto;             // climbing up onto this walkway
+
+        /// <summary>Up the ladder onto the wall.</summary>
+        public void ClimbWall(WallWalk w)
+        {
+            if (IsDead || w == null || hopT >= 0f) return;
+            Dismount();
+            StopMoving();
+            CancelRecall(null);
+            action = Action.None;
+            AttackTarget = null;
+            interactTarget = null;
+            Hop(transform.position, w.At(w.LadderAt), true, 1.1f, w);
+            Sfx.Play("whoosh", transform.position + Vector3.up, 0.3f, 0.1f);
+        }
+
+        /// <summary>Off the wall at once, inside (the walkway is being taken down).</summary>
+        public void LeaveWall()
+        {
+            var w = OnWall ?? hopOnto;
+            OnWall = null;
+            hopOnto = null;
+            hopT = -1f;
+            if (w != null) transform.position = TownLife.Walkable(w.Landing(w.Param(transform.position), false));
+            else transform.position = Factory.Flat(transform.position);
+        }
+
+        void Hop(Vector3 from, Vector3 to, bool climb, float seconds, WallWalk onto)
+        {
+            hopFrom = from;
+            hopTo = to;
+            hopClimb = climb;
+            hopDur = seconds;
+            hopOnto = onto;
+            hopT = 0f;
+            OnWall = null;
+            path.Clear();
+        }
+
+        /// <summary>A click while on the wall: along the walkway, or down the outside or inside.</summary>
+        void WallMove(Vector3 point)
+        {
+            if (hopT >= 0f || OnWall == null) return;
+            action = Action.None;
+            AttackTarget = null;
+            interactTarget = null;
+            float side = OnWall.Outside(point), a = OnWall.Clamp(OnWall.Param(point));
+            wallGoal = a;
+            wallJump = 0;
+            if (side > 1f) wallJump = 1;
+            else if (side < -1f)
+            {
+                if (Mathf.Abs(a - OnWall.LadderAt) < 2.5f) { wallGoal = OnWall.LadderAt; wallJump = -2; }
+                else wallJump = -1;
+            }
+        }
+
+        void JumpFromWall(bool outside)
+        {
+            var w = OnWall;
+            float a = w.Param(transform.position);
+            var grid = WorldGrid.Instance;
+            foreach (float d in new[] { 0f, 1f, -1f, 2f, -2f })
+            {
+                var land = w.Landing(a + d, outside);
+                if (!grid.IsWalkable(land)) continue;
+                Hop(transform.position, land, false, 0.6f, null);
+                Sfx.Play("whoosh", transform.position, 0.35f, 0.15f);
+                if (outside) Achievements.Add("wall_jump");
+                return;
+            }
+            GameUI.Float(transform.position + Vector3.up * 2.5f, "Can't jump down here", Color.gray, 0.85f);
+        }
+
+        void UpdateWall(float dt)
+        {
+            currentSpeed = 0f;
+            if (hopT >= 0f)
+            {
+                hopT += dt / hopDur;
+                float t = Mathf.Clamp01(hopT);
+                var p = Vector3.Lerp(hopFrom, hopTo, hopClimb ? Mathf.Clamp01(t * 1.25f - 0.25f) : t); // a climb goes up first, then over
+                p.y = hopClimb ? Mathf.Lerp(hopFrom.y, hopTo.y, Mathf.Clamp01(t * 1.2f)) : Mathf.Lerp(hopFrom.y, hopTo.y, t * t) + Mathf.Sin(t * Mathf.PI) * 0.7f;
+                transform.position = p;
+                var face = Factory.Flat(hopTo - hopFrom);
+                if (face.sqrMagnitude > 0.01f) transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(hopClimb && hopOnto == null ? -face : face), dt * 10f);
+                if (t < 1f) return;
+                hopT = -1f;
+                transform.position = hopTo;
+                OnWall = hopOnto;
+                hopOnto = null;
+                if (OnWall != null) { wallGoal = OnWall.Param(hopTo); wallJump = 0; }
+                else if (!hopClimb) { SpellFx.Dust(hopTo, 0.7f); Sfx.Play("hit_heavy", hopTo, 0.3f, 0.15f); }
+                return;
+            }
+            var w = OnWall;
+            float a = w.Param(transform.position);
+            // Moved off by something else (Leap, Teleport, a recall...): back on the ground.
+            if (transform.position.y < Rampart.Top - 0.5f || Factory.FlatDistance(transform.position, w.At(a)) > 0.8f)
+            {
+                OnWall = null;
+                transform.position = Factory.Flat(transform.position);
+                return;
+            }
+            float goal = w.Clamp(wallGoal), speed = MoveSpeed * 0.65f, step = speed * dt;
+            if (Mathf.Abs(goal - a) > step)
+            {
+                a += Mathf.Sign(goal - a) * step;
+                currentSpeed = speed;
+                transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(w.Side.Axis * Mathf.Sign(goal - a)), dt * 12f);
+            }
+            else
+            {
+                a = goal;
+                if (wallJump != 0)
+                {
+                    int j = wallJump;
+                    wallJump = 0;
+                    transform.position = w.At(a);
+                    if (j == -2) Hop(transform.position, w.Foot, true, 0.9f, null);
+                    else JumpFromWall(j > 0);
+                    return;
+                }
+            }
+            transform.position = w.At(a);
         }
 
         void FollowPath(float dt)
@@ -1429,6 +1580,7 @@ namespace Shadowfall
             string id = ChosenMount != null && OwnedMounts.Contains(ChosenMount) ? ChosenMount : OwnedMounts.Count > 0 ? OwnedMounts[OwnedMounts.Count - 1] : null;
             string why = id == null ? "You have no mount. Beastmaster Orla in Hollowmere sells them."
                 : Dungeon.Active ? "You can't ride in here."
+                : OnWall != null || hopT >= 0f ? "Not up here."
                 : Time.time - LastDamagedTime < 4f ? "Not while you're fighting."
                 : null;
             if (why != null) { GameUI.Float(transform.position + Vector3.up * 2.5f, why, Color.gray, 0.85f); return; }
