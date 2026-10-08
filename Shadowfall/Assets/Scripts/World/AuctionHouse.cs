@@ -27,6 +27,10 @@ namespace Shadowfall
         float nextCall, ringT = -1f;
 
         public override string HoverText => "Auctioneer\n<the auction house: buy, and sell your finds>";
+        /// <summary>Fled a burning quarter (Sack): no auctioneer behind the podium until the fires are out.</summary>
+        public bool Away => Sack.At(transform.position);
+        public override bool CanInteract => !Away;
+        bool hidden;
         public override Color LabelColor => new Color(1f, 0.85f, 0.4f);
         public override float LabelHeight => 2.9f;
 
@@ -132,6 +136,13 @@ namespace Shadowfall
 
         void Update()
         {
+            bool away = Away;
+            if (away != hidden && view != null)
+            {
+                hidden = away;
+                foreach (var r in view.Root.GetComponentsInChildren<Renderer>()) r.enabled = !away;
+            }
+            if (away) return;
             view?.UpdateLocomotion(0f);
             if (ringT >= 0f && bell != null)
             {

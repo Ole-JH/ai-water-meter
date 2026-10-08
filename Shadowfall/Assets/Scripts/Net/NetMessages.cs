@@ -103,6 +103,7 @@ namespace Shadowfall
         public int win;                // "duel" (end): the winner's id (0 = a draw)
         public NetWorldBoss wb;        // "wboss": the world boss that is up (see WorldBoss.cs)
         public NetInvasion iv;         // "invasion": a town under attack (see Invasion.cs); "invwin": k = town, xp, drops
+        public NetSack[] sk;           // "sack": the quarters burning after a lost siege (see Sack.cs)
     }
 
     /// <summary>Our guild (server/guild.js): ranks are member, officer, leader.</summary>
@@ -138,6 +139,9 @@ namespace Shadowfall
         public int hp;                 // the gate's integrity, 0..100
         public NetGuard[] gd;          // the town's guards (TownGuards)
     }
+
+    /// <summary>A quarter burning after a lost siege: town k, gate g (x, z), everything inside the walls within r of it, left seconds.</summary>
+    [Serializable] public class NetSack { public string k, g; public float x, z, r; public int left; }
 
     /// <summary>A town guard in an invasion: k "a" an archer on the wall, "s" a soldier before the gate.</summary>
     [Serializable] public class NetGuard { public int i, hp, mh; public string k; public float x, z; }

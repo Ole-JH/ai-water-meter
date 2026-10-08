@@ -351,6 +351,7 @@ namespace Shadowfall
             if (chooseDungeon >= 0) DrawDifficultyPicker(p);
             if (waystoneOpen != null) DrawWaystone(p);
             else tradeGoldFocused = false;
+            if (dialogNpc != null && dialogNpc.Away) dialogNpc = null; // fled a burning quarter mid-sale
             if (dialogNpc != null) DrawDialog(p);
             if (craftStation != null) DrawCrafting(p);
             if (forgeOpen) DrawForge(p);
@@ -818,6 +819,7 @@ namespace Shadowfall
 
                 if (it is Npc npc)
                 {
+                    if (npc.Away) continue; // fled a burning quarter
                     if (!WorldToGui(it.Position + Vector3.up * it.LabelHeight, out var g)) continue;
                     UISkin.Shadowed(new Rect(g.x - 140, g.y - 20, 280, 22), npc.DisplayName, UISkin.SmallCenter, npc.LabelColor);
                     if (!string.IsNullOrEmpty(npc.Title))
@@ -827,8 +829,9 @@ namespace Shadowfall
                     continue;
                 }
 
-                if (it is AuctionPodium)
+                if (it is AuctionPodium podium)
                 {
+                    if (podium.Away) continue;
                     // named like the townsfolk (it's a clickable podium, not an Npc, so it had no plate)
                     if (!WorldToGui(it.Position + Vector3.up * it.LabelHeight, out var g)) continue;
                     UISkin.Shadowed(new Rect(g.x - 140, g.y - 20, 280, 22), it.DisplayName, UISkin.SmallCenter, new Color(0.55f, 1f, 0.55f));
@@ -1373,6 +1376,7 @@ namespace Shadowfall
                 if (!Exploration.Seen(it.Position) && !(it is DungeonEntrance)) continue; // fog hides what you haven't found
                 if (it is Npc npc)
                 {
+                    if (npc.Away) continue;
                     var pos = toMap(npc.Position);
                     var mark = npc.Marker(p, out var mc);
                     if (mark != null && InCircle(r, pos, 6f))
@@ -2335,7 +2339,7 @@ namespace Shadowfall
                 foreach (var it in Interactable.All)
                 {
                     if (it == null || !Exploration.Seen(it.Position)) continue;
-                    if (it is Npc qn && qn.Marker(p, out _) != null) { mark(qn.Position, new Color(1f, 0.85f, 0.1f), 9); continue; }
+                    if (it is Npc qn && !qn.Away && qn.Marker(p, out _) != null) { mark(qn.Position, new Color(1f, 0.85f, 0.1f), 9); continue; }
                     string icon = MapIcon(it, out string label);
                     if (icon == null) continue;
                     var town = it is DungeonEntrance ? null : WorldGenerator.TownAt(it.Position);

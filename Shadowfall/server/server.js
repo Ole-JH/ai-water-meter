@@ -1452,6 +1452,8 @@ function runAdmin(s, c, a) {
     }
     case "invasion":
       return a.stop ? invasions.stop() : invasions.start(a.town || "", a.gate);
+    case "sack":
+      return invasions.sack(a.town || "", a.gate);
     case "worldboss":
       return a.stop ? worldBosses.stop() : worldBosses.start(a.name || "");
     case "rift": { // a greater rift of this tier now (walks the admin to the Rift Stone first)
@@ -1566,7 +1568,11 @@ function adminFromChat(s, line) {
       const gate = ["north", "south", "east", "west"].includes((w[w.length - 1] || "").toLowerCase()) ? w.pop().toLowerCase() : undefined;
       return runAdmin(s, "invasion", w[0] === "stop" ? { stop: true } : { town: w.join(" "), gate });
     }
-    default: return "Admin commands: tp x z, tpto name, summon name, dungeon <id|0-6> [depth], regen, spawn <type> [level] [count] [elite], killall [radius], time dawn|day|dusk|night, elites <0-1>, announce text, kick name, who, resetpw <account or character>, give gold [n]|legendary|set|gems|potions|materials|mounts, weather clear|cloudy|rain|storm|fog [minutes], season spring|summer|autumn|winter, invasion [town] [north|south|east|west] | invasion stop, worldboss [name] | worldboss stop, bounties, rift <tier>, riftbest <tier>, status";
+    case "sack": {
+      const gate = ["north", "south", "east", "west"].includes((w[w.length - 1] || "").toLowerCase()) ? w.pop().toLowerCase() : undefined;
+      return runAdmin(s, "sack", { town: w.join(" "), gate });
+    }
+    default: return "Admin commands: tp x z, tpto name, summon name, dungeon <id|0-6> [depth], regen, spawn <type> [level] [count] [elite], killall [radius], time dawn|day|dusk|night, elites <0-1>, announce text, kick name, who, resetpw <account or character>, give gold [n]|legendary|set|gems|potions|materials|mounts, weather clear|cloudy|rain|storm|fog [minutes], season spring|summer|autumn|winter, invasion [town] [north|south|east|west] | invasion stop, sack [town] [gate] | sack stop, worldboss [name] | worldboss stop, bounties, rift <tier>, riftbest <tier>, status";
   }
 }
 
@@ -2231,6 +2237,8 @@ const itemOps = {
 };
 
 const ECONOMY_OPS = new Set(Object.keys(itemOps));
+/** The trade that needs someone behind a counter (refused in a burning quarter). */
+const SACK_OPS = new Set(["vendor", "buy", "sell", "salvage", "reforge", "hire", "quest", "aubrowse", "aulist", "aubuy", "aucancel"]);
 
 /** Gold lost on death (15%), taken by the server when the client reports dying. */
 function deathPenalty(s) {
@@ -2293,6 +2301,8 @@ const handlers = {
     if (trades.has(s.id) && op !== "vendor" && op !== "use") return ierr(s, op, "Finish or cancel your trade first.");
     M.itemOps.inc({ op });
     if (s.dead && op !== "vendor") { ierr(s, op, ""); if (op === "use") sendInv(s); return; }
+    // A lost siege set this quarter on fire: its merchants, smiths and auctioneers have fled (invasion.js)
+    if (SACK_OPS.has(op) && invasions.sackedAt(s.x, s.z)) return ierr(s, op, "The merchants here have fled the fire. Come back when it's out, or find another in a quarter that isn't burning.");
     if (itemOps[op](s, m) === true) ledgerChanged(s);
     else if (op === "use") sendInv(s); // the client already took one out of the stack: put it right
   },

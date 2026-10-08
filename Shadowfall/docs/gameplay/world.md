@@ -292,7 +292,15 @@ the minimap counts down to the attack.
   a level) and a boss's share of loot at their feet: gold, a guaranteed rare and a gem, with a chance at set and
   legendary items. Invaders also give 30% more experience each.
 - **The town is sacked** when the gate breaks, or when nobody stops the siege within 12 minutes: the invaders plunder
-  the market and withdraw, and nobody is rewarded.
+  the market and withdraw, and nobody is rewarded. Worse, **they set fire to the quarter behind the broken gate** (inside
+  the walls, a little more than half the town's width from the gate) for **five minutes**:
+    - its houses burn, roofs ablaze and smoke rising;
+    - its people run for it: the merchants, smiths, healers, quest givers and the auctioneer of that quarter are gone,
+      and nothing there can be bought, sold, salvaged, reforged, hired, turned in or put up for auction;
+    - the townsfolk keep indoors.
+
+    Shops elsewhere in the town still trade. A burning town isn't attacked again until the fires are out; then
+    everyone comes back.
 
 Defending counts towards four [achievements](achievements.md#combat), one of them with the title *the Defender*, and
 one for jumping down from the wall onto the invaders' side.

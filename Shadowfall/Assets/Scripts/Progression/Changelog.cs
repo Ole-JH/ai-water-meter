@@ -24,6 +24,18 @@ namespace Shadowfall
         {
             new Entry
             {
+                Id = 78, Date = "2026-10-08", Title = "Burned out",
+                Items = new[]
+                {
+                    "Losing a town to invaders now hurts: they set fire to the quarter behind the gate they broke, and it burns for five minutes.",
+                    "Its people run for it, merchants, smiths, healers, quest givers and the auctioneer included: nothing can be bought, sold, salvaged, reforged or auctioned in that quarter until the fires are out. Shops in the rest of the town still trade.",
+                    "The townsfolk keep indoors while it burns, and a burned town isn't attacked again until it's over.",
+                    "Faster loading and much less memory: the game no longer needs more than a phone browser allows (it got stuck at 90% on iPhones).",
+                    "A big performance pass: cheaper ground and grass, shadows only as far as you can see, pooled spell effects, a lighter interface and fewer lights burning when nobody needs them.",
+                },
+            },
+            new Entry
+            {
                 Id = 77, Date = "2026-10-08", Title = "Behind closed doors",
                 Items = new[]
                 {

@@ -72,6 +72,9 @@ namespace Shadowfall
         /// <summary>The living trees of the wilds (lightning can strike them: WeatherDetail).</summary>
         public static readonly System.Collections.Generic.List<GameObject> Trees = new System.Collections.Generic.List<GameObject>();
 
+        /// <summary>Every town house's bounds (a lost siege sets the ones behind the broken gate on fire: Sack).</summary>
+        public static readonly System.Collections.Generic.List<Bounds> HouseBounds = new System.Collections.Generic.List<Bounds>();
+
         /// <summary>Town houses and gate towers next to the heroes (1 = fitted to their plot).</summary>
         const float BuildingScale = 1.25f;
 
@@ -111,6 +114,7 @@ namespace Shadowfall
         {
             HouseDoors.Clear();
             HouseWindows.Clear();
+            HouseBounds.Clear();
             var oldState = Random.state;
             Random.InitState(Seed);
             art = ArtLibrary.Available;
@@ -638,6 +642,9 @@ namespace Shadowfall
             if (house != null)
             {
                 HouseDoors.Add(house, model);
+                var hb = new Bounds(c, Vector3.zero);
+                foreach (var hr in house.GetComponentsInChildren<Renderer>()) hb.Encapsulate(hr.bounds);
+                HouseBounds.Add(hb);
                 // A few props in the yard (inside the blocked footprint).
                 Art(Pick("Props/barrel_large", "Props/barrel_small_stack"), new Vector3(r.xMin + 0.5f, 0, r.yMin + 0.5f), 1f, ArtLibrary.Fit.Height, VR(0, 360));
                 Art(Pick("Props/crates_stacked", "Props/box_stacked"), new Vector3(r.xMax - 0.5f, 0, r.yMax - 0.5f), 1.1f, ArtLibrary.Fit.Height, VR(0, 360));
@@ -652,6 +659,7 @@ namespace Shadowfall
                 HouseWindows.Add(house, model, NightLight.Add(glow, 0f));
                 return;
             }
+            HouseBounds.Add(new Bounds(c + Vector3.up * 2f, new Vector3(r.width, 4f, r.height)));
             Factory.Prim(PrimitiveType.Cube, deco, c + Vector3.up * 1.5f, new Vector3(r.width, 3f, r.height), wall);
             float side = r.width / 1.414f;
             var roofGo = Factory.Prim(PrimitiveType.Cube, deco, c + Vector3.up * 3f, new Vector3(side, side, r.height + 0.6f), roof);

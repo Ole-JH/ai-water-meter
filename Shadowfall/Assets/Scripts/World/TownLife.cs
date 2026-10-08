@@ -274,13 +274,14 @@ namespace Shadowfall
         {
             get
             {
-                if (!Invasion.Active) return false;
                 if (town == null) { var t = WorldGenerator.TownAt(Home); town = t != null ? t.Name : ""; }
-                return Invasion.Current.town == town;
+                if (Sack.Burns(town)) return true; // and while the fires of a lost siege burn
+                return Invasion.Active && Invasion.Current.town == town;
             }
         }
 
         static readonly string[] takeCover = { "Raiders! Get inside!", "They're at the gate! Bar the doors!", "Children, in! Now!", "Not again... inside, quick!", "Heroes, hold them off!" };
+        static readonly string[] fireLines = { "Fire! The whole quarter's going up!", "Get the children inside!", "Buckets! Where are the buckets?", "Stay in, stay in, the smoke!" };
         static readonly string[] allClear = { "Is it over? Thank the heroes!", "We held! Light the lamps!", "Still standing. Still standing.", "I need a drink after that." };
 
         // Something worth watching nearby (a duel): villagers stop, look and cheer (see Watch).
@@ -400,7 +401,7 @@ namespace Shadowfall
                 }
             }
             if (now == "shelter" && kind == Kind.Villager && HeroWithin(25f) && rng.NextDouble() < 0.6)
-                Speech.Say(transform, 2.6f, takeCover[rng.Next(takeCover.Length)]);
+                Speech.Say(transform, 2.6f, Sack.Burns(town) ? fireLines[rng.Next(fireLines.Length)] : takeCover[rng.Next(takeCover.Length)]);
             if (kind == Kind.Guard && was == "watch" && now == "barracks" && HeroWithin(20f))
                 Speech.Say(transform, 2.6f, NightWatch ? "Dawn. The day watch has it. I need my bed." : "Your watch now. Keep the torches lit.");
             arriveDoing = there;

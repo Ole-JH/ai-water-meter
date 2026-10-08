@@ -638,6 +638,7 @@ namespace Shadowfall
                     GameUI.Log(m.msg, new Color(1f, 0.85f, 0.4f));
                     break;
                 case "invasion": Invasion.Set(m.iv); break;
+                case "sack": Sack.Set(m.sk); break;
                 case "gev": TownGuards.Event(m); break;
                 case "wboss": WorldBoss.Set(m.wb); break;
                 case "dreq": Duel.Challenged(m.id, m.name); break;

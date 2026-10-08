@@ -4,7 +4,9 @@
 // militia put up ladders behind the wall during the gathering (the client's Rampart.cs): heroes on the wall can shoot
 // down from there, and only the invaders' archers and casters can shoot back. The gate is shut while it lasts. Kill every wave, the last led by a warlord, and the town holds: everyone who hurt an invader gets
 // experience and a boss's share of loot. If the gate falls (or the siege drags on for 12 minutes), the invaders
-// plunder the town and withdraw, and nobody is rewarded.
+// plunder the town and withdraw, and nobody is rewarded. Worse: they set fire to the quarter behind the broken gate
+// (the "sack", SACK_S, 5 minutes). It burns, its people flee, and its merchants, smiths and auctioneers are gone
+// until the fires are out: the server refuses their trade to anyone standing in the quarter (sackedAt).
 //
 // The server calls: tick(t) every simulation tick, idle(m, t) for an invader with nobody to fight, onDamage(m, s) when
 // a hero hurts one, sendTo(s) when a hero enters the world, and start()/stop() for the admin command.
@@ -16,6 +18,7 @@ const MAX_S = 12 * 60;      // a siege nobody answers ends in a sack
 // Gate integrity (of 100) lost per second per invader at the gate (big ones count double)
 const SIEGE_RATE = Number(process.env.INVASION_SIEGE_RATE ?? 0.35);
 const RESULT_S = 15;        // how long the outcome stays on players' screens
+const SACK_S = Number(process.env.SACK_S ?? 300); // how long the quarter behind a broken gate burns
 const STAGING = 24;         // how far outside the gate the invaders gather
 const PLAYERS_NEAR = 110;   // players this close to a town count towards it (choosing the town, scaling the waves)
 // The town's guards: archers up on the wall walk beside the gate and soldiers holding a line outside it. They help a
@@ -36,6 +39,25 @@ module.exports = function createInvasions(ctx) {
   let nextAt = minutes > 0 ? now() + rand(0.3, 0.6) * minutes * 60 : Infinity;
 
   const walled = TOWNS.filter((t) => t.walled);
+  // Burning quarters: town name -> { town, gate, until }. The quarter is everything inside the walls within
+  // sackRadius of the broken gate (a bit more than half the town's width).
+  const sacks = new Map();
+  const sackRadius = (t) => 0.55 * (t.x1 - t.x0);
+  const inside = (t, x, z) => x >= t.x0 && x <= t.x1 && z >= t.z0 && z <= t.z1;
+
+  function sackState() {
+    const t = now();
+    return { t: "sack", sk: [...sacks.values()].map((k) => ({ k: k.town.name, g: k.gate.name, x: r2(k.gate.x), z: r2(k.gate.z),
+      r: r2(sackRadius(k.town)), left: Math.max(0, Math.ceil(k.until - t)) })) };
+  }
+  function sendSacks() {
+    const data = JSON.stringify(sackState());
+    for (const s of sessions.values()) if (s.inWorld) safeSend(s, data);
+  }
+  function sack(town, gate) {
+    sacks.set(town.name, { town, gate, until: now() + SACK_S });
+    sendSacks();
+  }
   const centre = (t) => ({ x: (t.x0 + t.x1) / 2, z: (t.z0 + t.z1) / 2 });
   const overworld = () => [...sessions.values()].filter((s) => s.inWorld && !s.inst);
   const near = (t, list = overworld()) => { const c = centre(t); return list.filter((s) => dist(s.x, s.z, c.x, c.z) < PLAYERS_NEAR); };
@@ -68,7 +90,7 @@ module.exports = function createInvasions(ctx) {
   function begin(t, gateName) {
     const players = overworld();
     if (!t) {
-      const weighted = walled.map((w) => ({ t: w, n: near(w, players).length })).filter((w) => w.n > 0);
+      const weighted = walled.filter((w) => !sacks.has(w.name)).map((w) => ({ t: w, n: near(w, players).length })).filter((w) => w.n > 0);
       if (!weighted.length) return "nobody is near a walled town";
       let r = Math.random() * weighted.reduce((a, w) => a + w.n, 0);
       t = weighted.find((w) => (r -= w.n) < 0)?.t || weighted[0].t;
@@ -265,14 +287,18 @@ module.exports = function createInvasions(ctx) {
     } else {
       for (const id of inv.ids) monsters.delete(id); // they withdraw with their spoils
       inv.ids.clear();
-      broadcast({ t: "sys", msg: `The invaders broke through the ${inv.gate.name} gate of ${inv.town.name}, plundered the market and withdrew.` });
+      broadcast({ t: "sys", msg: `The invaders broke through the ${inv.gate.name} gate of ${inv.town.name}, plundered the market and set the ${inv.gate.name} quarter on fire! Its merchants have fled until the fires are out.` });
       log(`Invasion of ${inv.town.name} succeeded`);
+      sack(inv.town, inv.gate);
     }
     send();
     nextAt = minutes > 0 ? now() + minutes * 60 * rand(0.75, 1.25) : Infinity;
   }
 
   function tick(t) {
+    let burntOut = false;
+    for (const [name, k] of sacks) if (t >= k.until) { sacks.delete(name); burntOut = true; broadcast({ t: "sys", msg: `The fires in ${name} are out. Its merchants are back at their stalls.` }); }
+    if (burntOut) sendSacks();
     if (!inv) {
       if (t >= nextAt) {
         const why = begin(null);
@@ -336,7 +362,25 @@ module.exports = function createInvasions(ctx) {
 
   return {
     tick, idle, onDamage,
-    sendTo(s) { if (inv) safeSend(s, JSON.stringify({ t: "invasion", iv: state() })); },
+    sendTo(s) {
+      if (inv) safeSend(s, JSON.stringify({ t: "invasion", iv: state() }));
+      if (sacks.size) safeSend(s, JSON.stringify(sackState()));
+    },
+    /** In a burning quarter (its merchants, smiths and auctioneers have fled): their trade is refused there. */
+    sackedAt(x, z) {
+      for (const k of sacks.values())
+        if (inside(k.town, x, z) && dist(x, z, k.gate.x, k.gate.z) < sackRadius(k.town)) return k.town.name;
+      return "";
+    },
+    /** Admin: set the quarter behind a gate on fire now (the end of a lost siege), or put every fire out. */
+    sack(townName, gateName) {
+      if (townName === "stop") { const n = sacks.size; sacks.clear(); sendSacks(); return n ? "The fires are out." : "Nothing is burning."; }
+      const t = townName ? walled.find((w) => w.name.toLowerCase().startsWith(String(townName).toLowerCase())) : walled[0];
+      if (!t) return `No walled town called "${townName}" (${walled.map((w) => w.name).join(", ")}).`;
+      const g = gates(t).find((x) => x.name === (gateName || "south")) || gates(t)[0];
+      sack(t, g);
+      return `The ${g.name} quarter of ${t.name} burns for ${Math.round(SACK_S / 60)} minutes.`;
+    },
     active: () => (inv && inv.phase !== "won" && inv.phase !== "lost" ? inv.town.name : ""),
     /** Admin: start one now (at the named town, or the busiest), or end the current one. */
     start(townName, gateName) {

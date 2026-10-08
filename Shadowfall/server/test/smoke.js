@@ -514,6 +514,27 @@ async function invasionTests(a, b) {
   assert.strictEqual(last.hp, 0, "the gate's integrity runs out");
   assert.ok(b.all("sys").some((m) => /broke through the west gate of Saltreach/.test(m.msg)), "the sack is announced");
   assert.ok(b.all("invasion").some((m) => m.iv.phase === "wave" && m.iv.hp > 0 && m.iv.hp < 100), "the gate's integrity drops while they batter it");
+
+  // The quarter behind the broken gate burns: its merchants are gone until the fires are out
+  const sk = b.all("sack").at(-1)?.sk || [];
+  assert.ok(sk.some((k) => k.k === "Saltreach" && k.g === "west" && k.left > 250 && k.r > 10), "the quarter behind the broken gate is set on fire for five minutes");
+  assert.ok(b.all("sys").some((m) => /west quarter on fire/.test(m.msg)), "and everyone hears of it");
+  const shop = async (x, z) => {
+    state(b, x, z);
+    await sleep(150);
+    const errs = b.all("ierr").length, stocks = b.all("stock").length;
+    b.ws.send(JSON.stringify({ t: "iop", op: "vendor", k: "General" }));
+    await sleep(250);
+    return { refused: b.all("ierr").slice(errs).some((m) => /fled the fire/.test(m.msg)), served: b.all("stock").length > stocks };
+  };
+  const burning = await shop(450.5, 144.5);
+  assert.ok(burning.refused && !burning.served, "no trade in the burning quarter");
+  const elsewhere = await shop(478.5, 144.5);
+  assert.ok(!elsewhere.refused && elsewhere.served, "the far side of town still trades");
+  a.ws.send(JSON.stringify({ t: "adm", c: "sack", town: "stop" }));
+  await sleep(200);
+  assert.strictEqual((b.all("sack").at(-1)?.sk || []).length, 0, "an admin can put the fires out");
+  state(b, 146, 150);
   state(a, 144, 150);
   await sleep(150);
 }

@@ -849,10 +849,68 @@ namespace Shadowfall
             if (view != null) view.Action(clip, 1.1f);
         }
 
+        // ---- a lost siege: the quarter burns (Sack) and its people run for it, merchants and all, until the fires are out
+        bool away, postSet;
+        Vector3 post, fleeDir;
+        Quaternion postRot;
+        float fleeUntil;
+        Renderer[] bodyParts;
+        static readonly string[] fleeLines = { "Fire! FIRE!", "Run! The roofs are going up!", "My stock! Leave it, run!", "Water! Somebody fetch water!", "They've burned us out!" };
+
+        /// <summary>Fled from a burning quarter: not there, not to be talked to.</summary>
+        public bool Away => away;
+        public override bool CanInteract => !away;
+
+        /// <summary>Handles fleeing and coming back; true while away (nothing else to do).</summary>
+        bool Fleeing(Player p, float dist)
+        {
+            if (!postSet) { post = transform.position; postRot = transform.rotation; postSet = true; }
+            bool burning = Sack.At(post);
+            if (!burning && !away) return false;
+            if (bodyParts == null) bodyParts = GetComponentsInChildren<Renderer>();
+            if (burning && !away)
+            {
+                away = true;
+                busyUntil = 0f;
+                var town = WorldGenerator.TownAt(post);
+                fleeDir = Factory.Flat((town != null ? town.Center : post) - post);
+                if (fleeDir.sqrMagnitude < 4f) fleeDir = -transform.forward;
+                fleeDir.Normalize();
+                if (dist < 35f && view != null)
+                {
+                    fleeUntil = Time.time + 3.5f; // seen running off
+                    Speech.Say(transform, 2.6f, fleeLines[Random.Range(0, fleeLines.Length)]);
+                }
+                else Show(false);
+            }
+            if (burning)
+            {
+                if (Time.time < fleeUntil)
+                {
+                    transform.position += fleeDir * 5.5f * Time.deltaTime;
+                    Factory.Face(transform, transform.position + fleeDir, Time.deltaTime * 10f);
+                    view.UpdateLocomotion(5.5f);
+                }
+                else if (bodyParts.Length > 0 && bodyParts[0] != null && bodyParts[0].enabled) Show(false);
+                return true;
+            }
+            // The fires are out: back at the post
+            away = false;
+            transform.SetPositionAndRotation(post, postRot);
+            Show(true);
+            return false;
+        }
+
+        void Show(bool on)
+        {
+            foreach (var r in bodyParts) if (r != null) r.enabled = on;
+        }
+
         void Update()
         {
             var p = Player.I;
             float dist = p != null ? Factory.FlatDistance(p.transform.position, transform.position) : 999f;
+            if (Fleeing(p, dist)) return;
             // In another town (or far across this one): a look in now and then is enough
             if (dist > 60f && (Time.frameCount + GetInstanceID()) % 20 != 0) return;
             if (view != null) view.UpdateLocomotion(0f);

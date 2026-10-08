@@ -59,6 +59,7 @@ The same server-side commands work from chat with `/a` (or `/admin`):
 | `status` | `/a status`: one line on everything live |
 | `bounties` | `/a bounties`: new bounties for you now (for testing) |
 | `worldboss [name]` / `worldboss stop` | `/a worldboss hrimgar`: raise a [world boss](../gameplay/world.md#world-bosses) now (by part of its name; without one, the best fit for the heroes online), or put it back to sleep |
+| `sack [town] [north\|south\|east\|west]` / `sack stop` | `/a sack hollow east`: set the quarter behind a gate on fire for five minutes, as a lost siege does (the town by the start of its name, default the first walled town; gate default south), or put every fire out |
 | `invasion [town] [north\|south\|east\|west]` / `invasion stop` | `/a invasion frost north`: start a [town invasion](../gameplay/world.md#town-invasions) now (the town by the start of its name; without one, the busiest walled town; without a gate, a random one), or call the current one off |
 | `announce <text>` | `/a announce Server restart in 5 minutes` |
 | `kick <name>` | `/a kick Bob` |
