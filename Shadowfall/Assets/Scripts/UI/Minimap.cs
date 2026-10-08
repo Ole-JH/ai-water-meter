@@ -166,7 +166,16 @@ namespace Shadowfall
                     int i = y * map.width + x;
                     float seen = Exploration.At(new Vector3(origin.x + x + 0.5f, 0f, origin.z + y + 0.5f));
                     if (seen >= 1f) continue;
-                    src[i] = Color.Lerp(Fog(origin.x + x, origin.z + y), src[i], seen);
+                    var unseen = Fog(origin.x + x, origin.z + y);
+                    if (!underground)
+                    {
+                        // the land not yet walked, like an old chart: a faint sepia ghost of it (roads, rivers, lakes and
+                        // forest edges show) instead of black, so the map has a shape from the first minute
+                        Color c = src[i];
+                        float lum = c.r * 0.3f + c.g * 0.59f + c.b * 0.11f;
+                        unseen += new Color(0.62f, 0.52f, 0.38f) * (lum * 0.32f);
+                    }
+                    src[i] = Color.Lerp(unseen, src[i], seen);
                 }
             fogged.SetPixels32(src);
             fogged.Apply(false);

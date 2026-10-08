@@ -2047,9 +2047,14 @@ namespace Shadowfall
                 };
                 for (int i = 0; i < zones.Length; i++)
                 {
-                    // names appear once you've been nearby (or anywhere in the zone)
-                    if (!ZoneKnown(centers[i], 30f) && (Player.I == null || Player.I.Achievements.Get("zone." + zones[i]) == 0)) continue;
+                    // names stand out once you've been nearby (or anywhere in the zone); before that, faint, like rumours on an old chart
                     var c = toMap(centers[i]);
+                    if (!ZoneKnown(centers[i], 30f) && (Player.I == null || Player.I.Achievements.Get("zone." + zones[i]) == 0))
+                    {
+                        UISkin.Shadowed(new Rect(c.x - 140, c.y - 14, 280, 30), zones[i], UISkin.V(UISkin.HeadingCenter, fontStyle: FontStyle.Italic),
+                            new Color(0.85f, 0.75f, 0.58f, 0.38f), 1);
+                        continue;
+                    }
                     string zoneHere = WorldGenerator.ZoneAt(p.transform.position);
                     bool here = zoneHere.StartsWith(zones[i]) || zones[i].StartsWith(zoneHere); // "Hollowmere Village" is Hollowmere
                     UISkin.Shadowed(new Rect(c.x - 140, c.y - 14, 280, 30), zones[i], here ? UISkin.V(UISkin.HeadingCenter, fontSize: UISkin.HeadingCenter.fontSize + 4) : UISkin.HeadingCenter,

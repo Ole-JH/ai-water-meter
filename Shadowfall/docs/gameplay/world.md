@@ -184,7 +184,7 @@ falling at its entrance. Recall (++r++) takes you to the same town.
 
 ## Fog of war
 
-The minimap and the world map (++m++) start dark except for Hollowmere; everything within about 15 tiles of you is revealed as you travel, and what you have explored is saved with your character. Zone names appear on the world map once you've been there.
+The minimap starts dark except for Hollowmere; everything within about 15 tiles of you is revealed as you travel, and what you have explored is saved with your character. On the world map (++m++) the land you haven't walked shows faintly, like an old chart (roads, rivers, lakes and forest edges), and the region names are written in faintly until you've been there.
 
 Enemies are **not shown** on the minimap or the world map, and neither are dungeon entrances: you have to look. Quest givers, vendors and other players are shown where you have explored.
 
