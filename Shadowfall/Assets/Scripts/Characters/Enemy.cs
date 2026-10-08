@@ -349,6 +349,36 @@ namespace Shadowfall
         }
 
         Vector3? FacingTarget;
+        float limpPhase, spotT = -1f, nextTrail;
+        bool wasLimping;
+
+        /// <summary>It has seen someone (server "spot"): a "!" over it, a start, and its cry.</summary>
+        public void Spotted()
+        {
+            if (IsDead) return;
+            if (!Def.Boss && view != null) spotT = 0f; // (bosses climb, rise and tear in through their model: leave it be)
+            GameUI.Float(transform.position + Vector3.up * (Height + 0.5f), "!", Elite || Def.Boss ? new Color(1f, 0.5f, 0.2f) : new Color(1f, 0.85f, 0.25f), 1.7f, true);
+            var cry = Voice(Def, "attack") ?? "swing";
+            Sfx.Play(Def.Boss || Height > 2.6f ? "roar" : cry, Center, 0.45f, 0.15f, 30f);
+        }
+
+        public bool HasAffix(string a) => System.Array.IndexOf(Affixes, a) >= 0;
+
+        /// <summary>What an elite's affixes leave behind as it moves: fire underfoot, dust in a fast one's wake.</summary>
+        void AffixTrails(float dt)
+        {
+            if (!Elite || moveSpeed < 0.5f || Time.time < nextTrail) return;
+            if (HasAffix("Fire Enchanted"))
+            {
+                nextTrail = Time.time + 0.7f;
+                FirePatch.Drop(transform.position, 0.55f, 4f);
+            }
+            else if (HasAffix("Fast"))
+            {
+                nextTrail = Time.time + 0.15f;
+                if (SpellFx.Ready) SpellFx.Dust(transform.position, 0.35f);
+            }
+        }
 
         /// <summary>Which sound a monster makes: when attacking, getting hit or dying.</summary>
         static string Voice(EnemyDef d, string what)
@@ -425,7 +455,23 @@ namespace Shadowfall
 
             if (view != null)
             {
-                view.UpdateLocomotion(moveSpeed);
+                bool limping = Health < MaxHealth * 0.3f && moveSpeed > 0.5f && !Def.Boss;
+                view.UpdateLocomotion(limping ? moveSpeed * 0.85f : moveSpeed);
+                // badly hurt: it limps, lurching to one side with every other step; a fresh alarm makes it start
+                limpPhase += dt * moveSpeed * 2.2f;
+                if (limping || wasLimping)
+                {
+                    model.localRotation = Quaternion.Euler(0f, 0f, limping ? Mathf.Max(0f, Mathf.Sin(limpPhase)) * 8f : 0f);
+                    wasLimping = limping;
+                }
+                if (spotT >= 0f) // (only ever started for monsters that don't move their model themselves: see Spotted)
+                {
+                    spotT += dt / 0.35f;
+                    float hop = spotT < 1f ? Mathf.Sin(spotT * Mathf.PI) * 0.25f : 0f;
+                    model.localPosition = new Vector3(model.localPosition.x, hop, model.localPosition.z);
+                    if (spotT >= 1f) spotT = -1f;
+                }
+                AffixTrails(dt);
                 return;
             }
 

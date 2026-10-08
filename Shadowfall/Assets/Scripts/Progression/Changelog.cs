@@ -24,6 +24,17 @@ namespace Shadowfall
         {
             new Entry
             {
+                Id = 54, Date = "2026-10-08", Title = "Monsters with manners",
+                Items = new[]
+                {
+                    "Monsters show a \"!\" and cry out when they spot you.",
+                    "Archers and casters back away when you close in, while their next shot readies.",
+                    "Badly wounded monsters limp.",
+                    "Elite affixes show: Fire Enchanted elites leave burning ground behind them (don't stand in it), Fast ones kick up dust, Mighty blows crack the ground under you, and Vampiric hits draw your blood to them.",
+                },
+            },
+            new Entry
+            {
                 Id = 53, Date = "2026-10-08", Title = "Spells that leave a mark",
                 Items = new[]
                 {

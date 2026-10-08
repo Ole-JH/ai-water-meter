@@ -732,7 +732,15 @@ namespace Shadowfall
             Enemy.ById.TryGetValue(m.mid, out var e);
             var targetPos = new Vector3(m.x, 0, m.z);
             bool targetIsMe = m.tid == MyId;
+            if (m.k == "spot") { if (e != null) e.Spotted(); return; }
             if (e != null && m.k != "blink" && m.k != "explode") e.PlayAttack(targetPos);
+            // what an elite's affixes do to us when it hits: Mighty cracks the ground, Vampiric draws our blood to it
+            if (targetIsMe && e != null && e.Elite && m.dmg > 0f && p != null && (m.k == "melee" || m.k == "shot"))
+            {
+                if (e.HasAffix("Mighty") && m.k == "melee") { ImpactMarks.Place(p.transform.position, ImpactMarks.Kind.Crack, 0.9f, 8f); CameraRig.Shake(0.12f); }
+                if (e.HasAffix("Vampiric"))
+                    Projectile.FireVisual(p.transform.position + Vector3.up, e.Center, 9f, new Color(0.75f, 0.05f, 0.08f), 0.2f, 20f).OverWalls();
+            }
 
             switch (m.k)
             {

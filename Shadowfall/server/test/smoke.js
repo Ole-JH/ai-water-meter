@@ -488,7 +488,7 @@ async function invasionTests(a, b) {
 /** Heroes on a town wall during a siege (the client's Rampart): archers outside can shoot them, nothing else can reach them. */
 async function wallTests(a, b) {
   const bId = b.find("welcome").id;
-  const shotsAtB = () => b.all("matk").filter((m) => m.tid === bId).length;
+  const shotsAtB = () => b.all("matk").filter((m) => m.tid === bId && m.k !== "spot").length;
   state(a, 150.5, 108.5);
   state(b, 150.5, 116.2, { w: true }); // on Hollowmere's south wall
   a.ws.send(JSON.stringify({ t: "vanish", dur: 6 })); // the admin who spawns them stays out of it
@@ -496,8 +496,9 @@ async function wallTests(a, b) {
   const seen = b.all("matk").length;
   a.ws.send(JSON.stringify({ t: "adm", c: "spawn", type: "Skeleton Archer", l: 1, n: 2 }));
   await sleep(2500);
-  const shots = b.all("matk").slice(seen).filter((m) => m.tid === bId);
+  const shots = b.all("matk").slice(seen).filter((m) => m.tid === bId && m.k !== "spot");
   assert.ok(shots.length > 0 && shots.every((m) => m.k === "shot"), "archers outside shoot a hero up on the town wall");
+  assert.ok(b.all("matk").slice(seen).some((m) => m.k === "spot" && m.dmg === 0), "a monster that spots someone shows it (the client's \"!\")");
   const snap = a.all("snap").at(-1);
   if (snap && snap.p) assert.ok(snap.p.some((x) => x.id === bId && x.w === true), "others see that hero on the wall");
 
@@ -513,7 +514,7 @@ async function wallTests(a, b) {
   const seen2 = b.all("matk").length;
   a.ws.send(JSON.stringify({ t: "adm", c: "spawn", type: "Zombie", l: 1, n: 2 }));
   await sleep(2000);
-  assert.ok(!b.all("matk").slice(seen2).some((m) => m.tid === bId), "melee monsters can't reach a hero on the wall");
+  assert.ok(!b.all("matk").slice(seen2).some((m) => m.tid === bId && m.k !== "spot"), "melee monsters can't reach a hero on the wall");
   a.ws.send(JSON.stringify({ t: "adm", c: "killall", r: 30 }));
   state(b, 146, 150);
   state(a, 144, 150);

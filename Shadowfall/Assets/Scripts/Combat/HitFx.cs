@@ -150,3 +150,37 @@ namespace Shadowfall
         }
     }
 }
+
+namespace Shadowfall
+{
+    /// <summary>A patch of fire a Fire Enchanted elite leaves where it walks: burns for a few seconds and hurts to stand in.</summary>
+    public class FirePatch : MonoBehaviour
+    {
+        float radius, until, nextBurn;
+        static int alive;
+
+        public static void Drop(Vector3 at, float radius, float seconds)
+        {
+            if (alive > 30 || (WorldGrid.Instance != null && !WorldGrid.Instance.IsWalkable(at))) return;
+            var go = new GameObject("FirePatch");
+            go.transform.position = new Vector3(at.x, 0f, at.z);
+            var f = go.AddComponent<FirePatch>();
+            f.radius = radius;
+            f.until = Time.time + seconds;
+            alive++;
+            SpellFx.GroundFire(go.transform.position, radius, seconds);
+            ImpactMarks.Place(go.transform.position, ImpactMarks.Kind.Scorch, radius * 0.9f, seconds + 4f);
+        }
+
+        void Update()
+        {
+            if (Time.time >= until) { Destroy(gameObject); return; }
+            var p = Player.I;
+            if (p == null || p.IsDead || Time.time < nextBurn || Factory.FlatDistance(p.transform.position, transform.position) > radius + 0.35f) return;
+            nextBurn = Time.time + 0.5f;
+            p.TakeDamage(Mathf.Max(2f, p.MaxHealth * 0.03f), null);
+        }
+
+        void OnDestroy() => alive--;
+    }
+}

@@ -392,6 +392,12 @@ function spawnMonster(type, level, x, z, spawner, inst = 0) {
 
 function aggro(m, sessionId) {
   if (m.state === "chase" && m.target) return;
+  // it has seen someone: a "!" and a roar over it for those around (once a fight, not for every target switch)
+  if (m.state === "idle" && now() - (m.spottedAt || 0) > 8) {
+    m.spottedAt = now();
+    const s = sessions.get(sessionId);
+    sendNear(m.x, m.z, PLAYER_VIEW, { t: "matk", mid: m.id, tid: s ? s.id : -1, dmg: 0, k: "spot", x: r2(m.x), z: r2(m.z) }, m.inst);
+  }
   m.state = "chase";
   m.target = sessionId;
   m.repathAt = 0;
@@ -497,6 +503,17 @@ function updateMonster(m, t) {
       if (m.worldBoss && worldBosses.abilities(m, s, d, t)) break; // winding up a slam
 
       const canHit = d <= m.def.range + 0.45 && (!m.def.ranged || s.onWall || lineOfSight(m.x, m.z, s.x, s.z, 0.1));
+      // archers and casters keep their distance: too close, they back off while their next shot readies
+      if (canHit && m.def.ranged && !m.def.boss && d < 3.2 && t < m.nextAttack && !s.onWall) {
+        const ax = (m.x - s.x) / Math.max(0.01, d), az = (m.z - s.z) / Math.max(0.01, d);
+        const bx = m.x + ax * 2.5, bz = m.z + az * 2.5;
+        if (walkable(bx, bz) && lineOfSight(m.x, m.z, bx, bz)) {
+          m.path = [[bx, bz]];
+          moveAlongPath(m, speedOf(m) * (slowed ? 0.4 : 0.75));
+          m.ry = (Math.atan2(s.x - m.x, s.z - m.z) * 180) / Math.PI; // still facing them
+          break;
+        }
+      }
       if (canHit) {
         m.path = [];
         m.ry = (Math.atan2(s.x - m.x, s.z - m.z) * 180) / Math.PI;
