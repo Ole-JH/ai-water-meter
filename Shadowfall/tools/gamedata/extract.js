@@ -52,7 +52,7 @@ function extract() {
   const achievements = {};
   for (const b of blocks(read("Assets/Scripts/Progression/Achievements.cs"), "AchievementDef")) {
     const id = str(b, "Id");
-    if (id) achievements[id] = { name: str(b, "Name"), title: str(b, "Title") || "" };
+    if (id) achievements[id] = { name: str(b, "Name"), title: str(b, "Title") || "", points: num(b, "Points", 10) };
   }
   return { generatedFrom: "Assets/Scripts (tools/gamedata/extract.js)", quests, companions, achievements };
 }

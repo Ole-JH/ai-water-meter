@@ -751,6 +751,9 @@ const MAX_PARTY = 5;
 const PARTY_RANGE = 60;
 const INVITE_TIMEOUT = 60;
 
+/** Achievements worth this many points or more are announced to everyone online. */
+const RARE_ACH_POINTS = 50;
+
 function partyOf(s) { return s.party ? parties.get(s.party) || null : null; }
 function partyMembers(p) { return [...p.members].map((id) => sessions.get(id)).filter((o) => o && o.inWorld); }
 function sys(s, msg) { safeSend(s, JSON.stringify({ t: "sys", msg })); }
@@ -2371,12 +2374,14 @@ const handlers = {
     s.lastAch = t;
     s.earned.add(id);
     M.achievements.inc();
-    const msg = JSON.stringify({ t: "ach", id: s.id, name: s.name, k: a.name });
+    // the rare ones (50 points and up) are announced to the whole world; the rest to the party and those near by
+    const rare = (a.points || 0) >= RARE_ACH_POINTS;
+    const msg = JSON.stringify({ t: "ach", id: s.id, name: s.name, k: a.name, rare });
     const p = partyOf(s);
     for (const o of sessions.values()) {
       if (o === s || !o.inWorld) continue;
       const near = (o.inst || 0) === (s.inst || 0) && dist(o.x, o.z, s.x, s.z) < PLAYER_VIEW;
-      if (near || (p && p.members.has(o.id))) safeSend(o, msg);
+      if (rare || near || (p && p.members.has(o.id))) safeSend(o, msg);
     }
   },
 

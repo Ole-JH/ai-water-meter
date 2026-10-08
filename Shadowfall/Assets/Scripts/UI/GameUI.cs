@@ -692,8 +692,7 @@ namespace Shadowfall
                 string plate = (rp.GuildTag != "" ? "<" + rp.GuildTag + "> " : "") + rp.Name + "  " + rp.Level + (rp.Paragon > 0 ? " (" + rp.Paragon + ")" : "") + (rp.Dead ? "  (dead)" : "");
                 UISkin.Shadowed(new Rect(g.x - 140, g.y - 22, 280, 22), plate, UISkin.SmallCenter,
                     mate ? new Color(0.45f, 1f, 0.5f) : new Color(0.5f, 0.78f, 1f));
-                if (!string.IsNullOrEmpty(rp.Title))
-                    UISkin.Shadowed(new Rect(g.x - 140, g.y - 40, 280, 20), "«" + rp.Title + "»", UISkin.V(UISkin.SmallCenter, fontSize: 12), TitleColor);
+                if (!string.IsNullOrEmpty(rp.Title)) NameTitle(new Vector2(g.x, g.y + 5), rp.Title, rp.Id);
                 float pw = UISkin.SmallCenter.CalcSize(new GUIContent(plate)).x + 12f;
                 var plateRect = new Rect(g.x - pw / 2, g.y - 22, pw, 22);
                 Block(plateRect);
@@ -704,8 +703,7 @@ namespace Shadowfall
             if (WorldToGui(p.transform.position + Vector3.up * 2.45f, out var pg))
             {
                 UISkin.Shadowed(new Rect(pg.x - 140, pg.y - 20, 280, 22), p.DisplayName, UISkin.SmallCenter, new Color(0.65f, 0.9f, 1f));
-                if (p.Achievements.Title != null)
-                    UISkin.Shadowed(new Rect(pg.x - 140, pg.y - 38, 280, 20), "«" + p.Achievements.Title + "»", UISkin.V(UISkin.SmallCenter, fontSize: 12), TitleColor);
+                if (p.Achievements.Title != null) NameTitle(new Vector2(pg.x, pg.y + 1), p.Achievements.Title, 0);
             }
 
             foreach (var it in Interactable.All)
@@ -1073,6 +1071,14 @@ namespace Shadowfall
         }
 
         static readonly Color TitleColor = new Color(0.85f, 0.75f, 1f);
+
+        /// <summary>A hero's title under their name, with a slow sheen running over it.</summary>
+        static void NameTitle(Vector2 at, string title, int seed)
+        {
+            float sheen = Mathf.Pow(Mathf.Max(0f, Mathf.Sin(Time.time * 0.9f + seed * 1.3f)), 12f);
+            UISkin.Shadowed(new Rect(at.x - 140, at.y, 280, 18), title, UISkin.V(UISkin.SmallCenter, fontSize: 12, fontStyle: FontStyle.Italic),
+                Color.Lerp(TitleColor, Color.white, sheen * 0.8f));
+        }
 
         void DrawMenuButtons()
         {

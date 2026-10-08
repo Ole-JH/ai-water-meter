@@ -50,6 +50,7 @@ namespace Shadowfall
         public string reload;   // "error": a newer game build is out, reload the page for it
         public string hash;     // "grid": the server's map hash
         public bool mail;
+        public bool rare;       // "ach": a rare achievement (announced to everyone)
         public NetCharacter[] chars;
         public float x, z, tx, tz, dmg;
         public bool hasSave;

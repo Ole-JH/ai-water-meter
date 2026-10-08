@@ -12,6 +12,8 @@ namespace Shadowfall
 
         static readonly List<(AchievementDef def, float at)> toasts = new List<(AchievementDef, float)>();
         const float ToastTime = 5.5f;
+        /// <summary>Achievements worth this much are rare (announced to everyone, as the server's RARE_ACH_POINTS).</summary>
+        public const int RarePoints = 50;
 
         /// <summary>Shows the gold "Achievement earned" plate under the banner (several queue up one after another).</summary>
         public static void AchievementToast(AchievementDef a)
@@ -31,9 +33,32 @@ namespace Shadowfall
                 if (t < 0f) continue;
                 float alpha = Mathf.Clamp01(t / 0.3f) * Mathf.Clamp01((ToastTime - t) / 0.6f);
                 float slide = (1f - Mathf.Clamp01(t / 0.35f)) * 30f;
-                var r = new Rect((VW - 420) / 2, 170 - slide, 420, 92);
+                bool rare = a.Points >= RarePoints;
+                var accent = rare ? new Color(1f, 0.55f, 0.95f) : new Color(1f, 0.8f, 0.3f);
+                // it lands with a little bounce
+                float pop = t < 0.45f ? 1f + Mathf.Sin(Mathf.Clamp01(t / 0.45f) * Mathf.PI) * 0.06f : 1f;
+                var r = new Rect((VW - 420 * pop) / 2, 170 - slide, 420 * pop, 92 * pop);
+                if (Event.current.type == EventType.Repaint)
+                {
+                    // a glow behind it, breathing (stronger for a rare one)
+                    float breathe = 0.5f + 0.5f * Mathf.Sin(t * 3f);
+                    GUI.color = new Color(accent.r, accent.g, accent.b, alpha * (rare ? 0.3f + 0.15f * breathe : 0.16f + 0.08f * breathe));
+                    GUI.DrawTexture(new Rect(r.x - 40, r.y - 30, r.width + 80, r.height + 60), UISkin.Circle);
+                }
                 GUI.color = new Color(1f, 1f, 1f, alpha);
                 UISkin.Box(r, UISkin.Panel);
+                Outline(r, accent, alpha * (0.5f + 0.5f * Mathf.Sin(t * 4f) * 0.5f), 1f);
+                if (t > 0.3f && t < 1.3f && Event.current.type == EventType.Repaint)
+                {
+                    // a shine sweeping across the plate
+                    float k = (t - 0.3f) / 1f, sx = r.x - 60f + (r.width + 120f) * k;
+                    GUI.BeginGroup(r);
+                    GUI.color = new Color(1f, 1f, 1f, alpha * 0.18f);
+                    GUI.DrawTexture(new Rect(sx - r.x, 0, 26, r.height), UISkin.White);
+                    GUI.DrawTexture(new Rect(sx - r.x + 32, 0, 8, r.height), UISkin.White);
+                    GUI.EndGroup();
+                    GUI.color = new Color(1f, 1f, 1f, alpha);
+                }
                 var icon = new Rect(r.x + 14, r.y + 14, 64, 64);
                 UISkin.Box(icon, UISkin.Slot);
                 UISkin.IconInSlot(icon, UISkin.Icon(a.Icon), new Color(1f, 1f, 1f, alpha), 4);
@@ -44,9 +69,10 @@ namespace Shadowfall
                     GUI.DrawTexture(new Rect(icon.x - 6, icon.y - 6, icon.width + 12, icon.height + 12), UISkin.Circle);
                 }
                 GUI.color = new Color(1f, 1f, 1f, alpha);
-                UISkin.Shadowed(new Rect(r.x + 92, r.y + 10, 310, 20), "ACHIEVEMENT EARNED", UISkin.V(UISkin.Small, fontSize: 13), new Color(1f, 0.8f, 0.3f, alpha));
+                UISkin.Shadowed(new Rect(r.x + 92, r.y + 10, 310, 20), rare ? "RARE ACHIEVEMENT" : "ACHIEVEMENT EARNED", UISkin.V(UISkin.Small, fontSize: 13), new Color(accent.r, accent.g, accent.b, alpha));
                 UISkin.Shadowed(new Rect(r.x + 92, r.y + 30, 310, 28), a.Name, UISkin.V(UISkin.Heading, fontSize: 21), new Color(1f, 0.95f, 0.8f, alpha));
-                UISkin.Shadowed(new Rect(r.x + 92, r.y + 60, 310, 20), a.Points + " points" + (a.Title != null ? "   -   new title: " + a.Title : ""),
+                int shown = Mathf.RoundToInt(a.Points * Mathf.Clamp01((t - 0.35f) / 0.8f)); // the points count up
+                UISkin.Shadowed(new Rect(r.x + 92, r.y + 60, 310, 20), shown + " points" + (a.Title != null ? "   -   new title: " + a.Title : ""),
                     UISkin.V(UISkin.Small, fontSize: 13), new Color(0.85f, 0.78f, 0.65f, alpha));
                 GUI.color = Color.white;
                 break; // one at a time

@@ -24,6 +24,16 @@ namespace Shadowfall
         {
             new Entry
             {
+                Id = 69, Date = "2026-10-08", Title = "Worth shouting about",
+                Items = new[]
+                {
+                    "Achievement plates bounce in with a shine and count up their points; a ring of light bursts around you (and others near by see it).",
+                    "Rare achievements (50 points and up) get a pink plate and a gong, and are announced to everyone online.",
+                    "Titles now sit under your name, with a slow sheen.",
+                },
+            },
+            new Entry
+            {
                 Id = 68, Date = "2026-10-08", Title = "Blossom, haze and hoarfrost",
                 Items = new[]
                 {

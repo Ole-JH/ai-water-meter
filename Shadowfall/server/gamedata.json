@@ -403,387 +403,483 @@
  "achievements": {
   "first_blood": {
    "name": "First Blood",
-   "title": ""
+   "title": "",
+   "points": 5
   },
   "slayer_100": {
    "name": "Monster Slayer",
-   "title": ""
+   "title": "",
+   "points": 10
   },
   "slayer_1000": {
    "name": "Scourge of the Wilds",
-   "title": "the Slayer"
+   "title": "the Slayer",
+   "points": 25
   },
   "slayer_5000": {
    "name": "Unstoppable",
-   "title": "the Unstoppable"
+   "title": "the Unstoppable",
+   "points": 50
   },
   "wolves": {
    "name": "Wolfbane",
-   "title": "Wolfbane"
+   "title": "Wolfbane",
+   "points": 10
   },
   "goblins": {
    "name": "Goblin Smasher",
-   "title": ""
+   "title": "",
+   "points": 10
   },
   "undead": {
    "name": "Bone Collector",
-   "title": "Bonebreaker"
+   "title": "Bonebreaker",
+   "points": 10
   },
   "bandits": {
    "name": "Law of Hollowmere",
-   "title": ""
+   "title": "",
+   "points": 10
   },
   "golems": {
    "name": "Rockbreaker",
-   "title": ""
+   "title": "",
+   "points": 10
   },
   "elite_1": {
    "name": "Champion Slayer",
-   "title": ""
+   "title": "",
+   "points": 10
   },
   "elite_50": {
    "name": "Champion Hunter",
-   "title": "Champion Hunter"
+   "title": "Champion Hunter",
+   "points": 25
   },
   "boss_warchief": {
    "name": "Warchief's End",
-   "title": ""
+   "title": "",
+   "points": 10
   },
   "boss_lich": {
    "name": "Lichbane",
-   "title": "Lichbane"
+   "title": "Lichbane",
+   "points": 25
   },
   "boss_crypt_lord": {
    "name": "Rest in Pieces",
-   "title": ""
+   "title": "",
+   "points": 10
   },
   "boss_bandit_lord": {
    "name": "Hideout Raided",
-   "title": ""
+   "title": "",
+   "points": 10
   },
   "boss_goblin_king": {
    "name": "Regicide",
-   "title": ""
+   "title": "",
+   "points": 10
   },
   "boss_colossus": {
    "name": "Colossus Toppled",
-   "title": ""
+   "title": "",
+   "points": 10
   },
   "boss_all": {
    "name": "Kingslayer",
-   "title": "Kingslayer"
+   "title": "Kingslayer",
+   "points": 50
   },
   "boss_jarl": {
    "name": "Giant Slayer",
-   "title": ""
+   "title": "",
+   "points": 25
   },
   "boss_warlord": {
    "name": "Warlord Down",
-   "title": ""
+   "title": "",
+   "points": 25
   },
   "boss_ashen": {
    "name": "Ashes to Ashes",
-   "title": "the Unburnt"
+   "title": "the Unburnt",
+   "points": 50
   },
   "boss_frost_witch": {
    "name": "Thaw",
-   "title": ""
+   "title": "",
+   "points": 25
   },
   "boss_sand_colossus": {
    "name": "Sand in the Gears",
-   "title": ""
+   "title": "",
+   "points": 25
   },
   "boss_cinder_lord": {
    "name": "Snuffed Out",
-   "title": "the Fireproof"
+   "title": "the Fireproof",
+   "points": 50
   },
   "boss_nine": {
    "name": "Crownbreaker",
-   "title": "Crownbreaker"
+   "title": "Crownbreaker",
+   "points": 100
   },
   "boss_twelve": {
    "name": "Nothing Left Standing",
-   "title": "the Undefeated"
+   "title": "the Undefeated",
+   "points": 150
   },
   "auction_buy": {
    "name": "Going Once",
-   "title": ""
+   "title": "",
+   "points": 5
   },
   "auction_list_25": {
    "name": "Open for Business",
-   "title": "the Merchant"
+   "title": "the Merchant",
+   "points": 10
   },
   "guild_join": {
    "name": "Sworn In",
-   "title": ""
+   "title": "",
+   "points": 5
   },
   "duel_first": {
    "name": "Honour Satisfied",
-   "title": ""
+   "title": "",
+   "points": 10
   },
   "duel_25": {
    "name": "Duelist",
-   "title": "the Duelist"
+   "title": "the Duelist",
+   "points": 25
   },
   "duel_foes": {
    "name": "Open Challenge",
-   "title": ""
+   "title": "",
+   "points": 25
   },
   "salvage_50": {
    "name": "Scrapper",
-   "title": ""
+   "title": "",
+   "points": 10
   },
   "reforge_first": {
    "name": "Second Opinion",
-   "title": ""
+   "title": "",
+   "points": 5
   },
   "reforge_25": {
    "name": "Never Satisfied",
-   "title": "the Perfectionist"
+   "title": "the Perfectionist",
+   "points": 10
   },
   "bounty_10": {
    "name": "Bounty Hunter",
-   "title": ""
+   "title": "",
+   "points": 10
   },
   "bounty_days_7": {
    "name": "Regular",
-   "title": "the Bounty Hunter"
+   "title": "the Bounty Hunter",
+   "points": 25
   },
   "rift_1": {
    "name": "Through the Tear",
-   "title": ""
+   "title": "",
+   "points": 10
   },
   "rift_10": {
    "name": "Riftwalker",
-   "title": "the Riftwalker"
+   "title": "the Riftwalker",
+   "points": 25
   },
   "rift_25": {
    "name": "Beyond the Veil",
-   "title": ""
+   "title": "",
+   "points": 50
   },
   "worldboss_first": {
    "name": "Giant Slayer",
-   "title": ""
+   "title": "",
+   "points": 10
   },
   "worldboss_all": {
    "name": "Bane of Giants",
-   "title": "the Giantsbane"
+   "title": "the Giantsbane",
+   "points": 50
   },
   "defend_first": {
    "name": "Hold the Gate",
-   "title": ""
+   "title": "",
+   "points": 10
   },
   "defend_10": {
    "name": "Shield of the Realm",
-   "title": "the Defender"
+   "title": "the Defender",
+   "points": 25
   },
   "wall_jump": {
    "name": "Over the Wall",
-   "title": ""
+   "title": "",
+   "points": 10
   },
   "defend_all": {
    "name": "Warden of the Walls",
-   "title": ""
+   "title": "",
+   "points": 25
   },
   "dungeon_first": {
    "name": "Into the Dark",
-   "title": ""
+   "title": "",
+   "points": 5
   },
   "dungeon_all": {
    "name": "Delver",
-   "title": ""
+   "title": "",
+   "points": 10
   },
   "dungeon_seven": {
    "name": "Underworld Tourist",
-   "title": ""
+   "title": "",
+   "points": 25
   },
   "dungeon_bottom": {
    "name": "Rock Bottom",
-   "title": ""
+   "title": "",
+   "points": 10
   },
   "dungeon_veteran": {
    "name": "Veteran",
-   "title": ""
+   "title": "",
+   "points": 10
   },
   "dungeon_nightmare": {
    "name": "Nightmare Walker",
-   "title": "Nightmare Walker"
+   "title": "Nightmare Walker",
+   "points": 25
   },
   "dungeon_hell": {
    "name": "Through Hell",
-   "title": "the Hellborn"
+   "title": "the Hellborn",
+   "points": 50
   },
   "four_seasons": {
    "name": "Four Seasons",
-   "title": ""
+   "title": "",
+   "points": 25
   },
   "explore_25": {
    "name": "Pathfinder",
-   "title": ""
+   "title": "",
+   "points": 10
   },
   "explore_75": {
    "name": "Cartographer",
-   "title": "Cartographer"
+   "title": "Cartographer",
+   "points": 25
   },
   "zones_all": {
    "name": "Wanderer",
-   "title": "the Wanderer"
+   "title": "the Wanderer",
+   "points": 25
   },
   "zones_outer": {
    "name": "World Walker",
-   "title": "the World Walker"
+   "title": "the World Walker",
+   "points": 50
   },
   "waystones_all": {
    "name": "Attuned",
-   "title": ""
+   "title": "",
+   "points": 25
   },
   "mount_first": {
    "name": "Saddled Up",
-   "title": ""
+   "title": "",
+   "points": 10
   },
   "mount_all": {
    "name": "Stable Master",
-   "title": "the Rider"
+   "title": "the Rider",
+   "points": 25
   },
   "waystone_trips": {
    "name": "Frequent Traveller",
-   "title": ""
+   "title": "",
+   "points": 10
   },
   "level_5": {
    "name": "Adventurer",
-   "title": ""
+   "title": "",
+   "points": 5
   },
   "level_10": {
    "name": "Seasoned",
-   "title": ""
+   "title": "",
+   "points": 10
   },
   "level_20": {
    "name": "Veteran Hero",
-   "title": ""
+   "title": "",
+   "points": 25
   },
   "level_30": {
    "name": "Living Legend",
-   "title": "the Legendary"
+   "title": "the Legendary",
+   "points": 50
   },
   "paragon_1": {
    "name": "Beyond the Peak",
-   "title": ""
+   "title": "",
+   "points": 10
   },
   "paragon_25": {
    "name": "Ascendant",
-   "title": ""
+   "title": "",
+   "points": 25
   },
   "paragon_100": {
    "name": "Paragon",
-   "title": "the Paragon"
+   "title": "the Paragon",
+   "points": 50
   },
   "quests_10": {
    "name": "Helping Hand",
-   "title": ""
+   "title": "",
+   "points": 10
   },
   "quests_all": {
    "name": "Hero of Hollowmere",
-   "title": "Hero of Hollowmere"
+   "title": "Hero of Hollowmere",
+   "points": 25
   },
   "gold_1000": {
    "name": "Well-Off",
-   "title": ""
+   "title": "",
+   "points": 10
   },
   "gold_25000": {
    "name": "Dragon's Hoard",
-   "title": "the Wealthy"
+   "title": "the Wealthy",
+   "points": 25
   },
   "legendary_1": {
    "name": "Legendary!",
-   "title": ""
+   "title": "",
+   "points": 10
   },
   "legendary_10": {
    "name": "Hoarder of Legends",
-   "title": ""
+   "title": "",
+   "points": 25
   },
   "set_1": {
    "name": "Part of a Set",
-   "title": ""
+   "title": "",
+   "points": 10
   },
   "socket_10": {
    "name": "Jeweler",
-   "title": ""
+   "title": "",
+   "points": 10
   },
   "deaths_10": {
    "name": "Death's Regular",
-   "title": "Death's Regular"
+   "title": "Death's Regular",
+   "points": 5
   },
   "woodcutting_10": {
    "name": "Lumberjack",
-   "title": ""
+   "title": "",
+   "points": 10
   },
   "woodcutting_25": {
    "name": "Timberlord",
-   "title": ""
+   "title": "",
+   "points": 25
   },
   "mining_10": {
    "name": "Prospector",
-   "title": ""
+   "title": "",
+   "points": 10
   },
   "mining_25": {
    "name": "Deep Delver",
-   "title": ""
+   "title": "",
+   "points": 25
   },
   "fishing_10": {
    "name": "Angler",
-   "title": ""
+   "title": "",
+   "points": 10
   },
   "fishing_25": {
    "name": "Master Angler",
-   "title": ""
+   "title": "",
+   "points": 25
   },
   "smithing_10": {
    "name": "Apprentice Smith",
-   "title": ""
+   "title": "",
+   "points": 10
   },
   "smithing_25": {
    "name": "Master Smith",
-   "title": "Master Smith"
+   "title": "Master Smith",
+   "points": 25
   },
   "cooking_10": {
    "name": "Camp Cook",
-   "title": ""
+   "title": "",
+   "points": 10
   },
   "cooking_25": {
    "name": "Master Chef",
-   "title": "Master Chef"
+   "title": "Master Chef",
+   "points": 25
   },
   "crafted_50": {
    "name": "Busy Hands",
-   "title": ""
+   "title": "",
+   "points": 10
   },
   "hooligan": {
    "name": "Hooligan",
-   "title": "the Hooligan"
+   "title": "the Hooligan",
+   "points": 5
   },
   "party_1": {
    "name": "Better Together",
-   "title": ""
+   "title": "",
+   "points": 5
   },
   "trade_1": {
    "name": "Fair Deal",
-   "title": ""
+   "title": "",
+   "points": 5
   },
   "trade_25": {
    "name": "Merchant Prince",
-   "title": "Merchant Prince"
+   "title": "Merchant Prince",
+   "points": 25
   },
   "emotes_all": {
    "name": "Life of the Party",
-   "title": "Life of the Party"
+   "title": "Life of the Party",
+   "points": 10
   },
   "companion_1": {
    "name": "A Loyal Friend",
-   "title": ""
+   "title": "",
+   "points": 5
   },
   "companion_all": {
    "name": "Beastmaster",
-   "title": "Beastmaster"
+   "title": "Beastmaster",
+   "points": 25
   }
  }
 }

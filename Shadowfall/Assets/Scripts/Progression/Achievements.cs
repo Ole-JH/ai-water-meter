@@ -236,6 +236,16 @@ namespace Shadowfall
             if (quiet) return;
             GameUI.AchievementToast(a);
             Sfx.Play2D("quest_done", 0.7f, 1.15f);
+            bool rare = a.Points >= GameUI.RarePoints;
+            if (rare) Sfx.Play2D("gong", 0.45f, 1.1f);
+            var hero = Player.I;
+            if (hero != null)
+            {
+                // a burst of light around the hero, for everyone near by to see
+                var col = rare ? new Color(1f, 0.55f, 0.95f) : AchievementColor;
+                SpellFx.Ring(hero.transform.position + Vector3.up * 0.05f, col, rare ? 4f : 2.5f, 0.8f);
+                SpellFx.Hit(hero.transform.position + Vector3.up * 1.4f, col, false, rare ? 40 : 18);
+            }
             GameUI.Log("Achievement earned: " + a.Name + "  (" + a.Points + " points)" + (a.Title != null ? "  -  title: " + a.Title : ""), AchievementColor);
             NetClient.I?.SendAchievement(a.Id);
             NetClient.I?.SaveSoon();

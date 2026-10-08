@@ -537,7 +537,19 @@ namespace Shadowfall
                 case "fx": HandleFx(m); break;
                 case "emote": HandleEmote(m); break;
                 case "ach": // someone in the party or nearby earned an achievement
-                    if (m.id != MyId) GameUI.Log(m.name + " has earned the achievement [" + m.k + "]!", AchievementLog.AchievementColor);
+                    if (m.id == MyId) break;
+                    if (RemotePlayer.ById.TryGetValue(m.id, out var achiever) && achiever != null) // near by: the burst of light around them
+                    {
+                        var ac = m.rare ? new Color(1f, 0.55f, 0.95f) : AchievementLog.AchievementColor;
+                        SpellFx.Ring(achiever.transform.position + Vector3.up * 0.05f, ac, m.rare ? 4f : 2.5f, 0.8f);
+                        SpellFx.Hit(achiever.transform.position + Vector3.up * 1.4f, ac, false, m.rare ? 40 : 18);
+                    }
+                    if (m.rare)
+                    {
+                        GameUI.Log("* " + m.name + " has earned the rare achievement [" + m.k + "]! *", new Color(1f, 0.6f, 0.95f));
+                        Sfx.Play2D("gong", 0.25f, 1.2f);
+                    }
+                    else GameUI.Log(m.name + " has earned the achievement [" + m.k + "]!", AchievementLog.AchievementColor);
                     break;
 
                 case "chat": HandleChat(m); break;

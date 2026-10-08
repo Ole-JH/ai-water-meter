@@ -4,13 +4,17 @@ Press ++y++ (or the trophy button at the bottom right) for the achievements wind
 categories; each shows its progress toward the goal, and the ones you have earned show the date. Every achievement is worth
 points, and the total is at the top of the window.
 
-When you earn one, a gold plate rises under the banner with a fanfare, and your party (wherever they are) and the players
-around you see a line in their chat: *"Alice has earned the achievement [Lichbane]!"*.
+When you earn one, a gold plate bounces in under the banner with a fanfare, a shine runs across it and its points count up;
+a ring of light bursts around you. Your party (wherever they are) and the players around you see a line in their chat:
+*"Alice has earned the achievement [Lichbane]!"* (and the burst, if they're close).
+
+**Rare achievements** (worth 50 points or more) get a pink plate and a gong, and are announced to **everyone** online:
+*"\* Alice has earned the rare achievement [Unstoppable]! \*"*.
 
 ## Titles
 
 Some achievements award a **title**. Pick one with the arrows at the top of the achievements window, and it shows under your
-name, for everyone: *«Lichbane»*. The server only shows titles you have actually earned.
+name (in italics, with a slow sheen running over it), for everyone: *Lichbane*. The server only shows titles you have actually earned.
 
 ## Heroes from before achievements
 

@@ -935,6 +935,10 @@ async function main() {
     await sleep(200);
     const achs = d.all("ach");
     assert.ok(achs.length === 1 && achs[0].name === "Bob" && achs[0].k === "First Blood", "achievements are announced to the party, once, by name");
+    assert.strictEqual(achs[0].rare, false, "a common achievement isn't announced to the world");
+    b.ws.send(JSON.stringify({ t: "ach", id: "slayer_5000" }));
+    await sleep(400);
+    assert.strictEqual(d.all("ach").find((x) => x.k === "Unstoppable")?.rare, true, "a rare achievement (50+ points) is announced to everyone");
     state(b, 145, 187, { ti: "boss_lich" });
     await sleep(300);
     assert.strictEqual(view(a).allP.find((x) => x.name === "Bob")?.ti, "", "titles you haven't earned are not shown");
