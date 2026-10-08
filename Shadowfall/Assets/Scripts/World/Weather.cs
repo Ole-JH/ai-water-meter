@@ -42,7 +42,7 @@ namespace Shadowfall
         public const float PermLine = 400f, EastEdge = 300f, BadlandsNorth = WorldGenerator.OldSize;
         public static float SnowPerm { get; private set; } = 0.75f;
 
-        static bool InBadlands(Vector3 p) => p.x > EastEdge && p.z < BadlandsNorth;
+        public static bool InBadlands(Vector3 p) => p.x > EastEdge && p.z < BadlandsNorth;
         static bool InFrostpeak(Vector3 p) => p.z > PermLine && p.x < EastEdge;
         public static bool ColdAt(Vector3 p) => Season == Season.Winter || InFrostpeak(p) || (Season != Season.Summer && p.z > NorthLine && !InBadlands(p));
         public static float SnowCoverAt(Vector3 p)

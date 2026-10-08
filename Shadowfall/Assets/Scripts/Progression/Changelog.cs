@@ -24,6 +24,16 @@ namespace Shadowfall
         {
             new Entry
             {
+                Id = 68, Date = "2026-10-08", Title = "Blossom, haze and hoarfrost",
+                Items = new[]
+                {
+                    "Spring blossom drifts on the breeze out in the wilds.",
+                    "The Badlands air shimmers at midday, and dust devils whirl across the sand.",
+                    "On winter mornings the hoarfrost glints on the ground.",
+                },
+            },
+            new Entry
+            {
                 Id = 67, Date = "2026-10-08", Title = "Down in the dark",
                 Items = new[]
                 {

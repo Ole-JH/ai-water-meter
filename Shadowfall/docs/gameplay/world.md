@@ -148,6 +148,10 @@ Seven dungeons lie hidden in the wilds, three of them in the [outer lands](#the-
 - **Treasure chests** open properly: the lock gives, the lid swings up and light and coins spill out.
 - **The boss's room**: once the fight starts with you inside, iron portcullises slam down over its doorways. They rise
   again with a rumble when the boss falls, or if the fight is abandoned (nobody hurts it for 15 seconds) or you die.
+- **The air down there**: dust turns in the torchlight, water drips from the ceiling into puddles, cobwebs hang in the
+  room corners and old bones lie about. Each dungeon has its own: snow sifting from the ice of the Frozen Barrow,
+  with icicles and frost on the floor; sand trickling down and drifting in the Sunken Temple; embers rising from glowing
+  cracks in the Ashen Citadel. (Webs and bones only with the *Details* graphics option on.)
 
 ## Greater rifts
 
@@ -332,6 +336,9 @@ the weather.
   you further (the icon above your action bar shows how much). Shoveled streets shake it off, and so does standing by a
   fire. Your feet, and everyone else's, pack the snow into trails as you go.
 - Lakes **freeze** over in winter; trees turn golden and orange in autumn, and pines go dark and cold in winter.
+- **Spring** blossom drifts on the breeze out in the wilds; in the **Badlands** the air shimmers off the hot sand at
+  midday and the odd dust devil whirls past; on a **winter morning** the hoarfrost glints on the ground as the sun
+  comes up.
 
 ## Festivals
 
