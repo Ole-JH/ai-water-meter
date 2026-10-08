@@ -364,6 +364,24 @@ namespace Shadowfall
 
         public bool HasAffix(string a) => System.Array.IndexOf(Affixes, a) >= 0;
 
+        float stride;
+
+        /// <summary>The big ones (golems, giants, bosses) are heard walking: a thud with each stride, the ground shaking under a giant.</summary>
+        void HeavySteps(float dt)
+        {
+            if (Height < 2.6f || moveSpeed < 0.6f) { stride = 0f; return; }
+            stride += moveSpeed * dt;
+            float every = Mathf.Max(1.4f, Height * 0.55f);
+            if (stride < every) return;
+            stride = 0f;
+            var p = Player.I;
+            float d = p != null ? Factory.FlatDistance(p.transform.position, transform.position) : 99f;
+            if (d > 30f) return;
+            Sfx.Play(Height > 4f ? "boom" : "hit_stone", transform.position, Mathf.Clamp01(Height / 6f) * 0.5f, 0.15f, 30f);
+            if (Height > 4f && d < 14f) CameraRig.Shake(0.04f * (1f - d / 14f) * Height / 4f);
+            if (SpellFx.Ready && Height > 3.2f) SpellFx.Dust(transform.position, Height * 0.12f);
+        }
+
         /// <summary>What an elite's affixes leave behind as it moves: fire underfoot, dust in a fast one's wake.</summary>
         void AffixTrails(float dt)
         {
@@ -472,6 +490,7 @@ namespace Shadowfall
                     if (spotT >= 1f) spotT = -1f;
                 }
                 AffixTrails(dt);
+                HeavySteps(dt);
                 return;
             }
 

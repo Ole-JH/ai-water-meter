@@ -172,6 +172,11 @@ namespace Shadowfall
             }
             bool stone = WorldGenerator.InTown(pos) || WorldGenerator.InCrypt(pos) || Dungeon.Active;
             Sfx.Play(stone ? "step_stone" : "step_grass", pos, stone ? 0.35f : 0.45f, 0.1f, 20f);
+            // sand and dry earth puff up underfoot
+            var g = GroundSurface.Current;
+            if (!stone && g != null && SpellFx.Ready && (g.Weight(pos.x, pos.z, GroundSurface.Sand) > 0.5f || g.Weight(pos.x, pos.z, GroundSurface.Dry) > 0.6f))
+                SpellFx.Emit(new SpellFx.P { Burst = 3, Duration = 0.1f, Life = new Vector2(0.4f, 0.7f), Speed = new Vector2(0.2f, 0.6f), Size = new Vector2(0.12f, 0.22f),
+                    Start = new Color(0.8f, 0.7f, 0.5f, 0.35f), End = new Color(0.8f, 0.7f, 0.5f, 0f), Smoke = true, Grow = true, Radius = 0.12f }, pos + Vector3.up * 0.05f);
         }
 
         // =====================================================================================

@@ -24,6 +24,16 @@ namespace Shadowfall
         {
             new Entry
             {
+                Id = 57, Date = "2026-10-08", Title = "Listen",
+                Items = new[]
+                {
+                    "Golems, giants and bosses thud as they walk, and the biggest shake the ground.",
+                    "Wolves howl in the distance at night out in the wilds, leaves stir in the forests by day, and dungeons rumble, drip and groan.",
+                    "Windows open with the turn of a page and close with a soft thump, and sand puffs up underfoot.",
+                },
+            },
+            new Entry
+            {
                 Id = 56, Date = "2026-10-08", Title = "Hear ye!",
                 Items = new[]
                 {

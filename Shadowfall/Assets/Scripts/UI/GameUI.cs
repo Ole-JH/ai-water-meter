@@ -135,6 +135,23 @@ namespace Shadowfall
         // Update: hotkeys, hover detection, cursor, auto-closing dialogs
         // =====================================================================================
 
+        int windowsOpen = -1;
+
+        /// <summary>A window opening sounds like a page turned, one closing like a book shut.</summary>
+        void WindowSounds()
+        {
+            // (the forge, auction, rift and vendor windows have sounds of their own)
+            bool[] open = { showBags, showChar, showSkills, showQuests, showMap, showTalents, showAchievements, showGuild };
+            int mask = 0;
+            for (int i = 0; i < open.Length; i++) if (open[i]) mask |= 1 << i;
+            if (windowsOpen >= 0 && mask != windowsOpen)
+            {
+                bool opened = (mask & ~windowsOpen) != 0;
+                Sfx.Play2D(opened ? "book" : "ui_close", opened ? 0.3f : 0.35f, opened ? 1.15f : 1f);
+            }
+            windowsOpen = mask;
+        }
+
         void Update()
         {
             scale = Mathf.Max(0.4f, Screen.height / RefHeight * GameSettings.UiScale);
@@ -148,6 +165,7 @@ namespace Shadowfall
             UpdateCursor(p);
             if (p == null) { ChatOpen = false; return; }
             CheckNews(p);
+            WindowSounds();
 
             if (!ChatOpen)
             {
