@@ -119,6 +119,9 @@ namespace Shadowfall
             SpellFx.Column(p.transform.position, new Color(0.5f, 0.75f, 1f), 1f, 6f, 0.6f);
             Sfx.Play2D("blink", 0.6f);
             p.TeleportTo(to.Arrival);
+            GameUI.ScreenFlash(new Color(0.75f, 0.85f, 1f), 0.7f);
+            CameraRig.I?.Swoop();
+            GameUI.TitleCard(to.Town.Name, "by waystone", new Color(0.6f, 0.8f, 1f));
             p.Achievements.Add("waystone_trips");
             GameUI.Log("The waystone carries you to " + to.Town.Name + ".", new Color(0.6f, 0.8f, 1f));
         }

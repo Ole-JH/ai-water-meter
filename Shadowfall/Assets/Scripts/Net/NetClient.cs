@@ -335,13 +335,15 @@ namespace Shadowfall
                 p.TeleportTo(Dungeon.ToWorld(m.start[0], m.start[1]));
                 p.Achievements.Once("dungeon", Dungeon.Index.ToString());
                 if (Dungeon.Depth >= Dungeon.Depths) p.Achievements.Once("bottom", Dungeon.Index.ToString());
-                GameUI.Banner(Dungeon.ZoneName, new Color(1f, 0.55f, 0.3f));
+                GameUI.ScreenFlash(Color.black, 1.1f); // out of the dark into the place
+                GameUI.TitleCard(Dungeon.ZoneName, Rift.Inside || (m.k != null && m.k.StartsWith("Greater Rift")) ? "ten minutes, and the clock is running"
+                    : "Depth " + Dungeon.Depth + " of " + Dungeon.Depths + "  \u2022  " + Difficulties.Names[Dungeon.Difficulty], new Color(1f, 0.55f, 0.3f));
                 Sfx.Play2D(deeper ? "rubble" : "gong", 0.6f);
                 if (m.boss != null && m.boss.Length == 2) GameUI.Log("You sense a terrible presence. " + Dungeon.Def.Boss + " waits on this level.", new Color(1f, 0.45f, 0.35f));
             }
             else
             {
-                if (DungeonId != 0) SwitchSpace(0, null);
+                if (DungeonId != 0) { SwitchSpace(0, null); GameUI.ScreenFlash(Color.black, 0.9f); }
                 p.TeleportTo(new Vector3(m.x, 0f, m.z));
             }
         }

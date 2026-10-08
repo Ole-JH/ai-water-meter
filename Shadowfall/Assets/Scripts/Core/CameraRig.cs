@@ -29,6 +29,11 @@ namespace Shadowfall
             focus = new Vector3(WorldGenerator.Center, 0f, WorldGenerator.Center);
         }
 
+        float swoop;
+
+        /// <summary>After a long jump (a waystone): the view starts high above and swoops down onto the hero.</summary>
+        public void Swoop() => swoop = 1f;
+
         public static void Shake(float amount)
         {
             if (I != null) I.shake = Mathf.Max(I.shake, amount);
@@ -103,8 +108,10 @@ namespace Shadowfall
             distance = Mathf.Lerp(distance, distanceGoal, k);
             var center = focus;
 
-            var rot = Quaternion.Euler(pitch, yaw, 0f);
-            var pos = center + Vector3.up * 1f + rot * new Vector3(0f, 0f, -distance);
+            float sw = swoop * swoop * (3f - 2f * swoop); // eased
+            swoop = Mathf.MoveTowards(swoop, 0f, dt / 1.5f);
+            var rot = Quaternion.Euler(Mathf.Lerp(pitch, 78f, sw), yaw + 40f * sw, 0f);
+            var pos = center + Vector3.up * 1f + rot * new Vector3(0f, 0f, -distance * (1f + 3.2f * sw));
             if (shake > 0f)
             {
                 pos += Random.insideUnitSphere * shake * 0.6f;

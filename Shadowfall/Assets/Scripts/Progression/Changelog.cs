@@ -24,6 +24,16 @@ namespace Shadowfall
         {
             new Entry
             {
+                Id = 59, Date = "2026-10-08", Title = "Arrivals",
+                Items = new[]
+                {
+                    "Entering a zone or a dungeon shows its name in big type with a line beneath: the dungeon's depth and difficulty, or a word about the land.",
+                    "Dungeons fade up out of the dark when you go in or come out.",
+                    "Waystone travel flashes, and the view swoops down from high above onto you.",
+                },
+            },
+            new Entry
+            {
                 Id = 58, Date = "2026-10-08", Title = "The wild, alive",
                 Items = new[]
                 {

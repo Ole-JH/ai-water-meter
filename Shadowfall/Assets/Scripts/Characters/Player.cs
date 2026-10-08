@@ -2015,13 +2015,33 @@ namespace Shadowfall
         // Zones, damage, death
         // =====================================================================================
 
+        /// <summary>A line under a zone's name when you enter it.</summary>
+        static string ZoneSubtitle(string zone)
+        {
+            switch (zone)
+            {
+                case "Whisperwood": return "the old forest";
+                case "Forsaken Graveyard": return "where the dead don't rest";
+                case "Goblin Encampment": return "goblin country";
+                case "Ironvein Quarry": return "the old workings";
+                case "Crypt of the Lich": return "beware";
+                case WorldGenerator.Frostpeak: return "the high north";
+                case WorldGenerator.Badlands: return "sun, sand and raiders";
+                case WorldGenerator.Ashen: return "the burnt lands";
+                default: return "";
+            }
+        }
+
         void UpdateZone()
         {
             string zone = WorldGenerator.ZoneAt(transform.position);
             if (zone != lastZone)
             {
-                if (lastZone != null)
-                    GameUI.Banner(zone, WorldGenerator.InTown(transform.position) ? new Color(0.5f, 1f, 0.5f) : new Color(1f, 0.85f, 0.6f));
+                if (lastZone != null && !Dungeon.Active)
+                {
+                    bool town = WorldGenerator.InTown(transform.position);
+                    GameUI.TitleCard(zone, town ? "safe within the walls" : ZoneSubtitle(zone), town ? new Color(0.5f, 1f, 0.5f) : new Color(1f, 0.85f, 0.6f));
+                }
                 lastZone = zone;
                 if (!Dungeon.Active) Achievements.Once("zone", zone);
             }

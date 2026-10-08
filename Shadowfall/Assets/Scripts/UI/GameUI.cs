@@ -304,6 +304,7 @@ namespace Shadowfall
 
             DrawRecoveryCode();
             DrawBanner();
+            DrawTitleCard();
             if (GameSettings.ShowFps && Event.current.type == EventType.Repaint)
             {
                 float f = FpsMeter.Fps;
@@ -2200,6 +2201,36 @@ namespace Shadowfall
         // =====================================================================================
         // Banner & tooltip
         // =====================================================================================
+
+        static string cardTitle, cardSub;
+        static Color cardColor;
+        static float cardAt = -10f;
+
+        /// <summary>A place's name in big type with a line under it (entering a zone, a dungeon, arriving by waystone).</summary>
+        public static void TitleCard(string title, string subtitle, Color color)
+        {
+            cardTitle = title;
+            cardSub = subtitle;
+            cardColor = color;
+            cardAt = Time.time;
+        }
+
+        void DrawTitleCard()
+        {
+            float age = Time.time - cardAt;
+            if (age > 3.6f || string.IsNullOrEmpty(cardTitle)) return;
+            float a = age < 0.5f ? age / 0.5f : age > 2.8f ? 1f - (age - 2.8f) / 0.8f : 1f;
+            float y = VH * 0.2f;
+            var c = cardColor; c.a = a;
+            UISkin.Shadowed(new Rect(0, y, VW, 64), cardTitle, UISkin.TitleHuge, c, 3);
+            // a rule under the name that draws out from the middle
+            float w = Mathf.Lerp(40f, 420f, Mathf.Clamp01(age / 0.8f));
+            GUI.color = new Color(c.r, c.g, c.b, a * 0.8f);
+            GUI.DrawTexture(new Rect((VW - w) / 2f, y + 70, w, 2), UISkin.White);
+            GUI.color = Color.white;
+            if (!string.IsNullOrEmpty(cardSub))
+                UISkin.Shadowed(new Rect(0, y + 78, VW, 26), cardSub, UISkin.SmallCenter, new Color(0.9f, 0.88f, 0.82f, a * Mathf.Clamp01((age - 0.3f) / 0.5f)), 2);
+        }
 
         void DrawBanner()
         {
