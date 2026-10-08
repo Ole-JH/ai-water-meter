@@ -38,6 +38,8 @@ namespace Shadowfall
                     "Speech bubbles stay on the screen when the speaker is at its edge.",
                     "The maypole's ribbons no longer sweep across the path to Hollowmere's waystone.",
                     "The Midsummer bonfire is stacked high: logs leaning together in a ring of stones, not a flat pile.",
+                    "The world map shows a town's shops and services as one tidy row of icons under its name (hover for the list) instead of a pile on top of it; the town you're in is highlighted again.",
+                    "Torches, braziers, forges and other lights far from you are switched off until you come near: smoother in dungeons and busy towns.",
                     "Hoof dust, glowing weapons, dungeon dust and the seasons' blossom, haze and frost now come from one steady emitter each instead of a stream of new ones: smoother frame rates while riding, in dungeons and out in the wilds.",
                 },
             },

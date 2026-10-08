@@ -201,6 +201,46 @@ namespace Shadowfall
 
     public class NightLightUpdater : MonoBehaviour
     {
-        void Update() => NightLight.Step();
+        void Update()
+        {
+            NightLight.Step();
+            LightCull.Step();
+        }
+    }
+
+    /// <summary>
+    /// Every other point and spot light (torches, braziers, forges, waystones, glowing loot...) that NightLight doesn't
+    /// look after: switched off beyond <see cref="GameSettings.LightCullDistance"/> (a bit further, so they don't
+    /// blink at the edge) and back on when the hero comes near. Only lights it switched off itself are switched back
+    /// on, so it never fights a script that turns its own light off.
+    /// </summary>
+    public static class LightCull
+    {
+        static readonly HashSet<Light> culled = new HashSet<Light>();
+        static readonly List<Light> back = new List<Light>();
+        static float nextScan;
+
+        internal static void Step()
+        {
+            if (Time.unscaledTime < nextScan) return;
+            nextScan = Time.unscaledTime + 0.5f;
+            var hero = Player.I;
+            if (hero == null) return;
+            Vector3 at = hero.transform.position;
+            float far = GameSettings.LightCullDistance + 6f, far2 = far * far;
+            foreach (var l in Object.FindObjectsOfType<Light>())
+            {
+                if (l.type == LightType.Directional || culled.Contains(l)) continue;
+                if (l.enabled && (l.transform.position - at).sqrMagnitude > far2) { l.enabled = false; culled.Add(l); }
+            }
+            back.Clear();
+            foreach (var l in culled)
+                if (l == null || (l.transform.position - at).sqrMagnitude <= far2) back.Add(l);
+            foreach (var l in back)
+            {
+                culled.Remove(l);
+                if (l != null) l.enabled = true;
+            }
+        }
     }
 }

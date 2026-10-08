@@ -2041,7 +2041,8 @@ namespace Shadowfall
                     // names appear once you've been nearby (or anywhere in the zone)
                     if (!ZoneKnown(centers[i], 30f) && (Player.I == null || Player.I.Achievements.Get("zone." + zones[i]) == 0)) continue;
                     var c = toMap(centers[i]);
-                    bool here = WorldGenerator.ZoneAt(p.transform.position) == zones[i];
+                    string zoneHere = WorldGenerator.ZoneAt(p.transform.position);
+                    bool here = zoneHere.StartsWith(zones[i]) || zones[i].StartsWith(zoneHere); // "Hollowmere Village" is Hollowmere
                     UISkin.Shadowed(new Rect(c.x - 140, c.y - 14, 280, 30), zones[i], here ? UISkin.V(UISkin.HeadingCenter, fontSize: UISkin.HeadingCenter.fontSize + 4) : UISkin.HeadingCenter,
                         here ? UISkin.Gold : new Color(1f, 0.92f, 0.75f, 0.85f), 2);
                 }
@@ -2062,13 +2063,23 @@ namespace Shadowfall
                         var c = toMap(def.Entrance);
                         UISkin.Shadowed(new Rect(c.x - 100, c.y + 6, 200, 20), def.Name, UISkin.SmallCenter, new Color(1f, 0.7f, 0.45f), 2);
                     }
-                // what you've found: shops, healers, the stash, auction house, bounty boards and dungeon doors
+                // what you've found: dungeon doors each with an icon; a town's shops, healer, stash, auction house and bounty
+                // board as one row of small icons under its name (at this scale a whole town is a few dozen pixels)
+                var services = new Dictionary<Settlement, List<(string icon, string label)>>();
                 foreach (var it in Interactable.All)
                 {
                     if (it == null || !Exploration.Seen(it.Position)) continue;
                     if (it is Npc qn && qn.Marker(p, out _) != null) { mark(qn.Position, new Color(1f, 0.85f, 0.1f), 9); continue; }
                     string icon = MapIcon(it, out string label);
                     if (icon == null) continue;
+                    var town = it is DungeonEntrance ? null : WorldGenerator.TownAt(it.Position);
+                    if (town != null)
+                    {
+                        if (!services.TryGetValue(town, out var list)) services[town] = list = new List<(string, string)>();
+                        if (!list.Exists(x => x.icon == icon)) list.Add((icon, label));
+                        else { int k = list.FindIndex(x => x.icon == icon); list[k] = (icon, list[k].label + "\n" + label); }
+                        continue;
+                    }
                     var m = toMap(it.Position);
                     if (!r.Contains(m)) continue;
                     var ir = new Rect(m.x - 9, m.y - 9, 18, 18);
@@ -2080,6 +2091,21 @@ namespace Shadowfall
                     if (it is DungeonEntrance de)
                         UISkin.Shadowed(new Rect(m.x - 100, m.y + 10, 200, 20), de.Def.Name, UISkin.SmallCenter, new Color(1f, 0.7f, 0.45f), 2);
                     if (over) tooltip = label;
+                }
+                foreach (var kv in services)
+                {
+                    var list = kv.Value;
+                    const float sz = 14f, gap = 2f;
+                    var c = toMap(kv.Key.Center);
+                    var row = new Rect(c.x - (list.Count * (sz + gap) - gap) / 2f, c.y + 12f, list.Count * (sz + gap) - gap, sz);
+                    if (!r.Contains(row.center)) continue;
+                    GUI.color = new Color(0.05f, 0.03f, 0.02f, 0.7f);
+                    GUI.DrawTexture(new Rect(row.x - 3, row.y - 2, row.width + 6, row.height + 4), UISkin.White);
+                    GUI.color = Color.white;
+                    for (int i = 0; i < list.Count; i++)
+                        UISkin.IconInSlot(new Rect(row.x + i * (sz + gap), row.y, sz, sz), UISkin.Icon(list[i].icon), Color.white, 0);
+                    if (row.Contains(Event.current.mousePosition))
+                        tooltip = "<b>" + kv.Key.Name + "</b>\n" + string.Join("\n", list.ConvertAll(x => x.label.Replace("<b>", "").Replace("</b>", "")));
                 }
             }
             if (AdminTools.ShowEnemies)
