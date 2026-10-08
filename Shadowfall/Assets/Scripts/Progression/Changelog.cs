@@ -24,6 +24,16 @@ namespace Shadowfall
         {
             new Entry
             {
+                Id = 50, Date = "2026-10-08", Title = "A death worth remembering",
+                Items = new[]
+                {
+                    "You fall in slow motion as the colour drains from the world, and the gold death costs you spills from your purse.",
+                    "The death screen fades in after the fall.",
+                    "Releasing your spirit brings you back on a waystone's shimmer: a pale flash, a column of light, and you gather out of the motes as the colour returns.",
+                },
+            },
+            new Entry
+            {
                 Id = 49, Date = "2026-10-08", Title = "Loot you can hear",
                 Items = new[]
                 {

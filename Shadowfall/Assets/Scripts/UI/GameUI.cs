@@ -278,6 +278,7 @@ namespace Shadowfall
             if (menuPlayer != null) DrawPlayerMenu();
             DrawOffers();
             if (p.IsDead) DrawDeath(p);
+            DrawScreenFlash();
             DrawAchievementToasts();
             if (menu != MenuPage.None) DrawGameMenu(p);
 
@@ -1823,13 +1824,36 @@ namespace Shadowfall
 
         void DrawDeath(Player p)
         {
-            GUI.color = new Color(0.25f, 0f, 0f, 0.5f);
+            // it all fades in after the fall: the dark, then the words, then the way back
+            float t = Time.time - p.DiedAt;
+            float dark = Mathf.Clamp01(t / 1.4f), words = Mathf.Clamp01((t - 0.8f) / 1f), button = Mathf.Clamp01((t - 1.8f) / 0.6f);
+            GUI.color = new Color(0.12f, 0f, 0f, 0.6f * dark);
             GUI.DrawTexture(new Rect(0, 0, VW, VH), UISkin.White);
             GUI.color = Color.white;
             Block(new Rect(0, 0, VW, VH));
-            UISkin.Shadowed(new Rect(0, VH * 0.28f, VW, 90), "You Have Died", UISkin.TitleHuge, new Color(0.9f, 0.2f, 0.15f), 2);
+            var red = new Color(0.9f, 0.2f, 0.15f, words);
+            float drift = (1f - words) * 18f;
+            UISkin.Shadowed(new Rect(0, VH * 0.28f + drift, VW, 90), "You Have Died", UISkin.TitleHuge, red, 2);
+            if (button <= 0f) return;
+            GUI.color = new Color(1f, 1f, 1f, button);
             if (UISkin.Btn(new Rect((VW - 320) / 2, VH * 0.28f + 110, 320, 52), "Release Spirit", UISkin.Button)) p.Respawn();
-            UISkin.Shadowed(new Rect(0, VH * 0.28f + 168, VW, 24), "You will wake in the nearest town whose waystone you know, and lose 15% of your gold.", UISkin.SmallCenter, UISkin.Cream);
+            UISkin.Shadowed(new Rect(0, VH * 0.28f + 168, VW, 24), "You will wake in the nearest town whose waystone you know, and lose 15% of your gold.", UISkin.SmallCenter, new Color(UISkin.Cream.r, UISkin.Cream.g, UISkin.Cream.b, button));
+            GUI.color = Color.white;
+        }
+
+        static Color flashColor;
+        static float flashAt = -10f, flashFor = 1f;
+
+        /// <summary>A full-screen flash of <paramref name="color"/> fading out over <paramref name="seconds"/>.</summary>
+        public static void ScreenFlash(Color color, float seconds) { flashColor = color; flashAt = Time.unscaledTime; flashFor = Mathf.Max(0.05f, seconds); }
+
+        void DrawScreenFlash()
+        {
+            float k = 1f - (Time.unscaledTime - flashAt) / flashFor;
+            if (k <= 0f) return;
+            GUI.color = new Color(flashColor.r, flashColor.g, flashColor.b, 0.85f * k * k);
+            GUI.DrawTexture(new Rect(0, 0, VW, VH), UISkin.White);
+            GUI.color = Color.white;
         }
 
         // =====================================================================================

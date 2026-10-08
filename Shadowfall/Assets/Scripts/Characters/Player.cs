@@ -2032,7 +2032,47 @@ namespace Shadowfall
             view?.Die();
             Achievements.Add("deaths");
             Sfx.Play2D("death", 0.8f);
+            // the fall in slow motion, the colour draining from the world, the purse spilling
+            DiedAt = Time.time;
+            HitFx.Stop(1.1f, 0.3f);
+            ColorGrade.Mood = 1f;
+            SpillGold();
             GameUI.Log("You have been slain" + (killer != null ? " by " + killer.DisplayName : "") + ".", new Color(1f, 0.3f, 0.3f));
+        }
+
+        /// <summary>The hero gathering into being: from a sliver to full size over a moment.</summary>
+        System.Collections.IEnumerator Gather(Transform body)
+        {
+            var full = body.localScale;
+            for (float t = 0f; t < 1f; t += Time.deltaTime / 0.7f)
+            {
+                float k = Mathf.SmoothStep(0f, 1f, t);
+                body.localScale = new Vector3(full.x * Mathf.Lerp(0.2f, 1f, k), full.y * Mathf.Lerp(1.4f, 1f, k), full.z * Mathf.Lerp(0.2f, 1f, k));
+                yield return null;
+            }
+            body.localScale = full;
+        }
+
+        /// <summary>When we last died (the death screen fades in from it).</summary>
+        public float DiedAt { get; private set; } = -100f;
+
+        /// <summary>The gold death costs (the server takes it), shown spilling from the body as coins.</summary>
+        void SpillGold()
+        {
+            int lost = Mathf.RoundToInt(Gold * 0.15f);
+            if (lost <= 0) return;
+            var gold = new Color(1f, 0.8f, 0.2f);
+            int n = Mathf.Clamp(lost / 20 + 4, 4, 18);
+            for (int i = 0; i < n; i++)
+            {
+                var coin = Factory.Prim(PrimitiveType.Cylinder, null, transform.position + Vector3.up * 1f, new Vector3(0.16f, 0.015f, 0.16f), gold, false, Mat.Glow(gold * 0.5f));
+                var fall = coin.AddComponent<FallingPiece>();
+                fall.Velocity = new Vector3(Random.Range(-2.2f, 2.2f), Random.Range(2.5f, 4.5f), Random.Range(-2.2f, 2.2f));
+                fall.Spin = Random.insideUnitSphere * 720f;
+                coin.AddComponent<FadeAway>().Seconds = 25f;
+            }
+            Sfx.Play2D("coins", 0.7f, 0.85f);
+            GameUI.Float(transform.position + Vector3.up * 2.2f, "-" + lost + " gold", new Color(1f, 0.7f, 0.2f), 1.1f);
         }
 
         public void Respawn()
@@ -2053,8 +2093,16 @@ namespace Shadowfall
             path.Clear();
             GameUI.Log("You awaken in " + town + ".", new Color(1f, 0.6f, 0.3f));
             NetClient.I?.SaveNow();
+            // back among the living on a waystone's shimmer: the world's colour returns, a pale flash, a column of light,
+            // and the hero gathering out of the motes
+            ColorGrade.Mood = 0f;
+            GameUI.ScreenFlash(new Color(0.85f, 0.9f, 1f), 0.9f);
             SpellFx.HolyLight(transform.position);
+            SpellFx.Column(transform.position, new Color(0.6f, 0.8f, 1f), 1.1f, 7f, 1.4f);
+            SpellFx.Swirl(transform.position + Vector3.up * 0.3f, null, new Color(0.65f, 0.85f, 1f), 1.3f, 1.2f, 90f, false);
             Sfx.Play2D("holy_cast", 0.6f);
+            Sfx.Play2D("blink", 0.4f, 0.8f);
+            if (view != null) StartCoroutine(Gather(view.Root.transform));
         }
     }
 }
