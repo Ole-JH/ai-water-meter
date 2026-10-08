@@ -12,7 +12,7 @@
 | ++"Left click"++ on a loot label | Pick it up. Gold is picked up automatically when you walk over it |
 | ++"Right click"++ (hold) | Your class's second ability toward the cursor (Holy Bolt, Throwing Axe, Fireball or Multishot) |
 | ++"Right click"++ on another player | Their menu: invite to party, whisper, trade, challenge to a duel (anywhere on their character, not just the name) |
-| ++1++ – ++5++ | Your class's five abilities (see [Items & progression](progression.md#classes-and-abilities)) |
+| ++1++ – ++5++ | The five slots of your action bar: your class's abilities (see [Items & progression](progression.md#classes-and-abilities)). **Drag** an ability onto another slot to swap them; the keys follow the new order, and it's saved with your character. (Right-click always casts the class's second ability, wherever it sits.) |
 | ++q++ / ++e++ | Drink a health / mana potion (potions and food share a 15 s cooldown) |
 | ++v++ | Mount or dismount (once you have bought a mount from Beastmaster Orla) |
 | ++r++ | Recall to the nearest town whose waystone you know (Hollowmere at first): a 3 s channel (moving, casting or taking damage interrupts it; 20 s cooldown). Press ++r++ again in town to step back to where you left (not into a dungeon) |

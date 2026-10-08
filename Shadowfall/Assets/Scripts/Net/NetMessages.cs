@@ -201,6 +201,7 @@ namespace Shadowfall
         public int[] paragonPts;        // points in Might, Toughness, Precision, Swiftness
         public string look;
         public string mount;       // the mount V calls
+        public int[] bar;          // the action bar's order: which ability (of the class kit) sits in each slot
         public string[] talents;   // "id:rank"
         public float x, z, hp, mana;
         public int[] skillXp;

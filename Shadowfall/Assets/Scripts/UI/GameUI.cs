@@ -826,6 +826,10 @@ namespace Shadowfall
             GUI.color = Color.white;
         }
 
+        int barDrag = -1;
+        bool barDragging;
+        Vector2 barDragFrom;
+
         void DrawActionBar(Player p)
         {
             const float slot = 58, gap = 8;
@@ -843,15 +847,21 @@ namespace Shadowfall
             UISkin.Box(bg, UISkin.Panel);
             Block(bg);
 
+            var ev = Event.current;
+            int hoverSlot = -1;
             for (int i = 0; i < kit.Length; i++)
             {
-                var a = kit[i];
+                int k = i < p.BarOrder.Length && p.BarOrder[i] < kit.Length ? p.BarOrder[i] : i; // the ability in this slot
+                var a = kit[k];
                 var r = new Rect(x0 + i * (slot + gap), y0, slot, slot);
+                if (r.Contains(ev.mousePosition)) hoverSlot = i;
+                bool dragged = barDragging && barDrag == i;
                 bool locked = p.Level < a.RequiredLevel;
                 UISkin.Box(r, UISkin.Slot);
-                UISkin.IconInSlot(r, UISkin.Icon(UISkin.AbilityIcon(a.Id)), locked ? new Color(0.35f, 0.35f, 0.35f) : Color.white, 3);
+                UISkin.IconInSlot(r, UISkin.Icon(UISkin.AbilityIcon(a.Id)), dragged ? new Color(1f, 1f, 1f, 0.25f) : locked ? new Color(0.35f, 0.35f, 0.35f) : Color.white, 3);
+                if (barDragging && barDrag != i && r.Contains(ev.mousePosition)) Outline(r, UISkin.Gold, 1f, 2f); // where it would go
 
-                float cd = p.CooldownEnd[i] - Time.time;
+                float cd = p.CooldownEnd[k] - Time.time;
                 // a cast pops the button in its colour; a cooldown running out flashes it ready
                 if (i < barCasts.Length)
                 {
@@ -883,12 +893,32 @@ namespace Shadowfall
                     GUI.color = Color.white;
                 }
                 if (locked) UISkin.Shadowed(new Rect(r.x, r.y + 18, r.width, 22), "Lv " + a.RequiredLevel, UISkin.SmallCenter, new Color(1f, 0.6f, 0.5f), 2);
-                UISkin.Shadowed(new Rect(r.x + 5, r.y + 2, r.width, 18), a.Key.Split('/')[0], UISkin.Small, UISkin.Gold, 2);
-                if (r.Contains(Event.current.mousePosition))
-                    tooltip = "<size=17><b><color=#" + Item.Hex(a.Color) + ">" + a.Name + "</color></b></size>   [" + a.Key + "]\n" +
+                UISkin.Shadowed(new Rect(r.x + 5, r.y + 2, r.width, 18), (i + 1).ToString(), UISkin.Small, UISkin.Gold, 2);
+                if (r.Contains(ev.mousePosition) && !barDragging)
+                    tooltip = "<size=17><b><color=#" + Item.Hex(a.Color) + ">" + a.Name + "</color></b></size>   [" + (i + 1) + (k == 1 ? " / right-click" : "") + "]\n" +
                               "<color=#88aaff>" + a.ManaCost + " mana</color>   " + a.Cooldown + "s cooldown" +
-                              (locked ? "\n<color=#ff6666>Requires level " + a.RequiredLevel + "</color>" : "") + "\n\n" + a.Description;
-                if (ClickedIn(r) == 0) p.CastAbility(i, p.MouseGround);
+                              (locked ? "\n<color=#ff6666>Requires level " + a.RequiredLevel + "</color>" : "") + "\n\n" + a.Description +
+                              "\n\n<color=#998877>Drag to another slot to rearrange the bar.</color>";
+                // press on a slot: a click casts it; a drag moves it to another slot
+                if (ev.type == EventType.MouseDown && ev.button == 0 && r.Contains(ev.mousePosition)) { barDrag = i; barDragFrom = ev.mousePosition; barDragging = false; ev.Use(); }
+            }
+            if (barDrag >= 0)
+            {
+                if (ev.type == EventType.MouseDrag && (ev.mousePosition - barDragFrom).sqrMagnitude > 64f) { barDragging = true; ev.Use(); }
+                if (ev.type == EventType.MouseUp && ev.button == 0)
+                {
+                    if (!barDragging) p.CastAbility(p.BarOrder[barDrag], p.MouseGround);
+                    else if (hoverSlot >= 0 && hoverSlot != barDrag) { p.SwapBar(barDrag, hoverSlot); Sfx.Play2D("equip", 0.4f, 1.2f); }
+                    barDrag = -1;
+                    barDragging = false;
+                    ev.Use();
+                }
+                if (barDragging && barDrag >= 0 && barDrag < kit.Length && ev.type == EventType.Repaint)
+                {
+                    var a = kit[p.BarOrder[barDrag]];
+                    var at = new Rect(ev.mousePosition.x - slot * 0.45f, ev.mousePosition.y - slot * 0.45f, slot * 0.9f, slot * 0.9f);
+                    UISkin.IconInSlot(at, UISkin.Icon(UISkin.AbilityIcon(a.Id)), new Color(1f, 1f, 1f, 0.85f), 0);
+                }
             }
 
             // Potions

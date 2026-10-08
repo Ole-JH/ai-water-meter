@@ -21,6 +21,29 @@ namespace Shadowfall
         public readonly QuestLog Quests = new QuestLog();
         public readonly AchievementLog Achievements = new AchievementLog();
         public readonly float[] CooldownEnd = new float[5];
+        /// <summary>The action bar: which ability of the kit sits in each of the five slots (keys 1-5). Rearranged by dragging.</summary>
+        public readonly int[] BarOrder = { 0, 1, 2, 3, 4 };
+
+        /// <summary>Swaps two slots of the action bar (and saves it).</summary>
+        public void SwapBar(int a, int b)
+        {
+            if (a == b || a < 0 || b < 0 || a >= BarOrder.Length || b >= BarOrder.Length) return;
+            (BarOrder[a], BarOrder[b]) = (BarOrder[b], BarOrder[a]);
+            NetClient.I?.SaveSoon();
+        }
+
+        /// <summary>A saved order, if it's a proper one (each ability once); else the class's own.</summary>
+        void LoadBar(int[] saved)
+        {
+            for (int i = 0; i < BarOrder.Length; i++) BarOrder[i] = i;
+            if (saved == null || saved.Length != BarOrder.Length) return;
+            var seen = new bool[BarOrder.Length];
+            foreach (int k in saved) { if (k < 0 || k >= seen.Length || seen[k]) return; seen[k] = true; }
+            System.Array.Copy(saved, BarOrder, BarOrder.Length);
+        }
+
+        /// <summary>Back to the class's own order.</summary>
+        public void ResetBar() { for (int i = 0; i < BarOrder.Length; i++) BarOrder[i] = i; NetClient.I?.SaveSoon(); }
         /// <summary>This hero's five abilities (keys 1-5), from its class.</summary>
         public AbilityDef[] Kit { get; private set; } = ClassKits.For("Knight");
         /// <summary>Talent ranks by id (see <see cref="Shadowfall.Talents"/>).</summary>
@@ -601,11 +624,12 @@ namespace Shadowfall
             if (!GameInput.LeftHeld) standAttack = false;
             if (GameUI.I != null && GameUI.I.KeyboardCaptured) return;
 
-            if (GameInput.Down(GKey.Alpha1)) CastAbility(0, MouseGround);
-            if (GameInput.Down(GKey.Alpha2)) CastAbility(1, MouseGround);
-            if (GameInput.Down(GKey.Alpha3)) CastAbility(2, MouseGround);
-            if (GameInput.Down(GKey.Alpha4)) CastAbility(3, MouseGround);
-            if (GameInput.Down(GKey.Alpha5)) CastAbility(4, MouseGround);
+            // 1-5 are the action bar's slots, in the order the player arranged them
+            if (GameInput.Down(GKey.Alpha1)) CastAbility(BarOrder[0], MouseGround);
+            if (GameInput.Down(GKey.Alpha2)) CastAbility(BarOrder[1], MouseGround);
+            if (GameInput.Down(GKey.Alpha3)) CastAbility(BarOrder[2], MouseGround);
+            if (GameInput.Down(GKey.Alpha4)) CastAbility(BarOrder[3], MouseGround);
+            if (GameInput.Down(GKey.Alpha5)) CastAbility(BarOrder[4], MouseGround);
             if (GameInput.Down(GKey.R)) Recall();
             if (GameInput.Down(GKey.V)) ToggleMount();
             if (GameInput.Down(GKey.Q)) UseItemByName("Health Potion");
@@ -1899,7 +1923,7 @@ namespace Shadowfall
                 level = Level, xp = Xp, look = Look,
                 paragon = Paragon.Level, paragonXp = Paragon.Xp, paragonPts = (int[])Paragon.Points.Clone(),
                 talents = SaveTalents(),
-                companion = ActiveCompanion ?? "", mount = ChosenMount ?? "", wv = WorldGenerator.LayoutVersion,
+                companion = ActiveCompanion ?? "", mount = ChosenMount ?? "", wv = WorldGenerator.LayoutVersion, bar = (int[])BarOrder.Clone(),
                 fog = Exploration.Save(),
                 news = NewsSeen,
                 str = Strength, dex = Dexterity, intel = Intelligence, vit = Vitality, statPoints = StatPoints,
@@ -1979,6 +2003,7 @@ namespace Shadowfall
             Mana = Mathf.Min(s.mana, MaxMana);
             if (!string.IsNullOrEmpty(s.companion) && OwnedCompanions.Contains(s.companion)) SummonCompanion(s.companion, true);
             ChosenMount = string.IsNullOrEmpty(s.mount) ? null : s.mount;
+            LoadBar(s.bar);
         }
 
         // =====================================================================================

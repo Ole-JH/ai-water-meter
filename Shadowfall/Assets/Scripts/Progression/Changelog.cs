@@ -24,6 +24,14 @@ namespace Shadowfall
         {
             new Entry
             {
+                Id = 55, Date = "2026-10-08", Title = "Your bar, your way",
+                Items = new[]
+                {
+                    "Drag an ability onto another slot of the action bar to swap them. Keys 1 to 5 follow the new order, and it's saved with your character.",
+                },
+            },
+            new Entry
+            {
                 Id = 54, Date = "2026-10-08", Title = "Monsters with manners",
                 Items = new[]
                 {
