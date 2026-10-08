@@ -224,6 +224,22 @@ namespace Shadowfall
             var fireAt = new Vector3(139.5f, 0, 138.8f); // south-west of the well (the stash chest stands south-east)
             var logs = ArtLibrary.Spawn("Nature/campfire_logs", root, fireAt, 1.4f, ArtLibrary.Fit.Width);
             if (logs != null) foreach (var c in logs.GetComponentsInChildren<Collider>()) Destroy(c);
+            // stacked high for the fair: logs leaning together in a cone, in a ring of stones (no RNG: fixed angles)
+            var wood = new Color(0.42f, 0.28f, 0.16f);
+            for (int i = 0; i < 9; i++)
+            {
+                float ang = i * Mathf.PI * 2f / 9f;
+                var foot = fireAt + new Vector3(Mathf.Cos(ang), 0f, Mathf.Sin(ang)) * 0.62f;
+                var tip = fireAt + Vector3.up * 1.35f;
+                var log = Factory.Prim(PrimitiveType.Cylinder, root, (foot + tip) / 2f, new Vector3(0.11f, Vector3.Distance(foot, tip) / 2f, 0.11f), wood * (0.85f + 0.15f * (i % 3)));
+                log.transform.up = (tip - foot).normalized;
+            }
+            for (int i = 0; i < 12; i++)
+            {
+                float ang = i * Mathf.PI * 2f / 12f + 0.13f;
+                Factory.Prim(PrimitiveType.Sphere, root, fireAt + new Vector3(Mathf.Cos(ang) * 0.95f, 0.08f, Mathf.Sin(ang) * 0.95f),
+                    new Vector3(0.28f, 0.18f, 0.24f), new Color(0.45f, 0.43f, 0.4f) * (0.85f + 0.1f * (i % 2)));
+            }
             var light = Glow(fireAt + Vector3.up * 1.2f, new Color(1f, 0.6f, 0.25f), 12f, 2.2f);
             root.gameObject.AddComponent<NightFire>().Init(fireAt, light);
             foreach (var at in new[] { new Vector2(137.6f, 137.6f), new Vector2(150.4f, 150.4f), new Vector2(137.6f, 150.4f) })
@@ -446,7 +462,7 @@ namespace Shadowfall
         void Update()
         {
             bool lit = DayNight.Night > 0.3f;
-            if (lit && fire == null) fire = PropFire.Add(transform, at + Vector3.up * 0.2f, new Color(1f, 0.55f, 0.15f), 1.4f, true, light);
+            if (lit && fire == null) fire = PropFire.Add(transform, at + Vector3.up * 0.45f, new Color(1f, 0.55f, 0.15f), 1.7f, true, light); // up in the stacked logs
             else if (!lit && fire != null) { Destroy(fire.gameObject); fire = null; }
         }
     }
