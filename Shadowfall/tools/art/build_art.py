@@ -13,6 +13,7 @@ import sys
 sys.path.insert(0, os.path.dirname(__file__))
 import emotes  # noqa: E402
 import gltf_pack  # noqa: E402
+import split_primitives  # noqa: E402
 import nature  # noqa: E402
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
@@ -158,6 +159,7 @@ def main():
         stats = gltf_pack.repack(source, out, anims if anims is not None else [],
                                  synthesize=emotes.add if anims is HERO else None,
                                  image_transform=nature.transform(tint) if processed else None)
+        split_primitives.split(out, quiet=True)  # glTFast fails on skinned meshes with many primitives
         total += stats["bytes"]
         print(f"{out_rel:40s} {stats['bytes'] / 1024:8.0f} KB  {len(stats['animations'])} anims")
     print(f"\n{built} models, {total / 1024 / 1024:.1f} MB total -> {OUT}")

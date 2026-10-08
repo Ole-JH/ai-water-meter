@@ -30,6 +30,7 @@ Shadowfall uses free, openly licensed art. All 3D models are **CC0** (public dom
 - `ArtLibrary` loads a model by path (for example `Nature/tree_oak`), scales it to a target height or width, and sets it on the ground.
 - `CharacterView` plays the model's animations through the legacy `Animation` component that glTFast creates: idle, walk and run chosen from movement speed, plus attack, cast, hit and death.
 - `CharacterLook` maps each monster, NPC and hero appearance to a model, size and animation set.
+- **Skinned meshes have one primitive each.** glTFast fails to import a skinned mesh with many primitives ("SortAndNormalizeBoneWeightsJob ... You must call JobHandle.Complete()" in the build log) and the model then shows as a box. `tools/art/build_art.py` splits them with `tools/art/split_primitives.py`; run that on any skinned model you add by hand. The client build lists models that don't load ("did not import" in the build log).
 - **Fallback:** if a model can't be loaded, for example when the glTFast package is missing, the game falls back to the old primitive shapes and keeps working.
 
 !!! note "The world layout never depends on the art"

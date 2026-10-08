@@ -158,10 +158,8 @@ namespace Shadowfall.EditorTools
             {
                 var path = AssetDatabase.GUIDToAssetPath(guid);
                 if (!path.EndsWith(".glb") && !path.EndsWith(".gltf")) continue;
-                if (AssetDatabase.LoadAssetAtPath<GameObject>(path) != null) continue;
-                // One more try: a fresh import of just this model.
-                AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate | ImportAssetOptions.ForceSynchronousImport);
-                if (AssetDatabase.LoadAssetAtPath<GameObject>(path) == null) broken.Add(path + " (importer: " + (AssetImporter.GetAtPath(path)?.GetType().Name ?? "none") + ")");
+                // (glTFast fails on skinned meshes with many primitives: tools/art/split_primitives.py)
+                if (AssetDatabase.LoadAssetAtPath<GameObject>(path) == null) broken.Add(path);
             }
             if (broken.Count > 0)
                 Debug.LogWarning("[Shadowfall] " + broken.Count + " model(s) did not import and will show as boxes in the game:\n  " + string.Join("\n  ", broken));
