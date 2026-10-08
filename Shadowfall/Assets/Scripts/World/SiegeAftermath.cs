@@ -446,12 +446,35 @@ namespace Shadowfall
             b.Root.transform.position = at;
             var tr = b.Root.transform;
             var wood = new Color(0.62f, 0.48f, 0.3f);
-            // scaffolding: poles either side, two planked platforms
+            // scaffolding: stout poles either side, cross-braced, two planked platforms and a ladder up
             foreach (float s in new[] { -2.4f, 2.4f })
+            {
                 foreach (float d in new[] { 0f, 1.2f })
-                    Factory.PrimAt(PrimitiveType.Cube, tr, at + across * s + inward * d + Vector3.up * 2f, new Vector3(0.12f, 4f, 0.12f), wood);
+                    Factory.PrimAt(PrimitiveType.Cube, tr, at + across * s + inward * d + Vector3.up * 2.1f, new Vector3(0.2f, 4.2f, 0.2f), wood);
+                var brace = Factory.PrimAt(PrimitiveType.Cube, tr, at + across * s + inward * 0.6f + Vector3.up * 2.1f, new Vector3(0.1f, 3.6f, 0.1f), wood * 0.85f);
+                brace.transform.rotation = Quaternion.LookRotation(inward) * Quaternion.Euler(20f, 0f, 0f);
+            }
             foreach (float h in new[] { 1.4f, 2.9f })
-                Factory.PrimAt(PrimitiveType.Cube, tr, at + inward * 0.6f + Vector3.up * h, Abs(across * 5f + inward * 1.3f) + Vector3.up * 0.08f, wood * 0.9f);
+            {
+                Factory.PrimAt(PrimitiveType.Cube, tr, at + inward * 0.6f + Vector3.up * h, Abs(across * 5f + inward * 1.3f) + Vector3.up * 0.1f, wood * 0.9f);
+                // a cross-brace along the front, under each deck
+                var x = Factory.PrimAt(PrimitiveType.Cube, tr, at + Vector3.up * (h - 0.7f), Abs(across * 5.2f) + new Vector3(0.08f, 0.08f, 0.08f), wood * 0.8f);
+                x.transform.rotation = Quaternion.AngleAxis(14f, inward) * x.transform.rotation;
+            }
+            var ladderAt = at + inward * 1.5f + across * 1.8f;
+            foreach (float s in new[] { -0.25f, 0.25f })
+                Factory.PrimAt(PrimitiveType.Cube, tr, ladderAt + across * s + Vector3.up * 1.5f, new Vector3(0.07f, 3f, 0.07f), wood).transform.rotation = Quaternion.LookRotation(inward) * Quaternion.Euler(-12f, 0f, 0f);
+            for (int r = 0; r < 8; r++)
+                Factory.PrimAt(PrimitiveType.Cube, tr, ladderAt + inward * (0.31f - r * 0.045f) + Vector3.up * (0.3f + r * 0.36f), Abs(across * 0.55f) + new Vector3(0.05f, 0.05f, 0.05f), wood * 0.9f);
+            // the new gate going up in the gateway: fresh pale planks, the right half still to come
+            var fresh = new Color(0.86f, 0.72f, 0.5f);
+            for (int i = 0; i < 9; i++)
+            {
+                float pos = -2.1f + i * 0.33f;
+                float hgt = i < 5 ? 3.2f : i < 7 ? 1.6f : 0.6f;
+                Factory.PrimAt(PrimitiveType.Cube, tr, gate + inward * 0.4f + across * pos + Vector3.up * hgt / 2f, Abs(across * 0.3f + inward * 0.12f) + Vector3.up * hgt, fresh * (i % 2 == 0 ? 1f : 0.93f));
+            }
+            Factory.PrimAt(PrimitiveType.Cube, tr, gate + inward * 0.55f + across * -1.4f + Vector3.up * 2.2f, Abs(across * 1.6f + inward * 0.1f) + Vector3.up * 0.18f, fresh * 0.85f); // a crossbar on the finished half
             // fresh planks stacked by it, a sawhorse
             var pile = at + inward * 3f + across * 3.5f;
             for (int i = 0; i < 6; i++) Factory.PrimAt(PrimitiveType.Cube, tr, pile + Vector3.up * (0.08f + i * 0.1f), Abs(across * 0.3f + inward * 2.4f) + Vector3.up * 0.08f, new Color(0.78f, 0.62f, 0.4f));
