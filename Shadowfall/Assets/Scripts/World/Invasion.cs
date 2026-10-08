@@ -30,6 +30,7 @@ namespace Shadowfall
             {
                 GameUI.Banner(iv.town + " is under attack!", Color);
                 Sfx.Play2D("gong", 0.7f);
+                TownCrier.Announce("Hear ye! " + iv.town + " is under attack at its " + iv.gate + " gate! To arms!");
             }
             else if (iv.phase == "wave" && (was == null || was.wave != iv.wave))
             {

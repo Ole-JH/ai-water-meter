@@ -21,6 +21,8 @@ namespace Shadowfall
         // ---- windows
         bool showBags, showChar, showSkills, showQuests, showMap, showHelp, showTalents;
         Npc dialogNpc;
+        /// <summary>The NPC whose window is open (a vendor, a quest giver), or null.</summary>
+        public static Npc TalkingTo => I != null ? I.dialogNpc : null;
         GUIStyle chatFieldStyle;
         CraftingStation craftStation;
 

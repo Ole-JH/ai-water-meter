@@ -66,15 +66,18 @@ namespace Shadowfall
                 case "sell":
                     Sfx.Play2D("coins", 0.5f);
                     GameUI.Log("Sold " + m.name + (m.n > 1 ? " x" + m.n : "") + " for " + m.gold + " gold.", GoldColor);
+                    { var vendor = GameUI.TalkingTo; if (vendor != null) vendor.Traded(false); }
                     break;
                 case "sellcommon":
                     if (m.n == 0) { GameUI.Log("You have nothing common to sell.", Color.gray); break; }
                     Sfx.Play2D("coins", 0.5f);
                     GameUI.Log("Sold " + m.n + " item" + (m.n == 1 ? "" : "s") + " for " + m.gold + " gold.", GoldColor);
+                    { var vendor = GameUI.TalkingTo; if (vendor != null) vendor.Traded(false); }
                     break;
                 case "buy":
                     Sfx.Play2D("coins", 0.5f);
                     GameUI.Log("Bought " + m.name + (m.n > 1 ? " x" + m.n : "") + " for " + m.gold + " gold.", GoldColor);
+                    { var vendor = GameUI.TalkingTo; if (vendor != null) vendor.Traded(true); }
                     break;
                 case "aulist":
                     Sfx.Play2D("coins", 0.4f);

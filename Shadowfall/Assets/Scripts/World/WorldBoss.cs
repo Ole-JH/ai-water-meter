@@ -30,6 +30,7 @@ namespace Shadowfall
             if (Current != null && (was == null || was.name != wb.name))
             {
                 GameUI.Banner(wb.name + " has risen in " + wb.region + "!", Color);
+                TownCrier.Announce("Hear ye! " + wb.name + " has risen in " + wb.region + "! Gather your allies!");
                 Sfx.Play2D("gong", 0.6f, 0.8f);
             }
         }

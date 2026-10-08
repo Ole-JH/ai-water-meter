@@ -54,6 +54,7 @@ namespace Shadowfall
             ForgeStation.BuildAll();               // anvils and hearths by the smiths
             GuildBoard.Spawn();
             BountyBoard.SpawnAll();
+            TownCrier.SpawnAll();
             AuctionPodium.BuildAll();              // auctioneers by the general merchants (after the forges: they keep clear)
             gameObject.AddComponent<Ambience>();
             Music.Ensure();

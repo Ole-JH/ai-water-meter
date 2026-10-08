@@ -24,6 +24,15 @@ namespace Shadowfall
         {
             new Entry
             {
+                Id = 56, Date = "2026-10-08", Title = "Hear ye!",
+                Items = new[]
+                {
+                    "Every walled town has a town crier who rings a hand bell and cries the news. Invasions and world bosses are cried at once in every town.",
+                    "Merchants nod, flip a coin and have a word when you buy or sell.",
+                },
+            },
+            new Entry
+            {
                 Id = 55, Date = "2026-10-08", Title = "Your bar, your way",
                 Items = new[]
                 {

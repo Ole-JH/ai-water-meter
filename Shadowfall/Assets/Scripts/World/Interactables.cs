@@ -266,6 +266,21 @@ namespace Shadowfall
         }
     }
 
+    /// <summary>A coin a vendor flips: up spinning, and caught again.</summary>
+    public class FlippedCoin : MonoBehaviour
+    {
+        Vector3 hand;
+        float t;
+        public void Init(Vector3 h) { hand = h; Sfx.Play("coins", h, 0.3f, 0.2f, 15f); }
+        void Update()
+        {
+            t += Time.deltaTime / 0.7f;
+            transform.position = hand + Vector3.up * Mathf.Sin(Mathf.Clamp01(t) * Mathf.PI) * 0.7f;
+            transform.Rotate(900f * Time.deltaTime, 0f, 0f);
+            if (t >= 1f) Destroy(gameObject);
+        }
+    }
+
     /// <summary>A picked-up drop flying into the hero: up, then in, shrinking away.</summary>
     public class IntoHero : MonoBehaviour
     {
@@ -803,6 +818,23 @@ namespace Shadowfall
             }
             if (p.Level < q.MinLevel) { color = new Color(0.6f, 0.6f, 0.6f); return "!"; }
             return "!";
+        }
+
+        static readonly string[] boughtLines = { "A fine choice!", "Pleasure doing business.", "That'll serve you well.", "Mind how you use it!", "Come again!" };
+        static readonly string[] soldLines = { "I'll find a buyer for that.", "Hm. Fair enough.", "Not bad, not bad at all.", "Into the pile it goes." };
+
+        /// <summary>A sale done: a nod, a coin flipped and caught, and a word.</summary>
+        public void Traded(bool bought)
+        {
+            busyUntil = Time.time + 1.2f;
+            var p = Player.I;
+            if (p != null) Factory.Face(transform, p.transform.position);
+            if (view != null) view.Interact();
+            var hand = transform.position + transform.right * 0.3f + transform.forward * 0.3f + Vector3.up * 1.2f;
+            var gold = new Color(1f, 0.82f, 0.25f);
+            var coin = Factory.Prim(PrimitiveType.Cylinder, null, hand, new Vector3(0.1f, 0.01f, 0.1f), gold, false, Mat.Glow(gold * 0.6f));
+            coin.AddComponent<FlippedCoin>().Init(hand);
+            if (Random.value < 0.6f) Speech.Say(transform, LabelHeight + 0.9f, (bought ? boughtLines : soldLines)[Random.Range(0, bought ? boughtLines.Length : soldLines.Length)]);
         }
 
         /// <summary>Where this NPC's work is (a blacksmith's anvil, see ForgeStation): they face it while working.</summary>

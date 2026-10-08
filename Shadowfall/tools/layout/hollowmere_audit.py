@@ -23,7 +23,7 @@ for x,z,r,l in [(132.5,141.0,1.1,"cart"),(127.5,139.6,0.5,"barrels"),(137.4,139.
   (158.5,120.0,0.4,"barrel2"),(160.0,125.0,0.4,"banner tr"),(129.5,152.0,0.5,"barrels2"),(155.5,157.5,0.6,"hedge"),
   (140.6,170.5,0.3,"banner N1"),(148.4,170.5,0.3,"banner N2"),(140.6,118.5,0.3,"banner S1"),(148.4,118.5,0.3,"banner S2")]: add(x,z,r,l)
 add(149.5,139.5,0.6,"stash chest (likely)"); add(140.5,154.5,0.8,"waystone"); add(149.5,149.5,0.9,"rift stone")
-add(144.5,142.4,0.3,"job well"); add(152.6,148.4,0.9,"guild board"); add(136.6,148.6,0.9,"bounty board"); 
+add(144.5,142.4,0.3,"job well"); add(152.6,148.4,0.9,"guild board"); add(136.6,148.6,0.9,"bounty board"); add(151.9,137.6,0.6,"town crier"); 
 for x,z in [(140.5,140.6),(148.4,140.6),(147.2,149.8),(144.5,147.4)]: add(x,z,0.6,"meeting")
 for x,z in [(131.5,137.4),(133.5,137.4)]: add(x,z,0.3,"job market")
 add(138.5,166.5,0.3,"job woodpile"); add(161.5,157.6,0.3,"job church")
