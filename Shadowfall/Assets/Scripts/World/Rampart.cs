@@ -22,6 +22,7 @@ namespace Shadowfall
         static Transform root;
         static WorldGrid world;          // the overworld's grid (not a dungeon's)
         static TownGate gate;            // the gate of the current (or last) invasion
+        static readonly Dictionary<string, TownGate> gates = new Dictionary<string, TownGate>(); // every walled town's gates
         static readonly List<GameObject> helpers = new List<GameObject>();
         static string builtFor;          // "town|gate|started" of the ladders and helpers up now
         static bool runner;
@@ -68,6 +69,7 @@ namespace Shadowfall
             if (Dungeon.Active || WorldGrid.Instance == null) return; // the overworld's grid isn't the current one in there
             world = WorldGrid.Instance;
             if (root == null) root = new GameObject("Rampart").transform;
+            Gates();
 
             var iv = Invasion.Current;
             var town = iv != null ? Town(iv.town) : null;
@@ -80,8 +82,8 @@ namespace Shadowfall
             if (gate == null || gate.Town != town.Name || gate.GateName != iv.gate)
             {
                 Clear(false);
-                if (gate != null) Object.Destroy(gate.gameObject);
-                gate = TownGate.Build(root, town.Name, iv.gate, side, world);
+                if (gate != null) gate.Repair();
+                gate = GateOf(town, iv.gate);
             }
 
             switch (iv.phase)
@@ -109,6 +111,33 @@ namespace Shadowfall
                     gate.Shatter();
                     break;
             }
+        }
+
+        /// <summary>
+        /// Every walled town has real gates in its four gateways: open by day, pulled shut at night and swung open for
+        /// whoever comes along (see TownGate.Update). Only the ones near the hero are switched on.
+        /// </summary>
+        static void Gates()
+        {
+            var hero = Player.I;
+            foreach (var t in WorldGenerator.Towns)
+            {
+                if (!t.Walled) continue;
+                foreach (var name in new[] { "south", "north", "west", "east" })
+                {
+                    var g = GateOf(t, name);
+                    bool near = hero == null || Factory.FlatDistance(hero.transform.position, g.transform.position) < 110f || g == gate;
+                    if (g.gameObject.activeSelf != near) g.gameObject.SetActive(near);
+                }
+            }
+        }
+
+        static TownGate GateOf(Settlement town, string name)
+        {
+            string key = town.Name + "|" + name;
+            if (!gates.TryGetValue(key, out var g) || g == null)
+                gates[key] = g = TownGate.Build(root, town.Name, name, SideOf(town, name), world);
+            return g;
         }
 
         /// <summary>Takes the ladders, walkway and helpers away; with <paramref name="repair"/> the gate is mended and opened.</summary>
@@ -226,6 +255,8 @@ namespace Shadowfall
         float open = 1f, openTarget = 1f; // 1 = swung open (inside), 0 = shut
         float health = 100f, shake;
         bool broken, blocked;
+        bool siege;                       // shut (or opened) by the invasion, not by the time of day
+        float nextLook;
         static readonly Color Wood = new Color(0.5f, 0.35f, 0.2f), Dark = new Color(0.3f, 0.2f, 0.12f), Iron = new Color(0.25f, 0.25f, 0.27f);
 
         class Piece { public GameObject Go; public float BreaksAt; public Color Color; }
@@ -286,13 +317,15 @@ namespace Shadowfall
         public void Close()
         {
             if (broken) return;
+            siege = true;
             if (openTarget != 0f) { openTarget = 0f; Sfx.Play("rubble", transform.position + Vector3.up, 0.5f, 0.1f, 50f); }
             Block(true);
         }
 
         public void Open()
         {
-            if (broken || openTarget == 1f) return;
+            if (broken || !siege) return;
+            siege = false;
             openTarget = 1f;
             Block(false);
             Sfx.Play("rubble", transform.position + Vector3.up, 0.4f, 0.1f, 50f);
@@ -307,6 +340,7 @@ namespace Shadowfall
             pieces.Clear();
             foreach (Transform c in transform) Destroy(c.gameObject);
             broken = false;
+            siege = false;
             health = 100f;
             open = openTarget = 1f;
             Make();
@@ -390,9 +424,36 @@ namespace Shadowfall
 
         void Update()
         {
-            if (Mathf.Abs(open - openTarget) > 0.001f) open = Mathf.MoveTowards(open, openTarget, Time.deltaTime / 2.5f);
+            if (!siege && !broken && Time.time >= nextLook) Peacetime();
+            if (Mathf.Abs(open - openTarget) > 0.001f) open = Mathf.MoveTowards(open, openTarget, Time.deltaTime / (siege ? 2.5f : 1.3f));
             if (shake > 0f) shake = Mathf.Max(0f, shake - Time.deltaTime);
             Pose();
+        }
+
+        /// <summary>
+        /// Not under attack: open all day; at night pulled to (not barred: nothing is blocked) and swung open for anyone
+        /// who comes up to it, the hero, other heroes or the night watch, then pulled to again behind them.
+        /// </summary>
+        void Peacetime()
+        {
+            nextLook = Time.time + 0.25f;
+            float want = DayNight.Night > 0.55f && !SomeoneComing() ? 0.06f : 1f;
+            if (want == openTarget) return;
+            var hero = Player.I;
+            if (hero != null && Factory.FlatDistance(hero.transform.position, transform.position) < 30f)
+                Sfx.Play(want > openTarget ? "door_open" : "door_close", transform.position + Vector3.up * 1.5f, 0.55f, 0.1f, 30f);
+            openTarget = want;
+        }
+
+        bool SomeoneComing()
+        {
+            var at = transform.position;
+            const float r = 11f;
+            var hero = Player.I;
+            if (hero != null && Factory.FlatDistance(hero.transform.position, at) < r) return true;
+            foreach (var rp in RemotePlayer.ById.Values)
+                if (rp != null && Factory.FlatDistance(rp.transform.position, at) < r) return true;
+            return Walker.AnyNear(at, 7f);
         }
 
         void OnDestroy()

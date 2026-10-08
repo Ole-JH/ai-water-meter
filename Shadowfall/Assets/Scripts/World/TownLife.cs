@@ -215,6 +215,14 @@ namespace Shadowfall
 
         void OnDestroy() => all.Remove(this);
 
+        /// <summary>Anyone of the townsfolk out and about within <paramref name="r"/> metres (the gates open for them).</summary>
+        public static bool AnyNear(Vector3 p, float r)
+        {
+            foreach (var w in all)
+                if (w != null && !w.hidden && Factory.FlatDistance(w.transform.position, p) < r) return true;
+            return false;
+        }
+
         static float Hour => DayNight.Hour;
 
         // ------------------------------------------------------------------ the schedule
@@ -225,6 +233,12 @@ namespace Shadowfall
             float h = Hour;
             place = MyDoor != null ? MyDoor.Step : Home;
             there = Doing.Inside;
+            if (UnderAttack && kind != Kind.Guard)
+            {
+                // Raiders at the gate: everyone runs indoors (the hound to the tavern porch) until it is over
+                if (kind == Kind.Dog) { place = TownLife.Walkable(TownLife.TavernDoor + new Vector3(1.5f, 0, -1.5f)); there = Doing.Sitting; return "hide"; }
+                return "shelter";
+            }
             switch (kind)
             {
                 case Kind.Child:
@@ -253,6 +267,20 @@ namespace Shadowfall
                     return "work";
             }
         }
+
+        string town;
+        bool UnderAttack
+        {
+            get
+            {
+                if (!Invasion.Active) return false;
+                if (town == null) { var t = WorldGenerator.TownAt(Home); town = t != null ? t.Name : ""; }
+                return Invasion.Current.town == town;
+            }
+        }
+
+        static readonly string[] takeCover = { "Raiders! Get inside!", "They're at the gate! Bar the doors!", "Children, in! Now!", "Not again... inside, quick!", "Heroes, hold them off!" };
+        static readonly string[] allClear = { "Is it over? Thank the heroes!", "We held! Light the lamps!", "Still standing. Still standing.", "I need a drink after that." };
 
         // Something worth watching nearby (a duel): villagers stop, look and cheer (see Watch).
         static Vector3 spectacle;
@@ -365,9 +393,13 @@ namespace Shadowfall
                     path.Insert(0, step);
                     transform.position = new Vector3(d.Centre.x, 0f, d.Centre.z) + d.Out * 0.15f;
                     transform.rotation = Quaternion.LookRotation(d.Out);
+                    if (was == "shelter" && kind == Kind.Villager && HeroWithin(25f) && rng.NextDouble() < 0.5)
+                        Speech.Say(transform, 2.6f, allClear[rng.Next(allClear.Length)]);
                     return;
                 }
             }
+            if (now == "shelter" && kind == Kind.Villager && HeroWithin(25f) && rng.NextDouble() < 0.6)
+                Speech.Say(transform, 2.6f, takeCover[rng.Next(takeCover.Length)]);
             if (kind == Kind.Guard && was == "watch" && now == "barracks" && HeroWithin(20f))
                 Speech.Say(transform, 2.6f, NightWatch ? "Dawn. The day watch has it. I need my bed." : "Your watch now. Keep the torches lit.");
             arriveDoing = there;
@@ -419,7 +451,7 @@ namespace Shadowfall
             if (pathIndex >= path.Count) return 0f;
             var target = path[pathIndex];
             var to = Factory.Flat(target - transform.position);
-            float sp = doing == Doing.Playing ? speed * 1.3f : speed;
+            float sp = plan == "shelter" ? speed * 2.4f : doing == Doing.Playing ? speed * 1.3f : speed;
             float step = sp * Time.deltaTime;
             if (to.magnitude <= step) { transform.position = target; pathIndex++; }
             else

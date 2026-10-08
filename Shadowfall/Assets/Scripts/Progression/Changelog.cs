@@ -24,6 +24,17 @@ namespace Shadowfall
         {
             new Entry
             {
+                Id = 77, Date = "2026-10-08", Title = "Behind closed doors",
+                Items = new[]
+                {
+                    "When raiders come for a town, its people run for their front doors shouting for cover, the hound hides on the tavern porch, and shutters slam over every window. When it's over they come back out (some of them with a word of thanks).",
+                    "After dark the windows glow with the fire inside, and now and then someone walks past one. Each house goes to bed at its own hour and its lights go out until dawn.",
+                    "Every walled town has real gates now: open all day, pulled to at night, and swung open with a creak for anyone who comes up to them (the night watch included).",
+                    "Fixed the new front doors standing still: they now actually swing.",
+                },
+            },
+            new Entry
+            {
                 Id = 76, Date = "2026-10-08", Title = "A living world",
                 Items = new[]
                 {

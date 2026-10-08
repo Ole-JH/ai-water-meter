@@ -109,6 +109,7 @@ namespace Shadowfall
         public void Generate()
         {
             HouseDoors.Clear();
+            HouseWindows.Clear();
             var oldState = Random.state;
             Random.InitState(Seed);
             art = ArtLibrary.Available;
@@ -150,6 +151,7 @@ namespace Shadowfall
             if (art) StaticBatchingUtility.Combine(deco.gameObject);
 
             Random.state = oldState;
+            Rampart.Sync(); // the town gates (and the runner that keeps them)
         }
 
         // ------------------------------------------------------------------ painting
@@ -624,7 +626,7 @@ namespace Shadowfall
                 glow.color = new Color(1f, 0.7f, 0.35f);
                 glow.range = 7.5f;
                 glow.intensity = 1.1f;
-                NightLight.Add(glow, 0f);
+                HouseWindows.Add(house, model, NightLight.Add(glow, 0f));
                 return;
             }
             Factory.Prim(PrimitiveType.Cube, deco, c + Vector3.up * 1.5f, new Vector3(r.width, 3f, r.height), wall);

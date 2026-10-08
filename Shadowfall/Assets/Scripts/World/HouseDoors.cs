@@ -33,12 +33,27 @@ namespace Shadowfall
             public Vector3 Out;      // the way the door faces (flat)
             public Vector3 Step;     // on the ground just outside
             public Transform Leaf, Hole;
+            public Quaternion Shut;  // the leaf's rotation when closed
             public Light Spill;
             public float OpenUntil, Open;
         }
 
         static readonly List<Door> doors = new List<Door>();
         static HouseDoors runner;
+        static Transform movers;
+
+        /// <summary>
+        /// Where the parts that move or change live: the town's decoration is static-batched once the world is built
+        /// (a batched mesh never moves again), so doors and shutters are made on the house and then moved out here.
+        /// </summary>
+        public static Transform Movers
+        {
+            get
+            {
+                if (movers == null) movers = new GameObject("HouseMovers").transform;
+                return movers;
+            }
+        }
 
         /// <summary>Gives a house (the object ArtLibrary.Spawn returned) a door that can open, if its model has one.</summary>
         public static void Add(GameObject house, string model)
@@ -58,6 +73,7 @@ namespace Shadowfall
             hole.transform.localRotation = Quaternion.Euler(0f, 180f, 0f); // quads face -z; turn it to face out
             hole.GetComponent<Renderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             hole.SetActive(false);
+            hole.transform.SetParent(Movers, true);
             d.Hole = hole.transform;
 
             var leaf = Factory.Empty("DoorHinge", root, hinge);
@@ -66,7 +82,9 @@ namespace Shadowfall
             Factory.Prim(PrimitiveType.Cube, plank.transform, new Vector3(0f, 0.25f, 0.6f), new Vector3(0.96f, 0.05f, 0.4f), new Color(0.2f, 0.2f, 0.22f));
             Factory.Prim(PrimitiveType.Cube, plank.transform, new Vector3(0f, -0.25f, 0.6f), new Vector3(0.96f, 0.05f, 0.4f), new Color(0.2f, 0.2f, 0.22f));
             leaf.gameObject.SetActive(false);
+            leaf.SetParent(Movers, true);
             d.Leaf = leaf;
+            d.Shut = leaf.rotation;
             doors.Add(d);
         }
 
@@ -145,7 +163,7 @@ namespace Shadowfall
             }
             // Out on the hinge with a little overshoot, then back
             float swing = Mathf.SmoothStep(0f, 1f, d.Open) * 105f;
-            d.Leaf.localRotation = Quaternion.Euler(0f, -swing, 0f);
+            d.Leaf.rotation = d.Shut * Quaternion.Euler(0f, -swing, 0f);
             if (d.Spill != null)
             {
                 d.Spill.intensity = d.Open * 1.6f;
@@ -154,6 +172,11 @@ namespace Shadowfall
         }
 
         /// <summary>A new world (another region or a reload): the old houses are gone.</summary>
-        public static void Clear() => doors.Clear();
+        public static void Clear()
+        {
+            doors.Clear();
+            if (movers != null) Destroy(movers.gameObject);
+            movers = null;
+        }
     }
 }

@@ -56,7 +56,9 @@ Where the old world's north and east edges were, a broken ridge of rock runs wit
 
 Every vendor buys your loot: right-click an item in your bags while trading.
 
-NPCs greet you when you walk up and talk among themselves in speech bubbles. Villagers stroll around the square (and go home after dark, opening the front door as they go in: by night the doorway glows with the hearth inside), two guards patrol between the gates with torches at night, and a hound roams the village.
+NPCs greet you when you walk up and talk among themselves in speech bubbles. Villagers stroll around the square (and go home after dark, opening the front door as they go in: by night the doorway glows with the hearth inside), two guards patrol between the gates with torches at night, and a hound roams the village. After dark the windows are lit, now and then someone walks past one, and each house puts its lights out at its own bedtime. When raiders attack the town, the villagers run indoors, the hound hides on the tavern porch and shutters close over the windows until it is over.
+
+Every walled town has wooden gates in its four gateways: open all day, pulled to at night and swung open for anyone who comes up to them. They never lock you out (only an invasion bars a gate).
 
 ## Day and night
 

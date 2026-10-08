@@ -19,6 +19,7 @@
 | `World/GroundSurface.cs` | Splat control maps, curving roads, ground mesh with lake beds, water, grass blades |
 | `World/Dungeon.cs` | Dungeons on the client: builds the server's layout (walls, floors, torches, campfires, boss braziers, props), portals, stairs, chests |
 | `World/TownLife.cs` | Strolling villagers, patrolling guards, the village hound |
+| `World/HouseWindows.cs` | Lit window panes at night (with someone walking past now and then), bedtimes, shutters that close during an invasion |
 | `World/HouseDoors.cs` | Front doors that swing open when townsfolk go in or out (a leaf over the door painted into each house model) |
 | `World/Ambience.cs` | Crows, bats, fireflies and falling leaves around the hero |
 | `World/NpcChatter.cs` | What NPCs and villagers say in speech bubbles |
