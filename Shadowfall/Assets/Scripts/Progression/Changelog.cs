@@ -27,6 +27,7 @@ namespace Shadowfall
                 Id = 74, Date = "2026-10-08", Title = "Big fights, big bars",
                 Items = new[]
                 {
+                    "Footprints: heroes and monsters leave prints in sand, snow and mud after rain (boot prints, paw prints, a giant's broad feet) that fade after half a minute; monsters kick up dust on the sand too.",
                     "Bosses in a fight get a wide health bar across the top of the screen, with their phases marked: a gong and a flash as each one passes. World bosses show their armour plates, and their rage.",
                 },
             },

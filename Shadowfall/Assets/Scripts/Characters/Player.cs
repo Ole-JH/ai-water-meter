@@ -156,6 +156,7 @@ namespace Shadowfall
         }
 
         float stepDistance;
+        bool stepLeft;
 
         /// <summary>Footsteps: stone in the village and the crypt, grass and earth everywhere else.</summary>
         void Footsteps(float speed, float dt)
@@ -165,6 +166,8 @@ namespace Shadowfall
             if (stepDistance < 1.15f) return;
             stepDistance = 0f;
             var pos = transform.position;
+            stepLeft = !stepLeft;
+            if (Riding == null) Footprints.Step(pos, transform.forward, stepLeft, false, 1f);
             if (SnowDepth > 0.15f)
             {
                 Sfx.Play("step_snow", pos, 0.3f + SnowDepth * 0.3f, 0.1f, 20f);

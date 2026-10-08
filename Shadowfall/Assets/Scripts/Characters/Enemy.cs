@@ -382,6 +382,34 @@ namespace Shadowfall
             if (SpellFx.Ready && Height > 3.2f) SpellFx.Dust(transform.position, Height * 0.12f);
         }
 
+        float printStride;
+        bool printLeft;
+
+        /// <summary>Prints in sand, snow and mud (paws for beasts, broad feet for golems and giants), and a puff of
+        /// dust on dry ground now and then. Ghosts and wraiths leave nothing.</summary>
+        void Prints(float dt)
+        {
+            if (moveSpeed < 0.5f || Def.Name.Contains("Wraith")) { printStride = 0f; return; }
+            float stepLen = Mathf.Clamp(Height * 0.55f, 0.7f, 2.4f);
+            printStride += moveSpeed * dt;
+            if (printStride < stepLen) return;
+            printStride = 0f;
+            printLeft = !printLeft;
+            float scale = Mathf.Clamp(Height / 1.8f, 0.6f, 3f);
+            Footprints.Step(transform.position, transform.forward, printLeft, Def.Shape == EnemyShape.Beast, scale);
+            if (!printLeft || !SpellFx.Ready) return; // dust every other step
+            var p = Player.I;
+            if (p == null || Factory.FlatDistance(p.transform.position, transform.position) > 22f) return;
+            var dust = Footprints.DustAt(transform.position);
+            if (dust.HasValue)
+            {
+                var c = dust.Value;
+                SpellFx.Emit(new SpellFx.P { Burst = 2 + Mathf.RoundToInt(scale), Duration = 0.1f, Life = new Vector2(0.4f, 0.7f), Speed = new Vector2(0.2f, 0.6f),
+                    Size = new Vector2(0.12f, 0.22f) * scale, Start = new Color(c.r, c.g, c.b, 0.3f), End = new Color(c.r, c.g, c.b, 0f), Smoke = true, Grow = true,
+                    Radius = 0.12f * scale, Max = 8 }, transform.position + Vector3.up * 0.05f);
+            }
+        }
+
         /// <summary>What an elite's affixes leave behind as it moves: fire underfoot, dust in a fast one's wake.</summary>
         void AffixTrails(float dt)
         {
@@ -491,6 +519,7 @@ namespace Shadowfall
                 }
                 AffixTrails(dt);
                 HeavySteps(dt);
+                Prints(dt);
                 return;
             }
 

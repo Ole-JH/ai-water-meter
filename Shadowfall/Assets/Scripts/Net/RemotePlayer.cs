@@ -29,6 +29,8 @@ namespace Shadowfall
         Companion companion;       // cosmetic follower
         string companionId = "";
         MountRig mount;            // the horse they ride, if any
+        float stride;
+        bool stepLeft;
         string mountId = "";
 
         public static RemotePlayer Get(NetPlayer p)
@@ -154,6 +156,14 @@ namespace Shadowfall
             float moved = Factory.FlatDistance(before, transform.position);
             if (moved > 0.001f && Time.time >= nextTrample) { nextTrample = Time.time + 0.25f; SnowField.Trample(transform.position); }
             if (dt > 0f && moved < 3f) moveSpeed = Mathf.Lerp(moveSpeed, moving ? moved / dt : 0f, dt * 10f);
+            // prints in sand, snow and mud (not when riding: the hooves throw up dust instead)
+            if (moved < 3f) stride += moved;
+            if (stride > 1.15f)
+            {
+                stride = 0f;
+                stepLeft = !stepLeft;
+                if (mount == null) Footprints.Step(transform.position, transform.forward, stepLeft, false, 1f);
+            }
 
             if (Time.time >= nextBanner)
             {
