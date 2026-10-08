@@ -136,11 +136,17 @@ the stone come along, and the rest of the party can join while you are inside.
 
 - A rift is one level, laid out like a dungeon, with monsters from three dungeons at once at your party's level. Every
   tier gives them 17% more health and 10% more damage (compounding), and 15% more experience and better loot.
+- A rift is lit by its tier's colour: violet at first, then blue, teal, green, gold and on to blood red in the high
+  tiers. The light breathes, faster when there's under a minute left.
 - Killing monsters fills the **progress bar** (elites count four times; about 70% of the monsters fill it). At 100% the
-  **Rift Guardian**, one of the dungeon bosses, appears next to whoever filled it.
+  **Rift Guardian**, one of the dungeon bosses, appears next to whoever filled it. An orb of the rift's energy floats
+  by your shoulder: every kill sends a mote of essence into it and it fills with the bar. When it's full it bursts, a
+  tear opens in the air and the guardian steps out of it.
 - Beat the guardian within **10 minutes** and the rift is cleared: everyone inside gets a treasure chest's worth of loot
   and the next tier, and the run goes on the **leaderboard** (the window at the stone shows the top 20, highest tier
   first, then fastest). The top three are announced to everyone.
+- **A cleared rift collapses**: rocks rain down, the ground shakes harder and the dark closes in, and 30 seconds later
+  everyone still inside is thrown back to the Rift Stone. Any loot you hadn't picked up lands around you there.
 - Out of time, the rift still gives its monsters' loot, but no new tier and no leaderboard.
 
 Three [achievements](achievements.md#dungeons), one with the title *the Riftwalker*.

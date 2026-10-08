@@ -24,6 +24,16 @@ namespace Shadowfall
         {
             new Entry
             {
+                Id = 40, Date = "2026-10-08", Title = "Rifts with a pulse",
+                Items = new[]
+                {
+                    "Every rift tier has its own colour, from violet through blue, green and gold to blood red. The light breathes faster when time runs short.",
+                    "An orb of rift energy floats by your shoulder and fills as you kill, each kill sending a mote of essence into it. When it's full it bursts, and the Rift Guardian steps out of a tear in the air.",
+                    "A cleared rift collapses. Rocks fall and the dark closes in, then you're thrown back to the Rift Stone with any loot you hadn't picked up.",
+                },
+            },
+            new Entry
+            {
                 Id = 39, Date = "2026-10-08", Title = "At the anvil",
                 Items = new[]
                 {

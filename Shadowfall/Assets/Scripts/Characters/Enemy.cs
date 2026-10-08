@@ -167,6 +167,7 @@ namespace Shadowfall
             e.BuildModel();
             if (!string.IsNullOrEmpty(m.el)) e.MakeElite(m);
             if (WorldBoss.Is(def.Name)) BossPresence.Attach(e, e.model, e.Height);
+            if (Rift.IsGuardian(def.Name)) RiftFx.GuardianArrives(e, e.model);
             var col = go.AddComponent<CapsuleCollider>();
             col.center = new Vector3(0, e.Height * 0.5f, 0);
             col.height = e.Height;
@@ -490,6 +491,7 @@ namespace Shadowfall
             var deathVoice = Voice(Def, "die");
             if (deathVoice != null) Sfx.Play(deathVoice, Center, Def.Boss ? 1f : 0.6f, 0.1f, Def.Boss ? 80f : 40f);
             if (Def.Boss) Sfx.Play2D("gong", 0.7f);
+            if (Rift.Inside) RiftFx.Mote(Center, Elite ? 4 : 1); // its essence flies to the rift's orb
             if (SpellFx.Ready) SpellFx.Dust(transform.position, Def.Boss ? 2.5f : 1.2f);
             else FxPulse.Burst(Center, Factory.Shade(Def.Color, 0.6f), 0.8f, 0.3f);
             // A big killing blow (a crit, a heavy hit) also throws chunks.

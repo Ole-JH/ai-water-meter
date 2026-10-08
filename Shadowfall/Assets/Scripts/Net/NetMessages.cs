@@ -80,6 +80,7 @@ namespace Shadowfall
         // "weather": s = season (0 spring, 1 summer, 2 autumn, 3 winter), sky = clear|cloudy|rain|storm|fog,
         // i = intensity 0..1, left = seconds until the next season
         public int s, left;
+        public int c;                  // "rift": seconds until a cleared rift collapses (0: it isn't)
         public string sky;
         public float i;
         public NetMonster[] m;

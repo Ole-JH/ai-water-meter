@@ -20,6 +20,30 @@ namespace Shadowfall
 
         public static bool Inside => Dungeon.Active && Tier > 0;
         public static int SecondsLeft => Mathf.Max(0, Mathf.CeilToInt(left - (Time.time - leftAt)));
+        /// <summary>Seconds until a cleared rift collapses (0: it isn't collapsing).</summary>
+        public static float CollapseIn => collapse <= 0f ? 0f : Mathf.Max(0f, collapse - (Time.time - collapseAt));
+        static float collapse, collapseAt;
+
+        /// <summary>A rift's colour by tier: violet at first, through blue, teal and green to gold and blood red in the high tiers.</summary>
+        public static Color TierColor(int tier)
+        {
+            float h = Mathf.Repeat(0.78f - (tier - 1) * 0.028f, 1f);
+            return Color.HSVToRGB(h, 0.75f, 1f);
+        }
+
+        /// <summary>The rift's light now: its tier's colour, breathing, faster as the time runs out or the rift caves in.</summary>
+        public static float Pulse
+        {
+            get
+            {
+                float rate = CollapseIn > 0f ? 5f : SecondsLeft < 60 && Phase != "won" ? 3.2f : 1.4f;
+                return 0.5f + 0.5f * Mathf.Sin(Time.time * rate);
+            }
+        }
+
+        static readonly string[] guardians = { "Crypt Lord", "Goblin King", "Stone Colossus", "Bandit Lord", "The Frost Witch", "The Sand Colossus", "The Cinder Lord" };
+        /// <summary>A monster that could be the Rift Guardian (server/rift.js GUARDIANS), coming in when the bar is full.</summary>
+        public static bool IsGuardian(string name) => Inside && Progress >= 100 && System.Array.IndexOf(guardians, name) >= 0;
 
         public static void OnInfo(NetMsg m)
         {
@@ -36,6 +60,14 @@ namespace Shadowfall
             Phase = m.k ?? "";
             left = m.left;
             leftAt = Time.time;
+            if (m.c > 0 && collapse <= 0f)
+            {
+                GameUI.Banner("The rift is collapsing!", TierColor(Tier));
+                Sfx.Play2D("thunder", 0.6f, 0.7f);
+            }
+            collapse = m.c;
+            collapseAt = Time.time;
+            RiftFx.Ensure();
             if (Phase == was) return;
             if (Phase == "guardian") { GameUI.Banner("The Rift Guardian has come!", Color); Sfx.Play2D("roar", 0.7f, 0.8f); }
             else if (Phase == "won")
@@ -49,7 +81,7 @@ namespace Shadowfall
         }
 
         /// <summary>Out of the rift (any dungeon message for another place): forget it.</summary>
-        public static void Left() { Tier = 0; Phase = ""; }
+        public static void Left() { Tier = 0; Phase = ""; collapse = 0f; RiftFx.Clear(); }
 
         public static void SpawnStone()
         {

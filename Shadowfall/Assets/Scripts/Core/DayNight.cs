@@ -86,6 +86,17 @@ namespace Shadowfall
             RenderSettings.fogColor = new Color(0.01f, 0.008f, 0.01f);
             RenderSettings.fogStartDistance = 12f;
             RenderSettings.fogEndDistance = 42f;
+            if (Rift.Inside)
+            {
+                // A rift is lit by its tier's colour, breathing; as it collapses the dark closes in.
+                var c = Rift.TierColor(Rift.Tier);
+                float pulse = Rift.Pulse, caving = Rift.CollapseIn > 0f ? 1f - Rift.CollapseIn / 30f : 0f;
+                RenderSettings.ambientSkyColor = new Color(0.07f, 0.06f, 0.09f) + c * (0.07f + 0.05f * pulse);
+                RenderSettings.ambientEquatorColor = new Color(0.05f, 0.045f, 0.06f) + c * (0.05f + 0.03f * pulse);
+                RenderSettings.fogColor = c * (0.05f + 0.05f * pulse);
+                RenderSettings.fogStartDistance = Mathf.Lerp(12f, 3f, caving);
+                RenderSettings.fogEndDistance = Mathf.Lerp(42f, 14f, caving);
+            }
             if (cam != null) cam.backgroundColor = RenderSettings.fogColor;
             if (sun != null) { sun.intensity = 0.04f; sun.color = new Color(0.5f, 0.55f, 0.8f); }
         }

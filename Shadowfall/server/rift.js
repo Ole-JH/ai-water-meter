@@ -3,18 +3,21 @@
 // Guardian (a dungeon boss) appears next to whoever got it there. Beat it within RIFT_MINUTES and everyone inside
 // unlocks the next tier (ledger.riftBest), gets a treasure chest's worth of loot and goes on the leaderboard (stored
 // with store.setMeta, the best run per tier and party). Too slow: the rift still gives its monsters' loot, nothing more.
+// A cleared rift collapses: RIFT_COLLAPSE_S later everyone still inside is thrown back to the Rift Stone, and whatever
+// loot they hadn't picked up lands around them there.
 //
 // Messages: rinfo (-> rinfo {k: best, items: leaderboard lines "tier|seconds|names"}), ropen {n: tier}.
-// While inside: rift {tier, pct, left (seconds), k: phase run|guardian|won|late}.
+// While inside: rift {tier, pct, left (seconds), k: phase run|guardian|won|late, c: seconds until it collapses (0: not)}.
 
 const MINUTES = Number(process.env.RIFT_MINUTES ?? 10);
 const STONE = { x: 149.5, z: 149.5 }; // WorldGenerator / RiftStone.cs: where the old well stood, north-east of the square
 const BOARD_SIZE = 20;
+const COLLAPSE_S = Number(process.env.RIFT_COLLAPSE_S ?? 30);
 const GUARDIANS = ["Crypt Lord", "Goblin King", "Stone Colossus", "Bandit Lord", "The Frost Witch", "The Sand Colossus", "The Cinder Lord"];
 
 module.exports = function createRifts(ctx) {
   const { store, DUNGEONS, dungeonGen, instances, closeInstance, nextInstanceId, monsters, sessions, spawnMonster, makeElite, walkable, useGrid,
-    partyOf, partyMembers, partyKey, enterInstance, safeSend, sys, sendNear, broadcast, dropFor, rollChest, heroClass, ledgerChanged,
+    partyOf, partyMembers, partyKey, enterInstance, leaveInstance, safeSend, sys, sendNear, broadcast, dropFor, rollChest, heroClass, ledgerChanged,
     log, now, rand, randInt, dist, metrics } = ctx;
   let board = []; // [{ tier, secs, names, at }]
 
@@ -100,7 +103,8 @@ module.exports = function createRifts(ctx) {
 
   function sendState(inst, to) {
     const r = inst.rift;
-    const msg = JSON.stringify({ t: "rift", n: r.tier, i: Math.min(100, Math.floor(r.progress)), left: Math.max(0, Math.round(r.deadline - now())), k: r.phase });
+    const msg = JSON.stringify({ t: "rift", n: r.tier, i: Math.min(100, Math.floor(r.progress)), left: Math.max(0, Math.round(r.deadline - now())), k: r.phase,
+      c: r.collapseAt ? Math.max(0, Math.ceil(r.collapseAt - now())) : 0 });
     for (const o of to || inside(inst)) safeSend(o, msg);
     r.sentAt = now();
   }
@@ -137,6 +141,7 @@ module.exports = function createRifts(ctx) {
     const heroes = inside(inst);
     r.phase = inTime ? "won" : "late";
     if (inTime) {
+      r.collapseAt = now() + COLLAPSE_S;
       for (const s of heroes) {
         if (!s.ledger) continue;
         const up = r.tier > (s.ledger.riftBest || 0);
@@ -162,10 +167,30 @@ module.exports = function createRifts(ctx) {
     sendState(inst);
   }
 
+  /** The cleared rift caves in: everyone inside back to the stone, with the loot they left lying there. */
+  function collapse(inst) {
+    inst.rift.collapseAt = 0;
+    for (const s of inside(inst)) {
+      const moved = [];
+      for (const d of s.drops.values()) {
+        if (d.inst !== inst.id) continue;
+        d.inst = 0;
+        d.x = Math.round((STONE.x + rand(-2.2, 2.2)) * 100) / 100;
+        d.z = Math.round((STONE.z + 2 + rand(0.5, 2.5)) * 100) / 100;
+        moved.push({ id: d.id, x: d.x, z: d.z, gold: d.gold, item: d.item || {} });
+      }
+      leaveInstance(s, false);
+      if (moved.length) send(s, { t: "drops", drops: moved });
+      sys(s, moved.length ? "The rift collapses and throws you back to the Rift Stone. Your loot lies around you." : "The rift collapses and throws you back to the Rift Stone.");
+    }
+    closeInstance(inst);
+  }
+
   function tick(t) {
-    for (const inst of instances.values()) {
+    for (const inst of [...instances.values()]) {
       const r = inst.rift;
       if (!r) continue;
+      if (r.phase === "won" && r.collapseAt && t >= r.collapseAt) { collapse(inst); continue; }
       if ((r.phase === "run" || r.phase === "guardian") && t > r.deadline) {
         r.phase = "late";
         for (const s of inside(inst)) sys(s, "Time's up! The rift still holds its loot, but this run won't unlock a new tier.");

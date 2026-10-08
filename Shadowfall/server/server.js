@@ -2400,7 +2400,7 @@ const bounties = createBounties({
 // Greater rifts (rift.js): timed tiers opened at the Rift Stone, with a leaderboard.
 const rifts = createRifts({
   store, DUNGEONS, dungeonGen, instances, closeInstance, nextInstanceId: () => nextInstanceId++, monsters, sessions, spawnMonster, makeElite, walkable, useGrid,
-  partyOf, partyMembers, partyKey, enterInstance, safeSend, sys, sendNear, broadcast, dropFor, rollChest: I.rollChest, heroClass, ledgerChanged,
+  partyOf, partyMembers, partyKey, enterInstance, leaveInstance, safeSend, sys, sendNear, broadcast, dropFor, rollChest: I.rollChest, heroClass, ledgerChanged,
   log, now, rand, randInt, dist, metrics: M.rifts,
 });
 

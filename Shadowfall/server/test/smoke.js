@@ -610,11 +610,17 @@ async function riftTests(a) {
   await sleep(400);
   assert.strictEqual(a.all("rift").at(-1).k, "won", "beating the guardian in time clears the rift");
   assert.ok(a.all("sys").some((m) => /Rift tier 1 cleared in .* Tier 2 is open to you/.test(m.msg)), "and opens the next tier");
-  assert.ok(a.all("drops").at(-1).drops.length >= 2, "with a chest's worth of loot");
-  a.ws.send(JSON.stringify({ t: "dleave" }));
-  await sleep(200);
+  const chest = a.all("drops").at(-1).drops;
+  assert.ok(chest.length >= 2, "with a chest's worth of loot");
+  assert.ok(a.all("rift").at(-1).c > 0, "a cleared rift starts to collapse");
+  await sleep(2600); // RIFT_COLLAPSE_S=2
   const back = a.all("dungeon").at(-1);
-  assert.ok(back.id === 0 && Math.abs(back.x - 149.5) < 0.1, "leaving a rift brings you back to the Rift Stone");
+  assert.ok(back.id === 0 && Math.abs(back.x - 149.5) < 0.1, "when it collapses it throws you back to the Rift Stone");
+  const moved = a.all("drops").at(-1).drops;
+  assert.ok(moved.length >= chest.length && moved.every((d) => Math.abs(d.x - 149.5) < 3 && d.z > 150), "with the loot you left in there, around you");
+  a.ws.send(JSON.stringify({ t: "iop", op: "pickup", id: moved[0].id }));
+  await sleep(200);
+  assert.ok(a.all("iok").some((m) => m.op === "pickup" && m.id === moved[0].id), "and you can pick it up there");
   a.ws.send(JSON.stringify({ t: "rinfo" }));
   await sleep(150);
   const info = a.all("rinfo").at(-1);
@@ -789,7 +795,7 @@ async function main() {
   if (db.url) console.log("Testing against PostgreSQL");
   writeLegacyCharacter("Oldtimer", "oldpass", { level: 7, gold: 99, look: "Mage", x: 144, z: 150 });
   const server = spawn(process.execPath, [path.join(__dirname, "..", "server.js")], {
-    env: { ...process.env, PORT: String(PORT), DATA_DIR, PUBLIC_DIR, ELITE_CHANCE: "0", INVASION_MINUTES: "0", INVASION_GATHER_S: "1", INVASION_SIEGE_RATE: "15", WORLD_BOSS_MINUTES: "0", WORLD_BOSS_SLAM_S: "1", ADMINS: "alice", METRICS_PORT: String(METRICS_PORT), DATABASE_URL: db.url },
+    env: { ...process.env, PORT: String(PORT), DATA_DIR, PUBLIC_DIR, ELITE_CHANCE: "0", INVASION_MINUTES: "0", INVASION_GATHER_S: "1", INVASION_SIEGE_RATE: "15", WORLD_BOSS_MINUTES: "0", WORLD_BOSS_SLAM_S: "1", RIFT_COLLAPSE_S: "2", ADMINS: "alice", METRICS_PORT: String(METRICS_PORT), DATABASE_URL: db.url },
     stdio: ["ignore", "pipe", "pipe"],
   });
   let serverLog = "";

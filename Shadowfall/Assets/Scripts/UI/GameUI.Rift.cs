@@ -53,12 +53,15 @@ namespace Shadowfall
             float x = VW - 330, y = y0;
             UISkin.Shadowed(new Rect(x, y, 300, 26), "Greater Rift  -  Tier " + Rift.Tier, UISkin.Heading, Rift.Color);
             y += 28;
-            string status = Rift.Phase == "guardian" ? "Slay the Rift Guardian!" : Rift.Phase == "won" ? "Cleared! Leave by the exit." : Rift.Progress + "%";
+            string status = Rift.Phase == "guardian" ? "Slay the Rift Guardian!" : Rift.Phase == "won" ? "Cleared!" : Rift.Progress + "%";
             UISkin.Bar(new Rect(x + 12, y + 2, 230, 13), Rift.Progress / 100f, "Purple", status, Rift.Color);
             y += 20;
             int t = Rift.SecondsLeft;
-            UISkin.Shadowed(new Rect(x + 12, y, 300, 20), Rift.Phase == "late" ? "Out of time: loot only" : Rift.Phase == "won" ? "" : (t / 60) + ":" + (t % 60).ToString("00") + " left",
-                UISkin.Small, t < 60 && Rift.Phase != "won" ? new Color(1f, 0.5f, 0.4f) : UISkin.Cream);
+            int c = Mathf.CeilToInt(Rift.CollapseIn);
+            UISkin.Shadowed(new Rect(x + 12, y, 300, 20), Rift.Phase == "late" ? "Out of time: loot only"
+                : Rift.Phase == "won" ? (c > 0 ? "Collapsing in " + c + " s: grab your loot (it comes with you)" : "")
+                : (t / 60) + ":" + (t % 60).ToString("00") + " left",
+                UISkin.Small, (t < 60 && Rift.Phase != "won") || c > 0 ? new Color(1f, 0.5f, 0.4f) : UISkin.Cream);
             y += 30;
             return y - y0;
         }
