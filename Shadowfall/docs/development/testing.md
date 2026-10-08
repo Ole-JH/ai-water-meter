@@ -85,10 +85,10 @@ frame rate of each scene as `fps:<scene>` steps (with the worst frame and how ma
 are). Run it against any server with the check script, e.g. `CHECK_URL='https://your.server/?tour=1' node check.js`.
 It registers one `check######` account there.
 
-After the walk, the check takes a **photo tour** (`PhotoTour.cs`): every monster, boss, NPC, hero class and mount lined
-up five at a time under studio light with their names in a caption (`models-*.png`; a model that failed to load is
-marked *MISSING MODEL*), and each walled town and Hollowmere's square from above (`town-*.png`). After a deploy,
-auto-deploy posts them to Discord after the deploy message, ten to a message.
+With `?sfcheck=1&photos=1` (by hand; the deploy check skips it to save minutes) the check also takes a **photo tour**
+(`PhotoTour.cs`) after the walk: every monster, boss, NPC, hero class and mount lined up five at a time under studio
+light with their names in a caption (`models-*.png`; a model that failed to load is marked *MISSING MODEL*), and each
+walled town and Hollowmere's square from above (`town-*.png`). Missing models are reported by every check anyway.
 
 `tools/layout/hollowmere_audit.py` checks Hollowmere's fixed placements (buildings, NPCs, props, festival decorations,
 villagers' spots) for overlaps and things in the streets, and draws a top-down map.

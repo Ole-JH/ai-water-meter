@@ -158,9 +158,10 @@ namespace Shadowfall
                 Report("tour");
                 yield return gameObject.AddComponent<PlaytestTour>().Run(Shot, Report);
             }
-            else
+            else if (Application.absoluteURL.Contains("photos=1"))
             {
-                // Every model lined up, and the towns from above, for judging how things look (PhotoTour.cs).
+                // Every model lined up, and the towns from above, for judging how things look (PhotoTour.cs). By hand
+                // only: the deploy check skips it (nobody looked at the pictures, and it took minutes).
                 Report("photos");
                 yield return gameObject.AddComponent<PhotoTour>().Run(Shot);
             }

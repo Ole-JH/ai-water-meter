@@ -8,7 +8,8 @@
 #   - only if that passes: the new build is copied into server/public and task up restarts the server.
 # If anything fails, the running server is left alone and that commit isn't retried; the next push tries again.
 # Runs from the Shadowfall folder. Log: .autodeploy/log, screenshots: .autodeploy/check/. With DISCORD_WEBHOOK_URL in
-# server/.env (the same one the alerts use) every deploy and failure is posted there, with the check's screenshots.
+# server/.env (the same one the alerts use) every deploy and failure is posted there (text only: the check's
+# screenshots stay in .autodeploy/check/ for a look by hand).
 set -u
 cd "$(dirname "$0")/.." || exit 1
 state=.autodeploy
@@ -25,22 +26,13 @@ flock -n 9 || exit 0
 
 log() { echo "$(date '+%Y-%m-%d %H:%M:%S') $*"; }
 
-# notify "message" [screenshot.png...]: a Discord message, with up to 10 images attached.
+# notify "message": a Discord message (text only).
 notify() {
   url="$(cd server && sh ../tools/port-of.sh DISCORD_WEBHOOK_URL "")"
   [ -n "$url" ] || return 0
   msg="$(printf '%s' "Shadowfall on $(hostname): $1" | tr '\n' ' ' | cut -c1-1900 | sed 's/\\/\\\\/g; s/"/\\"/g')"
-  shift
   printf '{"content":"%s"}' "$msg" > "$state/discord.json"
-  n=0; files=""
-  for f in "$@"; do
-    [ -f "$f" ] && [ $n -lt 10 ] || continue
-    files="$files -F files[$n]=@$f"; n=$((n + 1))
-  done
-  set -f # no globbing of files[0]=...
-  # shellcheck disable=SC2086
-  curl -fsS -m 30 -F "payload_json=<$state/discord.json" $files "$url" >/dev/null 2>&1 || true
-  set +f
+  curl -fsS -m 30 -H "Content-Type: application/json" --data "@$state/discord.json" "$url" >/dev/null 2>&1 || true
 }
 
 # The browser check's verdict, from its result.json: "stage: detail".
@@ -61,7 +53,6 @@ build_errors() {
   } | cut -c1-300 | tr '\n' ' ' | cut -c1-1400
 }
 
-shots() { ls "$state"/check/*.png 2>/dev/null | grep -E -- "$1" | head -n 10; }
 
 branch="${AUTODEPLOY_BRANCH:-$(git rev-parse --abbrev-ref HEAD)}"
 git fetch -q origin "$branch" || { log "git fetch failed"; exit 1; }
@@ -97,11 +88,10 @@ if ! git reset -q --keep "$target"; then
   exit 1
 fi
 
-give_up() { # why, notify-text, [screenshots...]
+give_up() { # why, notify-text
   log "$1"
   echo "$target" > "$state/failed"
-  msg="$2"; shift 2
-  notify "$msg" "$@"
+  notify "$2"
   exit 1
 }
 
@@ -126,9 +116,8 @@ if [ "${AUTODEPLOY_CHECK:-1}" != 0 ] && [ -f "server/$public/build.json" ]; then
   log "Browser check of server/$public..."
   if ! CHECK_PUBLIC=$public "$TASK" check:browser; then
     reason="$(check_reason)"
-    # shellcheck disable=SC2046
     give_up "Browser check failed for $short ($reason); not deployed, the server keeps running the previous version." \
-            "browser check failed for $short ($subject): $reason. Not deployed." $(shots 'fail|stuck')
+            "browser check failed for $short ($subject): $reason. Not deployed (screenshots in .autodeploy/check/)."
   fi
   log "Browser check passed: $(check_reason)"
 fi
@@ -147,16 +136,4 @@ if ! "$TASK" up; then
 fi
 rm -f "$state/failed"
 log "Deployed $short${build:+ (with a new client build)}."
-# shellcheck disable=SC2046
-notify "deployed $short: $subject${build:+ (new client build)}" $(shots 'well|waystone|mount')
-# The photo tour (every model lined up, the towns from above), ten pictures a message.
-if [ -n "$build" ]; then
-  photos="$(ls "$state"/check/*models-*.png "$state"/check/*town-*.png 2>/dev/null)"
-  part=1
-  while [ -n "$photos" ]; do
-    batch="$(echo "$photos" | head -n 10)"; photos="$(echo "$photos" | tail -n +11)"
-    # shellcheck disable=SC2086
-    notify "photo tour of $short, part $part" $batch
-    part=$((part + 1))
-  done
-fi
+notify "deployed $short: $subject${build:+ (new client build)}"

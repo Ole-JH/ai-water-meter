@@ -67,8 +67,8 @@ a time, so a long client build is never started twice.
 
 `task autodeploy:log` shows the log, `.autodeploy/check/` holds the last check's screenshots and `result.json`, and
 `task autodeploy:uninstall` turns it off. With `DISCORD_WEBHOOK_URL` in `server/.env` (the same one the
-[alerts](monitoring.md) use) each deploy is posted to Discord with the screenshots of the well and the waystone, and each
-failure with the reason and a screenshot of where it went wrong (a failed client build quotes the build's error lines; the
+[alerts](monitoring.md) use) each deploy is posted to Discord as a short text message, and each failure with the reason
+(text only; the screenshots stay in `.autodeploy/check/`; a failed client build quotes the build's error lines; the
 whole build output of the last build is in `.autodeploy/build.log`). To skip the browser check (not recommended), put
 `AUTODEPLOY_CHECK=0` in `.deploy.env`.
 
