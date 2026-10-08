@@ -369,6 +369,7 @@ namespace Shadowfall
             public Vector3? FaceAt;
             public string Party;   // an emote kept up while standing about: dance, cheer, clap, sit
             public float RaiseTo = -1f; // up a scaffold once there (the platform's height)
+            public float SeatY = -1f;   // sat on a bench or bale this high once there (a feast)
             GameObject load;           // a plank on the shoulder (Shuttle)
             public Vector3? OrbitAbout; // a ring dance: round and round this point (OrbitR away, OrbitSpeed radians a second)
             public float OrbitR = 3f, OrbitSpeed = 0.6f, OrbitAngle;
@@ -507,6 +508,14 @@ namespace Shadowfall
                 if (!string.IsNullOrEmpty(Party) && at >= path.Count)
                 {
                     if (FaceAt.HasValue) Factory.Face(transform, FaceAt.Value, dt * 4f);
+                    if (SeatY >= 0f)
+                    {
+                        // up onto the seat and settled there: no wandering off it
+                        var p = transform.position;
+                        if (Mathf.Abs(p.y - SeatY) > 0.001f) transform.position = new Vector3(p.x, Mathf.MoveTowards(p.y, SeatY, 2f * dt), p.z);
+                        if (view != null && !view.Emoting && Time.time >= nextParty) { nextParty = Time.time + 0.3f; view.Emote(EmoteDef.Get(Party)); }
+                        return;
+                    }
                     if (view != null && !view.Emoting && Time.time >= nextParty)
                     {
                         nextParty = Time.time + Random.Range(0.5f, 3f);

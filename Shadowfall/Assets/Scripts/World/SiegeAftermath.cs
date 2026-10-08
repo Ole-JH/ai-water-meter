@@ -198,29 +198,7 @@ namespace Shadowfall
             b.Root.transform.position = at;
             var t = b.Root.transform;
             var wood = new Color(0.55f, 0.38f, 0.22f);
-            var cloth = new Color(0.82f, 0.78f, 0.68f);
-            Factory.PrimAt(PrimitiveType.Cube, t, at + Vector3.up * 0.82f, new Vector3(6.4f, 0.1f, 1.3f), wood);
-            Factory.PrimAt(PrimitiveType.Cube, t, at + Vector3.up * 0.875f, new Vector3(6.2f, 0.02f, 1.1f), cloth); // the cloth
-            Factory.PrimAt(PrimitiveType.Cube, t, at + Vector3.up * 0.7f + Vector3.forward * 0.62f, new Vector3(6.2f, 0.3f, 0.02f), new Color(0.6f, 0.12f, 0.1f)); // a red skirt to the front
-            foreach (float x in new[] { -2.8f, 0f, 2.8f }) Factory.PrimAt(PrimitiveType.Cube, t, at + new Vector3(x, 0.4f, 0f), new Vector3(0.12f, 0.8f, 1.1f), wood * 0.8f);
-            foreach (float z in new[] { -1.15f, 1.15f }) // benches either side
-            {
-                Factory.PrimAt(PrimitiveType.Cube, t, at + new Vector3(0f, 0.45f, z), new Vector3(6f, 0.08f, 0.38f), wood * 0.9f);
-                foreach (float x in new[] { -2.6f, 0f, 2.6f }) Factory.PrimAt(PrimitiveType.Cube, t, at + new Vector3(x, 0.22f, z), new Vector3(0.1f, 0.44f, 0.3f), wood * 0.7f);
-            }
-            // the food: a roast in the middle, loaves, cheeses, fruit bowls, tankards and candles all along
-            Factory.PrimAt(PrimitiveType.Sphere, t, at + new Vector3(0f, 1f, 0f), new Vector3(0.7f, 0.3f, 0.45f), new Color(0.6f, 0.32f, 0.15f));
-            Factory.PrimAt(PrimitiveType.Cylinder, t, at + new Vector3(0f, 0.9f, 0f), new Vector3(0.9f, 0.02f, 0.9f), new Color(0.75f, 0.75f, 0.7f));
-            for (int k = 0; k < 14; k++)
-            {
-                float x = -2.9f + k * 0.45f + R(-0.08f, 0.08f), z = R(-0.35f, 0.35f);
-                if (Mathf.Abs(x) < 0.6f) continue;
-                int kind = k % 5;
-                var food = Factory.PrimAt(kind == 0 || kind == 3 ? PrimitiveType.Cylinder : PrimitiveType.Sphere, t, at + new Vector3(x, kind == 3 ? 1.0f : 0.95f, z),
-                    kind == 0 ? new Vector3(0.12f, 0.1f, 0.12f) : kind == 1 ? new Vector3(0.28f, 0.14f, 0.18f) : kind == 2 ? new Vector3(0.22f, 0.12f, 0.22f) : kind == 3 ? new Vector3(0.05f, 0.12f, 0.05f) : new Vector3(0.18f, 0.1f, 0.18f),
-                    kind == 0 ? new Color(0.65f, 0.55f, 0.35f) : kind == 1 ? new Color(0.78f, 0.5f, 0.24f) : kind == 2 ? new Color(0.95f, 0.8f, 0.35f) : kind == 3 ? new Color(0.95f, 0.92f, 0.8f) : new Color(0.75f, 0.2f, 0.2f));
-                if (kind == 3) PropFire.Add(t, food.transform.position + Vector3.up * 0.1f, new Color(1f, 0.75f, 0.35f), 0.08f, false); // a candle
-            }
+            FeastArt.Table(t, at, rng);
             var table = b.Root.AddComponent<FeastTable>();
             table.Init(town);
             // the bonfire, a little way off, and its light
@@ -245,7 +223,7 @@ namespace Shadowfall
                 Factory.PrimAt(PrimitiveType.Cube, t, fire + new Vector3(s2, 0.6f, 0f), new Vector3(0.08f, 1.2f, 0.08f), new Color(0.3f, 0.2f, 0.12f)).transform.rotation = Quaternion.Euler(0f, 0f, s2 > 0 ? -10f : 10f);
             }
             Factory.PrimAt(PrimitiveType.Cylinder, spit, spit.position, new Vector3(0.04f, 1.2f, 0.04f), new Color(0.4f, 0.4f, 0.42f)).transform.rotation = Quaternion.Euler(0f, 0f, 90f);
-            Factory.PrimAt(PrimitiveType.Sphere, spit, spit.position, new Vector3(0.9f, 0.5f, 0.55f), new Color(0.62f, 0.33f, 0.16f));
+            FeastArt.SpitBoar(spit);
             // bunting on poles round the square, lanterns, a cask of ale with a barkeep
             var flags = new[] { new Color(0.85f, 0.2f, 0.18f), new Color(0.95f, 0.8f, 0.25f), new Color(0.25f, 0.45f, 0.85f), new Color(0.3f, 0.7f, 0.35f) };
             var corners = new Vector3[4];
@@ -253,46 +231,53 @@ namespace Shadowfall
             {
                 var c = TownLife.Walkable(at + new Vector3(k < 2 ? -5.5f : 5.5f, 0f, k % 2 == 0 ? -4f : 5f));
                 corners[k] = c;
-                Factory.PrimAt(PrimitiveType.Cylinder, t, c + Vector3.up * 2f, new Vector3(0.1f, 2f, 0.1f), wood * 0.8f);
+                Factory.PrimAt(PrimitiveType.Cylinder, t, c + Vector3.up * 2f, new Vector3(0.16f, 2f, 0.16f), wood * 0.8f);
                 PropFire.Add(t, c + Vector3.up * 4.1f, new Color(1f, 0.75f, 0.35f), 0.25f, false); // a lantern on top
             }
-            foreach (var (p0, p1) in new[] { (corners[0], corners[3]), (corners[1], corners[2]), (corners[0], corners[1]), (corners[2], corners[3]) })
+            foreach (var (p0, p1) in new[] { (corners[0], corners[3]), (corners[1], corners[2]), (corners[0], corners[1]), (corners[2], corners[3]), (corners[0], corners[2]), (corners[1], corners[3]) })
+                FeastArt.Bunting(t, p0 + Vector3.up * 3.8f, p1 + Vector3.up * 3.8f, flags, Factory.FlatDistance(p0, p1) > 9.5f);
+            // braziers at the table's ends, hay bales by the fire to sit on
+            foreach (float x in new[] { -4.5f, 4.5f })
             {
-                var a0 = p0 + Vector3.up * 3.8f; var a1 = p1 + Vector3.up * 3.8f;
-                int n = Mathf.Max(4, Mathf.RoundToInt(Vector3.Distance(a0, a1) / 0.7f));
-                for (int k = 1; k < n; k++)
-                {
-                    float u = k / (float)n;
-                    var q = Vector3.Lerp(a0, a1, u) + Vector3.down * Mathf.Sin(u * Mathf.PI) * 0.7f;
-                    var flag = Factory.PrimAt(PrimitiveType.Cube, t, q + Vector3.down * 0.18f, new Vector3(0.28f, 0.34f, 0.02f), flags[k % flags.Length]);
-                    flag.transform.rotation = Quaternion.LookRotation(Vector3.Cross(Vector3.up, (a1 - a0).normalized)) * Quaternion.Euler(0f, 0f, 45f);
-                }
+                var br = TownLife.Walkable(at + new Vector3(x, 0f, -1.9f));
+                if (ArtLibrary.Spawn("Graveyard/fire-basket", t, br - at, 1.3f, ArtLibrary.Fit.Height, 0f, false) != null)
+                    PropFire.Add(t, br + Vector3.up * 1.25f, new Color(1f, 0.6f, 0.25f), 0.45f, false);
             }
-            var cask = TownLife.Walkable(at + new Vector3(4.6f, 0f, 0f));
+            var bales = new List<Vector3>();
+            foreach (float a2 in new[] { 130f, 230f })
+            {
+                var hb = TownLife.Walkable(fire + Quaternion.Euler(0f, a2, 0f) * Vector3.forward * 2.3f);
+                if (ArtLibrary.Spawn("Seasonal/hay-bale", t, hb - at, 0.55f, ArtLibrary.Fit.Height, a2, false) != null) bales.Add(hb);
+            }
+            var cask = TownLife.Walkable(at + new Vector3(5f, 0f, 1.6f));
             ArtLibrary.Spawn("Props/barrel_large", t, cask - at, 1.1f, ArtLibrary.Fit.Height, 0f, false);
             ArtLibrary.Spawn("Props/barrel_small_stack", t, cask - at + new Vector3(0.9f, 0f, 0.8f), 1f, ArtLibrary.Fit.Height, 30f, false);
             // the townsfolk: some sat at the benches, the rest dancing and cheering round the fire
             var life = SiegeLife.Get();
             string[] models = { "Characters/Keeper", "Characters/RogueHooded", "Characters/Mage", "Characters/Rogue", "Characters/Knight" };
-            for (int i = 0; i < 12; i++)
-            {
-                string model = models[(i + rng.Next(3)) % models.Length];
-                SiegeLife.Extra e;
-                if (i < 5)
+            // ten sat along the benches facing each other, two on the bales by the fire, the rest dancing and cheering round it
+            foreach (float z in new[] { -1f, 1f })
+                foreach (float x in FeastArt.SeatX)
                 {
-                    float z = i % 2 == 0 ? -1.2f : 1.2f;
-                    var seat = at + new Vector3(-2.4f + i * 1.2f + R(-0.2f, 0.2f), 0f, z);
-                    e = life.Person("Villager", model, seat, R(1.75f, 1.95f));
-                    e.FaceAt = at + new Vector3(seat.x - at.x, 0f, 0f);
+                    var seat = at + new Vector3(x, 0f, z * FeastArt.SeatZ);
+                    var e = life.Person("Villager", models[rng.Next(models.Length)], seat, R(1.75f, 1.95f));
+                    e.FaceAt = at + new Vector3(x, 0f, 0f);
                     e.Party = "sit";
+                    e.SeatY = FeastArt.BenchY;
+                    b.People.Add(e);
                 }
-                else
-                {
-                    var spot = TownLife.Walkable(fire + Quaternion.Euler(0f, i * 52f + R(-10f, 10f), 0f) * Vector3.forward * R(2.6f, 4f));
-                    e = life.Person("Villager", model, spot, i == 8 ? 1.2f : R(1.75f, 1.95f));
-                    e.FaceAt = fire;
-                    e.Party = rng.NextDouble() < 0.45 ? "dance" : rng.NextDouble() < 0.5 ? "cheer" : "clap";
-                }
+            foreach (var hb in bales)
+            {
+                var e = life.Person("Villager", models[rng.Next(models.Length)], hb, R(1.75f, 1.9f));
+                e.FaceAt = fire; e.Party = "sit"; e.SeatY = 0.5f;
+                b.People.Add(e);
+            }
+            for (int i = 0; i < 7; i++)
+            {
+                var spot = TownLife.Walkable(fire + Quaternion.Euler(0f, i * 52f + R(-10f, 10f), 0f) * Vector3.forward * R(3.6f, 4.6f));
+                var e = life.Person("Villager", models[(i + rng.Next(3)) % models.Length], spot, i == 3 ? 1.2f : R(1.75f, 1.95f));
+                e.FaceAt = fire;
+                e.Party = rng.NextDouble() < 0.45 ? "dance" : rng.NextDouble() < 0.5 ? "cheer" : "clap";
                 b.People.Add(e);
             }
             // the barkeep at the cask, a minstrel, and a ring of dancers going round the fire
@@ -345,7 +330,7 @@ namespace Shadowfall
                     nextToast = Time.time + Random.Range(18f, 30f);
                     var who = people[Random.Range(0, people.Count)];
                     if (who != null) Speech.Say(who.transform, 2.4f, toasts[Random.Range(0, toasts.Length)]);
-                    foreach (var e in people) if (e != null && Random.value < 0.75f) e.Cheer();
+                    foreach (var e in people) if (e != null && e.SeatY < 0f && Random.value < 0.75f) e.Cheer();
                     Sfx.Play("coins", fire + Vector3.up, 0.25f, 0.2f, 30f); // cups clinking
                 }
                 if (minstrel != null && Time.time >= nextSong)
