@@ -29,6 +29,7 @@ namespace Shadowfall
                 {
                     "Small screens: windows always fit (the interface shrinks to the screen instead of running off it, even at UI scale 150%); on phones and tablets it's drawn bigger for fingers, and asks to be held sideways.",
                     "Footprints: heroes and monsters leave prints in sand, snow and mud after rain (boot prints, paw prints, a giant's broad feet) that fade after half a minute; monsters kick up dust on the sand too.",
+                    "The militia's ladders lean flat against the wall now, rungs along it (they stood sideways).",
                     "Bosses in a fight get a wide health bar across the top of the screen, with their phases marked: a gong and a flash as each one passes. World bosses show their armour plates, and their rage.",
                 },
             },

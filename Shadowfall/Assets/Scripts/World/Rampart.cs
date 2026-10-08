@@ -465,7 +465,8 @@ namespace Shadowfall
                 Factory.Prim(PrimitiveType.Cube, go.transform, new Vector3(x, len * 0.5f, 0f), new Vector3(0.09f, len, 0.09f), wood * 0.85f);
             for (float y = 0.3f; y < len - 0.1f; y += 0.38f)
                 Factory.Prim(PrimitiveType.Cube, go.transform, new Vector3(0f, y, 0f), new Vector3(0.52f, 0.06f, 0.07f), wood);
-            l.leaning = Quaternion.LookRotation(s.Axis, along.normalized);
+            // the rungs run along the wall (local x = the wall's axis) and the rails climb up to the walkway
+            l.leaning = Quaternion.LookRotation(Vector3.Cross(s.Axis, along.normalized), along.normalized);
             l.carried = l.leaning;
             go.transform.position = walk.Foot;
             go.transform.rotation = l.leaning;
@@ -484,7 +485,7 @@ namespace Shadowfall
         public void Raise(bool now)
         {
             transform.position = Walk.Foot;
-            carried = Quaternion.LookRotation(Walk.Side.Axis, -Walk.Side.Out); // lying on the ground, pointing into town
+            carried = Quaternion.LookRotation(Vector3.Cross(Walk.Side.Axis, -Walk.Side.Out), -Walk.Side.Out); // lying on the ground, pointing into town, rungs along the wall
             if (now) { transform.rotation = leaning; raiseT = -1f; Ready(); return; }
             raiseT = 0f;
             transform.rotation = carried;
