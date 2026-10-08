@@ -77,6 +77,7 @@ namespace Shadowfall
         public string[] comp;
         public NetDrop[] drops;
         public string op, item, target;
+        public Item it;                // "chat": a linked item
         public int rarity, restock;
         public bool burnt;
         public int[] slots;            // "tmine": the bag slots of our trade offer
@@ -140,7 +141,8 @@ namespace Shadowfall
     [Serializable] public class SlowMsg { public string t = "slow"; public int mid; public float dur; }
     [Serializable] public class StunMsg { public string t = "stun"; public int mid; public float dur; }
     [Serializable] public class VanishMsg { public string t = "vanish"; public float dur; }
-    [Serializable] public class ChatMsg { public string t = "chat"; public string msg; }
+    /// <summary>A chat line; li / le link an item from one of our bag slots / worn slots (-1: none; the server attaches its copy).</summary>
+    [Serializable] public class ChatMsg { public string t = "chat"; public string msg; public int li = -1, le = -1; }
     [Serializable] public class EmoteMsg { public string t = "emote"; public string e; }
     /// <summary>We earned achievement <c>id</c>: the server tells the party and players nearby.</summary>
     [Serializable] public class AchMsg { public string t = "ach"; public string id; }

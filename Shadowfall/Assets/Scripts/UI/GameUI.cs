@@ -65,7 +65,7 @@ namespace Shadowfall
 
         // ---- feedback
         struct FloatText { public Vector3 Pos; public string Text; public Color Color; public float Time, Size, Drift; public bool Shake; }
-        struct LogLine { public string Text; public Color Color; public float Time; }
+        struct LogLine { public string Text, Stamp, Who; public Color Color; public float Time; public Item Item; }
         static readonly List<FloatText> floats = new List<FloatText>();
         static readonly List<LogLine> log = new List<LogLine>();
         static string bannerText;
@@ -121,9 +121,12 @@ namespace Shadowfall
             if (floats.Count > 80) floats.RemoveAt(0);
         }
 
-        public static void Log(string text, Color color)
+        public static void Log(string text, Color color) => Log(text, color, null, null);
+
+        /// <summary>A chat line: <paramref name="who"/> said it (their name in it is clickable), <paramref name="item"/> is linked in it.</summary>
+        public static void Log(string text, Color color, string who, Item item)
         {
-            log.Add(new LogLine { Text = text, Color = color, Time = Time.time });
+            log.Add(new LogLine { Text = text, Color = color, Time = Time.time, Stamp = System.DateTime.Now.ToString("HH:mm"), Who = who, Item = item });
             if (log.Count > 60) log.RemoveAt(0);
         }
 
@@ -1639,7 +1642,14 @@ namespace Shadowfall
                 var emote = EmoteDef.FromChat(text);
                 if (emote != null) Player.I?.DoEmote(emote);
                 else if (text == "/e" || text == "/emote" || text == "/emotes") ListEmotes();
-                else NetClient.I.SendChat(text);
+                else
+                {
+                    // the link goes along only while its [name] is still in the line
+                    bool linked = chatLinkName != null && text.Contains("[" + chatLinkName + "]");
+                    NetClient.I.SendChat(text, linked ? chatLinkBag : -1, linked ? chatLinkWorn : -1);
+                }
+                chatLinkBag = chatLinkWorn = -1;
+                chatLinkName = null;
                 chatText = "";
                 ChatOpen = false;
             }
@@ -1664,6 +1674,32 @@ namespace Shadowfall
         float OrbsLeft => VW / 2f - 405f;
         float OrbsRight => VW / 2f + 405f;
 
+        /// <summary>A name clicked in the chat: their player menu if they're near, else a whisper to them.</summary>
+        void ChatNameClicked(string who)
+        {
+            foreach (var rp in RemotePlayer.ById.Values)
+                if (rp != null && rp.Name == who) { menuPlayer = rp; menuPos = Event.current.mousePosition; return; }
+            ChatOpen = true;
+            chatText = "/w " + who + " ";
+            Sfx.Play2D("ui_click", 0.3f);
+        }
+
+        // ---- an item linked into the chat line being typed (Shift+click it in the bags or on the character)
+        int chatLinkBag = -1, chatLinkWorn = -1;
+        string chatLinkName;
+
+        /// <summary>Puts [Item Name] into the chat line and remembers which slot it is, for the server to attach.</summary>
+        public void LinkItemInChat(Item item, int bagSlot, int wornSlot)
+        {
+            if (item == null) return;
+            if (!ChatOpen) ChatOpen = true;
+            chatLinkBag = bagSlot;
+            chatLinkWorn = wornSlot;
+            chatLinkName = item.Name;
+            chatText = (chatText.Length > 0 && !chatText.EndsWith(" ") ? chatText + " " : chatText) + "[" + item.Name + "] ";
+            Sfx.Play2D("ui_click", 0.3f, 1.2f);
+        }
+
         void DrawLog(bool inWorld)
         {
             float w = 400, lines = ChatOpen ? 14 : 8, lh = 20;
@@ -1671,12 +1707,15 @@ namespace Shadowfall
             if (inWorld && x + w + 8 > OrbsLeft) bottom = VH - 200; // narrow screen: sit above the orbs
             float y = bottom - lines * lh;
             var area = new Rect(x - 8, y - 8, w + 16, lines * lh + 16);
-            if (ChatOpen || (inWorld && area.Contains(Event.current.mousePosition)))
+            bool live = ChatOpen || (inWorld && area.Contains(Event.current.mousePosition)); // names and links answer the mouse
+            if (live)
             {
                 GUI.color = new Color(1, 1, 1, 0.9f);
                 UISkin.Box(area, UISkin.Inset);
                 GUI.color = Color.white;
+                if (inWorld) Block(area);
             }
+            var stampStyle = UISkin.V(UISkin.Small, fontSize: 11);
             int start = Mathf.Max(0, log.Count - (int)lines);
             for (int i = start; i < log.Count; i++)
             {
@@ -1686,7 +1725,49 @@ namespace Shadowfall
                 if (alpha <= 0f) continue;
                 var c = l.Color;
                 c.a = alpha;
-                UISkin.Shadowed(new Rect(x, y + (i - start) * lh, w, lh), l.Text, UISkin.Small, c);
+                float ly = y + (i - start) * lh;
+                // the time, dim, in front
+                float sx = x;
+                if (!string.IsNullOrEmpty(l.Stamp))
+                {
+                    UISkin.Shadowed(new Rect(x, ly + 1, 44, lh), l.Stamp, stampStyle, new Color(0.6f, 0.56f, 0.5f, alpha * 0.8f));
+                    sx = x + 40;
+                }
+                var row = new Rect(sx, ly, w - (sx - x), lh);
+                // a linked item: its name in the line gets a band of its colour, and shows the item when pointed at
+                if (l.Item != null)
+                {
+                    string token = "[" + l.Item.Name + "]";
+                    int at = l.Text.IndexOf(token, System.StringComparison.Ordinal);
+                    float tx = at >= 0 ? UISkin.Small.CalcSize(new GUIContent(l.Text.Substring(0, at))).x : 0f;
+                    float tw = UISkin.Small.CalcSize(new GUIContent(at >= 0 ? token : l.Text)).x;
+                    var band = new Rect(row.x + tx - 2, ly + 2, tw + 4, lh - 3);
+                    var ic = l.Item.NameColor;
+                    GUI.color = new Color(ic.r, ic.g, ic.b, 0.28f * alpha);
+                    GUI.DrawTexture(band, UISkin.White);
+                    GUI.color = Color.white;
+                    if (live && band.Contains(Event.current.mousePosition) && Player.I != null) ItemTooltip(l.Item, Player.I, l.Who != null ? "Linked by " + l.Who : "Linked");
+                }
+                UISkin.Shadowed(row, l.Text, UISkin.Small, c);
+                // the speaker's name: click for the player menu (whisper, invite, trade), or a whisper if they're far
+                if (live && inWorld && !string.IsNullOrEmpty(l.Who))
+                {
+                    int at = l.Text.IndexOf(l.Who, System.StringComparison.Ordinal);
+                    if (at >= 0)
+                    {
+                        float nx = UISkin.Small.CalcSize(new GUIContent(l.Text.Substring(0, at))).x;
+                        float nw = UISkin.Small.CalcSize(new GUIContent(l.Who)).x;
+                        var nr = new Rect(row.x + nx, ly, nw, lh);
+                        if (nr.Contains(Event.current.mousePosition))
+                        {
+                            GUI.color = new Color(c.r, c.g, c.b, 0.9f);
+                            GUI.DrawTexture(new Rect(nr.x, nr.yMax - 3, nr.width, 1), UISkin.White);
+                            GUI.color = Color.white;
+                            tooltip = "<b>" + l.Who + "</b>\nClick: whisper, invite, trade";
+                        }
+                        if (ClickedIn(nr) >= 0) ChatNameClicked(l.Who);
+                    }
+                }
             }
 
             if (inWorld && ChatOpen)
@@ -1832,6 +1913,7 @@ namespace Shadowfall
 
         void LeftClickBag(Player p, int i, Item item)
         {
+            if (ChatOpen && Event.current.shift) { LinkItemInChat(item, i, -1); return; } // Shift+click with the chat open: link it
             if (socketGem >= 0 && item.Kind == ItemKind.Equipment) { p.SocketGem(socketGem, item); socketGem = -1; }
             else if (item.Kind == ItemKind.Gem)
             {
@@ -2060,7 +2142,8 @@ namespace Shadowfall
             if (item == null && r.Contains(Event.current.mousePosition))
                 tooltip = "<b>" + Item.SlotName(slot) + "</b>\n<color=#998877>Empty</color>";
             if (item != null && item.Sockets > 0) DrawSocketPips(r, item);
-            if (item != null && ClickedIn(r) == 0)
+            if (item != null && ChatOpen && Event.current.shift && ClickedIn(r) == 0) { LinkItemInChat(item, -1, (int)slot); }
+            else if (item != null && ClickedIn(r) == 0)
             {
                 if (socketGem >= 0) { p.SocketGem(socketGem, item); socketGem = -1; p.RecalculateStats(); }
                 else p.Unequip(slot);

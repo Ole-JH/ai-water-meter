@@ -49,6 +49,8 @@ Every time you enter the world the camera starts in the classic view.
 | ++enter++ or ++slash++ | Chat. `/p` party, `/w name` whisper, `/r` reply, `/invite name`, `/leave`, `/who` |
 | ++esc++ | Close the open windows; with nothing open, the **game menu** (also the cog button at the bottom right): Resume, Settings, How to Play, What's New, Account, Character Select, Log Out (and Admin for admins) |
 | ++arrow-up++ / ++arrow-down++ in chat | Recall the messages you sent before |
+| ++shift++ + click an item (bags or worn) with the chat open | Link it in your message: everyone sees `[Item Name]` in its colour and can point at it for the full tooltip |
+| Click a name in the chat | Their player menu (whisper, invite, trade) if they're near, otherwise starts a whisper to them. Every line shows the time it came in |
 
 ## Inventory
 

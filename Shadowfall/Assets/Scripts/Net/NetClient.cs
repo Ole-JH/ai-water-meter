@@ -254,12 +254,12 @@ namespace Shadowfall
             GameUI.Log(string.Format(e.Other, m.name), Player.EmoteColor);
         }
 
-        public void SendChat(string text)
+        public void SendChat(string text, int linkBag = -1, int linkWorn = -1)
         {
             text = (text ?? "").Trim();
             if (text.Length == 0 || State != ConnState.InWorld) return;
             if (text.Length > 200) text = text.Substring(0, 200);
-            Send(new ChatMsg { msg = text });
+            Send(new ChatMsg { msg = text, li = linkBag, le = linkWorn });
         }
 
         // ---- party
@@ -657,24 +657,26 @@ namespace Shadowfall
 
         void HandleChat(NetMsg m)
         {
+            var linked = m.it != null && !string.IsNullOrEmpty(m.it.Name) ? m.it : null;
+            string who = m.name == Player.I?.DisplayName ? null : m.name; // our own name isn't a link
             switch (m.ch)
             {
                 case "p":
-                    GameUI.Log("[Party] " + m.name + ": " + m.msg, PartyColor);
+                    GameUI.Log("[Party] " + m.name + ": " + m.msg, PartyColor, who, linked);
                     Bubble(m.id, m.msg);
                     break;
                 case "w":
-                    GameUI.Log(m.name + " whispers: " + m.msg, WhisperColor);
+                    GameUI.Log(m.name + " whispers: " + m.msg, WhisperColor, who, linked);
                     GameUI.I?.SetReplyTarget(m.name);
                     break;
                 case "wto":
-                    GameUI.Log("To " + m.name + ": " + m.msg, WhisperColor);
+                    GameUI.Log("To " + m.name + ": " + m.msg, WhisperColor, who, linked);
                     break;
                 case "g":
-                    GameUI.Log("[" + (Guild.Current != null ? Guild.Current.tag : "Guild") + "] " + m.name + ": " + m.msg, Guild.Color);
+                    GameUI.Log("[" + (Guild.Current != null ? Guild.Current.tag : "Guild") + "] " + m.name + ": " + m.msg, Guild.Color, who, linked);
                     break;
                 default:
-                    GameUI.Log("[" + m.name + "]: " + m.msg, m.id == MyId ? new Color(0.85f, 0.85f, 1f) : Color.white);
+                    GameUI.Log("[" + m.name + "]: " + m.msg, m.id == MyId ? new Color(0.85f, 0.85f, 1f) : Color.white, m.id == MyId ? null : who, linked);
                     Bubble(m.id, m.msg);
                     break;
             }
