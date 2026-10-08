@@ -182,7 +182,8 @@ namespace Shadowfall
             builtFor = null;
             var p = Player.I;
             if (p != null && p.OnWall != null) p.LeaveWall(); // the walkway is gone
-            if (repair && gate != null && !Sack.Burns(gate.Town)) gate.Repair(); // a sacked town's gate lies broken while it burns
+            // a sacked town's gate lies broken while it burns, and a battered one stays so until the carpenters are done
+            if (repair && gate != null && !Sack.Burns(gate.Town) && !SiegeAftermath.Repairing(gate.Town)) gate.Repair();
         }
 
         /// <summary>The two ladders behind the gate, once per siege.</summary>

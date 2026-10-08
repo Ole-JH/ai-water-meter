@@ -45,6 +45,10 @@ namespace Shadowfall
 
         /// <summary>Captives waiting to be freed (the tracker shows them), and until when (Time.time).</summary>
         public static NetAfterSpot Captives;
+        static readonly Dictionary<string, float> repairsUntil = new Dictionary<string, float>();
+        /// <summary>Carpenters are still at work on this town's gate (it stays battered until they're done: Rampart).</summary>
+        public static bool Repairing(string town) => town != null && repairsUntil.TryGetValue(town, out var u) && Time.time < u;
+
         /// <summary>A town feasting its defenders now (the criers cry it), or null.</summary>
         public static string FeastTown;
         public static float CaptivesUntil;
@@ -55,6 +59,8 @@ namespace Shadowfall
             Get().nextCheck = 0f;
             Captives = a != null && a.cp != null && a.cp.Length > 0 ? a.cp[0] : null;
             FeastTown = a != null && a.fe != null && a.fe.Length > 0 ? a.fe[0].k : null;
+            repairsUntil.Clear();
+            if (a != null && a.rp != null) foreach (var r in a.rp) if (r != null && r.left > 0) repairsUntil[r.k] = Time.time + r.left;
             if (Captives != null) CaptivesUntil = Time.time + Captives.left;
         }
 

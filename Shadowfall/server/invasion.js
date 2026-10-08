@@ -52,7 +52,7 @@ const WARLORD_TAUNTS = ["Your gate is kindling, your walls are sand!", "I have b
 // After a siege. Won: a feast in the town square (FEAST_S; heroes who join it get the Heroes' Feast, see the client) and
 // carpenters at the gate. Won or lost: graves outside the wall for the guards who fell. Lost: the raiders drag
 // townsfolk off to their camp; free them (kill their captors) within CAPTIVE_S and the fires burn half as long again.
-const FEAST_S = Number(process.env.INVASION_FEAST_S ?? 300), REPAIR_S = 300, GRAVES_S = 2 * 3600;
+const FEAST_S = Number(process.env.INVASION_FEAST_S ?? 300), REPAIR_S = 180, GRAVES_S = 2 * 3600;
 // The feast's table in the square: every hero may eat from it once, for FEAST_BUFF_S of +FEAST_XP experience
 const FEAST_BUFF_S = 15 * 60, FEAST_XP = 1.25;
 const CAPTIVE_S = Number(process.env.INVASION_CAPTIVE_S ?? 600);
@@ -144,6 +144,12 @@ module.exports = function createInvasions(ctx) {
     for (const s of sessions.values()) if (s.inWorld) safeSend(s, data);
   }
   const captorsLeft = () => { let n = 0; if (captives) for (const id of captives.ids) if (monsters.has(id)) n++; return n; };
+
+  /** The fires of a sack are out: carpenters put up scaffolding at the broken gate and build it anew. */
+  function mend(k) {
+    repairs.set(k.town.name, { town: k.town, gate: k.gate, until: now() + REPAIR_S });
+    sendAfter();
+  }
 
   /** The raiders of a lost siege drag townsfolk off to their camp, guarded. */
   function takeCaptives(i) {
@@ -644,7 +650,7 @@ module.exports = function createInvasions(ctx) {
       log(`Invasion of ${inv.town.name} succeeded`);
       sack(inv.town, inv.gate);
       record(inv.town.name, "f", inv.gate.name, null);
-      repairs.set(inv.town.name, { town: inv.town, gate: inv.gate, until: now() + SACK_S + REPAIR_S });
+      // (the carpenters come to the broken gate once the fires are out: see mend())
       if (CAPTIVE_S > 0) takeCaptives(inv);
     }
     if (inv.fallen) graves.push({ town: inv.town, gate: inv.gate, n: Math.min(12, inv.fallen), seed: inv.id, until: now() + GRAVES_S });
@@ -675,7 +681,7 @@ module.exports = function createInvasions(ctx) {
     const dt = lastTick ? Math.min(1, t - lastTick) : 0;
     lastTick = t;
     let burntOut = false;
-    for (const [name, k] of sacks) if (t >= k.until) { sacks.delete(name); burntOut = true; broadcast({ t: "sys", msg: `The fires in ${name} are out. Its merchants are back at their stalls.` }); }
+    for (const [name, k] of sacks) if (t >= k.until) { sacks.delete(name); burntOut = true; mend(k); broadcast({ t: "sys", msg: `The fires in ${name} are out. Its merchants are back at their stalls; carpenters set to work on the gate.` }); }
     if (burntOut) sendSacks();
     updateAftermath(t);
     if (!inv) {
@@ -901,6 +907,7 @@ module.exports = function createInvasions(ctx) {
       k.helpers.set(who, (k.helpers.get(who) || 0) + 1);
       if (k.until > now()) { sendSacks(); return false; }
       sacks.delete(k.town.name);
+      mend(k);
       const top = [...k.helpers.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5).map(([n]) => n);
       broadcast({ t: "sys", msg: `The fires in ${k.town.name} are out early, thanks to ${top.join(", ")}${k.helpers.size > top.length ? " and others" : ""}. Its merchants are back at their stalls.` });
       sendSacks();
