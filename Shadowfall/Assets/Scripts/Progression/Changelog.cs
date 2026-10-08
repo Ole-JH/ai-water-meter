@@ -24,6 +24,17 @@ namespace Shadowfall
         {
             new Entry
             {
+                Id = 51, Date = "2026-10-08", Title = "A livelier screen",
+                Items = new[]
+                {
+                    "The health and mana orbs slosh when they change: a big hit or a potion sets the liquid swaying.",
+                    "A shimmer runs along the experience bar whenever experience comes in.",
+                    "Quest counts pop as they tick up, and a finished objective is struck out before \"Return to\" takes its place.",
+                    "Monster health bars fade with distance instead of popping in and out.",
+                },
+            },
+            new Entry
+            {
                 Id = 50, Date = "2026-10-08", Title = "A death worth remembering",
                 Items = new[]
                 {

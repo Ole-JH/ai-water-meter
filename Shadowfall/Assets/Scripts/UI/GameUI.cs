@@ -539,6 +539,7 @@ namespace Shadowfall
             Vector2 m = GameInput.MousePosition;
             RemotePlayer best = null;
             float bestDepth = float.MaxValue;
+            plateAlpha = 1f;
             foreach (var rp in RemotePlayer.ById.Values)
             {
                 if (rp == null) continue;
@@ -606,20 +607,25 @@ namespace Shadowfall
             return false;
         }
 
+        float plateAlpha = 1f;
+
         void Plate(Rect r, float frac, Color c, float chip = 0f)
         {
-            GUI.color = new Color(0, 0, 0, 0.8f);
+            c.a *= plateAlpha;
+            GUI.color = new Color(0, 0, 0, 0.8f * plateAlpha);
             GUI.DrawTexture(new Rect(r.x - 1, r.y - 1, r.width + 2, r.height + 2), UISkin.White);
-            GUI.color = Factory.Shade(c, 0.3f);
+            var back = Factory.Shade(c, 0.3f);
+            back.a = c.a;
+            GUI.color = back;
             GUI.DrawTexture(r, UISkin.White);
             if (chip > frac)
             {
-                GUI.color = new Color(1f, 0.95f, 0.85f, 0.9f); // the chip: what the last hits took
+                GUI.color = new Color(1f, 0.95f, 0.85f, 0.9f * plateAlpha); // the chip: what the last hits took
                 GUI.DrawTexture(new Rect(r.x, r.y, r.width * Mathf.Clamp01(chip), r.height), UISkin.White);
             }
             GUI.color = c;
             GUI.DrawTexture(new Rect(r.x, r.y, r.width * Mathf.Clamp01(frac), r.height), UISkin.White);
-            GUI.color = new Color(1, 1, 1, 0.25f);
+            GUI.color = new Color(1, 1, 1, 0.25f * plateAlpha);
             GUI.DrawTexture(new Rect(r.x, r.y, r.width * Mathf.Clamp01(frac), r.height * 0.4f), UISkin.White);
             GUI.color = Color.white;
         }
@@ -636,6 +642,8 @@ namespace Shadowfall
                 bool focus = e == hovered || e == p.AttackTarget || e.Def.Boss || e.Elite;
                 bool hurt = e.Health < e.MaxHealth;
                 if (!focus && !hurt) continue;
+                // far ones fade out rather than pop (they vanish at 32 m)
+                plateAlpha = Mathf.Clamp01((32f - Factory.FlatDistance(e.transform.position, p.transform.position)) / 8f);
                 float bw = e.Def.Boss ? 120 : e.Elite ? 96 : 64;
                 Plate(new Rect(g.x - bw / 2, g.y, bw, 7), e.Health / e.MaxHealth, e.Shielded ? new Color(0.4f, 0.8f, 1f) : new Color(0.85f, 0.12f, 0.1f), e.ChipHealth / e.MaxHealth);
                 if (focus)
@@ -898,13 +906,27 @@ namespace Shadowfall
             if (p.RecallProgress >= 0f)
                 UISkin.Bar(new Rect(VW / 2 - 140, y0 - 96, 280, 18), p.RecallProgress, "Blue", "Recalling...", new Color(0.4f, 0.6f, 1f));
 
-            // XP bar inside the action bar frame
+            // XP bar inside the action bar frame (a shimmer runs along it whenever experience comes in)
+            int xpNow = p.Level >= ParagonBoard.MaxLevel ? p.Paragon.Xp + p.Paragon.Level * 100000 : p.Xp + p.Level * 100000;
+            if (xpNow != lastXpSeen) { if (lastXpSeen >= 0) xpShimmerAt = Time.unscaledTime; lastXpSeen = xpNow; }
+            var xpRect = new Rect(x0, y0 + slot + 10, barW - 24, 16);
             if (p.Level >= ParagonBoard.MaxLevel)
                 UISkin.Bar(new Rect(x0, y0 + slot + 10, barW - 24, 16), (float)p.Paragon.Xp / p.Paragon.XpToNext, "Blue",
                     "Level " + p.Level + "  -  Paragon " + p.Paragon.Level + "   " + p.Paragon.Xp + " / " + p.Paragon.XpToNext + " XP", new Color(0.35f, 0.6f, 0.95f));
             else
                 UISkin.Bar(new Rect(x0, y0 + slot + 10, barW - 24, 16), (float)p.Xp / p.XpToNext, "Purple",
                     "Level " + p.Level + "   " + p.Xp + " / " + p.XpToNext + " XP", new Color(0.6f, 0.35f, 0.9f));
+            float shimmer = (Time.unscaledTime - xpShimmerAt) / 0.7f;
+            if (shimmer < 1f)
+            {
+                float sx = xpRect.x + (xpRect.width + 60f) * shimmer - 60f;
+                for (int i = 0; i < 6; i++)
+                {
+                    GUI.color = new Color(1f, 1f, 1f, 0.07f * (6 - Mathf.Abs(i - 3) * 2) * (1f - shimmer * 0.5f));
+                    GUI.DrawTexture(new Rect(Mathf.Clamp(sx + i * 10f, xpRect.x, xpRect.xMax), xpRect.y, Mathf.Max(0f, Mathf.Min(10f, xpRect.xMax - (sx + i * 10f))), xpRect.height), UISkin.White);
+                }
+                GUI.color = Color.white;
+            }
 
             // Gathering progress
             if (p.GatherNode != null)
@@ -914,9 +936,26 @@ namespace Shadowfall
             }
         }
 
+        // The orbs' liquid: it follows the value on a spring, so a big hit or a potion sloshes it up and down.
+        readonly Dictionary<float, Vector2> orbLevel = new Dictionary<float, Vector2>(); // x -> (shown, velocity)
+
+        float Slosh(float key, float frac)
+        {
+            if (!orbLevel.TryGetValue(key, out var s)) s = new Vector2(frac, 0f);
+            if (Event.current.type == EventType.Repaint)
+            {
+                float dt = Mathf.Min(0.05f, Time.unscaledDeltaTime);
+                s.y += (frac - s.x) * 140f * dt;
+                s.y *= Mathf.Exp(-7f * dt);
+                s.x += s.y * dt;
+                orbLevel[key] = s;
+            }
+            return Mathf.Clamp01(s.x);
+        }
+
         void DrawOrb(Rect r, float frac, Color color, string text)
         {
-            frac = Mathf.Clamp01(frac);
+            frac = Slosh(r.x, Mathf.Clamp01(frac));
             var big = new Rect(r.x - 14, r.y - 14, r.width + 28, r.height + 28);
             if (UISkin.Orb(big, frac, color))
             {
@@ -1249,6 +1288,11 @@ namespace Shadowfall
             return y - y0 + 10;
         }
 
+        struct QuestTick { public int Progress; public bool Ready; public float At, ReadyAt; }
+        readonly Dictionary<string, QuestTick> questTicks = new Dictionary<string, QuestTick>();
+        int lastXpSeen = -1;
+        float xpShimmerAt = -10f;
+
         void DrawQuestTracker(Player p)
         {
             float top = DrawInvasionTracker();
@@ -1262,11 +1306,29 @@ namespace Shadowfall
             foreach (var q in p.Quests.Active)
             {
                 bool ready = q.IsReady(p);
+                int prog = q.Progress(p);
+                // a tick pops the count; finishing it strikes the objective out before "Return to" takes its place
+                if (!questTicks.TryGetValue(q.Def.Id, out var tk)) tk = new QuestTick { Progress = prog, Ready = ready, At = -10f, ReadyAt = -10f };
+                if (prog != tk.Progress) { tk.Progress = prog; tk.At = Time.unscaledTime; }
+                if (ready && !tk.Ready) { tk.ReadyAt = Time.unscaledTime; Sfx.Play2D("ui_confirm", 0.4f, 1.2f); }
+                tk.Ready = ready;
+                questTicks[q.Def.Id] = tk;
                 UISkin.Shadowed(new Rect(x, y, 300, 22), q.Def.Title, UISkin.Label, new Color(1f, 0.85f, 0.3f));
                 y += 22;
                 string obj = q.Def.Type == QuestType.Kill ? q.Def.Target + " slain" : q.Def.Target;
-                UISkin.Shadowed(new Rect(x + 12, y, 290, 20), ready ? "Return to " + GiverOf(q.Def) : obj + ":  " + q.Progress(p) + " / " + q.Def.Count,
-                    UISkin.Small, ready ? new Color(0.55f, 1f, 0.55f) : UISkin.Cream);
+                float sinceReady = Time.unscaledTime - tk.ReadyAt, sinceTick = Time.unscaledTime - tk.At;
+                if (ready && sinceReady < 1.2f)
+                {
+                    float k = sinceReady / 1.2f;
+                    var c = Color.Lerp(new Color(0.55f, 1f, 0.55f), new Color(0.55f, 1f, 0.55f, 0f), Mathf.Clamp01((k - 0.6f) / 0.4f));
+                    UISkin.Shadowed(new Rect(x + 12, y, 290, 20), "<s>" + obj + ":  " + prog + " / " + q.Def.Count + "</s>", UISkin.Small, c);
+                }
+                else
+                {
+                    float pop = !ready && sinceTick < 0.35f ? 1f - sinceTick / 0.35f : 0f;
+                    UISkin.Shadowed(new Rect(x + 12 + pop * 4f, y, 290, 20), ready ? "Return to " + GiverOf(q.Def) : obj + ":  " + prog + " / " + q.Def.Count,
+                        UISkin.Small, ready ? new Color(0.55f, 1f, 0.55f) : Color.Lerp(UISkin.Cream, UISkin.Gold, pop));
+                }
                 y += 26;
             }
         }
