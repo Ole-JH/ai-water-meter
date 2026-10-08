@@ -177,6 +177,7 @@ namespace Shadowfall
                     else if (chooseDungeon >= 0) chooseDungeon = -1;
                     else if (dialogNpc != null || craftStation != null || forgeOpen || riftOpen || auctionOpen) { dialogNpc = null; craftStation = null; forgeOpen = false; riftOpen = false; auctionOpen = false; }
                     else if (showGuild) showGuild = false;
+                    else if (guildBoardOpen) guildBoardOpen = false;
                     else if (tradeOpen) NetClient.I?.CancelTrade();
                     else if (menu != MenuPage.None) menu = menu == MenuPage.Main ? MenuPage.None : MenuPage.Main;
                     else if (showNews) CloseNews(Player.I);
@@ -253,6 +254,7 @@ namespace Shadowfall
             if (showQuests) DrawQuestLog(p);
             if (showAchievements) DrawAchievements(p);
             if (showGuild) DrawGuild(p);
+            if (guildBoardOpen) DrawGuildBoard(p);
             if (riftOpen) DrawRiftWindow(p);
             if (showTalents) DrawTalents(p);
             if (showStash) DrawStash(p);

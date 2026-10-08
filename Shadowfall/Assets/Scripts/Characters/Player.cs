@@ -78,6 +78,7 @@ namespace Shadowfall
         string lastZone;
         HumanoidModel model;        // primitive fallback
         CharacterView view;         // animated model
+        float nextBanner;
         public string Look { get; private set; } = "Knight";
         Light torch;
         float currentSpeed;
@@ -479,6 +480,11 @@ namespace Shadowfall
                 else FollowPath(dt);
             }
             AutoPickupGold();
+            if (Time.time >= nextBanner)
+            {
+                nextBanner = Time.time + 1f;
+                GuildBanner.Sync(view != null ? view.Root.transform : transform, Guild.Current != null ? Guild.Current.hb : "");
+            }
             UpdateZone();
             UpdateSnow(dt);
 

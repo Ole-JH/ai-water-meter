@@ -218,6 +218,7 @@ namespace Shadowfall
         public void SendDuel(string t, int id = 0, bool yes = false) { if (State == ConnState.InWorld) Send(new DuelMsg { t = t, id = id, yes = yes }); }
         public void SendRift(string t, int tier = 0) { if (State == ConnState.InWorld) Send(new RiftMsg { t = t, n = tier }); }
         public void AnswerGuildInvite(bool yes) { if (State == ConnState.InWorld) Send(new GuildAnswerMsg { yes = yes }); }
+        public void RequestGuildList() { if (State == ConnState.InWorld) Send(new RiftMsg { t = "glist" }); }
         public void SendDuelHit(int id, int dmg) { if (State == ConnState.InWorld && id != 0) Send(new DuelMsg { t = "dhit", id = id, dmg = dmg }); }
 
         public void SendSlow(int monsterId, float duration)
@@ -564,6 +565,7 @@ namespace Shadowfall
                 case "dreq": Duel.Challenged(m.id, m.name); break;
                 case "duelring": DuelRing.OnRing(m); break;
                 case "guild": Guild.Set(m.g); break;
+                case "glist": Guild.OnList(m.items); break;
                 case "rinfo": Rift.OnInfo(m); break;
                 case "bounties": Bounties.Set(m.items); break;
                 case "auction": Auction.Set(m); break;

@@ -659,6 +659,16 @@ async function guildTests(a, b) {
   const g0 = a.all("guild").at(-1)?.g;
   assert.ok(g0 && g0.name === "Hollow Guard" && g0.tag === "HG" && g0.rank === "leader" && g0.members.length === 1, "founding a guild makes you its leader");
   assert.ok(a.all("sys").some((m) => /You founded Hollow Guard <HG> \(1000 gold\)/.test(m.msg)), "it costs gold");
+  assert.match(g0.hb, /^\d,\d,\d$/, "a new guild gets heraldry: two colours and an emblem");
+  await say(a, "/gbanner 3 3 1");
+  assert.ok(a.all("sys").some((m) => /Usage: \/gbanner/.test(m.msg)), "the two colours must differ");
+  await say(a, "/gbanner 2 7 5");
+  assert.strictEqual(a.all("guild").at(-1).g.hb, "2,7,5", "the leader picks the banner");
+  a.ws.send(JSON.stringify({ t: "glist" }));
+  await sleep(200);
+  assert.ok(a.all("glist").at(-1).items.some((x) => x === "Hollow Guard|HG|1|2,7,5|Alice"), "the guild board lists the guilds with their banners");
+  const snapA = b.all("snap").filter((m) => m.p && m.p.some((x) => x.name === "Alice")).at(-1);
+  if (snapA) await sleep(1000), assert.ok(b.all("snap").some((m) => m.p && m.p.some((x) => x.name === "Alice" && x.gb === "2,7,5")), "others see the banner on the member's back");
   await say(b, "/guild create Hollow Guard XX");
   assert.ok(b.all("sys").some((m) => /already a guild called Hollow Guard|costs 1000 gold/.test(m.msg)), "names are unique (and it costs gold)");
   await say(a, "/ginvite Bob");

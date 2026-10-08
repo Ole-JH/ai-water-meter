@@ -6,6 +6,10 @@
 //   /guild create <Name> <TAG>   found one (GUILD_COST gold)
 //   /ginvite <name>              officers and the leader; the hero answers with the popup (ganswer)
 //   /gleave  /gkick <name>  /gpromote <name>  /gdemote <name>  /gleader <name>  /gmotd <text>  /g <text>
+//   /gbanner <colour> <colour> <emblem>   the leader: the guild's heraldry (indices into the client's Guild.Colours/Emblems)
+// Every guild has heraldry, hb = [field colour, second colour, emblem]: drawn from its name when founded. Members wear
+// it as a banner on their backs (the snapshot's "gb"), and the guild board in Hollowmere hangs the biggest guilds'
+// banners (glist -> glist {items: ["name|TAG|members|c1,c2,emblem|leader"]}).
 // The client gets "guild" {g: {name, tag, rank, motd, members: [{name, rank, on, lvl}]}} (g null = no guild)
 // and "ginv" {name, k: guild} for an invitation.
 
@@ -13,6 +17,7 @@ const COST = Number(process.env.GUILD_COST ?? 1000);
 const MAX_MEMBERS = 100;
 const RANKS = ["member", "officer", "leader"];
 const NAME = /^[A-Za-z][A-Za-z ']{2,23}$/, TAG = /^[A-Za-z]{2,4}$/;
+const COLOURS = 10, EMBLEMS = 8; // Guild.cs Colours and Emblems
 
 module.exports = function createGuilds(ctx) {
   const { store, sessions, safeSend, sys, findOnline, log, now } = ctx;
@@ -37,9 +42,20 @@ module.exports = function createGuilds(ctx) {
 
   const save = (g) => store.saveGuild(g).catch((e) => log(`guild save failed: ${e.message}`));
 
+  /** The guild's heraldry; older guilds get theirs from their name. */
+  function heraldry(g) {
+    if (!Array.isArray(g.hb) || g.hb.length !== 3) {
+      let h = 7;
+      for (const ch of g.name) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+      const c1 = h % COLOURS, c2 = (c1 + 1 + ((h >>> 8) % (COLOURS - 1))) % COLOURS;
+      g.hb = [c1, c2, (h >>> 16) % EMBLEMS];
+    }
+    return g.hb.join(",");
+  }
+
   function info(g, forName) {
     const on = new Map(online(g).map((o) => [key(o.name), o]));
-    return { name: g.name, tag: g.tag, motd: g.motd || "", rank: (member(g, forName) || {}).rank || "member",
+    return { name: g.name, tag: g.tag, motd: g.motd || "", rank: (member(g, forName) || {}).rank || "member", hb: heraldry(g),
       members: g.members.map((m) => ({ name: m.name, rank: m.rank, on: on.has(key(m.name)), lvl: on.get(key(m.name))?.lvl || 0 })) };
   }
 
@@ -53,6 +69,28 @@ module.exports = function createGuilds(ctx) {
 
   /** The guild tag shown before a hero's name ("" without one). */
   const tagOf = (s) => (byMember.get(key(s.name)) || {}).tag || "";
+  /** Their guild's heraldry "c1,c2,emblem" ("" without a guild). */
+  const bannerOf = (s) => { const g = byMember.get(key(s.name)); return g ? heraldry(g) : ""; };
+
+  function banner(s, args) {
+    const g = byMember.get(key(s.name));
+    if (!g) return sys(s, "You are not in a guild.");
+    if (rankOf(g, s.name) < 2) return sys(s, "Only the leader can change the guild's banner.");
+    const [c1, c2, e] = args.map((x) => parseInt(x, 10));
+    if (![c1, c2].every((c) => c >= 0 && c < COLOURS) || !(e >= 0 && e < EMBLEMS) || c1 === c2)
+      return sys(s, `Usage: /gbanner <colour 0-${COLOURS - 1}> <another colour> <emblem 0-${EMBLEMS - 1}> (the guild window has buttons for it)`);
+    g.hb = [c1, c2, e];
+    save(g);
+    tell(g, `${s.name} has given the guild a new banner.`);
+    refresh(g);
+  }
+
+  /** The guild board: every guild, biggest first. */
+  function list(s) {
+    const items = [...guilds.values()].sort((a, b) => b.members.length - a.members.length || a.name.localeCompare(b.name)).slice(0, 50)
+      .map((g) => `${g.name}|${g.tag}|${g.members.length}|${heraldry(g)}|${(g.members.find((m) => m.rank === "leader") || {}).name || ""}`);
+    send(s, { t: "glist", items });
+  }
 
   function create(s, args) {
     if (byMember.has(key(s.name))) return sys(s, "You are already in a guild: /gleave first.");
@@ -191,12 +229,13 @@ module.exports = function createGuilds(ctx) {
       case "/gdemote": return setRank(s, rest[0], "member"), true;
       case "/gleader": return setRank(s, rest[0], "leader"), true;
       case "/gmotd": return motd(s, arg), true;
+      case "/gbanner": return banner(s, rest), true;
       default: return false;
     }
   }
 
   return {
-    load, command, answer, tagOf,
+    load, command, answer, tagOf, bannerOf, list,
     /** At login: the guild, the message of the day, and the members hear about it. */
     entered(s) {
       const g = byMember.get(key(s.name));

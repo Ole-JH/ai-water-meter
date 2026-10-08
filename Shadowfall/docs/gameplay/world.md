@@ -76,6 +76,12 @@ Right-click another player (anywhere on their character, or click the name above
 
 ## Guilds
 
+Every guild has a **banner**: a field colour, a second colour and an emblem (cross, chevron, star, sun, diamond,
+saltire, crescent or tower). It's drawn from the guild's name when it's founded, and the leader can change it in the
+guild window. Members carry it on a pole on their backs, and everyone sees it. The **Guild Board** on the east side
+of Hollowmere's square hangs the banners of the five biggest guilds; click it for a list of every guild, with its
+banner, size and leader.
+
 A guild has a name, a tag of 2 to 4 letters shown before every member's name (*&lt;HG&gt; Ayla 24*), its own chat and a
 message of the day shown when members log in. ++o++ opens the guild window with the members, online first. Everything
 else is chat commands:
@@ -90,6 +96,7 @@ else is chat commands:
 | `/gpromote name`, `/gdemote name` | the leader | Make a member an officer, or back |
 | `/gleader name` | the leader | Hand the guild over (you become an officer) |
 | `/gmotd text` | officers, the leader | Set the message of the day |
+| `/gbanner c1 c2 emblem` | the leader | Change the guild's banner (the guild window has buttons for it) |
 | `/gleave` | members | Leave. If the leader leaves, an officer (or the longest member) takes over; the last one out disbands it |
 
 Guilds are kept with the accounts (in the database). Up to 100 members.

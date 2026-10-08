@@ -24,6 +24,8 @@ namespace Shadowfall
         string appearance, modelName;
         HumanoidModel model;       // primitive fallback
         CharacterView view;        // animated model
+        string guildBanner = "";   // their guild's heraldry (GuildBanner on their back)
+        float nextBanner;
         Companion companion;       // cosmetic follower
         string companionId = "";
         MountRig mount;            // the horse they ride, if any
@@ -77,6 +79,7 @@ namespace Shadowfall
                 Level = p.lvl;
                 Paragon = p.pl;
                 GuildTag = p.gt ?? "";
+                guildBanner = p.gb ?? "";
                 Title = p.ti;
                 MaxHealth = Mathf.Max(1f, p.mhp);
             }
@@ -152,6 +155,11 @@ namespace Shadowfall
             if (moved > 0.001f && Time.time >= nextTrample) { nextTrample = Time.time + 0.25f; SnowField.Trample(transform.position); }
             if (dt > 0f && moved < 3f) moveSpeed = Mathf.Lerp(moveSpeed, moving ? moved / dt : 0f, dt * 10f);
 
+            if (Time.time >= nextBanner)
+            {
+                nextBanner = Time.time + 1f;
+                GuildBanner.Sync(view != null ? view.Root.transform : transform, guildBanner);
+            }
             if (view != null)
             {
                 if (mount != null) mount.Tick(moveSpeed);

@@ -24,6 +24,16 @@ namespace Shadowfall
         {
             new Entry
             {
+                Id = 43, Date = "2026-10-08", Title = "Banners of the guilds",
+                Items = new[]
+                {
+                    "Every guild has a banner: two colours and an emblem. Members carry it on their backs, and the leader can change it in the guild window (O).",
+                    "The Guild Board on Hollowmere's square hangs the banners of the biggest guilds. Click it to see every guild in the realm.",
+                    "Siege ladders lean against the wall walkway properly instead of poking through it.",
+                },
+            },
+            new Entry
+            {
                 Id = 42, Date = "2026-10-08", Title = "Saddle up",
                 Items = new[]
                 {

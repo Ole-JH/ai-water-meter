@@ -2235,6 +2235,7 @@ const handlers = {
   rinfo(s) { if (s.inWorld) rifts.info(s); },
   ropen(s, m) { if (s.inWorld) rifts.open(s, m.n); },
   ganswer(s, m) { if (s.inWorld) guilds.answer(s, !!m.yes); },
+  glist(s) { if (s.inWorld) guilds.list(s); },
 
   hit(s, m) {
     if (!s.inWorld || s.dead) return;
@@ -2307,7 +2308,7 @@ const handlers = {
         return;
       }
       case "/invite": case "/inv": return invite(s, arg);
-      case "/guild": case "/g": case "/gchat": case "/ginvite": case "/gleave": case "/gkick": case "/gpromote": case "/gdemote": case "/gleader": case "/gmotd":
+      case "/guild": case "/g": case "/gchat": case "/ginvite": case "/gleave": case "/gkick": case "/gpromote": case "/gdemote": case "/gleader": case "/gmotd": case "/gbanner":
         return guilds.command(s, cmd.toLowerCase(), rest);
       case "/leave": return partyHandlers.pleave(s);
       default:
@@ -2471,7 +2472,7 @@ function sendSnapshots(t) {
   // Players: the rarely-changing part gets a version; viewers get it again when it changes.
   for (const o of online) {
     const look = o.look || {};
-    const stat = `"name":${jstr(o.name)},"lvl":${o.lvl},"pl":${o.pl || 0},"gt":${jstr(guilds.tagOf(o))},"mhp":${Math.ceil(o.mhp || 1)},"body":${jstr(look.body || "")},"legs":${jstr(look.legs || "")},` +
+    const stat = `"name":${jstr(o.name)},"lvl":${o.lvl},"pl":${o.pl || 0},"gt":${jstr(guilds.tagOf(o))},"gb":${jstr(guilds.bannerOf(o))},"mhp":${Math.ceil(o.mhp || 1)},"body":${jstr(look.body || "")},"legs":${jstr(look.legs || "")},` +
       `"weapon":${jstr(look.weapon || "")},"helm":${jstr(look.helm || "")},"mdl":${jstr(look.mdl || "Knight")},"wk":${jstr(look.wk || "")},` +
       `"cp":${jstr(look.cp || "")},"mt":${jstr(look.mt || "")},"ti":${jstr(look.ti || "")}`;
     if (stat !== o.snapStat) { o.snapStat = stat; o.snapVer = (o.snapVer || 0) + 1; }

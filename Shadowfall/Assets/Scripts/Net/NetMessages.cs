@@ -30,6 +30,7 @@ namespace Shadowfall
         public bool w;         // up on a town wall (Rampart)
         public string body, legs, weapon, helm, mdl, wk; // wk = weapon model kind
         public string gt;      // guild tag (empty = none)
+        public string gb;      // guild heraldry (GuildBanner on their back)
         public string cp;      // companion following them (id, empty = none)
         public string mt;      // mount they ride (id, empty = on foot)
         public string ti;      // title worn under their name (empty = none)
@@ -96,6 +97,7 @@ namespace Shadowfall
     public class NetGuild
     {
         public string name, tag, motd, rank;
+        public string hb;              // heraldry "field,second,emblem" (GuildHeraldry)
         public NetGuildMember[] members;
     }
     [Serializable] public class NetGuildMember { public string name, rank; public bool on; public int lvl; }

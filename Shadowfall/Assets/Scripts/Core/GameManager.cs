@@ -52,6 +52,7 @@ namespace Shadowfall
             Waystone.SpawnAll();
             Rift.SpawnStone();
             ForgeStation.BuildAll();               // anvils and hearths by the smiths
+            GuildBoard.Spawn();
             gameObject.AddComponent<Ambience>();
             Music.Ensure();
             Weather.Ensure();

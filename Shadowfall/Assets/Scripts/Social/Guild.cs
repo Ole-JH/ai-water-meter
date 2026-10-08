@@ -39,6 +39,10 @@ namespace Shadowfall
 
         public static void Reset() { Current = null; InviteFrom = null; }
 
+        /// <summary>Every guild for the guild board ("name|TAG|members|heraldry|leader"), biggest first.</summary>
+        public static string[] Board { get; private set; } = new string[0];
+        public static void OnList(string[] items) => Board = items ?? new string[0];
+
         public static int Online { get { int n = 0; if (Current?.members != null) foreach (var m in Current.members) if (m.on) n++; return n; } }
     }
 }
