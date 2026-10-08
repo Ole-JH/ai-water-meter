@@ -22,6 +22,7 @@ const createDuels = require("./duel");
 const createGuilds = require("./guild");
 const createRifts = require("./rift");
 const createBounties = require("./bounty");
+const createAuctions = require("./auction");
 
 const PORT = parseInt(process.env.PORT || "7341", 10);
 // Behind a reverse proxy, take the client's address from X-Forwarded-For (for login rate limits).
@@ -687,6 +688,7 @@ function completeLogin(s) {
   worldBosses.sendTo(s);
   guilds.entered(s);
   bounties.send(s);
+  auctions.deliver(s);
   broadcast({ t: "sys", msg: `${ch.name} has entered the world.` });
   log(`${ch.name} entered the world (${sessions.size} connected)`);
 }
@@ -747,6 +749,7 @@ const M = {
   admin: metrics.counter("shadowfall_admin_commands_total", "Admin commands run, by command."),
   saves: metrics.counter("shadowfall_character_saves_total", "Character files written, by result."),
   clientErrors: metrics.counter("shadowfall_client_errors_total", "Errors reported by players' browsers and games, by kind: load (the page couldn't start the game), js (browser script errors), exception (the game threw), error (the game logged an error)."),
+  auctions: metrics.counter("shadowfall_auction_total", "Auction house events, by op (listed, sold, expired)."),
   rifts: metrics.counter("shadowfall_rifts_opened_total", "Greater rifts opened, by tier (20 = 20 and up)."),
   duels: metrics.counter("shadowfall_duels_total", "Duels that ended, by result (won, draw)."),
   invasions: metrics.counter("shadowfall_invasions_total", "Town invasions that ended, by town and result (won = beaten off, lost = the town was sacked)."),
@@ -1763,7 +1766,12 @@ function vendorFor(s, kind) {
   return v;
 }
 
+// The auction house (auction.js): listings, buying, and mail for sellers who are offline.
+const auctions = createAuctions({ store, I, sessions, safeSend, sys, give, ierr, iok, inTownNow, bagItem, ledgerChanged, log, metrics: M.auctions });
+metrics.gauge("shadowfall_auction_listings", "Items for sale at the auction house.", () => auctions.count());
+
 const itemOps = {
+  ...auctions.ops,
   equip(s, m) {
     const it = bagItem(s, m.i);
     if (!it || it.Kind !== I.Kind.Equipment || !(it.Slot > 0)) return ierr(s, "equip", "That can't be worn.");
@@ -2374,6 +2382,7 @@ function tick() {
   invasions.tick(t);
   worldBosses.tick(t);
   if (tickCount % 5 === 0) { duels.tick(t); rifts.tick(t); }
+  if (tickCount % 600 === 0) auctions.tick();
   if (tickCount % 50 === 0) cleanupInstances(t);
 
   sendSnapshots(t);
@@ -2518,6 +2527,7 @@ async function start() {
 
   await guilds.load();
   await rifts.load();
+  await auctions.load();
   loadWorld();
   if (world) initSpawners();
   else log("No world yet - it will be uploaded by the first client that connects.");

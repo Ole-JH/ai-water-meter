@@ -139,6 +139,8 @@ exploration count from the day achievements arrived.
 | --- | --- | --- | --- |
 | **Hooligan** | Run through a villager's leaf pile, and get what's coming to you. | 5 | the Hooligan |
 | **Better Together** | Join a party. | 5 |  |
+| **Going Once** | Buy something at the auction house. | 5 |  |
+| **Open for Business** | Put 25 items up for auction. | 10 | the Merchant |
 | **Sworn In** | Join or found a guild. | 5 |  |
 | **Honour Satisfied** | Win a duel. | 10 |  |
 | **Duelist** | Win 25 duels. | 25 | the Duelist |

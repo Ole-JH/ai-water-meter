@@ -15,7 +15,7 @@ namespace Shadowfall
         // ---- state read by gameplay code
         public bool MouseOverUI { get; private set; }
         public bool ChatOpen { get; private set; }
-        public bool KeyboardCaptured => ChatOpen || Player.I == null || tradeGoldFocused || menu != MenuPage.None || (showAdmin && adminFieldFocused);
+        public bool KeyboardCaptured => ChatOpen || Player.I == null || tradeGoldFocused || (auctionOpen && auctionFieldFocused) || menu != MenuPage.None || (showAdmin && adminFieldFocused);
         public bool BlocksWorldInput => Player.I == null || Player.I.IsDead || showMap || menu != MenuPage.None;
 
         // ---- windows
@@ -175,7 +175,7 @@ namespace Shadowfall
                 {
                     if (waystoneOpen != null) waystoneOpen = null;
                     else if (chooseDungeon >= 0) chooseDungeon = -1;
-                    else if (dialogNpc != null || craftStation != null || forgeOpen || riftOpen) { dialogNpc = null; craftStation = null; forgeOpen = false; riftOpen = false; }
+                    else if (dialogNpc != null || craftStation != null || forgeOpen || riftOpen || auctionOpen) { dialogNpc = null; craftStation = null; forgeOpen = false; riftOpen = false; auctionOpen = false; }
                     else if (showGuild) showGuild = false;
                     else if (tradeOpen) NetClient.I?.CancelTrade();
                     else if (menu != MenuPage.None) menu = menu == MenuPage.Main ? MenuPage.None : MenuPage.Main;
@@ -264,6 +264,7 @@ namespace Shadowfall
             if (dialogNpc != null) DrawDialog(p);
             if (craftStation != null) DrawCrafting(p);
             if (forgeOpen) DrawForge(p);
+            if (auctionOpen) DrawAuction(p);
             if (showHelp) DrawHelp();
             if (showNews) DrawNews(p);
             if (showEmotes) DrawEmotes(p);
@@ -1823,7 +1824,7 @@ namespace Shadowfall
         {
             var npc = dialogNpc;
             float height = npc.Role == NpcRole.Vendor && npc.Shop != null && npc.Shop.Kind == VendorKind.Companions ? 290 + CompanionDef.All.Length * 80 + MountDef.All.Length * 62
-                : npc.Role == NpcRole.Vendor && npc.Shop != null ? 330 + npc.Shop.Items.Count * 54 + (npc.Shop.Kind == VendorKind.Curios || npc.Shop.Kind == VendorKind.Weapons || npc.Shop.Kind == VendorKind.Armor ? 54 : 0)
+                : npc.Role == NpcRole.Vendor && npc.Shop != null ? 330 + npc.Shop.Items.Count * 54 + (npc.Shop.Kind == VendorKind.Curios || npc.Shop.Kind == VendorKind.Weapons || npc.Shop.Kind == VendorKind.Armor || npc.Shop.Kind == VendorKind.General ? 54 : 0)
                 : npc.Role == NpcRole.QuestGiver ? QuestDialogHeight(npc) : 520;
             var r = new Rect(14, 120, 470, Mathf.Min(height, VH - 140));
             if (UISkin.Window(r, npc.DisplayName, true, true)) { dialogNpc = null; return; }
@@ -1893,6 +1894,11 @@ namespace Shadowfall
                     y += 56;
                     if (UISkin.Btn(new Rect(r.x + (r.width - 340) / 2, y, 340, 46), "Sell Common Items & Materials", UISkin.Button))
                         NetClient.I?.Op("sellcommon");
+                    if (shop.Kind == VendorKind.General)
+                    {
+                        y += 54;
+                        if (UISkin.Btn(new Rect(r.x + (r.width - 340) / 2, y, 340, 46), "Auction House", UISkin.Button)) OpenAuction();
+                    }
                     if (shop.Kind == VendorKind.Weapons || shop.Kind == VendorKind.Armor)
                     {
                         y += 54;

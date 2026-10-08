@@ -98,6 +98,7 @@ namespace Shadowfall
             craftStation = null;
             forgeOpen = false;
             riftOpen = false;
+            auctionOpen = false;
             menuPlayer = null;
             socketGem = -1;
             ChatOpen = false;

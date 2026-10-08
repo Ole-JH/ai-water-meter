@@ -148,6 +148,17 @@ once you have reforged one property of an item, only that same property can be r
 
 Plus one and a half times the item's value in gold (at least 25).
 
+## Auction house
+
+Every **general goods merchant** in town has an **Auction House** button. *Browse* shows what other players are
+selling (search by name; the newest first), with **Buy** at the asking price, and your own listings with **Cancel**.
+*Sell an Item* puts anything from your bags up for sale at the price you set (1 to 10,000,000 gold), for **48 hours**,
+at most 10 at a time.
+
+When something sells, the gold, less the house's **5%**, comes to you at once, or at your next login if you're offline.
+Unsold items come back the same way when their time is up. Two [achievements](achievements.md#social), one with the
+title *the Merchant*.
+
 ## Companions
 
 Beastmaster Orla, by Hollowmere's east road, hires out companions. You pay once; after that you can summon any companion you own from her for free. One follows you at a time, and the active one is saved with your character.

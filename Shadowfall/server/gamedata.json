@@ -505,6 +505,14 @@
    "name": "Nothing Left Standing",
    "title": "the Undefeated"
   },
+  "auction_buy": {
+   "name": "Going Once",
+   "title": ""
+  },
+  "auction_list_25": {
+   "name": "Open for Business",
+   "title": "the Merchant"
+  },
   "guild_join": {
    "name": "Sworn In",
    "title": ""

@@ -485,6 +485,47 @@ async function invasionTests(a, b) {
   await sleep(150);
 }
 
+async function auctionTests(a, b) {
+  const iop = async (c, op, extra = {}) => { c.ws.send(JSON.stringify({ t: "iop", op, ...extra })); await sleep(200); };
+  const listing = (c) => (c.all("auction").at(-1)?.items || []).map((x) => JSON.parse(x));
+  const bInv = () => b.all("inv").at(-1);
+  state(b, 300, 300);
+  await sleep(150);
+  const slot = bInv().bag.findIndex((x) => x && x.Name), what = bInv().bag[slot].Name;
+  await iop(b, "aulist", { i: slot, n: 100 });
+  assert.match(b.all("ierr").at(-1)?.msg || "", /general merchants in town/, "listing needs a town");
+  state(b, 146, 150);
+  state(a, 144, 150);
+  await sleep(150);
+  await iop(b, "aulist", { i: slot, n: 0 });
+  assert.match(b.all("ierr").at(-1)?.msg || "", /price between/, "listings need a price");
+  await iop(b, "aulist", { i: slot, n: 100 });
+  assert.ok(!bInv().bag[slot].Name, "listing takes the item out of the bags");
+  const mine = listing(b);
+  assert.ok(mine.length === 1 && mine[0].seller === "Bob" && mine[0].price === 100 && mine[0].left > 2800, "your listings show for 48 hours");
+  await iop(a, "aubrowse", { k: what.slice(0, 4) });
+  const hit = listing(a).find((l) => l.seller === "Bob");
+  assert.ok(hit && hit.item.Name === what, "others find it by name");
+  await iop(a, "aubrowse", { k: "excalibur" });
+  assert.ok(!listing(a).some((l) => l.seller === "Bob"), "searches filter");
+  const goldA = a.all("inv").at(-1).gold, goldB = bInv().gold;
+  await iop(a, "aubuy", { id: hit.id });
+  await sleep(100);
+  assert.strictEqual(a.all("inv").at(-1).gold, goldA - 100, "buying costs the price");
+  assert.strictEqual(bInv().gold, goldB + 95, "the seller gets it less the house's 5%, at once when online");
+  assert.ok(b.all("sys").some((m) => m.msg.startsWith(`[Auction] Alice bought your ${what}: 95 gold`)), "and is told");
+  await iop(a, "aubuy", { id: hit.id });
+  assert.match(a.all("ierr").at(-1)?.msg || "", /already sold/, "an item sells once");
+  const next = bInv().bag.findIndex((x) => x && x.Name), nextName = bInv().bag[next].Name;
+  await iop(b, "aulist", { i: next, n: 50 });
+  const own = listing(b)[0];
+  await iop(b, "aubuy", { id: own.id });
+  assert.match(b.all("ierr").at(-1)?.msg || "", /your own listing/, "you can't buy your own");
+  await iop(b, "aucancel", { id: own.id });
+  assert.ok(bInv().bag.some((x) => x.Name === nextName) && listing(b).length === 0, "cancelling brings it back");
+  state(b, 145, 187);
+}
+
 async function bountyTests(a) {
   const list = () => a.all("bounties").at(-1).items.map((x) => x.split("|"));
   assert.ok(a.find("bounties"), "bounties are sent at login");
@@ -905,6 +946,7 @@ async function main() {
     await guildTests(a, b);
     await riftTests(a);
     await bountyTests(a);
+    await auctionTests(a, b);
 
     const danaId = d.find("welcome").id;
     d.ws.send(JSON.stringify({ t: "vanish", dur: 3 }));

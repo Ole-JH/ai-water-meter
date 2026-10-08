@@ -76,6 +76,19 @@ namespace Shadowfall
                     Sfx.Play2D("coins", 0.5f);
                     GameUI.Log("Bought " + m.name + (m.n > 1 ? " x" + m.n : "") + " for " + m.gold + " gold.", GoldColor);
                     break;
+                case "aulist":
+                    Sfx.Play2D("coins", 0.4f);
+                    GameUI.Log("Your " + m.name + " is up for auction at " + m.gold + " gold.", GoldColor);
+                    p.Achievements.Add("auction_listed");
+                    break;
+                case "aubuy":
+                    Sfx.Play2D("coins", 0.6f);
+                    GameUI.Log("You bought " + m.name + " for " + m.gold + " gold.", GoldColor);
+                    p.Achievements.Add("auction_bought");
+                    break;
+                case "aucancel":
+                    GameUI.Log("You take your " + m.name + " back from the auction house.", GoldColor);
+                    break;
                 case "salvage":
                 case "salvagejunk":
                     Sfx.Play2D("anvil", 0.6f, 0.9f);

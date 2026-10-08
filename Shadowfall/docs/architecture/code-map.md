@@ -51,6 +51,7 @@
 | `World/DungeonSites.cs` | The four dungeons (`DungeonDef`: entrance, look, depths) and their entrances (`DungeonEntrance`) |
 | `World/WorldBoss.cs` | The client side of world bosses: which is up and where, the banner, the slam's numbers (tracker and map markers in `GameUI`) |
 | `World/Invasion.cs` | The client side of town invasions: state from the server, banners, the reward and achievements (tracker and map markers in `GameUI`) |
+| `Social/Auction.cs`, `UI/GameUI.Auction.cs` | The auction house as the server shows it, and its window |
 | `Progression/Bounties.cs` | Today's bounties as the server sends them, and the reward |
 | `World/Rift.cs`, `UI/GameUI.Rift.cs` | The Rift Stone, the tier and leaderboard window, the progress tracker inside |
 | `Social/Guild.cs`, `UI/GameUI.Guild.cs` | Our guild as the server sends it, the invitation popup, the guild window (O) |
@@ -99,6 +100,7 @@
 | `admin-cli.js` | Command-line account admin: `reset-code`, `admin on\|off`, `accounts` ([Accounts & passwords](../deployment/accounts.md#admin-command-line)) |
 | `content.js` | Monster stats, spawner table, dungeons (`DUNGEONS`), global `BALANCE`, dungeon `DIFFICULTIES`, town safe-zone rectangle, spawn point |
 | `dungeon.js` | Dungeon level generators: rooms and corridors (`generate`) and natural caverns (`generateCaves`), with start, stairs, boss, chests and packs |
+| `auction.js` | The auction house: listings, buying with the house's cut, mail for offline sellers, expiry (`store.setMeta`) |
 | `bounty.js` | Daily bounties: three per hero per day (seeded by name and date), counted from kills, paid at once |
 | `rift.js` | Greater rifts: opening one at the Rift Stone, tier scaling, progress, the guardian, the leaderboard (`store.setMeta`) |
 | `guild.js` | Guilds: founding, invitations, ranks, guild chat, the tag on nameplates (stored with `store.saveGuild`) |

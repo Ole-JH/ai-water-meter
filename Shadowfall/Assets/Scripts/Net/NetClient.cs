@@ -564,6 +564,7 @@ namespace Shadowfall
                 case "guild": Guild.Set(m.g); break;
                 case "rinfo": Rift.OnInfo(m); break;
                 case "bounties": Bounties.Set(m.items); break;
+                case "auction": Auction.Set(m); break;
                 case "bounty":
                     Bounties.Finished(m);
                     SpawnDrops(m.drops);
