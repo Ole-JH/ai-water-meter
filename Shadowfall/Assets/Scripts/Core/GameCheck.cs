@@ -24,8 +24,8 @@ namespace Shadowfall
         public static bool Requested =>
             Application.absoluteURL != null && (Application.absoluteURL.Contains("sfcheck=1"));
 
-        int errors, exceptions;
-        readonly StringBuilder errorText = new StringBuilder();
+        int errors, exceptions, missing;
+        readonly StringBuilder exceptionText = new StringBuilder(), missingText = new StringBuilder(), errorText = new StringBuilder();
 
         public static void StartIfRequested(GameObject host)
         {
@@ -37,12 +37,27 @@ namespace Shadowfall
 
         void OnLog(string message, string stack, LogType type)
         {
-            // Missing models are only warnings in the game (it falls back to primitives), but the check reports them.
-            bool missingModel = type == LogType.Warning && message.Contains("Missing model");
-            if (type != LogType.Error && type != LogType.Exception && type != LogType.Assert && !missingModel) return;
-            errors++;
-            if (type != LogType.Error) exceptions++;
-            if (errors <= 5) errorText.Append(type).Append(": ").Append(message).Append('\n');
+            // The check's Chromium has no AAC decoder (Unity's WebGL audio format), so every compressed sound fails to load
+            // there ("Loading FSB failed"). Players' browsers decode it: not a problem with the build.
+            if (message.Contains("Loading FSB failed") || message.Contains("FMOD")) return;
+            if (type == LogType.Warning && message.Contains("Missing model"))
+            {
+                // Only a warning in the game (it falls back to primitives), but the check reports it.
+                if (++missing <= 8) missingText.Append(message.Replace("[Shadowfall] ", "")).Append('\n');
+            }
+            else if (type == LogType.Exception || type == LogType.Assert)
+            {
+                if (++exceptions <= 3)
+                {
+                    var lines = (stack ?? "").Split('\n');
+                    exceptionText.Append(message).Append(" @ ").Append(string.Join(" < ", lines, 0, Mathf.Min(4, lines.Length)).Trim()).Append('\n');
+                }
+            }
+            else if (type == LogType.Error)
+            {
+                if (++errors <= 5) errorText.Append(message).Append('\n');
+            }
+            else return;
             SF_CheckReport("error", type + ": " + message + (type == LogType.Exception ? "\n" + stack : ""));
         }
 
@@ -144,9 +159,12 @@ namespace Shadowfall
             float fps = walkTime > 0f ? frames / walkTime : 0f;
             if (net.State != NetClient.ConnState.InWorld) { yield return Fail("lost the connection: " + net.Status); yield break; }
             // Exceptions fail the check; other logged errors don't, but the first ones go in the report (and Discord).
-            string summary = "fps " + fps.ToString("0") + " while walking (software rendering), " + exceptions + " exception(s), " + (errors - exceptions) + " other error(s)";
-            if (exceptions > 0) { yield return Fail(summary + "\n" + errorText); yield break; }
-            if (errors > 0) summary += "\n" + errorText;
+            string summary = "fps " + fps.ToString("0") + " while walking (software rendering), " + exceptions + " exception(s), " +
+                missing + " missing model(s), " + errors + " other error(s)";
+            string details = (exceptions > 0 ? "\nEXCEPTIONS: " + exceptionText : "") + (missing > 0 ? "\nMISSING MODELS: " + missingText : "") +
+                             (errors > 0 ? "\nERRORS: " + errorText : "");
+            if (exceptions > 0) { yield return Fail(summary + details); yield break; }
+            summary += details;
             Report("done", summary);
         }
 

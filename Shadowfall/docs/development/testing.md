@@ -69,8 +69,9 @@ With `?sfcheck=1` the game drives itself (`GameCheck.cs`): it registers a random
 waits for the world, walks to the well in the middle of Hollowmere's square and then to the waystone, and reports every
 step to the page (`window.sfCheck`, `ShadowfallCheck.jslib`). The browser takes a screenshot at each stop. The check
 **fails** when the page shows a loading error, the game doesn't start within 5 minutes, registering or entering the world
-fails, the hero can't walk to a stop, or the game logs an exception; other logged errors, and models that failed to
-load, are listed in the report.
+fails, the hero can't walk to a stop, or the game logs an exception. The report lists the exceptions first (with the
+top of their stack), then models that failed to load, then other logged errors. "Loading FSB failed" audio errors are
+ignored: the check's Chromium has no AAC decoder (the audio format of Unity's WebGL builds); players' browsers do.
 
 Results go to `.autodeploy/check/`: `01-spawn.png`, `02-well.png`, `03-waystone.png`, `04-mount.png` (the hero on a horse; and `NN-fail.png` on failure), plus
 `result.json` with the verdict, every step, the game's logged errors and the browser console. `CHECK_TIMEOUT_S` (default
