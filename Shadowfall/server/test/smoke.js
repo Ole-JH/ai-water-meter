@@ -1332,7 +1332,8 @@ async function main() {
       assert.ok(champ, "elite monsters appear in snapshots");
       assert.ok(champ.af.split(",").length >= 1, "elites have affixes");
       e.ws.send(JSON.stringify({ t: "hit", mid: champ.id, dmg: 999999 }));
-      for (let i = 0; i < 40 && !e.all("kill").some((k) => k.mid === champ.id); i++) {
+      // (hits are capped at 100 + 60 a level: a tough elite, Extra Health or Shielding, takes many)
+      for (let i = 0; i < 160 && !e.all("kill").some((k) => k.mid === champ.id); i++) {
         const now = view(e).m.find((m) => m.id === champ.id); // it moves (it fights back): keep next to it
         if (now && i % 5 === 4) state(e, now.x + 1, now.z);
         e.ws.send(JSON.stringify({ t: "hit", mid: champ.id, dmg: 999999 }));
