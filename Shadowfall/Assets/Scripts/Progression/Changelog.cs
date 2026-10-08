@@ -29,6 +29,7 @@ namespace Shadowfall
                 {
                     "Small screens: windows always fit (the interface shrinks to the screen instead of running off it, even at UI scale 150%); on phones and tablets it's drawn bigger for fingers, and asks to be held sideways.",
                     "Footprints: heroes and monsters leave prints in sand, snow and mud after rain (boot prints, paw prints, a giant's broad feet) that fade after half a minute; monsters kick up dust on the sand too.",
+                    "Announcements no longer land on top of each other: zone names, banners, achievement plates and questions (party invites, ready checks, trades) stack down the middle of the screen, below the boss bar; numbers and words popping up from the same spot stack too.",
                     "The name over the ladder (and other things you point at) no longer flickers, and long ones fit on a dark plate you can read.",
                     "Parties: the leader can call a ready check (button or /ready; marks on everyone's portrait) and choose to split the gold anyone picks up with the party nearby.",
                     "Chat: Shift+click an item with the chat open to link it (everyone can point at it for the tooltip), click a name for their menu or a whisper, and every line shows its time.",

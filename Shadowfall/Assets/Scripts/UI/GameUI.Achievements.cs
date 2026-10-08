@@ -37,7 +37,7 @@ namespace Shadowfall
                 var accent = rare ? new Color(1f, 0.55f, 0.95f) : new Color(1f, 0.8f, 0.3f);
                 // it lands with a little bounce
                 float pop = t < 0.45f ? 1f + Mathf.Sin(Mathf.Clamp01(t / 0.45f) * Mathf.PI) * 0.06f : 1f;
-                var r = new Rect((VW - 420 * pop) / 2, 170 - slide, 420 * pop, 92 * pop);
+                var r = new Rect((VW - 420 * pop) / 2, Lane(92f) - slide, 420 * pop, 92 * pop);
                 if (Event.current.type == EventType.Repaint)
                 {
                     // a glow behind it, breathing (stronger for a rare one)

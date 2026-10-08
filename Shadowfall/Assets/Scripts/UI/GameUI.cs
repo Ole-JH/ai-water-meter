@@ -116,6 +116,11 @@ namespace Shadowfall
         /// <summary>A floating number or word: pops out, arcs off to one side and fades; <paramref name="shake"/> for crits and hits on us.</summary>
         public static void Float(Vector3 worldPos, string text, Color color, float size, bool shake)
         {
+            // several at once from the same spot (xp, gold, a level up...) stack up instead of printing over each other
+            int near = 0;
+            foreach (var f in floats)
+                if (Time.time - f.Time < 0.6f && Factory.FlatDistance(f.Pos, worldPos) < 1.2f && Mathf.Abs(f.Pos.y - worldPos.y) < 2.5f) near++;
+            worldPos += Vector3.up * (0.42f * Mathf.Min(near, 6));
             floats.Add(new FloatText { Pos = worldPos + new Vector3(Random.Range(-0.3f, 0.3f), 0, 0), Text = text, Color = color, Time = Time.time, Size = size,
                 Drift = Random.Range(-1f, 1f), Shake = shake });
             if (floats.Count > 80) floats.RemoveAt(0);
@@ -296,6 +301,7 @@ namespace Shadowfall
             VH = Screen.height / scale;
             GUI.matrix = Matrix4x4.TRS(Vector3.zero, Quaternion.identity, new Vector3(scale, scale, 1f));
             tooltip = null;
+            laneY = VH * 0.13f + (bossShown != null ? 70f : 0f);
 
             HandleChatKeys();
 
@@ -351,17 +357,18 @@ namespace Shadowfall
             if (showEmotes) DrawEmotes(p);
             if (showMap) DrawWorldMap(p);
             if (menuPlayer != null) DrawPlayerMenu();
+            // the announcements down the middle share one lane, each below the last (never on top of each other)
+            DrawTitleCard();
+            DrawBanner();
+            DrawAchievementToasts();
             DrawOffers();
             if (p.IsDead) DrawDeath(p);
             DrawScreenFlash();
             DrawFlyers();
             DrawTurnSideways();
-            DrawAchievementToasts();
             if (menu != MenuPage.None) DrawGameMenu(p);
 
             DrawRecoveryCode();
-            DrawBanner();
-            DrawTitleCard();
             if (GameSettings.ShowFps && Event.current.type == EventType.Repaint)
             {
                 float f = FpsMeter.Fps;
@@ -665,7 +672,7 @@ namespace Shadowfall
         {
             var net = NetClient.I;
             var inv = net.PartyInvite;
-            float y = 150;
+            float y = laneY; // below the announcements; each question takes its own place
             if (inv != null)
             {
                 if (Time.time - inv.Time > 60f) net.AnswerPartyInvite(false);
@@ -707,6 +714,7 @@ namespace Shadowfall
                 else if (OfferBox(y, "<b>" + q.Name + "</b> shares a quest:\n<b>" + q.Quest.Title + "</b>  -  " + q.Quest.Objective, out bool yes))
                     net.AnswerQuestOffer(yes);
             }
+            laneY = y;
         }
 
         bool OfferBox(float y, string text, out bool accepted)
@@ -2773,6 +2781,19 @@ namespace Shadowfall
         // Banner & tooltip
         // =====================================================================================
 
+        // ---- the announcement lane: zone names, banners, achievement plates and questions (party invites, ready
+        // checks, trades...) stack down the middle of the screen in that order, each taking the next free space
+
+        float laneY;
+
+        /// <summary>The top of the next free space in the lane, <paramref name="height"/> tall (and moves the lane on).</summary>
+        float Lane(float height)
+        {
+            float y = laneY;
+            laneY += height + 8f;
+            return y;
+        }
+
         static string cardTitle, cardSub;
         static Color cardColor;
         static float cardAt = -10f;
@@ -2791,7 +2812,7 @@ namespace Shadowfall
             float age = Time.time - cardAt;
             if (age > 3.6f || string.IsNullOrEmpty(cardTitle)) return;
             float a = age < 0.5f ? age / 0.5f : age > 2.8f ? 1f - (age - 2.8f) / 0.8f : 1f;
-            float y = VH * 0.2f;
+            float y = Lane(string.IsNullOrEmpty(cardSub) ? 76f : 106f);
             var c = cardColor; c.a = a;
             UISkin.Shadowed(new Rect(0, y, VW, 64), cardTitle, UISkin.TitleHuge, c, 3);
             // a rule under the name that draws out from the middle
@@ -2809,7 +2830,7 @@ namespace Shadowfall
             if (age > 3.5f || string.IsNullOrEmpty(bannerText)) return;
             var c = bannerColor;
             c.a = age < 0.2f ? age / 0.2f : age > 2.5f ? 1f - (age - 2.5f) : 1f;
-            UISkin.Shadowed(new Rect(0, VH * 0.17f, VW, 50), bannerText, UISkin.Banner, c, 2);
+            UISkin.Shadowed(new Rect(0, Lane(50f), VW, 50), bannerText, UISkin.Banner, c, 2);
         }
 
         /// <summary>Second tooltip shown next to the main one (Shift: the item you have equipped in that slot).</summary>
