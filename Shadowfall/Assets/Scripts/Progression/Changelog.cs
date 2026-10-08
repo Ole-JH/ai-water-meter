@@ -24,6 +24,15 @@ namespace Shadowfall
         {
             new Entry
             {
+                Id = 72, Date = "2026-10-08", Title = "Lamplight",
+                Items = new[]
+                {
+                    "Lantern light on the ground at night is smooth now, instead of blotchy patches that changed as you walked.",
+                    "The Auctioneer has a nameplate like the other townsfolk, and a lamp on the podium at night.",
+                },
+            },
+            new Entry
+            {
                 Id = 71, Date = "2026-10-08", Title = "Right back in",
                 Items = new[]
                 {

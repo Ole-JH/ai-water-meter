@@ -239,10 +239,12 @@ namespace Shadowfall
             mat.SetFloat("_Tiling", 5f);
             mat.SetVector("_WorldSize", new Vector4(W, H, 0, 0));
 
-            // In 64x64 tile chunks, so the parts off screen are culled (the world is 576 tiles a side).
+            // In 16x16 tile chunks: the parts off screen are culled, and (as forward rendering picks the brightest lights
+            // per object) each patch of ground is lit per pixel by the lanterns next to it; with big chunks the other
+            // lanterns fell back to per-vertex light and left blotchy patches on the ground at night.
             var go = new GameObject("Ground");
             go.transform.SetParent(parent, false);
-            const int chunk = 64;
+            const int chunk = 16;
             for (int cz = 0; cz < H; cz += chunk)
                 for (int cx = 0; cx < W; cx += chunk)
                 {

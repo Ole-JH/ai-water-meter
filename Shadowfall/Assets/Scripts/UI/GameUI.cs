@@ -742,6 +742,15 @@ namespace Shadowfall
                     continue;
                 }
 
+                if (it is AuctionPodium)
+                {
+                    // named like the townsfolk (it's a clickable podium, not an Npc, so it had no plate)
+                    if (!WorldToGui(it.Position + Vector3.up * it.LabelHeight, out var g)) continue;
+                    UISkin.Shadowed(new Rect(g.x - 140, g.y - 20, 280, 22), it.DisplayName, UISkin.SmallCenter, new Color(0.55f, 1f, 0.55f));
+                    UISkin.Shadowed(new Rect(g.x - 140, g.y - 2, 280, 20), "<Auction House>", UISkin.SmallCenter, new Color(0.75f, 0.9f, 0.7f));
+                    continue;
+                }
+
                 if (it is LootDrop drop && drop.CanInteract)
                 {
                     // Loot filter: plain white gear only gets a label while Alt is held (unless the option is on).

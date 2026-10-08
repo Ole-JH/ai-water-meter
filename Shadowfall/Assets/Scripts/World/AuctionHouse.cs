@@ -69,6 +69,17 @@ namespace Shadowfall
             var front = go.transform.forward * 0.6f;
             var pod = Factory.Prim(PrimitiveType.Cube, go.transform, Vector3.zero, new Vector3(0.7f, 1.05f, 0.45f), wood);
             pod.transform.position = at + front + Vector3.up * 0.52f;
+            // a lamp on the podium, lit at night (in the dark its plain wood read as a black box)
+            var lamp = new GameObject("PodiumLamp").AddComponent<Light>();
+            lamp.transform.SetParent(go.transform, false);
+            lamp.transform.position = at + front + Vector3.up * 1.6f + go.transform.right * 0.45f;
+            lamp.type = LightType.Point;
+            lamp.color = new Color(1f, 0.75f, 0.45f);
+            lamp.range = 4.5f;
+            lamp.intensity = 1.3f;
+            lamp.shadows = LightShadows.None;
+            NightLight.Add(lamp, 0f);
+            Factory.Prim(PrimitiveType.Sphere, go.transform, lamp.transform.position, Vector3.one * 0.14f, new Color(1f, 0.8f, 0.5f), false, Mat.Glow(new Color(1f, 0.7f, 0.35f)));
             var top = Factory.Prim(PrimitiveType.Cube, go.transform, Vector3.zero, new Vector3(0.8f, 0.06f, 0.55f), wood * 0.8f);
             top.transform.position = at + front + Vector3.up * 1.08f;
             top.transform.rotation = go.transform.rotation * Quaternion.Euler(-12f, 0f, 0f);
