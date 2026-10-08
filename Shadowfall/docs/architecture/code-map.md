@@ -55,6 +55,10 @@
 | `World/WorldBoss.cs` | The client side of world bosses: which is up and where, the banner, the slam's numbers (tracker and map markers in `GameUI`) |
 | `Characters/BossPresence.cs` | A world boss's entrance, armour plates (broken by the server's "phase" events), rage glow, slam craters and lingering corpse |
 | `World/Invasion.cs` | The client side of town invasions: state from the server, banners, the reward and achievements (tracker and map markers in `GameUI`) |
+| `World/WarCamp.cs` | The raiders' camp outside the gate during the scouts' warning: tents, fire, banners, torches, war drums and horns |
+| `World/SiegeLife.cs` | A siege's people (visual only): refugees and the wounded scout, the camp's jeers and taunts, fallen guards carried to a healer, bucket carriers; `Extra` is the walking, emoting stand-in they all use |
+| `World/SiegeWorks.cs` | What heroes do in a siege besides fighting: the beacons and burning roofs (clickable), and the siege's events (`gev`: fire arrows, taunts, the rout) |
+| `World/SiegeAftermath.cs` | After a siege: the victory feast and the Heroes' Feast buff, carpenters at the gate, graves, captives at the raiders' camp; `SiegeChronicle` (the towns' siege record and prosperity) and the `MemorialBoard` by each crier |
 | `World/ForgeStation.cs` | The smiths' anvils and hearths (built after the world, visual only) and the salvage and reforge shows played on them |
 | `World/RiftFx.cs` | A rift's progress orb and kill motes, the guardian's tear, and the collapse after a clear (the tier's light and fog are in `DayNight`) |
 | `Characters/DuelRing.cs` | A duel as everyone nearby sees it: the ring, the countdown, the crowd (villagers watching via `Walker.Watch`) and the winner's banner |

@@ -97,6 +97,8 @@ Server → client:
 | `tok` | — | Accept the current offers |
 | `tcancel` | — | Cancel the trade |
 | `iop` | `op` + `i`, `j`, `slot`, `n`, `id`, `k`, `name`, `to` | An item or gold action, carried out by the server: `equip i`, `unequip slot`, `use i`, `drop i`, `pickup id`, `sort`, `stash i`, `unstash i`, `socket i` (into `to` = `eq` `slot` or `bag` `j`), `fuse`, `sell i`, `sellcommon`, `vendor k`, `buy k i n name`, `craft name`, `gather name`, `quest k`, `hire k`, `respec`, `chest i`, `rebuild k` (`wood`, `stone` or `gold` for the reeve of a burning town you stand in). Answered by `iok` or `ierr`, then `inv` |
+| `beacon` | `i` | Light beacon `i` by a besieged gate (within 4.5 m of it, while the siege is on). Announced to everyone; the state's `bc` shows who lit it |
+| `douse` | `id` | A bucket of water on burning roof `id` of a besieged town (within 14 m of it, once every 1.2 s). Answered by `doused` (`id`, `xp`) |
 | `adm` | `c` + arguments | Admin command (`tp`, `tpto`, `summon`, `dungeon`, `regen`, `spawn`, `killall`, `time`, `elites`, `announce`, `kick`, `who`, `resetpw`, `give`); refused unless the account is an admin. See [Admin module](../deployment/admin.md) |
 | `chat` | `msg` | Chat to everyone. Commands handled by the server: `/who`, `/p` (party), `/w name` (whisper), `/invite name`, `/leave`, `/a` (admin). `/r` is turned into `/w` by the client |
 | `pinvite` | `name` | Invite a player to your party (leader only once in a party) |
@@ -122,7 +124,7 @@ Server → client:
 | `welcome` | `id`, `name`, `look`, `hasSave`, `save`, `now`, `admin` | Entered the world: your session id, the character's name, class and save, and the server clock (ms, drives the day/night cycle). An `inv` follows |
 | `inv` | `gold`, `bag[]`, `stash[]`, `eq[]`, `comp[]` | Your whole inventory, after login and every change: 40 bag and 40 stash slots (`Item`, `{}` = empty), worn items, hired companion ids |
 | `drops` | `drops[]`, `chest` | Loot on the ground for you only: `{id, x, z, gold, item}` (dropped items, overflow, chest contents) |
-| `stock` | `k`, `stock[]`, `restock` | What vendor `k` sells you now, and seconds until it restocks |
+| `stock` | `k`, `stock[]`, `restock`, `pmul` | What vendor `k` sells you now, seconds until it restocks, and the town's price factor (its prosperity after its sieges; `buy` charges the price times it, rounded) |
 | `iok` | `op` + what happened | An `iop` went through: `name`, `n`, `gold`, `k`, `item`, `rarity`, `burnt`, `target`, `drops` (what didn't fit in your bags). `op` `death`: the gold you lost by dying |
 | `ierr` | `op`, `msg`, `id`, `k`, `n` | An `iop` was refused; `msg` says why (empty = say nothing). For `pickup`: `id`, and `n` left on the ground when your bags filled up |
 | `snap` | `l` (online count), `m[]`, `p[]` | Nearby monsters `{id,n,l,x,z,ry,hp,mhp,ar,sl,st}` (`sl` slowed, `st` stunned) (elites also `el` name, `af` comma-separated affixes, `sh` shield up) and players `{id,name,x,z,ry,hp,mhp,lvl,mv,atk,dead,body,legs,weapon,helm,mdl,wk,cp,ti}` (`ti` = the title they wear, or empty) |
@@ -147,6 +149,11 @@ Server → client:
 | `tp` | `x`, `z` | Admin teleport: move there (in the current space) |
 | `clock` | `now` | The server clock changed (an admin set the time of day) |
 | `sack` | `sk[]` | At login (if any) and whenever one starts or ends: the quarters burning after a lost siege `{k,g,x,z,r,left}`: town `k`, gate `g` at `x`, `z`, everything inside its walls within `r` of the gate, seconds `left`. Trade with merchants, smiths and auctioneers is refused there (`ierr`). Sent again when deliveries to the reeve (`iop rebuild`) shorten the fires |
+| `invasion` | `iv` | A town invasion's state, whenever it changes: `town`, `gate` (at `gx`, `gz`), `phase` (`warn` the scouts' warning, `gather`, `wave`, `won`, `lost`, `none`), `left` (seconds to the charge, or invaders alive), `wave`, `waves`, `hp` (the gate's integrity), `gd[]` the guards, `paused` (nobody near), `sx`, `sz` the war camp and `n` raiders in it, `bc[]` the beacons `{x,z,l}` (`l` who lit it), `fr[]` burning roofs `{i,x,z,s}` (strength 0..100), `ram` (1 coming, 2 abandoned), `rt` (routed) |
+| `gev` | `k` + fields | A siege's deeds, to players near the town: the guards' (`shot` with `f` = fire arrows, `swing`, `hurt`, `die`), `fire` (a roof catches at `x`, `z`; a fire arrow from `sx`, `sz`), `fireout` (`by`), `beacon` (`i`, `by`), `say` (a monster `mid` shouts `msg`: the warlord's taunts), `rout` (the banner fell) |
+| `chron` | `rec[]` | At login and after every siege: each walled town's record `{k,h,f,sp,last,ago,g,d,p}`: held, fell, spared, the last result and how many seconds ago, the gate, the last defenders, prosperity -3..3 |
+| `after` | `fe[]`, `rp[]`, `gr[]`, `cp[]` | A siege's aftermath, when it changes: victory feasts `{k,x,z,left}`, gate repairs `{k,g,x,z,left}`, graves `{k,g,x,z,n,s}` (count, seed), captives at the raiders' camp `{k,x,z,n,left,c}` (`c` captors left) |
+| `rescued` | `k`, `xp` | You helped free town `k`'s captives |
 | `weather` | `s`, `sky`, `i`, `left` | At login and on every change: season `s` (0 spring, 1 summer, 2 autumn, 3 winter), `sky` (`clear`, `cloudy`, `rain`, `storm`, `fog`; rain and storms fall as snow where it's cold), intensity `i` (0..1), seconds `left` in the season |
 | `admwho` | `items[]` | Admin player list: `id\|name\|level\|where` |
 | `sys` | `msg` | System message (joins, leaves, boss kills, `/who`) |

@@ -46,6 +46,12 @@ exploration count from the day achievements arrived.
 | **Shield of the Realm** | Help beat off ten invasions. | 25 | the Defender |
 | **Over the Wall** | Jump down from a town wall onto the invaders' side (see [invasions](world.md#town-invasions)). | 10 |  |
 | **Warden of the Walls** | Defend Hollowmere, Frosthaven, Saltreach and Emberwatch from invasions. | 25 |  |
+| **Light the Beacons** | Light a beacon by a besieged gate. | 5 |  |
+| **Bucket Brigade** | Throw 25 buckets of water on burning roofs in a siege. | 10 |  |
+| **Splinters** | Destroy a battering ram. | 10 |  |
+| **Strike the Colours** | Kill the raiders' banner bearer and break their nerve. | 10 |  |
+| **No One Left Behind** | Free the captives the raiders took from a town. | 15 |  |
+| **Guest of Honour** | Join a victory feast after a siege. | 5 |  |
 
 ### Bosses
 

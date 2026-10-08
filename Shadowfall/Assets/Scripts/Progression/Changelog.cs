@@ -24,6 +24,20 @@ namespace Shadowfall
         {
             new Entry
             {
+                Id = 81, Date = "2026-10-08", Title = "The siege comes alive",
+                Items = new[]
+                {
+                    "Before the attack: refugees and a laden cart flee into town, a wounded scout gallops to the crier, and the raiders jeer, dance and sharpen their blades round their camp fire while their chief taunts the town.",
+                    "A battering ram is built in the war camp and pushed to the gate by its crew, hitting like ten raiders. Kill the crew and it stands abandoned, or break it.",
+                    "Light the two beacons by the gate: the wall's archers loose fire arrows. The raiders shoot fire arrows too: burning roofs spread if nobody throws water on them.",
+                    "The warlord taunts the town and brings a banner bearer: kill him and the raiders' nerve breaks. Guards shout as they fight, the fallen are carried to a healer, gate blows shake the ground, and battle music plays.",
+                    "A town that holds throws a victory feast in the square: join it for +10% experience for ten minutes. Carpenters mend the gate, and graves are dug for the guards who fell.",
+                    "A sacked town's people are dragged to the raiders' camp: free them in ten minutes and the fires burn half as long.",
+                    "Every walled town keeps a siege record (a board by its crier, and shields on the world map), and its prosperity changes its merchants' prices. Six new siege achievements.",
+                },
+            },
+            new Entry
+            {
                 Id = 80, Date = "2026-10-08", Title = "No more waiting at the gate",
                 Items = new[]
                 {

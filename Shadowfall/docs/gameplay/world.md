@@ -267,11 +267,19 @@ one of the walled towns (Hollowmere, Frosthaven, Saltreach or Emberwatch), usual
 - **Scouts see them coming** a minute and a half ahead (`INVASION_WARN_S`, 90 seconds): everyone online hears which town
   and which gate, a bell tolls and the town crier calls it out, the gate gets a marker on the minimap and the world map
   ("Raiders sighted!") and the tracker under the minimap counts down. Time to head over, or ride a waystone.
+- **Refugees run in** from the raiders' side, farmers and a laden cart, and a wounded scout gallops through the gate to
+  the town crier with the news.
 - **The raiders make camp** outside the named gate meanwhile: tents, a fire and red war banners, and the first wave
   marching in a few at a time to the beat of war drums (the tracker counts them). They wait there for the horns, so
   you can **strike the camp before they're ready**: every raider killed there is one fewer in the first wave, and
   counts towards the defenders' reward. Inside, the guards hurry to their posts, the militia put the ladders up and the
-  townsfolk bar their doors. Horns sound at 30 and 10 seconds.
+  townsfolk bar their doors. Horns sound at 30 and 10 seconds. The raiders jeer, dance and sharpen their blades round
+  the fire, torches burn on poles about the camp, and their chief shouts what they'll do to the town.
+- **A battering ram** is built in the camp, with a crew of two. When the first wave charges the crew push it to the
+  gate, where every blow lands like ten raiders' (the ground shakes and the thud carries across town). Kill the crew,
+  in the camp or on the way, and the ram stands abandoned; or break the ram itself (it doesn't fight back).
+- **Two beacons** stand just inside the wall either side of the gate. Click one to light it: the wall's archers then
+  loose fire arrows, half as hard again for each lit beacon.
 - When the countdown runs out **the first wave falls on the gate** straight away: the marker turns to a pulsing red one
   and the gate shuts.
 - **No heroes, no siege.** The countdown only runs while someone is in or near the town (about 110 m from its middle,
@@ -288,7 +296,12 @@ one of the walled towns (Hollowmere, Frosthaven, Saltreach or Emberwatch), usual
   percent of an invader's life a blow), so the heroes do the real work, and guard kills give nobody experience or loot
   unless a hero hurt the monster too. Invaders still go for heroes first; with no hero near they fight the soldiers
   (their archers and casters shoot at the wall's archers too), and only then batter the gate. Fallen guards are
-  replaced at the next wave.
+  replaced at the next wave. The guards call out as they fight; when a soldier falls, two militiamen carry him back to a
+  healer who tends the wounded in the square.
+- **Fire arrows.** Once the waves come, the raiders' archers and casters now and then set a roof behind the gate alight.
+  A fire grows (the townsfolk's bucket line only slows it) and, left burning at full strength, spreads to the next roof.
+  Click a burning roof to throw water on it: two buckets put out a fresh fire, and each pays a little experience. Roofs
+  still burning at full strength when the siege ends cost the town its stores (its prosperity, below).
 - **The gate shuts** as soon as the first wave comes: nobody walks in or out there until it's over (recall or
   a waystone still gets you home).
 - **The militia put up ladders.** Two helpers carry a ladder each from the middle of town to the inside of the wall,
@@ -301,9 +314,17 @@ one of the walled towns (Hollowmere, Frosthaven, Saltreach or Emberwatch), usual
   weakens, and planks, bars and the brace break off one by one and fall into the town. The tracker shows its integrity:
   big monsters count double, the warlord four times. Kill them before it breaks; when it does, what's left of it bursts
   inward. Once the invasion is over the gate is mended and opened again, and the ladders come down.
-- **The town holds** when every wave is dead: every hero who hurt at least one invader gets experience (about a sixth of
-  a level) and a boss's share of loot at their feet: gold, a guaranteed rare and a gem, with a chance at set and
-  legendary items. Invaders also give 30% more experience each.
+- **The last wave is led by the warlord**, who taunts the town as he comes, with a **banner bearer** at his side (a red
+  banner on his back). Kill the bearer and the raiders' nerve breaks: four in ten turn and run for their camp, and the
+  rest hit a quarter softer.
+- **Battle music** plays at a siege, and the boss music for the warlord's wave.
+- **The town holds** when every wave is dead: every hero who hurt at least one invader (or lit a beacon) gets
+  experience (about a sixth of a level) and a boss's share of loot at their feet: gold, a guaranteed rare and a gem,
+  with a chance at set and legendary items. Invaders also give 30% more experience each. Then:
+    - **a victory feast**: bells ring, a bonfire burns in the square with tables of food and drink, and the townsfolk
+      dance, cheer and toast the defenders for ten minutes. Join it (walk up to the fire) for the **Heroes' Feast**:
+      +10% experience for ten minutes;
+    - carpenters mend the gate behind scaffolding for a few minutes.
 - **The town is sacked** when the gate breaks, or when nobody stops the siege within 12 minutes: the invaders plunder
   the market and withdraw, and nobody is rewarded. Worse, **they set fire to the quarter behind the broken gate** (inside
   the walls, a little more than half the town's width from the gate) for **twelve minutes**:
@@ -325,9 +346,25 @@ one of the walled towns (Hollowmere, Frosthaven, Saltreach or Emberwatch), usual
 
     Every delivery pays experience (timber and stone more than coin): eight loads of timber or stone put the fires out. If the fires go out early, everyone online hears whose help did it, and the
     merchants come straight back.
+- **Free the captives.** A sacked town's raiders also drag three to five of its people back to their camp outside the
+  broken gate, tied to a stake and calling for help, with a few raiders (and a slaver) standing guard. The tracker and
+  the world map show where. Kill the captors within ten minutes and the captives run home, the fires burn half as long
+  again, and everyone who fought the captors gets experience. Leave them and they're carried off into the wilds.
+- **Graves** are dug outside the wall by the gate for every guard who fell, won or lost, and stay for a couple of hours.
 
+### The siege record and prosperity
+
+Every walled town keeps the tally of its sieges: held, fell or spared (nobody came), when, at which gate, and the names
+of its last defenders. A **Siege Record** board stands beside each town crier (click it for every town's record), and
+the world map shows a shield by each town's name: green if it held last time, red if it fell, grey if it was spared.
+
+A town's **prosperity** runs from Ruined (-3) to Thriving (+3) and is remembered with its record. A defence raises it
+one step, freeing its captives another; a sack lowers it two, and losing its captives or leaving roofs burning one
+more. It drifts back one step towards normal every six hours. Its merchants charge **4% less for every step up** (and
+4% more for every step down); the shop window says so.
 Defending counts towards four [achievements](achievements.md#combat), one of them with the title *the Defender*, and
-one for jumping down from the wall onto the invaders' side.
+one for jumping down from the wall onto the invaders' side; six more are for lighting a beacon, throwing buckets on
+burning roofs, breaking a ram, killing a banner bearer, freeing captives and joining a victory feast.
 
 ## Monsters
 
