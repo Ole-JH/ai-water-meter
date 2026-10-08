@@ -201,8 +201,18 @@ namespace Shadowfall
             FeastArt.Table(t, at, rng);
             var table = b.Root.AddComponent<FeastTable>();
             table.Init(town);
-            // the bonfire, a little way off, and its light
+            // the bonfire on open ground a little way from the table, clear of the square's well (its centrepiece)
             var fire = TownLife.Walkable(at + Vector3.forward * 5.5f);
+            foreach (var o in new[] { new Vector3(0f, 0f, -6.5f), new Vector3(0f, 0f, 6.5f), new Vector3(-9f, 0f, 0f), new Vector3(9f, 0f, 0f), new Vector3(0f, 0f, -8f), new Vector3(0f, 0f, 8f) })
+            {
+                var c = at + o;
+                if (Factory.FlatDistance(c, square) < 5f) continue;
+                bool open = true;
+                for (float x = -3f; x <= 3f && open; x += 1f)
+                    for (float z = -3f; z <= 3f && open; z += 1f)
+                        if (x * x + z * z <= 9.5f && grid != null && !grid.IsWalkable(c + new Vector3(x, 0f, z))) open = false;
+                if (open) { fire = c; break; }
+            }
             for (int i = 0; i < 6; i++)
                 Factory.PrimAt(PrimitiveType.Cylinder, t, fire + Vector3.up * 0.35f, new Vector3(0.22f, 0.9f, 0.22f), new Color(0.35f, 0.24f, 0.14f))
                     .transform.rotation = Quaternion.Euler(60f, i * 60f, 0f);
@@ -236,13 +246,7 @@ namespace Shadowfall
             }
             foreach (var (p0, p1) in new[] { (corners[0], corners[3]), (corners[0], corners[1]), (corners[2], corners[3]), (corners[0], corners[2]), (corners[1], corners[3]) })
                 FeastArt.Bunting(t, p0 + Vector3.up * 3.8f, p1 + Vector3.up * 3.8f, flags, Factory.FlatDistance(p0, p1) > 9.5f && Factory.FlatDistance((p0 + p1) / 2f, fire) > 4f); // (no lantern over the bonfire's smoke)
-            // braziers at the table's ends, hay bales by the fire to sit on
-            foreach (float x in new[] { -4.5f, 4.5f })
-            {
-                var br = TownLife.Walkable(at + new Vector3(x, 0f, -1.9f));
-                if (ArtLibrary.Spawn("Graveyard/fire-basket", t, br - at, 1.3f, ArtLibrary.Fit.Height, 0f, false) != null)
-                    PropFire.Add(t, br + Vector3.up * 1.25f, new Color(1f, 0.6f, 0.25f), 0.45f, false);
-            }
+            // hay bales by the fire to sit on
             var bales = new List<Vector3>();
             foreach (float a2 in new[] { 130f, 230f })
             {

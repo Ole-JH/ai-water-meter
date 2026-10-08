@@ -394,10 +394,14 @@ namespace Shadowfall
         }
 
         /// <summary>The gate as new and open again (the invasion is over).</summary>
+        readonly List<Renderer> worn_ = new List<Renderer>(); // gate pieces darkened by the battering
+
         public void Repair()
         {
             Block(false);
             if (!broken && health >= 100f) { Open(); return; }
+            foreach (var r in worn_) if (r != null) Destroy(r.material);
+            worn_.Clear();
             foreach (var p in pieces) if (p.Go != null) Destroy(p.Go);
             pieces.Clear();
             foreach (Transform c in transform) Destroy(c.gameObject);
@@ -426,7 +430,9 @@ namespace Shadowfall
                 if (p.Go == null) continue;
                 if (health <= p.BreaksAt) { BreakOff(p, 1f); continue; }
                 var r = p.Go.GetComponent<Renderer>();
-                if (r != null) r.material.color = Color.Lerp(p.Color, p.Color * 0.45f, worn);
+                if (r == null) continue;
+                if (!worn_.Contains(r)) worn_.Add(r); // (its own material from now on: freed at the repair)
+                r.material.color = Color.Lerp(p.Color, p.Color * 0.45f, worn);
             }
             if (health <= 0f) Shatter();
         }
