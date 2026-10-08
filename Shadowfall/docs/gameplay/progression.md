@@ -155,7 +155,10 @@ Plus one and a half times the item's value in gold (at least 25).
 
 ## Auction house
 
-Every **general goods merchant** in town has an **Auction House** button. *Browse* shows what other players are
+Every **general goods merchant** in town has an **Auction House** button, and an **auctioneer** at a podium
+beside them who opens it too. He calls out lots now and then, and when something sells nearby he bangs his gavel,
+rings his bell and calls out the item and price. What the house owes you (gold from a sale, an unsold item coming back)
+is brought by a **courier**, who runs up to you wherever you are (not in dungeons) and hands it over. *Browse* shows what other players are
 selling (search by name; the newest first), with **Buy** at the asking price, and your own listings with **Cancel**.
 *Sell an Item* puts anything from your bags up for sale at the price you set (1 to 10,000,000 gold), for **48 hours**,
 at most 10 at a time.

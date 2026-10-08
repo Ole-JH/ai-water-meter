@@ -24,6 +24,15 @@ namespace Shadowfall
         {
             new Entry
             {
+                Id = 44, Date = "2026-10-08", Title = "Going once, going twice",
+                Items = new[]
+                {
+                    "An auctioneer stands at a podium beside every general merchant. He calls out lots, and when something sells he bangs his gavel, rings his bell and calls out the sale.",
+                    "A courier now runs up to you with the gold from your sales and any unsold items, wherever you are.",
+                },
+            },
+            new Entry
+            {
                 Id = 43, Date = "2026-10-08", Title = "Banners of the guilds",
                 Items = new[]
                 {

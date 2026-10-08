@@ -549,6 +549,8 @@ async function auctionTests(a, b) {
   assert.strictEqual(a.all("inv").at(-1).gold, goldA - 100, "buying costs the price");
   assert.strictEqual(bInv().gold, goldB + 95, "the seller gets it less the house's 5%, at once when online");
   assert.ok(b.all("sys").some((m) => m.msg.startsWith(`[Auction] Alice bought your ${what}: 95 gold`)), "and is told");
+  assert.ok(b.all("aumail").some((m) => m.gold === 95 && /Alice bought your/.test(m.k)), "a courier brings the seller the gold");
+  assert.ok(a.all("ausold").some((m) => m.name === what && m.gold === 100), "the auctioneer rings the sale out to those nearby");
   await iop(a, "aubuy", { id: hit.id });
   assert.match(a.all("ierr").at(-1)?.msg || "", /already sold/, "an item sells once");
   const next = bInv().bag.findIndex((x) => x && x.Name), nextName = bInv().bag[next].Name;

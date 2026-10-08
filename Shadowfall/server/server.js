@@ -1816,7 +1816,7 @@ function vendorFor(s, kind) {
 }
 
 // The auction house (auction.js): listings, buying, and mail for sellers who are offline.
-const auctions = createAuctions({ store, I, sessions, safeSend, sys, give, ierr, iok, inTownNow, bagItem, ledgerChanged, log, metrics: M.auctions });
+const auctions = createAuctions({ store, I, sessions, safeSend, sendNear, sys, give, ierr, iok, inTownNow, bagItem, ledgerChanged, log, metrics: M.auctions });
 metrics.gauge("shadowfall_auction_listings", "Items for sale at the auction house.", () => auctions.count());
 
 const itemOps = {

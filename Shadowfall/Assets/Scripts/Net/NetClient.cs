@@ -566,6 +566,13 @@ namespace Shadowfall
                 case "duelring": DuelRing.OnRing(m); break;
                 case "guild": Guild.Set(m.g); break;
                 case "glist": Guild.OnList(m.items); break;
+                case "aumail": AuctionCourier.Deliver(m); break;
+                case "ausold":
+                {
+                    var pod = Player.I != null ? AuctionPodium.Near(Player.I.transform.position) : null;
+                    if (pod != null) pod.Sold(m.name, m.gold);
+                    break;
+                }
                 case "rinfo": Rift.OnInfo(m); break;
                 case "bounties": Bounties.Set(m.items); break;
                 case "auction": Auction.Set(m); break;

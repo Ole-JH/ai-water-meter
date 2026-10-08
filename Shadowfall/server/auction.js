@@ -5,12 +5,14 @@
 //
 // Item ops (through iop, so the usual checks apply): aubrowse {k: search}, aulist {i: bag slot, n: price},
 // aubuy {id}, aucancel {id}. The client gets "auction" {items: [listing JSON], k: search, n: my listings count}.
+// With every delivery the client also gets "aumail" {gold, items: [names], k: first note} (a courier brings it), and
+// everyone near a sale hears "ausold" {name, gold} (the auctioneer's bell).
 
 const HOURS = Number(process.env.AUCTION_HOURS ?? 48);
 const CUT = 0.05, PER_SELLER = 10, MAX_LISTINGS = 2000, RESULTS = 60, MAX_PRICE = 10_000_000;
 
 module.exports = function createAuctions(ctx) {
-  const { store, I, sessions, safeSend, sys, give, ierr, iok, inTownNow, bagItem, ledgerChanged, log, metrics } = ctx;
+  const { store, I, sessions, safeSend, sendNear, sys, give, ierr, iok, inTownNow, bagItem, ledgerChanged, log, metrics } = ctx;
   let listings = [];  // { id, seller, item, price, at, until }
   let mail = {};      // lower-case character name -> { gold, items: [] }
   let nextId = 1;
@@ -46,6 +48,7 @@ module.exports = function createAuctions(ctx) {
     if (drops.length) safeSend(s, JSON.stringify({ t: "drops", drops }));
     for (const n of m.notes.slice(0, 10)) sys(s, `[Auction] ${n}`);
     if (m.notes.length > 10) sys(s, `[Auction] ...and ${m.notes.length - 10} more.`);
+    safeSend(s, JSON.stringify({ t: "aumail", gold: m.gold, items: m.items.map((it) => it.Name), k: m.notes[0] || "", n: m.notes.length }));
     ledgerChanged(s);
     saveMail();
   }
@@ -95,6 +98,7 @@ module.exports = function createAuctions(ctx) {
       const paid = Math.max(1, Math.floor(l.price * (1 - CUT)));
       post(l.seller, paid, [], `${s.name} bought your ${l.item.Name}: ${paid} gold (after the house's 5%).`);
       metrics.inc({ op: "sold" });
+      if (sendNear && !s.inst) sendNear(s.x, s.z, 30, { t: "ausold", name: l.item.Name, gold: l.price });
       log(`Auction: ${s.name} bought ${l.item.Name} from ${l.seller} for ${l.price}`);
       iok(s, "aubuy", { name: l.item.Name, gold: l.price });
       browse(s, m.k);

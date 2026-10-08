@@ -53,6 +53,7 @@ namespace Shadowfall
             Rift.SpawnStone();
             ForgeStation.BuildAll();               // anvils and hearths by the smiths
             GuildBoard.Spawn();
+            AuctionPodium.BuildAll();              // auctioneers by the general merchants (after the forges: they keep clear)
             gameObject.AddComponent<Ambience>();
             Music.Ensure();
             Weather.Ensure();
