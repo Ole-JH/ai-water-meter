@@ -441,6 +441,9 @@ namespace Shadowfall
         }
 
         /// <summary>Shows the weapon kind in hand ("sword", "axe", "mace", "dagger", "staff", or null for none) and the helmet if worn.</summary>
+        /// <summary>The weapon in hand (null: none).</summary>
+        public Transform Weapon => weapon != null ? weapon.transform : null;
+
         public void Equip(string kind, bool helm)
         {
             foreach (var h in headgear) if (h != null) h.SetActive(helm);

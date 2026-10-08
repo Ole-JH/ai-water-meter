@@ -407,6 +407,15 @@ namespace Shadowfall
         }
 
         /// <summary>A sweeping arc in front of the attacker (Cleave).</summary>
+        /// <summary>A basic melee swing: a quick, thin arc in front (in the weapon's colour) and a few sparks.</summary>
+        public static void Swing(Vector3 pos, Quaternion facing, float radius, Color color, bool mirror)
+        {
+            if (!Ready) return;
+            Shape(arcMesh, band, pos + Vector3.up * 1.05f, facing * Quaternion.Euler(mirror ? 8f : -8f, mirror ? -40f : 40f, mirror ? 180f : 0f), new Color(color.r, color.g, color.b, 0.7f),
+                new Vector3(radius * 0.7f, 1f, radius * 0.7f), new Vector3(radius, 1f, radius), 0.16f, mirror ? 620f : -620f);
+            Emit(new P { Burst = 6, Duration = 0.1f, Life = new Vector2(0.12f, 0.25f), Speed = new Vector2(2f, 4f), Size = new Vector2(0.03f, 0.06f), Start = Color.white, End = new Color(color.r, color.g, color.b, 0f), Shape = ParticleSystemShapeType.Circle, Arc = 90f, Radius = radius * 0.8f, Stretch = true, Drag = 3f }, pos + Vector3.up, null, facing * Quaternion.Euler(0f, -45f, 0f));
+        }
+
         public static void Cleave(Vector3 pos, Quaternion facing, float radius, Color color)
         {
             if (!Ready)

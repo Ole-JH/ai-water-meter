@@ -184,3 +184,49 @@ namespace Shadowfall
         void OnDestroy() => alive--;
     }
 }
+
+namespace Shadowfall
+{
+    /// <summary>A set or legendary weapon in hand: a glow of its colour along it and sparks drifting off.</summary>
+    public class WeaponGlow : MonoBehaviour
+    {
+        Color color;
+        Light glow;
+        float nextSpark;
+
+        /// <summary>Puts the right glow on <paramref name="weapon"/> (none for null colour). Cheap to call often.</summary>
+        public static void Sync(Transform weapon, Color? c)
+        {
+            if (weapon == null) return;
+            var g = weapon.GetComponent<WeaponGlow>();
+            if (!c.HasValue) { if (g != null) Destroy(g); return; }
+            if (g == null) g = weapon.gameObject.AddComponent<WeaponGlow>();
+            if (g.color != c.Value) g.Set(c.Value);
+        }
+
+        void Set(Color c)
+        {
+            color = c;
+            if (glow == null)
+            {
+                glow = new GameObject("WeaponGlow").AddComponent<Light>();
+                glow.transform.SetParent(transform, false);
+                glow.type = LightType.Point;
+                glow.shadows = LightShadows.None;
+                glow.range = 1.8f;
+            }
+            glow.color = c;
+        }
+
+        void Update()
+        {
+            if (glow != null) glow.intensity = 1.1f + Mathf.Sin(Time.time * 3.1f) * 0.35f;
+            if (Time.time < nextSpark || !SpellFx.Ready) return;
+            nextSpark = Time.time + 0.12f;
+            SpellFx.Emit(new SpellFx.P { Burst = 1, Duration = 0.1f, Life = new Vector2(0.35f, 0.7f), Speed = new Vector2(0.05f, 0.25f), Size = new Vector2(0.03f, 0.06f),
+                Start = Color.Lerp(color, Color.white, 0.4f), End = new Color(color.r, color.g, color.b, 0f), Velocity = Vector3.up * 0.4f, Radius = 0.12f }, transform.position + transform.up * 0.35f);
+        }
+
+        void OnDestroy() { if (glow != null) Destroy(glow.gameObject); }
+    }
+}

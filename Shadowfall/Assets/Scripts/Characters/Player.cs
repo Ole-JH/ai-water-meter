@@ -102,6 +102,7 @@ namespace Shadowfall
         HumanoidModel model;        // primitive fallback
         CharacterView view;         // animated model
         float nextBanner;
+        bool swingSide;
         public string Look { get; private set; } = "Knight";
         Light torch;
         float currentSpeed;
@@ -514,6 +515,8 @@ namespace Shadowfall
             {
                 nextBanner = Time.time + 1f;
                 GuildBanner.Sync(view != null ? view.Root.transform : transform, Guild.Current != null ? Guild.Current.hb : "");
+                var weapon = Inventory.GetEquipped(EquipSlot.Weapon);
+                WeaponGlow.Sync(view != null ? view.Weapon : null, weapon != null && weapon.Rarity >= Rarity.Set ? Item.RarityColor(weapon.Rarity) : (Color?)null);
             }
             UpdateZone();
             UpdateSnow(dt);
@@ -962,6 +965,13 @@ namespace Shadowfall
             Dismount();
             nextAttackTime = Time.time + 1f / Mathf.Max(0.2f, AttackSpeed);
             AnimAttack();
+            if (AttackRange <= 3f) // a melee swing leaves a streak in the weapon's colour, alternating sides
+            {
+                var w = Inventory.GetEquipped(EquipSlot.Weapon);
+                var wc = w != null && w.Rarity >= Rarity.Magic ? Item.RarityColor(w.Rarity) : new Color(0.95f, 0.92f, 0.85f);
+                swingSide = !swingSide;
+                SpellFx.Swing(transform.position, Quaternion.LookRotation(Factory.Flat(point - transform.position).sqrMagnitude > 0.01f ? Factory.Flat(point - transform.position) : transform.forward), 1.8f, wc, swingSide);
+            }
             Factory.Face(transform, point);
 
             Combatant victim = target;

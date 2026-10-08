@@ -24,6 +24,15 @@ namespace Shadowfall
         {
             new Entry
             {
+                Id = 61, Date = "2026-10-08", Title = "Weapons with weight",
+                Items = new[]
+                {
+                    "Melee swings leave a streak in your weapon's rarity colour, alternating sides as you strike.",
+                    "Set and legendary weapons glow in your hand and shed sparks.",
+                },
+            },
+            new Entry
+            {
                 Id = 60, Date = "2026-10-08", Title = "Every death its own",
                 Items = new[]
                 {
