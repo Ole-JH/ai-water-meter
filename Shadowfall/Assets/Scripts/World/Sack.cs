@@ -57,6 +57,14 @@ namespace Shadowfall
         /// <summary>The quarter that burns in a town ("west"), or null.</summary>
         public static string GateOf(string town) => town != null && burning.TryGetValue(town, out var b) ? b.Gate : null;
 
+        /// <summary>A town that burns now (and its gate), or null.</summary>
+        public static string AnyBurning(out string gate)
+        {
+            foreach (var b in burning.Values) { gate = b.Gate; return b.Town; }
+            gate = null;
+            return null;
+        }
+
         /// <summary>Some quarter of this town is burning (the townsfolk keep indoors).</summary>
         public static bool Burns(string town) => town != null && burning.ContainsKey(town);
 
@@ -88,7 +96,7 @@ namespace Shadowfall
             {
                 var h = WorldGenerator.HouseBounds[houses[n]];
                 var spots = houses[n] < WorldGenerator.HouseFireSpots.Count ? WorldGenerator.HouseFireSpots[houses[n]] : new[] { h.center };
-                float size = Mathf.Clamp(Mathf.Max(h.size.x, h.size.z) * 0.13f, 0.7f, 1.5f);
+                float size = Mathf.Clamp(Mathf.Max(h.size.x, h.size.z) * 0.3f, 1.6f, 3.4f); // a house fire, not a campfire
                 // Fires on the building itself (points taken from its model): the highest is the big blaze with the
                 // house's one light; the others along the roof and out of the upper walls
                 for (int j = 0; j < spots.Length; j++)
@@ -106,8 +114,17 @@ namespace Shadowfall
                         light.intensity = 2.4f;
                         light.shadows = LightShadows.None;
                     }
-                    float k = j == 0 ? 1.6f : R(0.75f, 1.15f);
-                    PropFire.Add(b.Root, at, Flame, size * k, j == 0 || j % 3 == 0, light);
+                    float k = j == 0 ? 1.5f : R(0.7f, 1.15f);
+                    PropFire.Add(b.Root, at, Flame, size * k, j == 0 || j % 2 == 0, light);
+                }
+                // the walls burn too: flames licking up the house's sides from the ground floor
+                for (int w = 0; w < 4; w++)
+                {
+                    if (rng.NextDouble() < (Lite ? 0.75 : 0.35)) continue; // fewer on phones and low settings
+                    var face = w == 0 ? Vector3.right : w == 1 ? Vector3.left : w == 2 ? Vector3.forward : Vector3.back;
+                    float half = Vector3.Dot(h.extents, new Vector3(Mathf.Abs(face.x), 0f, Mathf.Abs(face.z)));
+                    var side = new Vector3(h.center.x, 0f, h.center.z) + face * (half + 0.15f) + Vector3.Cross(Vector3.up, face) * R(-half * 0.6f, half * 0.6f);
+                    PropFire.Add(b.Root, side + Vector3.up * R(0.6f, Mathf.Max(1f, h.size.y * 0.45f)), Flame, size * R(0.55f, 0.85f), rng.NextDouble() < 0.4);
                 }
                 if (n % 3 == 0)
                 {
@@ -117,6 +134,7 @@ namespace Shadowfall
                 Ruin(b, h, spots, n, rng);
             }
             Pall(b);
+            WallFires(b, s, rng);
             Debris(b, s, rng);
             // The reeve, on the far side of town from the fire, asking for help with the rebuilding
             var town = WorldGenerator.TownAt(b.At - Factory.Flat(b.At - CenterOf(s.k)).normalized * 6f);
@@ -151,7 +169,7 @@ namespace Shadowfall
                     Rate = 6, Duration = 1f, Life = new Vector2(1.5f, 3f), Speed = new Vector2(0.6f, 1.6f), Size = new Vector2(0.04f, 0.09f),
                     Start = new Color(1f, 0.6f, 0.2f, 1f), End = new Color(1f, 0.3f, 0.05f, 0f), Gravity = -0.15f, Radius = size * 0.3f, Max = 30,
                 }, root, top);
-                if (n % 3 == 0)
+                if (n % 2 == 0)
                     SpellFx.Loop(new SpellFx.P
                     {
                         Rate = 5, Duration = 1f, Life = new Vector2(6f, 9f), Speed = new Vector2(2.2f, 3.2f), Size = new Vector2(2.2f, 3.6f),
@@ -159,7 +177,7 @@ namespace Shadowfall
                         Smoke = true, Grow = true, Radius = size * 0.2f, Max = 60,
                     }, root, top + Vector3.up * 1.5f);
             }
-            if (n % 3 != 1) return;
+            if (n % 2 != 1) return;
             // fallen in on one side
             var side = (rng.NextDouble() < 0.5 ? Vector3.right : Vector3.forward) * (rng.NextDouble() < 0.5 ? -1f : 1f);
             var at = foot + side * (size * 0.5f + 0.6f);
@@ -179,6 +197,40 @@ namespace Shadowfall
             PropFire.Add(root, at + Vector3.up * 0.3f, Flame, R(0.6f, 0.9f), true);
         }
 
+        /// <summary>
+        /// The town wall on either side of the broken gate burns along its length: big flames on top of it and up its face,
+        /// soot on the ground at its foot, and a few breaches where it has partly come down (a heap of burning timber).
+        /// </summary>
+        static void WallFires(Burning b, NetSack s, System.Random rng)
+        {
+            float R(float a, float c) => a + (float)rng.NextDouble() * (c - a);
+            var town = WorldGenerator.TownNamed(s.k);
+            if (town == null) return;
+            var side = Rampart.SideOf(town, s.g);
+            var root = b.Root;
+            int reach = Mathf.Min(22, side.Half - 1);
+            for (int a = side.Mid - reach; a <= side.Mid + reach; a += 2)
+            {
+                if (Mathf.Abs(a - side.Mid) <= 3) continue; // the gateway itself has its own heap
+                if (rng.NextDouble() < (Lite ? 0.55 : 0.2)) continue;
+                var p = side.Point(a + 0.5f);
+                bool big = rng.NextDouble() < 0.45;
+                PropFire.Add(root, p + Vector3.up * (Rampart.Top + R(-0.2f, 0.4f)), Flame, big ? R(1.8f, 2.8f) : R(1f, 1.6f), big);
+                if (rng.NextDouble() < 0.5) PropFire.Add(root, p - side.Out * 0.7f + Vector3.up * R(0.5f, 1.6f), Flame, R(0.9f, 1.5f), false); // up the inside face
+                ImpactMarks.Place(p - side.Out * 1.2f, ImpactMarks.Kind.Scorch, R(1.2f, 2f), s.left);
+                if (rng.NextDouble() < 0.15)
+                {
+                    // a breach: the palisade's timbers down in a burning heap at its foot
+                    for (int k = 0; k < 6; k++)
+                    {
+                        var beam = Factory.Prim(PrimitiveType.Cube, root, p - side.Out * R(0.8f, 2.2f) + side.Axis * R(-1f, 1f) + Vector3.up * R(0.2f, 0.6f), new Vector3(0.28f, 0.28f, R(1.8f, 2.8f)), Charred);
+                        beam.transform.rotation = Quaternion.Euler(R(-30f, 30f), R(0f, 360f), R(-30f, 30f));
+                    }
+                    PropFire.Add(root, p - side.Out * 1.4f + Vector3.up * 0.4f, Flame, R(1.4f, 2.2f), true);
+                }
+            }
+        }
+
         /// <summary>Ash drifting down over the whole quarter.</summary>
         static void Pall(Burning b)
         {
@@ -190,6 +242,9 @@ namespace Shadowfall
                 Shape = ParticleSystemShapeType.Circle, Radius = b.Radius * 0.8f, Max = 150,
             }, b.Root, b.At + Vector3.up * 12f);
         }
+
+        /// <summary>Phones and low particle settings: a lighter fire (it's the heaviest scene in the game).</summary>
+        static bool Lite => GameSettings.Phone || GameSettings.ParticleScale < 0.75f;
 
         static readonly Color Wood = new Color(0.42f, 0.29f, 0.18f), Charred = new Color(0.12f, 0.1f, 0.09f), Stone = new Color(0.45f, 0.43f, 0.4f);
 
@@ -226,7 +281,7 @@ namespace Shadowfall
             }
 
             // Inside the walls: the street behind the gate and the quarter
-            for (int i = 0; i < 180; i++)
+            for (int i = 0; i < 340; i++)
             {
                 var p = Spot(2f, b.Radius * 0.9f, true);
                 if (float.IsInfinity(p.x)) continue;
@@ -283,7 +338,7 @@ namespace Shadowfall
                 if (banner != null) banner.transform.rotation = Quaternion.Euler(84f, R(0f, 360f), 0f);
             }
             // The battlefield outside: arrows, broken weapons' hafts, planks of the ladders and the dead's gear
-            for (int i = 0; i < 90; i++)
+            for (int i = 0; i < 160; i++)
             {
                 var p = Spot(3f, 26f, false);
                 if (float.IsInfinity(p.x)) continue;
@@ -360,7 +415,7 @@ namespace Shadowfall
         CharacterView view;
         Vector3 fire;
         float nextCall;
-        static readonly string[] Calls = { "Timber! Stone! Anything you can spare!", "Bring logs and ore, and we'll have the fires out sooner!",
+        static readonly string[] Calls = { "The raiders broke through and burned us out! Help us rebuild!", "We lost the gate, and half the town with it. Timber! Stone!", "Timber! Stone! Anything you can spare!", "Bring logs and ore, and we'll have the fires out sooner!",
             "The masons need paying. Every coin helps!", "Don't stand there gawping, help us rebuild!" };
 
         public override string HoverText => "Reeve of " + Town + "\n<help put out the fires and rebuild>";

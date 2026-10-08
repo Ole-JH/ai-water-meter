@@ -21,6 +21,14 @@ namespace Shadowfall
 
         CharacterView view;
         CharacterLook look;
+        // Mustering (seen from the start of a siege): out of a house's door, through the streets to the gate; an archer
+        // to the foot of a siege ladder, where he waits until the militia have it standing, then up it and along the walk.
+        enum Way { None, Waiting, Walking, AtLadder, Climbing, OnWalk }
+        Way way;
+        readonly List<Vector3> approach = new List<Vector3>();
+        SiegeLadder ladder;
+        float startAt, pace, climbK;
+        HouseDoors.Door door;
         float nextReady;
         static readonly string[] musterCalls = { "To the walls!", "Form up! Shields!", "Look sharp, they're coming!", "Hold here. Nobody passes.", "Archers, find your marks!" };
         Vector3 target;
@@ -81,6 +89,18 @@ namespace Shadowfall
                 : new CharacterLook { Model = "Characters/Knight", Height = 1.95f, Tint = new Color(0.85f, 0.9f, 1.1f), Weapon = "sword" };
             tg.view = CharacterView.Create(go.transform, look);
             tg.look = look;
+            var ivm = Invasion.Current;
+            var hero = Player.I;
+            bool muster = ivm != null && (ivm.phase == "warn" || ivm.phase == "gather") && hero != null && WorldGrid.Instance != null
+                && Factory.FlatDistance(hero.transform.position, Invasion.Gate) < 140f;
+            if (muster && tg.Muster(g, ivm))
+            {
+                tg.target = new Vector3(g.x, tg.Archer ? Rampart.Top : 0f, g.z);
+                tg.lastPos = go.transform.position;
+                tg.nextReady = Time.time + Random.Range(2f, 5f);
+                All[g.i] = tg;
+                return tg;
+            }
             if (tg.Archer)
             {
                 // climbs up the inside of the wall onto the walkway, from just behind it
@@ -98,6 +118,92 @@ namespace Shadowfall
             if (iv0 != null && (iv0.phase == "warn" || iv0.phase == "gather")) Shout(tg, musterCalls, 0.5f); // mustering
             All[g.i] = tg;
             return tg;
+        }
+
+        /// <summary>Sets off from a house near the gate (false: no door or way found: appear at the post as before).</summary>
+        bool Muster(NetGuard g, NetInvasion iv)
+        {
+            var gate = Invasion.Gate;
+            var town = WorldGenerator.TownNamed(iv.town);
+            if (town == null) return false;
+            var inward = Factory.Flat(town.Center - gate).normalized;
+            door = Rampart.DoorNear(gate + inward * 12f + Vector3.Cross(Vector3.up, inward) * Random.Range(-8f, 8f), 32f);
+            if (door == null) return false;
+            var start = TownLife.Walkable(door.Step);
+            var post = new Vector3(g.x, 0f, g.z);
+            Vector3 goal = post;
+            if (Archer)
+            {
+                ladder = Rampart.LadderNear(post);
+                if (ladder == null) return false;
+                goal = ladder.Walk.Foot - ladder.Walk.Side.Out * Random.Range(0.6f, 1.4f) + ladder.Walk.Side.Axis * Random.Range(-0.8f, 0.8f);
+            }
+            approach.Clear();
+            if (!WorldGrid.Instance.FindPath(start, goal, approach, 6000) || approach.Count == 0) return false;
+            transform.position = start;
+            way = Way.Waiting;
+            startAt = Time.time + Random.Range(0.2f, Archer ? 3f : 5f); // they come out one by one, not all at once
+            pace = Archer ? Random.Range(2.7f, 3.5f) : Random.Range(3f, 4f);
+            if (view != null) view.Root.SetActive(false);
+            return true;
+        }
+
+        /// <summary>The muster walk; true while it's still going (the server's position takes over after).</summary>
+        bool Approach(float dt)
+        {
+            switch (way)
+            {
+                case Way.Waiting:
+                    if (Time.time < startAt) return true;
+                    if (view != null) view.Root.SetActive(true);
+                    if (door != null) HouseDoors.Swing(door, 1.4f);
+                    way = Way.Walking;
+                    return true;
+                case Way.Walking:
+                {
+                    if (approach.Count == 0) { way = Archer ? Way.AtLadder : Way.None; return way != Way.None; }
+                    var to = Factory.Flat(approach[0] - transform.position);
+                    float step = pace * dt;
+                    if (to.magnitude <= step) { transform.position = new Vector3(approach[0].x, 0f, approach[0].z); approach.RemoveAt(0); }
+                    else transform.position += to.normalized * step;
+                    if (to.sqrMagnitude > 0.001f) transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(to), dt * 8f);
+                    view?.UpdateLocomotion(pace);
+                    return true;
+                }
+                case Way.AtLadder:
+                    // waiting for the ladder to stand: looking up at the wall, shifting about
+                    if (ladder == null) { way = Way.None; return false; }
+                    Face(ladder.Walk.Foot);
+                    view?.UpdateLocomotion(0f);
+                    if (!ladder.Raised) return true;
+                    transform.position = ladder.Walk.Foot;
+                    climbK = -Random.Range(0f, 1.2f); // not all up the rungs at once
+                    way = Way.Climbing;
+                    return true;
+                case Way.Climbing:
+                {
+                    climbK += dt / 1.8f;
+                    if (climbK < 0f) { view?.UpdateLocomotion(0f); return true; }
+                    var w = ladder.Walk;
+                    transform.position = Vector3.Lerp(w.Foot, w.LadderTop, Mathf.Clamp01(climbK));
+                    transform.rotation = Quaternion.LookRotation(w.Side.Out);
+                    view?.UpdateLocomotion(1.2f);
+                    if (climbK >= 1f) { transform.position = w.At(w.LadderAt); way = Way.OnWalk; }
+                    return true;
+                }
+                case Way.OnWalk:
+                {
+                    var to = target - transform.position;
+                    to.y = 0f;
+                    float step = pace * 0.8f * dt;
+                    if (to.magnitude <= step) { transform.position = target; way = Way.None; return false; }
+                    transform.position += to.normalized * step;
+                    transform.rotation = Quaternion.LookRotation(to);
+                    view?.UpdateLocomotion(pace * 0.8f);
+                    return true;
+                }
+            }
+            return false;
         }
 
         /// <summary>One of their deeds (server "gev"): an arrow loosed, a swing, a blow taken, a fall.</summary>
@@ -157,6 +263,7 @@ namespace Shadowfall
         {
             if (dieAt >= 0f) return;
             float dt = Time.deltaTime;
+            if (way != Way.None && Approach(dt)) { lastPos = transform.position; return; }
             if (climbT >= 0f)
             {
                 // up the ladder-side of the wall, then a step onto the walkway
@@ -171,7 +278,8 @@ namespace Shadowfall
             }
             var to = target - transform.position;
             float dist = Factory.Flat(to).magnitude;
-            if (dist > 6f) transform.position = target;
+            if (dist > 40f) transform.position = target;
+            else if (dist > 6f) transform.position = Vector3.MoveTowards(transform.position, target, 6.5f * dt); // catching up at a run
             else if (dist > 0.03f)
             {
                 transform.position = Vector3.MoveTowards(transform.position, target, Mathf.Max(3.2f, dist * 4f) * dt);

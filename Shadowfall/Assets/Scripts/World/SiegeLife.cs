@@ -220,19 +220,24 @@ namespace Shadowfall
             var square = TownLife.Walkable(town.Center + new Vector3(3f + (wounded % 3) * 1.6f, 0f, -3f - (wounded / 3) * 2f));
             if (healer == null)
             {
-                healer = Extra.Make(this, "Healer", new CharacterLook { Model = "Characters/Mage", Height = 1.8f, Tint = new Color(1f, 1f, 0.95f) }, TownLife.Walkable(town.Center + new Vector3(5f, 0f, -1.5f)), 1.6f);
+                healer = Person("Healer", "Characters/Mage", TownLife.Walkable(town.Center + new Vector3(5f, 0f, -1.5f)), 1.8f);
                 healer.Line = "Bring them here! Gently!";
                 healer.Tending = true;
+                healer.FaceAt = square;
             }
             var bed = square;
             wounded++;
             var militiaLook = new CharacterLook { Model = "Characters/RogueHooded", Height = 1.8f, Tint = new Color(0.75f, 0.85f, 1f) };
-            var start = TownLife.Walkable(Vector3.MoveTowards(at, town.Center, 12f));
-            var a = Extra.Make(this, "Militia", militiaLook, start, 4f);
-            var b = Extra.Make(this, "Militia", militiaLook, start + Vector3.right, 4f);
+            // two men run out of a house near the gate for him
+            var near = Vector3.MoveTowards(at, town.Center, 12f);
+            var door = Rampart.DoorNear(near, 25f, rng);
+            var start = TownLife.Walkable(door != null ? door.Step : near);
+            var a = Extra.Make(this, "Militia", militiaLook, start, R(3.6f, 4.6f));
+            var b = Extra.Make(this, "Militia", militiaLook, TownLife.Walkable(start + Vector3.right), R(3.6f, 4.6f));
             var body = Extra.Make(this, "Wounded guard", look, at, 0f);
             body.Lying = true;
-            a.Delay = b.Delay = 1.5f;
+            a.Delay = R(0.8f, 2.5f);
+            b.Delay = a.Delay + R(0.2f, 1.2f);
             a.Walk(at + Vector3.left * 0.7f);
             b.Walk(at + Vector3.right * 0.7f);
             a.Line = Pick(carriers);
@@ -262,6 +267,8 @@ namespace Shadowfall
         {
             string[] models = { "Characters/Keeper", "Characters/RogueHooded", "Characters/Rogue" };
             string model = Pick(models);
+            var door = Rampart.DoorNear(stand, 30f, rng); // out of a neighbour's house with a bucket
+            if (door != null) from = TownLife.Walkable(door.Step);
             var e = Extra.Make(this, "Bucket carrier", new CharacterLook { Model = model, Height = R(1.75f, 1.9f), Anims = model.EndsWith("Keeper") ? AnimSet.Kenney : AnimSet.KayKit, Tint = new Color(R(0.85f, 1f), R(0.8f, 0.95f), R(0.7f, 0.9f)) }, from, R(3.8f, 4.6f));
             e.Delay = R(0.5f, 3f);
             e.Walk(stand);
@@ -271,10 +278,22 @@ namespace Shadowfall
         }
 
         /// <summary>One of the townsfolk standing at <paramref name="at"/> (a feast, a carpenter, a captive).</summary>
-        public Extra Person(string name, string model, Vector3 at, float height)
+        /// <summary>
+        /// One of the townsfolk who comes to stand at <paramref name="at"/> (a feast, a carpenter, the healer): out of a
+        /// house's front door nearby, in their own time and at their own pace. <paramref name="fromDoor"/> false: already
+        /// there (a captive at the raiders' camp).
+        /// </summary>
+        public Extra Person(string name, string model, Vector3 at, float height, bool fromDoor = true)
         {
             var look = new CharacterLook { Model = model, Height = height, Anims = model.EndsWith("Keeper") ? AnimSet.Kenney : AnimSet.KayKit, Tint = new Color(R(0.85f, 1f), R(0.8f, 0.95f), R(0.7f, 0.9f)) };
-            return Extra.Make(this, name, look, at, 3.5f);
+            var door = fromDoor ? Rampart.DoorNear(at, 40f, rng) : null;
+            if (door == null) return Extra.Make(this, name, look, at, R(1.4f, 2f));
+            var e = Extra.Make(this, name, look, TownLife.Walkable(door.Step), R(1.5f, 2.6f));
+            e.Delay = R(0.3f, 6f);
+            e.Hidden = true; // indoors until they step out
+            e.Door = door;
+            e.Walk(at);
+            return e;
         }
 
         // ------------------------------------------------------------------ the extras
@@ -286,6 +305,9 @@ namespace Shadowfall
             public string Line;
             public System.Action<Extra> OnArrive;
             public bool Lying, Tending;
+            public bool Hidden;            // still indoors: shown (and the door swung) when Delay runs out
+            public HouseDoors.Door Door;
+            float nextFidget;
             public Vector3? FaceAt;
             public string Party;   // an emote kept up while standing about: dance, cheer, clap, sit
             float nextParty;
@@ -323,6 +345,20 @@ namespace Shadowfall
 
             public void FadeOut(float after) { fadeAt = Time.time + after; fadeLen = 1.5f; }
 
+            /// <summary>Standing about: now and then a glance aside, a shuffle of the feet, so nobody stands like a post.</summary>
+            void Fidget()
+            {
+                if (Time.time < nextFidget) return;
+                nextFidget = Time.time + Random.Range(4f, 11f);
+                if (FaceAt.HasValue && Random.value < 0.6f) return;
+                transform.rotation *= Quaternion.Euler(0f, Random.Range(-35f, 35f), 0f);
+                if (Random.value < 0.3f)
+                {
+                    var p = transform.position + new Vector3(Random.Range(-0.5f, 0.5f), 0f, Random.Range(-0.5f, 0.5f));
+                    if (WorldGrid.Instance == null || WorldGrid.Instance.IsWalkable(p)) { path.Clear(); at = 0; path.Add(p); }
+                }
+            }
+
             void Update()
             {
                 float dt = Time.deltaTime;
@@ -342,14 +378,21 @@ namespace Shadowfall
                     }
                     return;
                 }
-                if (Tending)
+                if (Tending && at >= path.Count && Delay <= 0f)
                 {
                     if (FaceAt.HasValue) Factory.Face(transform, FaceAt.Value, dt * 6f);
                     if (Time.time >= nextTend) { nextTend = Time.time + Random.Range(FaceAt.HasValue ? 1.6f : 3f, FaceAt.HasValue ? 2.8f : 6f); view?.Interact(); }
                     view?.UpdateLocomotion(0f);
                     return;
                 }
+                if (Hidden && view != null && view.Root.activeSelf) view.Root.SetActive(false);
                 if (Delay > 0f) { Delay -= dt; view?.UpdateLocomotion(0f); mount?.Tick(0f); return; }
+                if (Hidden)
+                {
+                    Hidden = false;
+                    if (view != null) view.Root.SetActive(true);
+                    if (Door != null) HouseDoors.Swing(Door, 1.3f);
+                }
                 if (!string.IsNullOrEmpty(Party) && at >= path.Count)
                 {
                     if (FaceAt.HasValue) Factory.Face(transform, FaceAt.Value, dt * 4f);
@@ -359,6 +402,7 @@ namespace Shadowfall
                         view.Emote(EmoteDef.Get(Party));
                     }
                     if (view != null && !view.Emoting) view.UpdateLocomotion(0f);
+                    Fidget();
                     return;
                 }
                 float moved = 0f;

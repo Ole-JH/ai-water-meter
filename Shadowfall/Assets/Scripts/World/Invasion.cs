@@ -64,7 +64,10 @@ namespace Shadowfall
                 Sfx.Play2D("roar", 0.55f);
             }
             else if (iv.phase == "lost" && was != null && was.phase != "lost")
+            {
                 GameUI.Banner(iv.town + " has been sacked", new Color(0.75f, 0.7f, 0.65f));
+                TownCrier.Announce("Hear ye! " + iv.town + " has fallen! The raiders broke the " + iv.gate + " gate and the town burns!");
+            }
             else if (iv.phase == "won" && was != null && was.phase != "won" && !rewarded)
                 GameUI.Banner(iv.town + " holds!", new Color(0.55f, 1f, 0.55f));
             if (iv.phase != "won") rewarded = false;

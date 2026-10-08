@@ -27,6 +27,7 @@ namespace Shadowfall
         Transform bell;
         float nextCry, ringT = -1f;
         string lastNews = "";
+        float lastNewsAt = -999f;
 
         public override string HoverText => "Town Crier\n<the news of the realm>";
         public override Color LabelColor => new Color(1f, 0.9f, 0.6f);
@@ -72,6 +73,7 @@ namespace Shadowfall
         {
             if (string.IsNullOrEmpty(text)) return;
             lastNews = loud ? text : lastNews;
+            if (loud) lastNewsAt = Time.time;
             ringT = 0f;
             view?.Action("Cheer", 1.4f);
             var p = Player.I;
@@ -97,14 +99,24 @@ namespace Shadowfall
         /// <summary>What's going on right now that's worth crying.</summary>
         static string Current()
         {
-            if (Invasion.Active && Invasion.Current != null) return "Hear ye! " + Invasion.Current.town + " is under attack at its " + Invasion.Current.gate + " gate! To arms!";
+            var iv = Invasion.Current;
+            if (Invasion.Warned) return "Hear ye! Raiders are massing outside the " + iv.gate + " gate of " + iv.town + "! Defenders, to the walls!";
+            if (Invasion.Active && iv != null) return "Hear ye! " + iv.town + " is under attack at its " + iv.gate + " gate! To arms!";
+            if (iv != null && iv.phase == "lost") return "Hear ye! " + iv.town + " has fallen! The raiders broke the " + iv.gate + " gate!";
+            string burning = Sack.AnyBurning(out string g);
+            if (burning != null) return "Hear ye! " + burning + " has been sacked and its " + g + " quarter burns! The reeve needs timber, stone and coin!";
+            if (SiegeAftermath.Captives != null) return "Hear ye! The raiders hold townsfolk of " + SiegeAftermath.Captives.k + " at their camp! Who will free them?";
+            if (SiegeAftermath.FeastTown != null) return "Hear ye! " + SiegeAftermath.FeastTown + " held! There's a feast in the square for its defenders!";
+            if (iv != null && iv.phase == "won") return "Hear ye! " + iv.town + " holds! The raiders are beaten!";
             if (WorldBoss.Up && WorldBoss.Current != null) return "Hear ye! " + WorldBoss.Current.name + " walks in " + WorldBoss.Current.region + "! Gather your allies!";
             return null;
         }
 
         public override void Interact(Player p)
         {
-            Cry(Current() ?? (string.IsNullOrEmpty(lastNews) ? Ordinary[Random.Range(0, Ordinary.Length)] : lastNews), false);
+            // the last loud news only while it's fresh: an old "under attack" after the siege is over would be a lie
+            bool fresh = !string.IsNullOrEmpty(lastNews) && Time.time - lastNewsAt < 90f;
+            Cry(Current() ?? (fresh ? lastNews : Ordinary[Random.Range(0, Ordinary.Length)]), false);
         }
     }
 }

@@ -37,6 +37,8 @@ namespace Shadowfall
 
         /// <summary>Captives waiting to be freed (the tracker shows them), and until when (Time.time).</summary>
         public static NetAfterSpot Captives;
+        /// <summary>A town feasting its defenders now (the criers cry it), or null.</summary>
+        public static string FeastTown;
         public static float CaptivesUntil;
 
         public static void Set(NetAfter a)
@@ -44,6 +46,7 @@ namespace Shadowfall
             Get().last = a;
             Get().nextCheck = 0f;
             Captives = a != null && a.cp != null && a.cp.Length > 0 ? a.cp[0] : null;
+            FeastTown = a != null && a.fe != null && a.fe.Length > 0 ? a.fe[0].k : null;
             if (Captives != null) CaptivesUntil = Time.time + Captives.left;
         }
 
@@ -293,7 +296,7 @@ namespace Shadowfall
             for (int i = 0; i < n; i++)
             {
                 var at = camp + Quaternion.Euler(0f, i * (360f / n), 0f) * Vector3.forward * 1.1f;
-                var e = life.Person("Captive", models[i % models.Length], at, i == n - 1 ? 1.2f : R(1.7f, 1.9f));
+                var e = life.Person("Captive", models[i % models.Length], at, i == n - 1 ? 1.2f : R(1.7f, 1.9f), false);
                 e.FaceAt = camp + (at - camp) * 3f;
                 e.Party = "sit";
                 b.People.Add(e);

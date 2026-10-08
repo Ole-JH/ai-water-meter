@@ -24,6 +24,45 @@ namespace Shadowfall
         static TownGate gate;            // the gate of the current (or last) invasion
         static readonly Dictionary<string, TownGate> gates = new Dictionary<string, TownGate>(); // every walled town's gates
         static readonly List<GameObject> helpers = new List<GameObject>();
+        /// <summary>The siege ladders up (or being carried) now: the wall's archers wait for theirs to stand before climbing.</summary>
+        public static readonly List<SiegeLadder> Standing = new List<SiegeLadder>();
+
+        /// <summary>The ladder whose walkway is nearest <paramref name="p"/> (null: none).</summary>
+        public static SiegeLadder LadderNear(Vector3 p)
+        {
+            SiegeLadder best = null;
+            float bd = 40f;
+            foreach (var l in Standing)
+            {
+                if (l == null) continue;
+                float d = Factory.FlatDistance(l.Walk.Foot, p);
+                if (d < bd) { bd = d; best = l; }
+            }
+            return best;
+        }
+
+        /// <summary>
+        /// The front door of a house near <paramref name="p"/> (within <paramref name="r"/>, inside the same town), picked
+        /// at random among the nearest few, swung open: where townsfolk and guards come out of instead of appearing.
+        /// </summary>
+        public static HouseDoors.Door DoorNear(Vector3 p, float r, System.Random rng = null)
+        {
+            var town = WorldGenerator.TownAt(p);
+            var near = new List<HouseDoors.Door>();
+            foreach (var d in HouseDoors.All)
+            {
+                if (Factory.FlatDistance(d.Centre, p) > r) continue;
+                var t = WorldGenerator.TownAt(d.Centre);
+                if (town != null && t != town) continue;
+                near.Add(d);
+            }
+            if (near.Count == 0) return null;
+            near.Sort((a, b) => Factory.FlatDistance(a.Centre, p).CompareTo(Factory.FlatDistance(b.Centre, p)));
+            int k = Mathf.Min(near.Count, 4);
+            var pick = near[rng != null ? rng.Next(k) : Random.Range(0, k)];
+            HouseDoors.Swing(pick, 1.6f);
+            return pick;
+        }
         static string builtFor;          // "town|gate|started" of the ladders and helpers up now
         static bool runner;
 
@@ -139,6 +178,7 @@ namespace Shadowfall
         {
             foreach (var h in helpers) if (h != null) Object.Destroy(h);
             helpers.Clear();
+            Standing.Clear();
             builtFor = null;
             var p = Player.I;
             if (p != null && p.OnWall != null) p.LeaveWall(); // the walkway is gone
@@ -180,6 +220,7 @@ namespace Shadowfall
 
             var ladder = SiegeLadder.Build(root, walkway);
             walkway.Ladder = ladder;
+            Standing.Add(ladder);
             helpers.Add(ladder.gameObject);
             var deck = Walkway(walkway);
             helpers.Add(deck);
@@ -525,6 +566,8 @@ namespace Shadowfall
         Quaternion carried, leaning;
 
         public override bool CanInteract => raised;
+        /// <summary>Standing against the wall (the archers climb it then).</summary>
+        public bool Raised => raised;
         public override string HoverText => "Ladder\n<climb onto the wall: shoot from up there, or jump down outside>";
         public override Color LabelColor => new Color(1f, 0.85f, 0.55f);
         public override float LabelHeight => 3.2f;
@@ -612,7 +655,7 @@ namespace Shadowfall
         WallWalk walk;
         readonly List<Vector3> path = new List<Vector3>();
         Step step;
-        float until, nextShout, speed;
+        float until, nextShout, speed, delay;
         Vector3 stand;
 
         public static Militia Create(Transform parent, Settlement town, Rampart.Side side, WallWalk walk, SiegeLadder ladder,
@@ -625,14 +668,18 @@ namespace Shadowfall
             m.walk = walk;
             m.ladder = ladder;
             m.deck = deck;
-            m.speed = 3.6f;
+            m.speed = Random.Range(3.1f, 4.2f);
+            m.delay = Time.time + Random.Range(0.3f, 3f); // each sets off in his own time
             m.stand = walk.Foot - side.Out * 0.9f + side.Axis * dir * 1.2f;
             var grid = WorldGrid.Instance;
             if (!grid.IsWalkable(m.stand)) m.stand = walk.Foot - side.Out * 1.2f;
             Vector3 start = m.stand;
             if (fromTown)
             {
-                start = TownLife.Walkable(new Vector3(town.Rect.center.x, 0f, town.Rect.center.y) + side.Out * 5f + side.Axis * dir * 3f);
+                // out of a house's front door (one near the middle of town, on his side), not out of thin air
+                var mid = new Vector3(town.Rect.center.x, 0f, town.Rect.center.y) + side.Out * 5f + side.Axis * dir * 3f;
+                var door = Rampart.DoorNear(mid, 26f);
+                start = door != null ? TownLife.Walkable(door.Step) : TownLife.Walkable(mid);
                 if (!grid.FindPath(start, walk.Foot, m.path) || m.path.Count == 0) { start = m.stand; fromTown = false; }
             }
             go.transform.position = start;
@@ -663,6 +710,7 @@ namespace Shadowfall
             switch (step)
             {
                 case Step.Walking:
+                    if (Time.time < delay) break;
                     if (path.Count == 0)
                     {
                         step = Step.Raising;
