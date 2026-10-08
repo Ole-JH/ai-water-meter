@@ -24,6 +24,15 @@ namespace Shadowfall
         {
             new Entry
             {
+                Id = 80, Date = "2026-10-08", Title = "No more waiting at the gate",
+                Items = new[]
+                {
+                    "The scouts' warning is the time to get there: when it runs out, the first wave falls on the gate at once, with no extra minute of gathering. The militia put the ladders up during the warning.",
+                    "A sacked quarter now burns for twelve minutes, and the reeve's help counts for much more: timber or stone puts the fires out a minute and a half sooner, coin a minute, and both pay more experience.",
+                },
+            },
+            new Entry
+            {
                 Id = 79, Date = "2026-10-08", Title = "Scouts and rebuilding",
                 Items = new[]
                 {

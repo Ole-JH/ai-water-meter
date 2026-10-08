@@ -12,13 +12,15 @@
 // a hero hurts one, sendTo(s) when a hero enters the world, and start()/stop() for the admin command.
 
 const WAVES = 3;
-const GATHER_S = Number(process.env.INVASION_GATHER_S ?? 60); // between the warning and the first wave
+// An admin's invasion without the scouts' warning gathers this long before the first wave; after a warning the first
+// wave falls at once (the warning was the time to get there)
+const GATHER_S = Number(process.env.INVASION_GATHER_S ?? 60);
 const WAVE_GAP_S = 75;      // the next wave comes after this long, or sooner when the last one is nearly dead
 const MAX_S = 12 * 60;      // a siege nobody answers ends in a sack
 // Gate integrity (of 100) lost per second per invader at the gate (big ones count double)
 const SIEGE_RATE = Number(process.env.INVASION_SIEGE_RATE ?? 0.35);
 const RESULT_S = 15;        // how long the outcome stays on players' screens
-const SACK_S = Number(process.env.SACK_S ?? 300); // how long the quarter behind a broken gate burns
+const SACK_S = Number(process.env.SACK_S ?? 720); // how long the quarter behind a broken gate burns (deliveries to the reeve shorten it)
 // Scouts see the raiders coming: an invasion the server starts by itself is announced this long before they gather
 // (phase "warn"), so heroes further away have time to come and defend
 const WARN_S = Number(process.env.INVASION_WARN_S ?? 90);
@@ -99,21 +101,21 @@ module.exports = function createInvasions(ctx) {
     return weighted.find((w) => (r -= w.n) < 0)?.t || weighted[0].t;
   }
 
-  /** Scouts sight the raiders: name the town and gate now, the gathering begins in WARN_S seconds. */
+  /** Scouts sight the raiders: name the town and gate now, the first wave falls on it in WARN_S seconds. */
   function scout(town, gateName) {
     const t = town || chooseTown();
     if (!t) return "nobody is near a walled town";
     const g = gates(t).filter((x) => !gateName || x.name === gateName).sort(() => Math.random() - 0.5)[0];
     if (!g) return `${t.name} has no ${gateName} gate`;
     pending = { town: t, gate: g, at: now() + WARN_S };
-    broadcast({ t: "sys", msg: `Scouts sight raiders massing near ${t.name}! They will fall on its ${g.name} gate in ${Math.round(WARN_S)} seconds. Defenders, make haste!` });
+    broadcast({ t: "sys", msg: `Scouts sight raiders massing near ${t.name}! They will fall on its ${g.name} gate in ${Math.round(WARN_S)} seconds. Defenders, to the walls!` });
     send();
     log(`Raiders sighted near ${t.name} (${g.name} gate)`);
     return null;
   }
 
-  /** Sets up a siege of town t (or the busiest walled town). Returns why not, or null. */
-  function begin(t, gateName) {
+  /** Sets up a siege of town t (or the busiest walled town); warned: the scouts called it, the first wave falls now. Returns why not, or null. */
+  function begin(t, gateName, warned) {
     if (!t) {
       t = chooseTown();
       if (!t) return "nobody is near a walled town";
@@ -134,8 +136,10 @@ module.exports = function createInvasions(ctx) {
         phase: "gather", wave: 0, integrity: 100, began: now(), waveAt: now() + GATHER_S, ids: new Set(),
         defenders: new Map(), sentAt: 0, endedAt: 0, guards: [], nextGuard: 1,
       };
-      broadcast({ t: "sys", msg: `${t.name} is under attack! Monsters are gathering outside its ${g.name} gate. Defend the town!` });
+      broadcast({ t: "sys", msg: warned ? `The raiders fall on the ${g.name} gate of ${t.name}! Defend the town!`
+        : `${t.name} is under attack! Monsters are gathering outside its ${g.name} gate. Defend the town!` });
       log(`Invasion of ${t.name} (${g.name} gate, level ${level}, ${ros.types.join(", ")})`);
+      if (warned) { inv.phase = "wave"; spawnWave(); }
       send();
       return null;
     }
@@ -332,7 +336,7 @@ module.exports = function createInvasions(ctx) {
         if (t >= pending.at) {
           const p = pending;
           pending = null;
-          if (sacks.has(p.town.name) || begin(p.town, p.gate.name)) { send(); nextAt = t + 5 * 60; }
+          if (sacks.has(p.town.name) || begin(p.town, p.gate.name, true)) { send(); nextAt = t + 5 * 60; }
         }
         return;
       }
@@ -445,7 +449,7 @@ module.exports = function createInvasions(ctx) {
       if (townName && !t) return `No walled town called "${townName}" (${walled.map((w) => w.name).join(", ")}).`;
       if (warn) { // as the server does by itself: scouts' warning first
         const why = scout(t || walled[0], gateName);
-        return why ? `No invasion: ${why}.` : `Scouts sight raiders near ${pending.town.name}; they gather in ${Math.round(WARN_S)} s.`;
+        return why ? `No invasion: ${why}.` : `Scouts sight raiders near ${pending.town.name}; they attack in ${Math.round(WARN_S)} s.`;
       }
       const why = begin(t, gateName);
       return why ? `No invasion: ${why}.` : `Invasion of ${inv.town.name} begins at the ${inv.gate.name} gate.`;

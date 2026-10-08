@@ -172,14 +172,14 @@ namespace Shadowfall
             var wr = new Rect(x, y, qw, 32);
             if (AdminButton(wr, (adminWarn ? "[x]" : "[ ]") + " Scouts first")) adminWarn = !adminWarn;
             if (wr.Contains(Event.current.mousePosition))
-                tooltip = "Ticked, the town buttons start an invasion as the server's own do: scouts announce the town and gate and the raiders gather 90 seconds later";
+                tooltip = "Ticked, the town buttons start an invasion as the server's own do: scouts announce the town and gate and the first wave falls on it 90 seconds later";
             GUI.enabled = Invasion.Current != null;
             if (AdminButton(new Rect(x + qw + 6, y, qw, 32), "Go to the gate") && Invasion.Current != null)
                 AdminTools.Send(new AdminCmd { c = "tp", x = Invasion.Current.gx, z = Invasion.Current.gz - 4f });
             if (AdminButton(new Rect(x + 2 * (qw + 6), y, qw, 32), "End it")) AdminTools.Send(new AdminCmd { c = "invasion", stop = true });
             GUI.enabled = true;
             y += 38;
-            // As a lost siege: the quarter behind the chosen gate burns for five minutes (south when "Any gate")
+            // As a lost siege: the quarter behind the chosen gate burns for twelve minutes (south when "Any gate")
             // which quarter: the gate picked above ("Any gate" burns the south one)
             string burnGate = adminGate == 0 ? "South" : adminGates[adminGate];
             UISkin.Shadowed(new Rect(x, y - 2, 90, 18), "Burn the", UISkin.Small, UISkin.Muted);
@@ -193,7 +193,7 @@ namespace Shadowfall
                 if (AdminButton(br, t.Name.Split(' ')[0]))
                     AdminTools.Send(new AdminCmd { c = "sack", town = t.Name, gate = burnGate.ToLowerInvariant() });
                 if (br.Contains(Event.current.mousePosition))
-                    tooltip = "Set fire to the " + burnGate.ToLowerInvariant() + " quarter of " + t.Name + " for five minutes, as a lost siege does: its houses burn, " +
+                    tooltip = "Set fire to the " + burnGate.ToLowerInvariant() + " quarter of " + t.Name + " for twelve minutes, as a lost siege does: its houses burn, " +
                               "its merchants flee and their trade is refused there. Pick the gate in the row above.";
             }
             var pr = new Rect(x + w - 76, y, 76, 30);

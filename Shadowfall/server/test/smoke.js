@@ -517,7 +517,7 @@ async function invasionTests(a, b) {
 
   // The quarter behind the broken gate burns: its merchants are gone until the fires are out
   const sk = b.all("sack").at(-1)?.sk || [];
-  assert.ok(sk.some((k) => k.k === "Saltreach" && k.g === "west" && k.left > 250 && k.r > 10), "the quarter behind the broken gate is set on fire for five minutes");
+  assert.ok(sk.some((k) => k.k === "Saltreach" && k.g === "west" && k.left > 700 && k.r > 10), "the quarter behind the broken gate is set on fire for twelve minutes");
   assert.ok(b.all("sys").some((m) => /west quarter on fire/.test(m.msg)), "and everyone hears of it");
   const shop = async (x, z) => {
     state(b, x, z);
@@ -545,7 +545,7 @@ async function invasionTests(a, b) {
   await sleep(300);
   const ok = b.all("iok").filter((m) => m.op === "rebuild").at(-1);
   assert.ok(ok && ok.xp > 0, "a delivery pays experience");
-  assert.ok(leftNow() <= before - 25, "and the fires burn half a minute shorter");
+  assert.ok(leftNow() <= before - 85, "and the fires burn a minute and a half shorter");
   assert.strictEqual(b.all("inv").at(-1).bag.filter((x) => x && x.Name === "Oak Logs").length, 0, "the logs are taken");
   a.ws.send(JSON.stringify({ t: "adm", c: "sack", town: "stop" }));
   await sleep(200);
@@ -555,16 +555,16 @@ async function invasionTests(a, b) {
   await sleep(250);
   assert.ok(b.all("ierr").slice(errs1).some((m) => m.op === "rebuild" && /Nothing here is burning/.test(m.msg)), "no rebuilding where nothing burns");
 
-  // Scouts see raiders coming: the town and gate are known before they gather
+  // Scouts see raiders coming: the town and gate are known before the first wave falls on it
   a.ws.send(JSON.stringify({ t: "adm", c: "invasion", town: "Frost", gate: "north", warn: true }));
   await sleep(400);
   const warned = b.all("invasion").at(-1)?.iv;
-  assert.ok(warned && warned.phase === "warn" && warned.town === "Frosthaven" && warned.left > 0, "raiders are sighted before they gather");
+  assert.ok(warned && warned.phase === "warn" && warned.town === "Frosthaven" && warned.left > 0, "raiders are sighted before they attack");
   assert.ok(b.all("sys").some((m) => /Scouts sight raiders massing near Frosthaven/.test(m.msg)), "and everyone is warned");
-  let gathered;
-  for (let i = 0; i < 20 && (gathered = b.all("invasion").at(-1).iv).phase === "warn"; i++) await sleep(250);
-  assert.strictEqual(gathered.phase, "gather", "then they gather at the gate that was named");
-  assert.strictEqual(gathered.gate, warned.gate, "the same gate");
+  let attacked;
+  for (let i = 0; i < 20 && (attacked = b.all("invasion").at(-1).iv).phase === "warn"; i++) await sleep(250);
+  assert.ok(attacked.phase === "wave" && attacked.wave === 1, "then the first wave falls at once, no gathering");
+  assert.strictEqual(attacked.gate, warned.gate, "on the gate that was named");
   a.ws.send(JSON.stringify({ t: "adm", c: "invasion", stop: true }));
   await sleep(200);
   state(b, 146, 150);

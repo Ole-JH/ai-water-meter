@@ -4,7 +4,7 @@ using UnityEngine;
 namespace Shadowfall
 {
     /// <summary>
-    /// A lost siege (server/invasion.js): the invaders set fire to the quarter behind the gate they broke. For five minutes
+    /// A lost siege (server/invasion.js): the invaders set fire to the quarter behind the gate they broke. For twelve minutes (less as heroes help the reeve)
     /// the houses there burn (flames on the roofs, smoke, the roar of it), the people flee (see Npc: the merchants,
     /// smiths and auctioneers of the quarter are gone, and the server refuses their trade there) and the townsfolk keep
     /// indoors. When the fires are out, everyone comes back.

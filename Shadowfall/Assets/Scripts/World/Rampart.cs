@@ -88,20 +88,14 @@ namespace Shadowfall
 
             switch (iv.phase)
             {
+                case "warn": // the scouts' warning: the militia put the ladders up, the gate stays open until they come
+                    Ladders(town, side, iv);
+                    break;
                 case "gather":
                 case "wave":
                     gate.Close();
                     gate.SetHealth(iv.hp);
-                    string key = iv.town + "|" + iv.gate;
-                    if (builtFor != key)
-                    {
-                        Clear(false);
-                        builtFor = key;
-                        // Seen from the start (the gathering has just begun): the helpers carry the ladders out.
-                        // Otherwise (we logged in later, or came back from a dungeon) they're up already.
-                        bool fresh = iv.phase == "gather" && iv.left >= 25;
-                        foreach (int dir in new[] { -1, 1 }) PlaceLadder(town, side, dir, fresh);
-                    }
+                    Ladders(town, side, iv);
                     break;
                 case "won":
                     gate.SetHealth(iv.hp);
@@ -149,6 +143,19 @@ namespace Shadowfall
             var p = Player.I;
             if (p != null && p.OnWall != null) p.LeaveWall(); // the walkway is gone
             if (repair && gate != null) gate.Repair();
+        }
+
+        /// <summary>The two ladders behind the gate, once per siege.</summary>
+        static void Ladders(Settlement town, Side side, NetInvasion iv)
+        {
+            string key = iv.town + "|" + iv.gate;
+            if (builtFor == key) return;
+            Clear(false);
+            builtFor = key;
+            // Seen from the start (the warning or the gathering has just begun): the helpers carry the ladders out.
+            // Otherwise (we logged in later, or came back from a dungeon) they're up already.
+            bool fresh = (iv.phase == "warn" || iv.phase == "gather") && iv.left >= 25;
+            foreach (int dir in new[] { -1, 1 }) PlaceLadder(town, side, dir, fresh);
         }
 
         static void PlaceLadder(Settlement town, Side side, int dir, bool walk)

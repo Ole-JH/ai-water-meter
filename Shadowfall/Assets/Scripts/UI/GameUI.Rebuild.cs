@@ -29,26 +29,27 @@ namespace Shadowfall
             y += 76;
             GUI.Label(new Rect(x, y, w, 26), "The fires burn for another <b>" + (left / 60) + ":" + (left % 60).ToString("00") + "</b>", UISkin.InkRich);
             y += 38;
-            int xp = Mathf.RoundToInt(4 * Mathf.Pow(p.Level, 1.4f));
+            // as the server pays them (server.js, itemOps.rebuild)
+            int xp = Mathf.RoundToInt(10 * Mathf.Pow(p.Level, 1.4f)), coinXp = Mathf.RoundToInt(6 * Mathf.Pow(p.Level, 1.4f));
             int gold = Mathf.Max(50, 25 * p.Level);
-            y = RebuildRow(p, x, y, w, "Timber", Have(p, Logs), "5 logs of one kind (woodcutting)", "wood", 30, xp);
-            y = RebuildRow(p, x, y, w, "Stone", Have(p, Ores), "5 ore of one kind (mining)", "stone", 30, xp);
+            y = RebuildRow(p, x, y, w, "Timber", Have(p, Logs), "5 logs of one kind (woodcutting)", "wood", "-1:30", xp);
+            y = RebuildRow(p, x, y, w, "Stone", Have(p, Ores), "5 ore of one kind (mining)", "stone", "-1:30", xp);
             GUI.enabled = p.Gold >= gold;
             UISkin.Shadowed(new Rect(x, y + 4, 200, 22), "Coin", UISkin.Label, UISkin.Cream);
-            GUI.Label(new Rect(x, y + 26, 220, 20), gold + " gold (you have " + p.Gold + ")", UISkin.Ink14);
-            if (UISkin.Btn(new Rect(x + w - 190, y + 6, 190, 38), "Give " + gold + " gold  -20 s", UISkin.Button)) NetClient.I?.Op("rebuild", k: "gold");
+            GUI.Label(new Rect(x, y + 26, 260, 20), gold + " gold (you have " + p.Gold + "), +" + coinXp + " xp", UISkin.Ink14);
+            if (UISkin.Btn(new Rect(x + w - 190, y + 6, 190, 38), "Give " + gold + " gold  -1:00", UISkin.Button)) NetClient.I?.Op("rebuild", k: "gold");
             GUI.enabled = true;
             y += 58;
-            GUI.Label(new Rect(x, y, w, 40), "Each delivery: <b>+" + xp + " experience</b>. When the fires are out, everyone hears who helped.", UISkin.V(UISkin.InkRich, wordWrap: true));
+            GUI.Label(new Rect(x, y, w, 40), "Timber and stone: <b>+" + xp + " experience</b> each. When the fires are out, everyone hears who helped.", UISkin.V(UISkin.InkRich, wordWrap: true));
         }
 
-        float RebuildRow(Player p, float x, float y, float w, string what, string have, string needs, string kind, int seconds, int xp)
+        float RebuildRow(Player p, float x, float y, float w, string what, string have, string needs, string kind, string shorter, int xp)
         {
             bool can = !string.IsNullOrEmpty(have);
             UISkin.Shadowed(new Rect(x, y + 4, 200, 22), what, UISkin.Label, UISkin.Cream);
             GUI.Label(new Rect(x, y + 26, 260, 20), can ? "You have " + have : needs, UISkin.Ink14);
             GUI.enabled = can;
-            if (UISkin.Btn(new Rect(x + w - 190, y + 6, 190, 38), "Give 5  -" + seconds + " s", UISkin.Button)) NetClient.I?.Op("rebuild", k: kind);
+            if (UISkin.Btn(new Rect(x + w - 190, y + 6, 190, 38), "Give 5  " + shorter, UISkin.Button)) NetClient.I?.Op("rebuild", k: kind);
             GUI.enabled = true;
             return y + 58;
         }

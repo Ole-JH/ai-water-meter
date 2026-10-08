@@ -261,17 +261,17 @@ Cache falls out of the sky at your feet as a chest trailing light, lands with a 
 
 ## Town invasions
 
-Every 45 minutes or so (the server's `INVASION_MINUTES`), monsters from the surrounding lands gather outside a gate of
+Every 45 minutes or so (the server's `INVASION_MINUTES`), monsters from the surrounding lands attack a gate of
 one of the walled towns (Hollowmere, Frosthaven, Saltreach or Emberwatch), usually where heroes are.
 
 - **Scouts see them coming** a minute and a half ahead (`INVASION_WARN_S`, 90 seconds): everyone online hears which town
   and which gate, a bell tolls and the town crier calls it out, the gate gets a marker on the minimap and the world map
-  ("Raiders sighted!") and the tracker under the minimap counts down. Time to head over, or ride a waystone.
-- Then the raiders gather outside the gate: the marker turns to a pulsing red one and the tracker counts down to the
-  attack.
-
-- **A minute later the first wave marches on the gate**, then a second and a third, the last led by a **warlord** (a
-  three-affix champion with extra health). The next wave comes when the last is nearly dead, or after 75 seconds.
+  ("Raiders sighted!") and the tracker under the minimap counts down. Time to head over, or ride a waystone; the
+  militia put the ladders up meanwhile.
+- When the countdown runs out **the first wave falls on the gate** straight away: the marker turns to a pulsing red one
+  and the gate shuts.
+- **Three waves march on the gate**, one after another, the last led by a **warlord** (a three-affix champion with
+  extra health). The next wave comes when the last is nearly dead, or after 75 seconds.
 - The invaders are monsters of the land around that gate, at about the level of the heroes near the town, and there
   are more of them the more heroes are around. They fight anyone they meet on the way, as usual; heroes inside the
   walls are out of their reach.
@@ -281,7 +281,7 @@ one of the walled towns (Hollowmere, Frosthaven, Saltreach or Emberwatch), usual
   unless a hero hurt the monster too. Invaders still go for heroes first; with no hero near they fight the soldiers
   (their archers and casters shoot at the wall's archers too), and only then batter the gate. Fallen guards are
   replaced at the next wave.
-- **The gate shuts** as soon as the monsters start gathering: nobody walks in or out there until it's over (recall or
+- **The gate shuts** as soon as the first wave comes: nobody walks in or out there until it's over (recall or
   a waystone still gets you home).
 - **The militia put up ladders.** Two helpers carry a ladder each from the middle of town to the inside of the wall,
   a few paces either side of the gate, stand them up and lay a plank walkway along the top. Click a ladder to climb up.
@@ -298,7 +298,7 @@ one of the walled towns (Hollowmere, Frosthaven, Saltreach or Emberwatch), usual
   legendary items. Invaders also give 30% more experience each.
 - **The town is sacked** when the gate breaks, or when nobody stops the siege within 12 minutes: the invaders plunder
   the market and withdraw, and nobody is rewarded. Worse, **they set fire to the quarter behind the broken gate** (inside
-  the walls, a little more than half the town's width from the gate) for **five minutes**:
+  the walls, a little more than half the town's width from the gate) for **twelve minutes**:
     - its houses burn, flames all over the roofs and out of the upper walls, smoke rising;
     - the wreckage of the fight lies about: the gate's planks thrown inward, toppled barrels and spilled crates, charred
       timber, rubble, arrows in the ground, a fallen banner, scorch marks and burning wreckage, and a battlefield of
@@ -311,11 +311,11 @@ one of the walled towns (Hollowmere, Frosthaven, Saltreach or Emberwatch), usual
     everyone comes back.
 - **Help it rebuild.** While a town burns, its reeve, Halden, stands near the middle of town, away from the flames (a "!" over his head), and asks for
   help. Click him and bring him:
-    - **timber**: 5 logs of one kind (Oak, Willow or Yew, from woodcutting), the fires burn 30 seconds shorter;
-    - **stone**: 5 ore of one kind (Copper, Iron or Mithril, from mining), 30 seconds shorter;
-    - **coin**: 25 gold a level (at least 50), 20 seconds shorter.
+    - **timber**: 5 logs of one kind (Oak, Willow or Yew, from woodcutting), the fires burn a minute and a half shorter;
+    - **stone**: 5 ore of one kind (Copper, Iron or Mithril, from mining), a minute and a half shorter;
+    - **coin**: 25 gold a level (at least 50), a minute shorter.
 
-    Every delivery pays experience. If the fires go out early, everyone online hears whose help did it, and the
+    Every delivery pays experience (timber and stone more than coin): eight loads of timber or stone put the fires out. If the fires go out early, everyone online hears whose help did it, and the
     merchants come straight back.
 
 Defending counts towards four [achievements](achievements.md#combat), one of them with the title *the Defender*, and

@@ -2206,13 +2206,13 @@ const itemOps = {
       const name = names.find((n) => I.countOf(s.ledger.bag, n) >= REBUILD_COUNT);
       if (!name) return ierr(s, "rebuild", `The reeve needs ${REBUILD_COUNT} ${kind === "wood" ? "logs of one kind (woodcutting)" : "ore of one kind (mining)"}.`);
       I.removeByName(s.ledger.bag, name, REBUILD_COUNT);
-      seconds = 30;
+      seconds = 90;
     } else if (kind === "gold") {
       if (s.ledger.gold < gold) return ierr(s, "rebuild", `You need ${gold} gold.`);
       s.ledger.gold -= gold;
-      seconds = 20;
+      seconds = 60;
     } else return false;
-    const xp = Math.round(4 * Math.pow(s.lvl || 1, 1.4));
+    const xp = Math.round((seconds === 90 ? 10 : 6) * Math.pow(s.lvl || 1, 1.4));
     const out = invasions.douse(k, seconds, s.name);
     iok(s, "rebuild", { k: kind, xp, msg: out ? "out" : "", gold: kind === "gold" ? gold : 0 });
     return true;

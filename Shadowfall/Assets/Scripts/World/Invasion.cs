@@ -14,7 +14,7 @@ namespace Shadowfall
         /// <summary>The invasion going on (or just ended), or null.</summary>
         public static NetInvasion Current { get; private set; }
         public static bool Active => Current != null && (Current.phase == "gather" || Current.phase == "wave");
-        /// <summary>Scouts have sighted raiders: the town and gate are known, they gather in Countdown seconds.</summary>
+        /// <summary>Scouts have sighted raiders: the town and gate are known, the first wave falls in Countdown seconds.</summary>
         public static bool Warned => Current != null && Current.phase == "warn";
         /// <summary>Worth a marker on the maps: sighted, or attacking.</summary>
         public static bool Marked => Active || Warned;
@@ -39,7 +39,15 @@ namespace Shadowfall
             }
 
             bool started = was == null || was.town != iv.town || (was.phase != "gather" && iv.phase == "gather");
-            if (started && iv.phase == "gather")
+            bool fellFromWarning = was != null && was.phase == "warn" && iv.phase == "wave"; // the scouts' warning ran out: no gathering
+            if (fellFromWarning)
+            {
+                GameUI.Banner("The raiders fall on " + iv.town + "!", Color);
+                Sfx.Play2D("gong", 0.7f);
+                Sfx.Play2D("roar", 0.55f);
+                TownCrier.Announce("Hear ye! The raiders are at the " + iv.gate + " gate of " + iv.town + "! To arms!");
+            }
+            else if (started && iv.phase == "gather")
             {
                 GameUI.Banner(iv.town + " is under attack!", Color);
                 Sfx.Play2D("gong", 0.7f);
@@ -85,7 +93,7 @@ namespace Shadowfall
                 if (c == null) return "";
                 switch (c.phase)
                 {
-                    case "warn": return "Raiders sighted! They gather at the " + c.gate + " gate in " + Countdown + " s";
+                    case "warn": return "Raiders sighted! They attack the " + c.gate + " gate in " + Countdown + " s";
                     case "gather": return "Monsters gather at the " + c.gate + " gate - first wave in " + Countdown + " s";
                     case "wave": return "Wave " + c.wave + "/" + c.waves + "  -  " + c.left + (c.left == 1 ? " invader" : " invaders") + "  -  " + c.gate + " gate";
                     case "won": return "The town holds!";
