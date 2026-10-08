@@ -64,6 +64,11 @@ namespace Shadowfall
             new AchievementDef { Id = "reforge_first", Name = "Second Opinion", Description = "Reforge a property of an item.", Category = AchievementCategory.Professions, Icon = "ach_anvil", Points = 5, Stat = "reforged", Goal = 1 },
             new AchievementDef { Id = "reforge_25", Name = "Never Satisfied", Description = "Reforge 25 times.", Category = AchievementCategory.Professions, Icon = "ach_anvil", Points = 10, Stat = "reforged", Goal = 25, Title = "the Perfectionist" },
 
+            // ---- greater rifts
+            new AchievementDef { Id = "rift_1", Name = "Through the Tear", Description = "Clear a greater rift in time.", Category = AchievementCategory.Dungeons, Icon = "ach_dungeon", Points = 10, Stat = "rift_tier", Goal = 1 },
+            new AchievementDef { Id = "rift_10", Name = "Riftwalker", Description = "Clear a tier 10 greater rift in time.", Category = AchievementCategory.Dungeons, Icon = "ach_hell", Points = 25, Stat = "rift_tier", Goal = 10, Title = "the Riftwalker" },
+            new AchievementDef { Id = "rift_25", Name = "Beyond the Veil", Description = "Clear a tier 25 greater rift in time.", Category = AchievementCategory.Dungeons, Icon = "ach_hell", Points = 50, Stat = "rift_tier", Goal = 25 },
+
             // ---- world bosses
             new AchievementDef { Id = "worldboss_first", Name = "Giant Slayer", Description = "Help slay a world boss.", Category = AchievementCategory.Bosses, Icon = "ach_boss", Points = 10, Stat = "world_boss", Goal = 1 },
             new AchievementDef { Id = "worldboss_all", Name = "Bane of Giants", Description = "Help slay Old Bramblehide, Hrimgar the Mountain, Gorvash the Dune Reaver and the Pyre Colossus.", Category = AchievementCategory.Bosses, Icon = "ach_boss", Points = 50, Stat = "world_boss", Goal = 4, Title = "the Giantsbane" },

@@ -96,6 +96,8 @@ namespace Shadowfall
         public NetGuildMember[] members;
     }
     [Serializable] public class NetGuildMember { public string name, rank; public bool on; public int lvl; }
+    /// <summary>Greater rifts: rinfo (best tier and leaderboard, please), ropen (open tier n).</summary>
+    [Serializable] public class RiftMsg { public string t; public int n; }
     [Serializable] public class GuildAnswerMsg { public string t = "ganswer"; public bool yes; }
 
     /// <summary>A world boss (server/worldboss.js): phase none | up; hp in percent; n = heroes fighting it.</summary>

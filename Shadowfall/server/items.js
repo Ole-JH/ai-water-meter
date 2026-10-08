@@ -414,7 +414,7 @@ const GATHER = {
 
 /** A character's items and gold, as stored in their save and sent to the client. */
 function emptyLedger() {
-  return { gold: 0, bag: new Array(BAG_SIZE).fill(null), eq: {}, stash: new Array(STASH_SIZE).fill(null), companions: [] };
+  return { gold: 0, bag: new Array(BAG_SIZE).fill(null), eq: {}, stash: new Array(STASH_SIZE).fill(null), companions: [], riftBest: 0 };
 }
 
 /** Reads the item fields of a save (the format the client used to write) into a ledger. */
@@ -427,6 +427,7 @@ function ledgerFromSave(save) {
   for (const s of save.stash || []) if (s && s.index >= 0 && s.index < STASH_SIZE) L.stash[s.index] = clean(s.item);
   for (const it of save.equipped || []) { const c = clean(it); if (c && c.Kind === Kind.Equipment && c.Slot > 0) L.eq[c.Slot] = c; }
   L.companions = Array.isArray(save.companions) ? save.companions.filter((c) => typeof c === "string").slice(0, 20) : [];
+  L.riftBest = Math.max(0, parseInt(save.riftBest, 10) || 0); // the highest rift tier beaten in time (rift.js)
   return L;
 }
 
@@ -437,6 +438,7 @@ function ledgerToSave(L, save) {
   save.stash = L.stash.map((it, index) => (it ? { index, item: it } : null)).filter(Boolean);
   save.equipped = Object.values(L.eq).filter(Boolean);
   save.companions = L.companions.slice();
+  save.riftBest = L.riftBest || 0;
   return save;
 }
 

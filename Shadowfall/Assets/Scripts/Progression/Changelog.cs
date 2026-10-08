@@ -24,6 +24,16 @@ namespace Shadowfall
         {
             new Entry
             {
+                Id = 33, Date = "2026-10-08", Title = "Greater rifts",
+                Items = new[]
+                {
+                    "A Rift Stone now stands in Hollowmere's square. Open a greater rift at the tier you choose: one level with monsters from three dungeons, tougher with every tier.",
+                    "Fill the progress bar, then beat the Rift Guardian within 10 minutes to unlock the next tier, earn a chest's worth of loot and get on the leaderboard.",
+                    "Three new achievements, one with the title \"the Riftwalker\".",
+                },
+            },
+            new Entry
+            {
                 Id = 32, Date = "2026-10-08", Title = "Guilds",
                 Items = new[]
                 {

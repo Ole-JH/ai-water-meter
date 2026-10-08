@@ -252,6 +252,7 @@ namespace Shadowfall
             if (showQuests) DrawQuestLog(p);
             if (showAchievements) DrawAchievements(p);
             if (showGuild) DrawGuild(p);
+            if (riftOpen) DrawRiftWindow(p);
             if (showTalents) DrawTalents(p);
             if (showStash) DrawStash(p);
             if (tradeOpen) DrawTrade(p);
@@ -1203,6 +1204,7 @@ namespace Shadowfall
         {
             float top = DrawInvasionTracker();
             top += DrawWorldBossTracker(342 + top);
+            top += DrawRiftTracker(342 + top);
             if (p.Quests.Active.Count == 0) return;
             float x = VW - 330, y = 342 + top;
             UISkin.Shadowed(new Rect(x, y, 300, 26), "Quests", UISkin.Heading, UISkin.Gold);

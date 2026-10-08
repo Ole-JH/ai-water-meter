@@ -66,6 +66,9 @@ exploration count from the day achievements arrived.
 
 | Achievement | How | Points | Title |
 | --- | --- | --- | --- |
+| **Through the Tear** | Clear a greater rift in time. | 10 |  |
+| **Riftwalker** | Clear a tier 10 greater rift in time. | 25 | the Riftwalker |
+| **Beyond the Veil** | Clear a tier 25 greater rift in time. | 50 |  |
 | **Into the Dark** | Enter a dungeon. | 5 |  |
 | **Delver** | Enter four different dungeons. | 10 |  |
 | **Underworld Tourist** | Enter all seven dungeons, the Frozen Barrow, the Sunken Temple and the Ashen Citadel included. | 25 |  |

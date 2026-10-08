@@ -94,6 +94,7 @@ container is running and the machine's CPU, memory and disk. See [Monitoring →
 | `ADMINS` | empty | Comma-separated account names with admin rights (see [Admin module](admin.md)); passed through by `docker-compose.yml` from `server/.env` |
 | `SEASON_MINUTES` | `120` | Real minutes per season; the year (spring, summer, autumn, winter) comes round every 4 × this |
 | `WORLD_BOSS_MINUTES` | `90` | About how often a [world boss](../gameplay/world.md#world-bosses) rises (75-125% of this, only with heroes online). `0` = never (admins can still raise one) |
+| `RIFT_MINUTES` | `10` | The time limit of a [greater rift](../gameplay/world.md#greater-rifts) |
 | `INVASION_MINUTES` | `45` | About how often a [town invasion](../gameplay/world.md#town-invasions) starts (75-125% of this, only with heroes near a walled town). `0` = never (admins can still start one) |
 | `ELITE_CHANCE` | `0.18` | Chance that a new open-world monster spawns as an elite (admins can change it at runtime) |
 | `DROP_PRIVILEGES` | `1` | Start as root only to `chown` the data volume, then run as the `node` user (uid/gid from `APP_UID`/`APP_GID`, default 1000) |

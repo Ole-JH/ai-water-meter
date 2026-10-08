@@ -216,6 +216,7 @@ namespace Shadowfall
         }
 
         public void SendDuel(string t, int id = 0, bool yes = false) { if (State == ConnState.InWorld) Send(new DuelMsg { t = t, id = id, yes = yes }); }
+        public void SendRift(string t, int tier = 0) { if (State == ConnState.InWorld) Send(new RiftMsg { t = t, n = tier }); }
         public void AnswerGuildInvite(bool yes) { if (State == ConnState.InWorld) Send(new GuildAnswerMsg { yes = yes }); }
         public void SendDuelHit(int id, int dmg) { if (State == ConnState.InWorld && id != 0) Send(new DuelMsg { t = "dhit", id = id, dmg = dmg }); }
 
@@ -322,6 +323,7 @@ namespace Shadowfall
 
         void HandleDungeon(NetMsg m)
         {
+            if (m.id == 0 || m.k == null || !m.k.StartsWith("Greater Rift")) Rift.Left();
             var p = Player.I;
             if (p == null) return;
             if (m.id != 0)
@@ -560,6 +562,8 @@ namespace Shadowfall
                 case "wboss": WorldBoss.Set(m.wb); break;
                 case "dreq": Duel.Challenged(m.id, m.name); break;
                 case "guild": Guild.Set(m.g); break;
+                case "rinfo": Rift.OnInfo(m); break;
+                case "rift": Rift.OnState(m); break;
                 case "ginv": Guild.Invited(m.name, m.k); break;
                 case "duel": Duel.OnState(m); break;
                 case "dhit": Duel.OnHit(m.id, Mathf.RoundToInt(m.dmg)); break;

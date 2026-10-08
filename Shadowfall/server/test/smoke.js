@@ -484,6 +484,50 @@ async function invasionTests(a, b) {
   await sleep(150);
 }
 
+async function riftTests(a) {
+  state(a, 300, 300);
+  await sleep(150);
+  a.ws.send(JSON.stringify({ t: "ropen", n: 1 }));
+  await sleep(150);
+  assert.ok(a.all("sys").some((m) => /Stand at the Rift Stone/.test(m.msg)), "rifts open at the Rift Stone");
+  state(a, 149.5, 151.5);
+  await sleep(150);
+  a.ws.send(JSON.stringify({ t: "rinfo" }));
+  await sleep(150);
+  assert.ok(a.all("rinfo").at(-1)?.k === "0" && a.all("rinfo").at(-1).items.length === 0, "a new hero has beaten no tier, and the board is empty");
+  a.ws.send(JSON.stringify({ t: "ropen", n: 5 }));
+  await sleep(300);
+  const dg = a.all("dungeon").at(-1), r0 = a.all("rift").at(-1);
+  assert.ok(dg && dg.id > 0 && dg.k === "Greater Rift  -  Tier 1" && dg.n === 1, "opening a rift takes you in (at most one tier above your best)");
+  assert.ok(r0 && r0.n === 1 && r0.i === 0 && r0.left > 500 && r0.k === "run", "with a progress bar and a timer");
+  state(a, dg.start[0], dg.start[1]);
+  await sleep(150);
+  a.ws.send(JSON.stringify({ t: "adm", c: "killall", r: 200 }));
+  await sleep(400);
+  assert.ok(a.all("rift").at(-1).i >= 100 && a.all("rift").at(-1).k === "guardian", "killing fills the bar, and the guardian comes");
+  assert.ok(a.all("sys").some((m) => /The Rift Guardian, .* has come/.test(m.msg)), "it is announced");
+  a.ws.send(JSON.stringify({ t: "adm", c: "killall", r: 200 }));
+  await sleep(400);
+  assert.strictEqual(a.all("rift").at(-1).k, "won", "beating the guardian in time clears the rift");
+  assert.ok(a.all("sys").some((m) => /Rift tier 1 cleared in .* Tier 2 is open to you/.test(m.msg)), "and opens the next tier");
+  assert.ok(a.all("drops").at(-1).drops.length >= 2, "with a chest's worth of loot");
+  a.ws.send(JSON.stringify({ t: "dleave" }));
+  await sleep(200);
+  const back = a.all("dungeon").at(-1);
+  assert.ok(back.id === 0 && Math.abs(back.x - 149.5) < 0.1, "leaving a rift brings you back to the Rift Stone");
+  a.ws.send(JSON.stringify({ t: "rinfo" }));
+  await sleep(150);
+  const info = a.all("rinfo").at(-1);
+  assert.ok(info.k === "1" && /^1\|\d+\|Alice$/.test(info.items[0]), "the best tier is kept, and the run is on the leaderboard");
+  a.ws.send(JSON.stringify({ t: "ropen", n: 9 }));
+  await sleep(300);
+  assert.strictEqual(a.all("dungeon").at(-1).k, "Greater Rift  -  Tier 2", "the next tier opens");
+  a.ws.send(JSON.stringify({ t: "dleave" }));
+  await sleep(200);
+  state(a, 144, 150);
+  await sleep(150);
+}
+
 async function guildTests(a, b) {
   const say = async (c, msg) => { c.ws.send(JSON.stringify({ t: "chat", msg })); await sleep(600); }; // chat: two lines a second
   await say(a, "/guild create Hollow Guard HG");
@@ -835,6 +879,7 @@ async function main() {
     await worldBossTests(a, b);
     await duelTests(a, b);
     await guildTests(a, b);
+    await riftTests(a);
 
     const danaId = d.find("welcome").id;
     d.ws.send(JSON.stringify({ t: "vanish", dur: 3 }));

@@ -60,6 +60,7 @@ class FileStore {
     this.resetFile = path.join(dataDir, "resets.json");
     this.auditFile = path.join(dataDir, "account-events.log");
     this.guildFile = path.join(dataDir, "guilds.json");
+    this.metaFile = path.join(dataDir, "meta.json");
     this.writes = new Map(); // file -> promise chain, so writes to one file never interleave
   }
 
@@ -199,6 +200,14 @@ class FileStore {
 
   async logEvent(accountId, username, event, ip) {
     fs.appendFile(this.auditFile, JSON.stringify({ at: new Date().toISOString(), accountId, username, event, ip }) + "\n", () => {});
+  }
+
+  // Small server-wide values (the rift leaderboard): one file.
+  async getMeta(key) { const all = this._read(this.metaFile) || {}; return key in all ? all[key] : null; }
+  async setMeta(key, value) {
+    const all = this._read(this.metaFile) || {};
+    all[key] = value;
+    await this._write(this.metaFile, all);
   }
 
   // Guilds (guild.js): one file with all of them, keyed by lower-case name.
@@ -477,6 +486,14 @@ class PgStore {
   async logEvent(accountId, username, event, ip) {
     this._track(this.pool.query("INSERT INTO account_events (account_id, username, event, ip) VALUES ($1, $2, $3, $4)",
       [accountId || null, username || null, event, ip || null])).catch((e) => this.log("audit log failed", e.message));
+  }
+
+  async getMeta(key) {
+    const { rows } = await this.pool.query("SELECT value FROM meta WHERE key = $1", [key]);
+    return rows.length ? rows[0].value : null;
+  }
+  async setMeta(key, value) {
+    await this._track(this.pool.query("INSERT INTO meta (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = $2", [key, String(value)]));
   }
 
   async loadGuilds() {

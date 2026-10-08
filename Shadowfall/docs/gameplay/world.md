@@ -128,6 +128,23 @@ Seven dungeons lie hidden in the wilds, three of them in the [outer lands](#the-
 - **Fog of war:** each level starts dark on your map and is revealed as you explore it.
 - Dying in a dungeon sends you back to town (see [Death](#death)). Logging out inside puts you back at that dungeon's entrance next time.
 
+## Greater rifts
+
+The **Rift Stone** stands in Hollowmere's square (north-east of the well, with a purple tear turning above it). Use it to
+open a greater rift at a **tier** of your choice, up to one above the best you have cleared; party members standing at
+the stone come along, and the rest of the party can join while you are inside.
+
+- A rift is one level, laid out like a dungeon, with monsters from three dungeons at once at your party's level. Every
+  tier gives them 17% more health and 10% more damage (compounding), and 15% more experience and better loot.
+- Killing monsters fills the **progress bar** (elites count four times; about 70% of the monsters fill it). At 100% the
+  **Rift Guardian**, one of the dungeon bosses, appears next to whoever filled it.
+- Beat the guardian within **10 minutes** and the rift is cleared: everyone inside gets a treasure chest's worth of loot
+  and the next tier, and the run goes on the **leaderboard** (the window at the stone shows the top 20, highest tier
+  first, then fastest). The top three are announced to everyone.
+- Out of time, the rift still gives its monsters' loot, but no new tier and no leaderboard.
+
+Three [achievements](achievements.md#dungeons), one with the title *the Riftwalker*.
+
 ## Death
 
 When you die you lose 15% of your gold and choose **Release Spirit** to wake up in the **nearest town whose waystone you

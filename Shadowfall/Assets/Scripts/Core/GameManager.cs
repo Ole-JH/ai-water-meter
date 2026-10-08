@@ -51,6 +51,7 @@ namespace Shadowfall
             DungeonEntrance.SpawnAll();
             StashChest.Spawn();
             Waystone.SpawnAll();
+            Rift.SpawnStone();
             gameObject.AddComponent<Ambience>();
             Music.Ensure();
             Weather.Ensure();

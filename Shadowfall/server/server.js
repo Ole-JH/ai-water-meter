@@ -20,6 +20,7 @@ const createInvasions = require("./invasion");
 const createWorldBosses = require("./worldboss");
 const createDuels = require("./duel");
 const createGuilds = require("./guild");
+const createRifts = require("./rift");
 
 const PORT = parseInt(process.env.PORT || "7341", 10);
 // Behind a reverse proxy, take the client's address from X-Forwarded-For (for login rate limits).
@@ -580,11 +581,16 @@ function killMonster(m) {
   }
   if (m.def.boss && m.inst) {
     const inst = instances.get(m.inst);
-    sendNear(m.x, m.z, 999, { t: "sys", msg: `${m.type} has been slain! ${inst ? DUNGEONS[inst.dIdx].name : "The dungeon"} falls silent.` }, m.inst);
+    if (!(inst && inst.rift)) sendNear(m.x, m.z, 999, { t: "sys", msg: `${m.type} has been slain! ${inst ? DUNGEONS[inst.dIdx].name : "The dungeon"} falls silent.` }, m.inst);
   }
   else if (m.def.boss) broadcast({ t: "sys", msg: `${m.type} has been slain!` });
   else if (m.elite) sendNear(m.x, m.z, PLAYER_VIEW, { t: "sys", msg: `${m.elite.name} (${m.type}) has been slain!` }, m.inst);
   if (m.spawner) m.spawner.pending.push(now() + m.spawner.respawn);
+  if (m.inst) { // a greater rift counts its kills
+    let top = null, most = -1;
+    for (const [sid, amount] of m.threat) if (amount > most) { most = amount; top = sessions.get(sid); }
+    rifts.onKill(m, top);
+  }
 }
 
 function updateSpawners(t) {
@@ -738,6 +744,7 @@ const M = {
   admin: metrics.counter("shadowfall_admin_commands_total", "Admin commands run, by command."),
   saves: metrics.counter("shadowfall_character_saves_total", "Character files written, by result."),
   clientErrors: metrics.counter("shadowfall_client_errors_total", "Errors reported by players' browsers and games, by kind: load (the page couldn't start the game), js (browser script errors), exception (the game threw), error (the game logged an error)."),
+  rifts: metrics.counter("shadowfall_rifts_opened_total", "Greater rifts opened, by tier (20 = 20 and up)."),
   duels: metrics.counter("shadowfall_duels_total", "Duels that ended, by result (won, draw)."),
   invasions: metrics.counter("shadowfall_invasions_total", "Town invasions that ended, by town and result (won = beaten off, lost = the town was sacked)."),
   tick: metrics.histogram("shadowfall_tick_duration_seconds", "Time spent in one simulation tick.", [0.001, 0.0025, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25]),
@@ -1115,7 +1122,7 @@ function enterInstance(s, inst) {
   inst.lastActive = now();
   const L = inst.layout;
   safeSend(s, JSON.stringify({
-    t: "dungeon", id: inst.id, l: inst.depth, k: DUNGEONS[inst.dIdx].name, d: inst.dIdx, n: DUNGEONS[inst.dIdx].depths, df: inst.df, seed: inst.seed, w: L.w, h: L.h, cells: inst.cells,
+    t: "dungeon", id: inst.id, l: inst.depth, k: inst.name || DUNGEONS[inst.dIdx].name, d: inst.dIdx, n: inst.depths || DUNGEONS[inst.dIdx].depths, df: inst.df, seed: inst.seed, w: L.w, h: L.h, cells: inst.cells,
     rooms: L.rooms.flatMap((r) => [r.x, r.y, r.w, r.h]), start: L.start, exit: L.exit,
     stairs: L.stairs || [], boss: L.boss || [], chests: L.chests.flat(),
   }));
@@ -1125,12 +1132,16 @@ function leaveInstance(s, toTown) {
   if (trades.has(s.id)) closeTrade(trades.get(s.id), "The trade was cancelled.");
   const inst = instances.get(s.inst);
   s.inst = 0;
-  [s.x, s.z] = toTown ? [SPAWN.x, SPAWN.z] : exitOf(inst ? inst.dIdx : 0);
+  [s.x, s.z] = toTown ? [SPAWN.x, SPAWN.z] : inst && inst.rift ? [rifts.STONE.x, rifts.STONE.z + 2] : exitOf(inst ? inst.dIdx : 0);
   safeSend(s, JSON.stringify({ t: "dungeon", id: 0, x: s.x, z: s.z }));
 }
 
 /** Where a player is in the overworld (for saves): dungeon players are saved at the entrance. */
-const overworldPos = (s) => (s.inst ? exitOf((instances.get(s.inst) || { dIdx: 0 }).dIdx) : [s.x, s.z]);
+const overworldPos = (s) => {
+  if (!s.inst) return [s.x, s.z];
+  const inst = instances.get(s.inst) || { dIdx: 0 };
+  return inst.rift ? [rifts.STONE.x, rifts.STONE.z + 2] : exitOf(inst.dIdx);
+};
 
 function cleanupInstances(t) {
   for (const inst of instances.values()) {
@@ -2155,6 +2166,8 @@ const handlers = {
   dans(s, m) { if (s.inWorld) duels.answer(s, !!m.yes); },
   dhit(s, m) { if (s.inWorld && !s.dead) duels.hit(s, m.id, m.dmg, 100 + s.lvl * 60); },
   dyield(s) { if (s.inWorld) duels.yieldDuel(s); },
+  rinfo(s) { if (s.inWorld) rifts.info(s); },
+  ropen(s, m) { if (s.inWorld) rifts.open(s, m.n); },
   ganswer(s, m) { if (s.inWorld) guilds.answer(s, !!m.yes); },
 
   hit(s, m) {
@@ -2313,6 +2326,13 @@ const invasions = createInvasions({
 const guilds = createGuilds({ store, sessions, safeSend, sys, findOnline, log, now, ledgerChanged: (s) => ledgerChanged(s) });
 metrics.gauge("shadowfall_guilds", "Guilds.", () => guilds.count());
 
+// Greater rifts (rift.js): timed tiers opened at the Rift Stone, with a leaderboard.
+const rifts = createRifts({
+  store, DUNGEONS, dungeonGen, instances, closeInstance, nextInstanceId: () => nextInstanceId++, monsters, sessions, spawnMonster, makeElite, walkable, useGrid,
+  partyOf, partyMembers, partyKey, enterInstance, safeSend, sys, sendNear, broadcast, dropFor, rollChest: I.rollChest, heroClass, ledgerChanged,
+  log, now, rand, randInt, dist, metrics: M.rifts,
+});
+
 // Duels (duel.js): two heroes fight each other, and only each other, until one yields.
 const duels = createDuels({ sessions, safeSend, sendNear, sys, dist, now, log, metrics: M.duels });
 
@@ -2340,7 +2360,7 @@ function tick() {
   updateSpawners(t);
   invasions.tick(t);
   worldBosses.tick(t);
-  if (tickCount % 5 === 0) duels.tick(t);
+  if (tickCount % 5 === 0) { duels.tick(t); rifts.tick(t); }
   if (tickCount % 50 === 0) cleanupInstances(t);
 
   sendSnapshots(t);
@@ -2484,6 +2504,7 @@ async function start() {
   setInterval(refreshCounts, 60000);
 
   await guilds.load();
+  await rifts.load();
   loadWorld();
   if (world) initSpawners();
   else log("No world yet - it will be uploaded by the first client that connects.");
