@@ -724,6 +724,15 @@ async function issueResume(s) {
   safeSend(s, JSON.stringify({ t: "resume", user: s.acc.username, name: s.char.name, k: code }));
 }
 
+/** The item a chat message links (one the sender really has: bag slot li or worn slot le), or null. */
+function linkedItem(s, m) {
+  if (!s.ledger) return null;
+  const li = Number(m.li), le = Number(m.le);
+  if (Number.isInteger(li) && li >= 0 && li < s.ledger.bag.length && s.ledger.bag[li]) return s.ledger.bag[li];
+  if (Number.isInteger(le) && le > 0 && s.ledger.eq[le]) return s.ledger.eq[le];
+  return null;
+}
+
 /** The character is chosen and the world is in sync: put them in the world. */
 function completeLogin(s) {
   const ch = s.char;
@@ -2374,6 +2383,9 @@ const handlers = {
     }
     const [cmd, ...rest] = msg.split(" ");
     const arg = rest.join(" ").trim();
+    // a linked item: the client names one of its own bag slots (li) or worn slots (le); the server attaches its copy
+    const linked = linkedItem(s, m);
+    const link = linked ? { it: linked } : {};
     if (cmd.toLowerCase() === "/a" || cmd.toLowerCase() === "/admin") {
       if (!s.admin) return sys(s, "You are not an admin.");
       Promise.resolve(adminFromChat(s, arg)).then((res) => res && sys(s, `[admin] ${res}`));
@@ -2385,7 +2397,7 @@ const handlers = {
         const p = partyOf(s);
         if (!p) return sys(s, "You are not in a party.");
         if (!arg) return;
-        const data = JSON.stringify({ t: "chat", ch: "p", id: s.id, name: s.name, msg: arg });
+        const data = JSON.stringify({ t: "chat", ch: "p", id: s.id, name: s.name, msg: arg, ...link });
         for (const o of partyMembers(p)) safeSend(o, data);
         return;
       }
@@ -2395,8 +2407,8 @@ const handlers = {
         const text = words.join(" ").trim();
         if (!target) return sys(s, `No player named "${String(to || "").slice(0, 16)}" is online.`);
         if (!text) return;
-        safeSend(target, JSON.stringify({ t: "chat", ch: "w", id: s.id, name: s.name, msg: text }));
-        safeSend(s, JSON.stringify({ t: "chat", ch: "wto", id: s.id, name: target.name, msg: text }));
+        safeSend(target, JSON.stringify({ t: "chat", ch: "w", id: s.id, name: s.name, msg: text, ...link }));
+        safeSend(s, JSON.stringify({ t: "chat", ch: "wto", id: s.id, name: target.name, msg: text, ...link }));
         return;
       }
       case "/invite": case "/inv": return invite(s, arg);
@@ -2406,7 +2418,7 @@ const handlers = {
       default:
         if (cmd.startsWith("/")) return sys(s, "Commands: /p party chat, /g guild chat, /w name whisper, /invite name, /leave, /guild, /who");
     }
-    broadcast({ t: "chat", id: s.id, name: s.name, msg });
+    broadcast({ t: "chat", id: s.id, name: s.name, msg, ...link });
   },
 
   // Emotes (/wave, /dance...): shown to players nearby, who also get the "Alice waves." line.

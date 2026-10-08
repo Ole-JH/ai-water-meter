@@ -900,6 +900,15 @@ async function main() {
     await sleep(300);
     assert.strictEqual(b.find("chat")?.msg, "hello bthere/b", "chat is relayed and sanitised");
     assert.ok(b.find("fx"), "spell effects are relayed");
+    await sleep(400);
+    a.ws.send(JSON.stringify({ t: "chat", msg: "look at my [Worn Shortsword]", le: 1 }));
+    await sleep(300);
+    const linkMsg = b.all("chat").find((m) => /Worn Shortsword/.test(m.msg));
+    assert.ok(linkMsg && linkMsg.it && linkMsg.it.Name === "Worn Shortsword", "chat can link an item the sender wears (the server's copy)");
+    await sleep(400);
+    a.ws.send(JSON.stringify({ t: "chat", msg: "fake [Excalibur]", li: 39 }));
+    await sleep(300);
+    assert.ok(!b.all("chat").find((m) => /Excalibur/.test(m.msg)).it, "a link to an empty slot carries no item");
 
     a.ws.send(JSON.stringify({ t: "emote", e: "dance" }));
     await sleep(300);
@@ -1203,10 +1212,12 @@ async function main() {
       const e = await connect("Erin", "secret5", hash2, bytes2, BUILD_B); // the world was replaced above
       state(e, 144, 187);
       await sleep(1200);
-      assert.ok(view(e).m.length > 0 && !view(e).m.some((m) => m.el), "no elites in the beginner packs by the town gate, even at 100%");
+      const nearGate = view(e).m.filter((m) => Math.hypot(m.x - 144, m.z - 191) < 12);
+      assert.ok(nearGate.length > 0 && !nearGate.some((m) => m.el), "no elites in the beginner pack by the town gate, even at 100%");
       state(e, 134, 240); // out in the woods, well away from town
       await sleep(1200);
-      const champ = view(e).m.find((m) => m.el);
+      const champ = view(e).m.filter((m) => m.el).sort((p, q) => Math.hypot(p.x - 134, p.z - 240) - Math.hypot(q.x - 134, q.z - 240))[0];
+      if (champ) { state(e, champ.x + 1, champ.z); await sleep(300); } // right next to it, so the hits count
       assert.ok(champ, "elite monsters appear in snapshots");
       assert.ok(champ.af.split(",").length >= 1, "elites have affixes");
       e.ws.send(JSON.stringify({ t: "hit", mid: champ.id, dmg: 999999 }));
