@@ -525,9 +525,19 @@ namespace Shadowfall
         // Lights
         // =====================================================================================
 
+        // Spell lights at once: each is one more pass over everything it touches, and a big fight made dozens. The
+        // first few get a light; the rest show their particles only (fewer still on the "Few lights" setting).
+        internal static int liveLights;
+        static int LightCap => GameSettings.Lights.Value == 0 ? 2 : GameSettings.Lights.Value == 1 ? 4 : 8;
+
+        class LightCount : MonoBehaviour { void OnDestroy() => liveLights--; }
+
         public static void Flash(Vector3 pos, Color color, float range, float intensity, float duration)
         {
+            if (liveLights >= LightCap) return;
+            liveLights++;
             var go = new GameObject("FX light");
+            go.AddComponent<LightCount>();
             go.transform.position = pos;
             var l = go.AddComponent<Light>();
             l.type = LightType.Point;
@@ -540,7 +550,10 @@ namespace Shadowfall
 
         static void AddLight(Transform t, Color color, float range, float intensity)
         {
+            if (liveLights >= LightCap) return;
+            liveLights++;
             var go = new GameObject("FX glow");
+            go.AddComponent<LightCount>();
             go.transform.SetParent(t, false);
             var l = go.AddComponent<Light>();
             l.type = LightType.Point;

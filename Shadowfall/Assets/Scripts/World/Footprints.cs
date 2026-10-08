@@ -88,9 +88,11 @@ namespace Shadowfall
             if (now >= nextFade)
             {
                 nextFade = now + 0.5f;
-                int before = prints.Count;
-                prints.RemoveAll(x => now - x.Born > Life);
-                if (prints.Count != before || prints.Exists(x => now - x.Born > Life - Fade)) dirty = true;
+                // (plain loops: lambdas capturing now made garbage twice a second)
+                for (int i = prints.Count - 1; i >= 0; i--)
+                    if (now - prints[i].Born > Life) { prints.RemoveAt(i); dirty = true; }
+                for (int i = 0; i < prints.Count && !dirty; i++)
+                    if (now - prints[i].Born > Life - Fade) dirty = true;
             }
             if (!dirty || mesh == null) return;
             dirty = false;
@@ -101,10 +103,11 @@ namespace Shadowfall
         readonly List<Vector2> uvs = new List<Vector2>();
         readonly List<Color> cols = new List<Color>();
         readonly List<int> tris = new List<int>();
+        readonly List<Vector3> normals = new List<Vector3>();
 
         void Rebuild(float now)
         {
-            verts.Clear(); uvs.Clear(); cols.Clear(); tris.Clear();
+            verts.Clear(); uvs.Clear(); cols.Clear(); tris.Clear(); normals.Clear();
             foreach (var p in prints)
             {
                 float a = Mathf.Clamp01((Life - (now - p.Born)) / Fade);
@@ -116,6 +119,7 @@ namespace Shadowfall
                 float u0 = p.Paw ? 0.5f : 0f, u1 = u0 + 0.5f;
                 uvs.Add(new Vector2(u0, 0)); uvs.Add(new Vector2(u0, 1)); uvs.Add(new Vector2(u1, 1)); uvs.Add(new Vector2(u1, 0));
                 cols.Add(c); cols.Add(c); cols.Add(c); cols.Add(c);
+                normals.Add(Vector3.up); normals.Add(Vector3.up); normals.Add(Vector3.up); normals.Add(Vector3.up);
                 tris.Add(i); tris.Add(i + 1); tris.Add(i + 2); tris.Add(i); tris.Add(i + 2); tris.Add(i + 3);
             }
             mesh.Clear();
@@ -123,7 +127,7 @@ namespace Shadowfall
             mesh.SetUVs(0, uvs);
             mesh.SetColors(cols);
             mesh.SetTriangles(tris, 0);
-            mesh.RecalculateNormals();
+            mesh.SetNormals(normals); // flat on the ground: straight up (no need to work them out)
             mesh.RecalculateBounds();
         }
 

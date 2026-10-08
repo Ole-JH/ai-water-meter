@@ -35,8 +35,14 @@ namespace Shadowfall
         public readonly List<QuestState> Active = new List<QuestState>();
         public readonly HashSet<string> Completed = new HashSet<string>();
 
-        public bool IsActive(string id) => Active.Exists(q => q.Def.Id == id);
-        public QuestState Get(string id) => Active.Find(q => q.Def.Id == id);
+        // Plain loops: these run for every quest NPC's marker on the HUD and the minimap, several times a frame, and a
+        // lambda capturing the id made garbage each time
+        public bool IsActive(string id) => Get(id) != null;
+        public QuestState Get(string id)
+        {
+            for (int i = 0; i < Active.Count; i++) if (Active[i].Def.Id == id) return Active[i];
+            return null;
+        }
 
         public void Accept(QuestDef def)
         {

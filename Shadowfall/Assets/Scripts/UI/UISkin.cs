@@ -256,6 +256,7 @@ namespace Shadowfall
 
         public static void Shadowed(Rect r, string text, GUIStyle style, Color color, int outline = 1)
         {
+            if (Event.current.type != EventType.Repaint) return; // a label only ever paints (OnGUI also runs for input events)
             var old = style.normal.textColor;
             style.normal.textColor = new Color(0, 0, 0, color.a * 0.85f);
             if (outline > 1)

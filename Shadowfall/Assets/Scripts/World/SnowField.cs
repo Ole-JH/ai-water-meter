@@ -76,7 +76,7 @@ namespace Shadowfall
                     if (d > 1f) continue;
                     byte v = (byte)(target * Mathf.Clamp01(1.3f - d * 0.6f));
                     int i = y * w + x;
-                    if (v > mask[i]) { mask[i] = v; dirty = true; }
+                    if (v > mask[i]) { mask[i] = v; dirty = true; settled = false; }
                 }
         }
 
@@ -88,6 +88,9 @@ namespace Shadowfall
         }
 
         static int refillRow, refillAmount;
+        // A full pass that changed nothing means every cell is back at its floor: no more passes until something is
+        // cleared again (the pass is 1.3 million cells a second, for nothing, most of the year)
+        static bool settled, changedThisPass;
 
         /// <summary>
         /// Called by the weather every frame: fresh snow fills paths in; with no snow around the mask fades. The refill
@@ -102,8 +105,9 @@ namespace Shadowfall
                 nextRefill = Time.time + 1f;
                 bool snowing = Weather.Precip > 0.15f && Weather.Season != Season.Summer;
                 bool bare = Weather.SnowNorth < 0.01f && Weather.SnowSouth < 0.01f && Weather.SnowPerm < 0.01f;
-                refillAmount = snowing ? Mathf.RoundToInt(Weather.Precip * 255f / 100f) : bare ? 20 : 0;
+                refillAmount = settled ? 0 : snowing ? Mathf.RoundToInt(Weather.Precip * 255f / 100f) : bare ? 20 : 0;
                 refillRow = 0;
+                changedThisPass = false;
             }
             if (refillAmount > 0 && refillRow < h)
             {
@@ -115,8 +119,10 @@ namespace Shadowfall
                     if (v <= f) continue;
                     mask[i] = (byte)Mathf.Max(f, v - refillAmount);
                     dirty = true;
+                    changedThisPass = true;
                 }
                 refillRow = end;
+                if (refillRow >= h && !changedThisPass) settled = true;
             }
             if (dirty && Time.time >= nextUpload)
             {

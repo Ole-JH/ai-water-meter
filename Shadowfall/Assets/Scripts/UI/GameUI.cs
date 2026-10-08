@@ -316,6 +316,9 @@ namespace Shadowfall
             // World-space labels only matter when painting or clicking; OnGUI also runs for layout, key and
             // mouse-move events, and projecting every nameplate for those is wasted work.
             var et = Event.current.type;
+            // Holding the button to walk sends a drag event every frame: with nothing of the interface under the mouse or
+            // being dragged, there's nothing for it to do, and the whole HUD would be run through a second time a frame.
+            if (et == EventType.MouseDrag && !MouseOverUI && GUIUtility.hotControl == 0 && barDrag < 0 && bagDrag < 0 && menu == MenuPage.None) return;
             bool paintOrClick = et == EventType.Repaint || et == EventType.MouseDown || et == EventType.MouseUp;
             DrawVignette();
             if (paintOrClick)
@@ -892,7 +895,9 @@ namespace Shadowfall
                 g.x += f.Drift * 34f * Mathf.Sqrt(age);
                 float pop = age < 0.18f ? 1f + 0.55f * Mathf.Sin(age / 0.18f * Mathf.PI) : 1f;
                 if (f.Shake && age < 0.3f) { g.x += Mathf.Sin(age * 90f) * 3f * (1f - age / 0.3f); g.y += Mathf.Cos(age * 77f) * 2f * (1f - age / 0.3f); }
-                UISkin.FloatText.fontSize = Mathf.RoundToInt(19 * f.Size * pop);
+                // In steps of 3: every new size makes the font draw its letters again into its atlas (a hitch), and the
+                // pop and fade used to ask for a new size nearly every frame
+                UISkin.FloatText.fontSize = Mathf.RoundToInt(19 * f.Size * pop / 3f) * 3;
                 var c = f.Color;
                 c.a = age > 0.9f ? 1f - (age - 0.9f) / 0.4f : 1f;
                 UISkin.Shadowed(new Rect(g.x - 160, g.y - 16, 320, 32), f.Text, UISkin.FloatText, c, 2);
@@ -2524,7 +2529,7 @@ namespace Shadowfall
                 GUI.DrawTexture(new Rect(c.x - glow / 2, c.y - glow / 2, glow, glow), UISkin.Circle);
                 GUI.color = Color.white;
             }
-            var style = UISkin.V(UISkin.TitleHuge, fontSize: Mathf.RoundToInt(UISkin.TitleHuge.fontSize * pulse));
+            var style = UISkin.V(UISkin.TitleHuge, fontSize: Mathf.RoundToInt(UISkin.TitleHuge.fontSize * pulse / 4f) * 4); // (steps of 4: see the damage numbers)
             UISkin.Shadowed(new Rect(c.x - 50, c.y - 40, 100, 80), mark, style, live ? Color.Lerp(mc, Color.white, ready ? 0.25f * (pulse - 0.87f) / 0.26f : 0f) : mc, 2);
         }
 

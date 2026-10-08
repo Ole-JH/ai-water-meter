@@ -851,10 +851,12 @@ namespace Shadowfall
 
         void Update()
         {
-            if (view != null) view.UpdateLocomotion(0f);
-            else model.Animate(0f, -1f, Time.deltaTime);
             var p = Player.I;
             float dist = p != null ? Factory.FlatDistance(p.transform.position, transform.position) : 999f;
+            // In another town (or far across this one): a look in now and then is enough
+            if (dist > 60f && (Time.frameCount + GetInstanceID()) % 20 != 0) return;
+            if (view != null) view.UpdateLocomotion(0f);
+            else model.Animate(0f, -1f, Time.deltaTime);
             Chatter(p, dist);
             Greet(dist);
             if (Time.time < busyUntil) return; // at the anvil for us
