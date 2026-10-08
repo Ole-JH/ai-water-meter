@@ -20,6 +20,9 @@ namespace Shadowfall
             this.shot = shot;
             this.report = report;
             var hero = Player.I;
+            // on Low, like the slowest machines (and so software rendering stays quick enough for screenshots)
+            GameSettings.Quality = 0;
+            yield return new WaitForSeconds(1f);
             yield return Fps("town-idle", 5f);
 
             // the windows
@@ -30,36 +33,6 @@ namespace Shadowfall
                 GameUI.CheckShow(w, false);
             }
 
-            // out of town to the nearest monsters, and fight
-            for (int fight = 0; fight < 3 && hero != null && !hero.IsDead; fight++)
-            {
-                var e = Nearest(hero.transform.position);
-                if (e == null) { report("tour", "no monsters found"); break; }
-                report("tour", "fighting " + e.Def.Name + " at " + Fmt(e.transform.position));
-                hero.SetAttackTarget(e);
-                float until = Time.realtimeSinceStartup + 45f, shotAt = Time.realtimeSinceStartup + 6f;
-                bool shotTaken = false;
-                while (Time.realtimeSinceStartup < until && e != null && !e.IsDead && !hero.IsDead)
-                {
-                    if (hero.AttackTarget != e) hero.SetAttackTarget(e);
-                    if (Factory.FlatDistance(hero.transform.position, e.transform.position) < 3f)
-                    {
-                        hero.CastAbility(0, e.transform.position, true);
-                        if (!shotTaken && Time.realtimeSinceStartup > shotAt) { shotTaken = true; yield return Fps("fight", 3f); yield return shot("fight-" + fight); }
-                    }
-                    yield return null;
-                }
-                yield return new WaitForSeconds(1.2f);
-                yield return shot(hero.IsDead ? "died" : "after-fight-" + fight);
-                if (hero.IsDead) break;
-            }
-            if (hero != null && hero.IsDead)
-            {
-                yield return new WaitForSeconds(6f);
-                yield return shot("death-screen");
-                yield break; // the rest needs a living hero
-            }
-
             // the nearest dungeon
             DungeonDef best = null;
             float bestD = float.MaxValue;
@@ -68,7 +41,7 @@ namespace Shadowfall
                 float dist = Factory.FlatDistance(d.Entrance, hero.transform.position);
                 if (dist < bestD) { bestD = dist; best = d; }
             }
-            if (best == null) yield break;
+            if (best == null) goto Outside;
             report("tour", "walking to " + best.Name + " (" + bestD.ToString("0") + " m)");
             hero.MoveTo(best.Entrance);
             float walkUntil = Time.realtimeSinceStartup + 90f;
@@ -82,7 +55,7 @@ namespace Shadowfall
             NetClient.I.EnterDungeon(System.Array.IndexOf(DungeonDef.All, best), 0);
             float inUntil = Time.realtimeSinceStartup + 30f;
             while (!Dungeon.Active && Time.realtimeSinceStartup < inUntil) yield return null;
-            if (!Dungeon.Active) { report("tour", "couldn't enter " + best.Name); yield break; }
+            if (!Dungeon.Active) { report("tour", "couldn't enter " + best.Name); goto Outside; }
             yield return new WaitForSeconds(4f);
             yield return Fps("dungeon", 5f);
             yield return shot("dungeon");
@@ -99,6 +72,40 @@ namespace Shadowfall
                 yield return Fps("dungeon-fight", 2f);
                 yield return shot("dungeon-fight");
             }
+
+            Outside:
+            // back up top (out of the dungeon) and a fight in the open
+            if (Dungeon.Active) { NetClient.I.LeaveDungeon(false); float outUntil = Time.realtimeSinceStartup + 30f; while (Dungeon.Active && Time.realtimeSinceStartup < outUntil) yield return null; yield return new WaitForSeconds(3f); }
+            // out of town to the nearest monsters, and fight
+            for (int fight = 0; fight < 3 && hero != null && !hero.IsDead; fight++)
+            {
+                var e = Nearest(hero.transform.position);
+                if (e == null) { report("tour", "no monsters found"); break; }
+                report("tour", "fighting " + e.Def.Name + " at " + Fmt(e.transform.position));
+                hero.SetAttackTarget(e);
+                float until = Time.realtimeSinceStartup + 45f, shotAt = Time.realtimeSinceStartup + 6f;
+                bool shotTaken = false;
+                while (Time.realtimeSinceStartup < until && e != null && !e.IsDead && !hero.IsDead)
+                {
+                    if (hero.Health < hero.MaxHealth * 0.6f) { report("tour", "backing off at " + Mathf.RoundToInt(hero.Health) + " hp"); break; }
+                    if (hero.AttackTarget != e) hero.SetAttackTarget(e);
+                    if (Factory.FlatDistance(hero.transform.position, e.transform.position) < 3f)
+                    {
+                        hero.CastAbility(0, e.transform.position, true);
+                        if (!shotTaken && Time.realtimeSinceStartup > shotAt) { shotTaken = true; yield return Fps("fight", 3f); yield return shot("fight-" + fight); }
+                    }
+                    yield return null;
+                }
+                yield return new WaitForSeconds(1.2f);
+                yield return shot(hero.IsDead ? "died" : "after-fight-" + fight);
+                if (hero.IsDead || hero.Health < hero.MaxHealth * 0.6f) break;
+            }
+            if (hero != null && hero.IsDead)
+            {
+                yield return new WaitForSeconds(6f);
+                yield return shot("death-screen");
+            }
+
         }
 
         IEnumerator Fps(string scene, float seconds)

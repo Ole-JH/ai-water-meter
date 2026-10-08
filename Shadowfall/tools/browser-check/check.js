@@ -28,7 +28,8 @@ function log(msg) { console.log(`[${((Date.now() - started) / 1000).toFixed(0).p
 
 async function shot(page, name) {
   const file = `${String(++shots).padStart(2, "0")}-${name.replace(/[^a-z0-9-]/gi, "_")}.png`;
-  try { await page.screenshot({ path: path.join(outDir, file) }); log(`screenshot ${file}`); } catch (e) { log(`screenshot ${file} failed: ${e.message}`); }
+  // software rendering can take many seconds a frame in a busy scene: give the screenshot time
+  try { await page.screenshot({ path: path.join(outDir, file), timeout: 90000 }); log(`screenshot ${file}`); } catch (e) { log(`screenshot ${file} failed: ${e.message}`); }
   return file;
 }
 

@@ -78,8 +78,9 @@ Results go to `.autodeploy/check/`: `01-spawn.png`, `02-well.png`, `03-waystone.
 480) limits the whole run; software rendering is slow, so the frame rate it reports is no measure of a real machine.
 
 **Longer playtest** (by hand, never in the deploy check): with `?sfcheck=1&tour=1` the game skips the photo tour and
-plays on instead (`PlaytestTour.cs`): opens the bags, character, talents, map, achievements and comfort settings for a
-screenshot each, fights the nearest monsters outside town, walks to the nearest dungeon and goes down, and reports the
+plays on instead (`PlaytestTour.cs`): switches to the Low graphics preset, opens the bags, character, talents, map,
+achievements and comfort settings for a screenshot each, walks to the nearest dungeon and goes down (a look around, the
+map, a fight), comes back up and fights the nearest monsters outside (backing off below 60% health), and reports the
 frame rate of each scene as `fps:<scene>` steps (with the worst frame and how many particle systems and lights there
 are). Run it against any server with the check script, e.g. `CHECK_URL='https://your.server/?tour=1' node check.js`.
 It registers one `check######` account there.
