@@ -482,8 +482,8 @@ function updateMonster(m, t) {
         const d = dist(m.x, m.z, s.x, s.z);
         if (d < bestD) { bestD = d; best = s; }
       }
-      if (best) { aggro(m, best.id); alertNearby(m, best.id); break; }
-      if (m.invasion && invasions.idle(m, t)) break; // marching on a town gate, or battering it
+      if (best && !m.fleeing) { aggro(m, best.id); alertNearby(m, best.id); break; }
+      if (m.invasion && invasions.idle(m, t)) break; // marching on a town gate, or battering it (or the ram, or running)
       if (t >= m.wanderAt) {
         m.wanderAt = t + rand(3, 7);
         const wx = m.homeX + rand(-4, 4), wz = m.homeZ + rand(-4, 4);
@@ -599,7 +599,7 @@ function damageMonster(m, s, dmg) {
   m.threat.set(s.id, (m.threat.get(s.id) || 0) + dmg);
   if (m.invasion) invasions.onDamage(m, s);
   if (m.worldBoss) worldBosses.onDamage(m, s);
-  if (m.state !== "chase") { aggro(m, s.id); alertNearby(m, s.id); }
+  if (m.state !== "chase" && !m.def.siege && !m.fleeing) { aggro(m, s.id); alertNearby(m, s.id); } // a ram doesn't fight back; the routed run
   if (m.hp <= 0) killMonster(m);
 }
 
@@ -1451,7 +1451,7 @@ function runAdmin(s, c, a) {
       return `It is now ${SEASONS[i]}.`;
     }
     case "invasion":
-      return a.stop ? invasions.stop() : invasions.start(a.town || "", a.gate, !!a.warn);
+      return a.stop ? invasions.stop() : a.fire ? invasions.fireNow() : invasions.start(a.town || "", a.gate, !!a.warn);
     case "sack":
       return invasions.sack(a.town || "", a.gate);
     case "worldboss":
@@ -1567,13 +1567,13 @@ function adminFromChat(s, line) {
     case "invasion": {
       const gate = ["north", "south", "east", "west"].includes((w[w.length - 1] || "").toLowerCase()) ? w.pop().toLowerCase() : undefined;
       const warn = w[0] === "warn" ? !!w.shift() : false;
-      return runAdmin(s, "invasion", w[0] === "stop" ? { stop: true } : { town: w.join(" "), gate, warn });
+      return runAdmin(s, "invasion", w[0] === "stop" ? { stop: true } : w[0] === "fire" ? { fire: true } : { town: w.join(" "), gate, warn });
     }
     case "sack": {
       const gate = ["north", "south", "east", "west"].includes((w[w.length - 1] || "").toLowerCase()) ? w.pop().toLowerCase() : undefined;
       return runAdmin(s, "sack", { town: w.join(" "), gate });
     }
-    default: return "Admin commands: tp x z, tpto name, summon name, dungeon <id|0-6> [depth], regen, spawn <type> [level] [count] [elite], killall [radius], time dawn|day|dusk|night, elites <0-1>, announce text, kick name, who, resetpw <account or character>, give gold [n]|legendary|set|gems|potions|materials|mounts, weather clear|cloudy|rain|storm|fog [minutes], season spring|summer|autumn|winter, invasion [warn] [town] [north|south|east|west] | invasion stop, sack [town] [gate] | sack stop, worldboss [name] | worldboss stop, bounties, rift <tier>, riftbest <tier>, status";
+    default: return "Admin commands: tp x z, tpto name, summon name, dungeon <id|0-6> [depth], regen, spawn <type> [level] [count] [elite], killall [radius], time dawn|day|dusk|night, elites <0-1>, announce text, kick name, who, resetpw <account or character>, give gold [n]|legendary|set|gems|potions|materials|mounts, weather clear|cloudy|rain|storm|fog [minutes], season spring|summer|autumn|winter, invasion [warn] [town] [north|south|east|west] | invasion fire | invasion stop, sack [town] [gate] | sack stop, worldboss [name] | worldboss stop, bounties, rift <tier>, riftbest <tier>, status";
   }
 }
 
@@ -2439,7 +2439,7 @@ const handlers = {
     const mon = monsters.get(m.mid);
     if (!mon || mon.inst !== (s.inst || 0) || dist(mon.x, mon.z, s.x, s.z) > 12) return;
     mon.slowUntil = now() + Math.min(Number(m.dur) || 0, 5);
-    if (mon.state !== "chase") aggro(mon, s.id);
+    if (mon.state !== "chase" && !mon.def.siege && !mon.fleeing) aggro(mon, s.id);
   },
 
   stun(s, m) {
@@ -2449,7 +2449,21 @@ const handlers = {
     let dur = Math.min(Number(m.dur) || 0, 3);
     if (mon.def.boss) dur *= 0.4; // bosses shrug it off quickly
     mon.stunUntil = Math.max(mon.stunUntil, now() + dur);
-    if (mon.state !== "chase") aggro(mon, s.id);
+    if (mon.state !== "chase" && !mon.def.siege && !mon.fleeing) aggro(mon, s.id);
+  },
+
+  /** Lighting a beacon by a besieged gate (invasion.js). */
+  beacon(s, m) {
+    if (!s.inWorld || s.dead || s.inst) return;
+    const why = invasions.light(s, m.i);
+    if (why) safeSend(s, JSON.stringify({ t: "sys", msg: why }));
+  },
+
+  /** A bucket of water on a burning roof in a besieged town (invasion.js). */
+  douse(s, m) {
+    if (!s.inWorld || s.dead || s.inst) return;
+    const xp = invasions.douseFire(s, m.id);
+    if (xp) safeSend(s, JSON.stringify({ t: "doused", id: m.id | 0, xp }));
   },
 
   vanish(s, m) {

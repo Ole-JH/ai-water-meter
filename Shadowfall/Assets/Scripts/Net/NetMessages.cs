@@ -104,6 +104,11 @@ namespace Shadowfall
         public NetWorldBoss wb;        // "wboss": the world boss that is up (see WorldBoss.cs)
         public NetInvasion iv;         // "invasion": a town under attack (see Invasion.cs); "invwin": k = town, xp, drops
         public NetSack[] sk;           // "sack": the quarters burning after a lost siege (see Sack.cs)
+        // "gev" (a siege's deeds, SiegeWorks): by = the hero who lit a beacon or put a fire out; sx, sz = where a fire
+        // arrow came from; f = 1: a wall archer's arrow is a fire arrow
+        public string by;
+        public float sx, sz;
+        public int f;
     }
 
     /// <summary>Our guild (server/guild.js): ranks are member, officer, leader.</summary>
@@ -141,6 +146,10 @@ namespace Shadowfall
         public bool paused;            // nobody near the town: the countdown and the siege stand still
         public float sx, sz;           // the raiders' war camp, where they mass during the warning (WarCamp)
         public int n;                  // raiders in the camp (warn)
+        public NetBeacon[] bc;         // the beacons by the gate (SiegeWorks)
+        public NetFire[] fr;           // roofs set alight by fire arrows (SiegeWorks)
+        public int ram;                // 1: the battering ram is coming, 2: abandoned (its crew is dead), 0: none
+        public bool rt;                // the raiders' banner fell: they're routed
     }
 
     /// <summary>A quarter burning after a lost siege: town k, gate g (x, z), everything inside the walls within r of it, left seconds.</summary>
@@ -148,6 +157,12 @@ namespace Shadowfall
 
     /// <summary>A town guard in an invasion: k "a" an archer on the wall, "s" a soldier before the gate.</summary>
     [Serializable] public class NetGuard { public int i, hp, mh; public string k; public float x, z; }
+    /// <summary>A beacon by a besieged gate: l = who lit it ("" = unlit).</summary>
+    [Serializable] public class NetBeacon { public float x, z; public string l; }
+    /// <summary>A burning roof: i = id, s = strength 0..100.</summary>
+    [Serializable] public class NetFire { public int i, s; public float x, z; }
+    [Serializable] public class BeaconCmd { public string t = "beacon"; public int i; }
+    [Serializable] public class DouseCmd { public string t = "douse"; public int id; }
 
     // ---------------------------------------------------------------- client -> server
 
@@ -199,7 +214,7 @@ namespace Shadowfall
     /// <summary>Dungeon commands: denter, dstairs, dleave (town = after dying).</summary>
     [Serializable] public class DungeonCmd { public string t; public bool town; public int d, df; }
     /// <summary>Admin command (the server checks the sender is an admin). Unused fields are ignored.</summary>
-    [Serializable] public class AdminCmd { public string t = "adm"; public string c, name, type, text, phase, what, kind, town, gate; public float x, z, r, chance; public int d, l, n, df; public bool elite, fresh, stop, warn; }
+    [Serializable] public class AdminCmd { public string t = "adm"; public string c, name, type, text, phase, what, kind, town, gate; public float x, z, r, chance; public int d, l, n, df; public bool elite, fresh, stop, warn, fire; }
 
     /// <summary>Party commands: pinvite (name), paccept, pdecline, pleave, pkick (id), pshare (q).</summary>
     [Serializable] public class PartyCmd { public string t, name, q; public int id; }

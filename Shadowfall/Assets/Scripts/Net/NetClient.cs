@@ -224,6 +224,11 @@ namespace Shadowfall
 
         void Send(object msg) => socket.Send(JsonUtility.ToJson(msg));
 
+        /// <summary>Light beacon i by a besieged gate.</summary>
+        public void LightBeacon(int i) { if (State == ConnState.InWorld) Send(new BeaconCmd { i = i }); }
+        /// <summary>A bucket of water on burning roof id.</summary>
+        public void Douse(int id) { if (State == ConnState.InWorld) Send(new DouseCmd { id = id }); }
+
         // =====================================================================================
         // Outgoing gameplay messages
         // =====================================================================================
@@ -639,7 +644,8 @@ namespace Shadowfall
                     break;
                 case "invasion": Invasion.Set(m.iv); break;
                 case "sack": Sack.Set(m.sk); break;
-                case "gev": TownGuards.Event(m); break;
+                case "gev": SiegeWorks.Event(m); break;
+                case "doused": SiegeWorks.Doused(m); break;
                 case "wboss": WorldBoss.Set(m.wb); break;
                 case "dreq": Duel.Challenged(m.id, m.name); break;
                 case "duelring": DuelRing.OnRing(m); break;

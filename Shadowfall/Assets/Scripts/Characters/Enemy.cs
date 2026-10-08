@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace Shadowfall
 {
-    public enum EnemyShape { Humanoid, Beast, Golem }
+    public enum EnemyShape { Humanoid, Beast, Golem, Ram }
 
     /// <summary>
     /// Client-side look of a monster type. Gameplay stats (health, damage, AI) live on the server
@@ -49,6 +49,8 @@ namespace Shadowfall
             new EnemyDef { Name = "Raider Marksman", Color = new Color(0.9f, 0.75f, 0.55f), Secondary = new Color(0.6f, 0.4f, 0.2f), Ranged = true, Weapon = false,
                 ProjectileColor = new Color(0.95f, 0.85f, 0.6f) },
             new EnemyDef { Name = "Sand Golem", Shape = EnemyShape.Golem, Color = new Color(0.78f, 0.66f, 0.45f), Secondary = new Color(0.6f, 0.5f, 0.32f), Scale = 1.3f },
+            // town invasions: the raiders' battering ram (server/invasion.js)
+            new EnemyDef { Name = "Battering Ram", Shape = EnemyShape.Ram, Color = new Color(0.45f, 0.3f, 0.18f), Secondary = new Color(0.32f, 0.32f, 0.35f), Weapon = false },
             new EnemyDef { Name = "Raider Warlord", Color = new Color(0.85f, 0.6f, 0.4f), Secondary = new Color(0.6f, 0.2f, 0.1f), Scale = 1.5f, Boss = true },
             // Ashen Reach
             new EnemyDef { Name = "Ash Ghoul", Color = new Color(0.45f, 0.43f, 0.42f), Secondary = new Color(0.28f, 0.25f, 0.24f), Scale = 1.05f, Weapon = false },
@@ -115,6 +117,8 @@ namespace Shadowfall
         {
             Elite = true;
             DisplayName = m.el;
+            if (m.el == "Banner Bearer") // marches beside an invasion's warlord: kill him and the raiders lose heart
+                ArtLibrary.Spawn("Props/banner_red", transform, new Vector3(0.35f, 0f, -0.3f), 3.4f, ArtLibrary.Fit.Height, 0f, false);
             Affixes = string.IsNullOrEmpty(m.af) ? new string[0] : m.af.Split(',');
             var c = Affixes.Length > 0 ? AffixColor(Affixes[0]) : ChampionColor;
             if (model != null) model.localScale *= 1.25f;
@@ -255,6 +259,38 @@ namespace Shadowfall
                         Factory.Prim(PrimitiveType.Cube, legs[i], new Vector3(0, -0.28f, 0), new Vector3(0.15f, 0.56f, 0.15f), Def.Secondary);
                     }
                     Height = 1.3f * Def.Scale;
+                    break;
+                }
+
+                case EnemyShape.Ram:
+                {
+                    // A wheeled frame under a plank roof, a great log slung on chains with an iron head, pointing ahead
+                    model = Factory.Empty("Model", transform, Vector3.zero);
+                    var wood = Def.Color; var iron = Def.Secondary;
+                    Factory.Prim(PrimitiveType.Cube, model, new Vector3(0f, 0.55f, 0f), new Vector3(1.5f, 0.14f, 3.2f), wood * 0.85f);
+                    foreach (float x in new[] { -0.8f, 0.8f })
+                    {
+                        foreach (float z in new[] { -1.1f, 1.1f })
+                        {
+                            Factory.Prim(PrimitiveType.Cylinder, model, new Vector3(x, 0.42f, z), new Vector3(0.84f, 0.06f, 0.84f), wood * 0.6f)
+                                .transform.localRotation = Quaternion.Euler(0f, 0f, 90f);
+                            Factory.Prim(PrimitiveType.Cube, model, new Vector3(x * 0.85f, 1.35f, z), new Vector3(0.14f, 1.6f, 0.14f), wood);
+                        }
+                        Factory.Prim(PrimitiveType.Cube, model, new Vector3(x * 0.85f, 2.15f, 0f), new Vector3(0.14f, 0.14f, 2.4f), wood);
+                    }
+                    // the roof: two pitched rows of planks, hides over them
+                    Factory.Prim(PrimitiveType.Cube, model, new Vector3(-0.45f, 2.45f, 0f), new Vector3(1.05f, 0.08f, 3f), new Color(0.42f, 0.32f, 0.22f))
+                        .transform.localRotation = Quaternion.Euler(0f, 0f, 32f);
+                    Factory.Prim(PrimitiveType.Cube, model, new Vector3(0.45f, 2.45f, 0f), new Vector3(1.05f, 0.08f, 3f), new Color(0.42f, 0.32f, 0.22f))
+                        .transform.localRotation = Quaternion.Euler(0f, 0f, -32f);
+                    ramLog = Factory.Empty("Log", model, new Vector3(0f, 1.45f, 0f));
+                    Factory.Prim(PrimitiveType.Cylinder, ramLog, new Vector3(0f, 0f, 0.3f), new Vector3(0.42f, 1.9f, 0.42f), wood * 1.1f)
+                        .transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+                    Factory.Prim(PrimitiveType.Cube, ramLog, new Vector3(0f, 0f, 2.3f), new Vector3(0.55f, 0.55f, 0.4f), iron); // the iron head
+                    foreach (float z in new[] { -0.6f, 0.9f })
+                        Factory.Prim(PrimitiveType.Cube, ramLog, new Vector3(0f, 0.4f, z), new Vector3(0.05f, 0.8f, 0.05f), iron); // the chains
+                    Height = 2.7f;
+                    Radius = 1.3f;
                     break;
                 }
 
@@ -475,8 +511,12 @@ namespace Shadowfall
         /// <summary>Busy with something: sharpening a blade, checking a strap.</summary>
         public void Busy() { if (view != null && !IsDead) view.Interact(); }
 
+        Transform ramLog;
+        float ramSwing = -1f;
+
         public void PlayAttack(Vector3 targetPos)
         {
+            if (ramLog != null) { ramSwing = 0f; return; } // the ram: drawn back on its chains, then driven in (Rampart.Struck has the blow)
             attackAnim = 0f;
             FacingTarget = targetPos;
             var voice = Voice(Def, "attack");
@@ -538,6 +578,19 @@ namespace Shadowfall
                 return;
             }
 
+            if (ramLog != null)
+            {
+                if (ramSwing >= 0f)
+                {
+                    ramSwing += dt / 1.1f;
+                    // back slowly, then forward hard
+                    float z = ramSwing < 0.75f ? -Mathf.SmoothStep(0f, 0.9f, ramSwing / 0.75f) : Mathf.Lerp(-0.9f, 0.35f, (ramSwing - 0.75f) / 0.25f);
+                    ramLog.localPosition = new Vector3(0f, 1.45f, z);
+                    if (ramSwing >= 1f) ramSwing = -1f;
+                }
+                else ramLog.localPosition = Vector3.MoveTowards(ramLog.localPosition, new Vector3(0f, 1.45f, 0f), dt);
+                return;
+            }
             walkPhase += dt * 12f * Mathf.Max(0.1f, speed01);
             float s = Mathf.Sin(walkPhase) * 35f * speed01;
             if (Def.Shape == EnemyShape.Beast && legs != null)

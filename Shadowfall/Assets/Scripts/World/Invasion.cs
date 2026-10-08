@@ -28,6 +28,7 @@ namespace Shadowfall
             Rampart.Sync(); // the gate, the ladders and the helpers
             WarCamp.Sync(); // the raiders' camp outside the gate
             SiegeLife.Sync(); // refugees, the scout, the wounded
+            SiegeWorks.Sync(); // the beacons and burning roofs
             TownGuards.Sync(Current != null ? Current.gd : null, Current == null || Current.phase == "won" || Current.phase == "lost");
             if (Current == null) return;
             if (Current.phase == "gather" || Current.phase == "warn") { countdownFrom = Current.left; countdownAt = Time.time; }
@@ -102,7 +103,8 @@ namespace Shadowfall
                 {
                     case "warn": return c.n + (c.n == 1 ? " raider" : " raiders") + " massing outside the " + c.gate + " gate - they charge in " + Countdown + " s";
                     case "gather": return "Monsters gather at the " + c.gate + " gate - first wave in " + Countdown + " s";
-                    case "wave": return "Wave " + c.wave + "/" + c.waves + "  -  " + c.left + (c.left == 1 ? " invader" : " invaders") + "  -  " + c.gate + " gate";
+                    case "wave": return "Wave " + c.wave + "/" + c.waves + "  -  " + c.left + (c.left == 1 ? " invader" : " invaders") + "  -  " + c.gate + " gate"
+                        + (c.ram == 1 ? "  -  a battering ram!" : "") + (c.fr != null && c.fr.Length > 0 ? "  -  " + c.fr.Length + (c.fr.Length == 1 ? " roof" : " roofs") + " burning" : "");
                     case "won": return "The town holds!";
                     case "lost": return "The gate fell. The invaders plundered the town.";
                     default: return "";

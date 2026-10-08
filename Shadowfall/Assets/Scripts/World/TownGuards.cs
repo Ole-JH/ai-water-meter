@@ -106,8 +106,9 @@ namespace Shadowfall
                     tg.Face(at);
                     if (tg.view != null) tg.view.Shoot();
                     var from = tg.transform.position + Vector3.up * 1.4f + tg.transform.forward * 0.4f;
-                    Projectile.FireVisual(from, at + Vector3.up, 16f, new Color(0.85f, 0.75f, 0.55f), 0.3f, 30f)
-                        .WithTrail(SpellFx.Trail.Arrow).WithShape(Projectile.Shape.Arrow).OverWalls(); // down from the wall walk
+                    bool flaming = m.f == 1; // a beacon is lit: fire arrows
+                    Projectile.FireVisual(from, at + Vector3.up, 16f, flaming ? new Color(1f, 0.55f, 0.15f) : new Color(0.85f, 0.75f, 0.55f), 0.3f, 30f)
+                        .WithTrail(flaming ? SpellFx.Trail.Fire : SpellFx.Trail.Arrow).WithShape(Projectile.Shape.Arrow).OverWalls(); // down from the wall walk
                     Sfx.Play("bow", from, 0.35f, 0.1f, 30f);
                     Shout(tg, archerCalls, 0.3f);
                     break;

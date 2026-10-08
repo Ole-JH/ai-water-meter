@@ -35,6 +35,19 @@ const PLAYERS_NEAR = 110;   // players this close to a town count towards it (ch
 const ARCHERS = 3, SOLDIERS = 4;
 const GUARD_HIT = 0.025;    // share of an invader's max life per guard blow
 const ARCHER_RANGE = 22, ARCHER_CD = 2.6, SOLDIER_CD = 1.7, SOLDIER_REACH = 7, GUARD_SPEED = 3.2;
+// The battering ram: built in the war camp, pushed to the gate by its crew when the first wave charges, and much harder
+// on the gate than any raider. Kill its crew (in the camp, or on the way) and it stands where it is.
+const RAM = "Battering Ram", RAM_CREW = 2, RAM_SPEED = 1.5, RAM_CD = 2.4, RAM_HIT = 10; // RAM_HIT: as many raiders at the gate
+// Beacons: two braziers just inside the wall either side of the gate; lit by a hero, they give the wall's archers fire
+// arrows (each lit beacon: half as much damage again)
+const BEACON_OFF = 9, BEACON_BONUS = 0.5;
+// Fire arrows: the raiders' archers and casters set roofs behind the gate alight now and then. A fire grows; the
+// townsfolk's buckets slow it, heroes can put it out (DOUSE a throw); one at full strength spreads to a neighbour.
+const FIRE_EVERY = Number(process.env.INVASION_FIRE_S ?? 18), FIRE_MAX = 8, FIRE_GROW = 1.6, FIRE_BUCKETS = 0.8, DOUSE = 35, FIRE_SPREAD_S = 20;
+// The banner bearer marches with the warlord; when he falls the raiders lose heart: some flee, the rest hit softer
+const ROUT_SHARE = 0.4, ROUT_DMG = 0.75;
+const WARLORD_TAUNTS = ["Your gate is kindling, your walls are sand!", "I have burned bigger towns than this before breakfast!",
+  "Bring me their champion's head!", "Break it down! Leave nothing standing!", "Is this all the defence they have? Ha!"];
 
 module.exports = function createInvasions(ctx) {
   const { TOWNS, SPAWNERS, MONSTERS, monsters, sessions, spawnMonster, makeElite, findPath, nearestWalkable, moveAlongPath,
@@ -139,7 +152,10 @@ module.exports = function createInvasions(ctx) {
         id: nextId++, town: t, gate: g, sx, sz, types: ros.types, level, players: Math.max(1, defenders.length),
         phase: warned ? "warn" : "gather", wave: 0, integrity: 100, began: now(), waveAt: now() + (warned ? WARN_S : GATHER_S),
         ids: new Set(), defenders: new Map(), sentAt: 0, endedAt: 0, guards: [], nextGuard: 1, massed: 0, nextMass: now() + Math.min(2, WARN_S * 0.1),
+        ram: 0, ramStopped: false, beacons: [], fires: [], nextFire: Infinity, nextFireId: 1, bearer: 0, routed: false, nextTaunt: 0, lostFires: 0,
       };
+      buildRam();
+      placeBeacons();
       if (warned) {
         broadcast({ t: "sys", msg: `Scouts sight raiders massing outside the ${g.name} gate of ${t.name}! They attack in ${Math.round(WARN_S)} seconds. Defenders, to the walls, or strike their camp before they're ready!` });
         postGuards(); // the guards hurry to their posts
@@ -149,6 +165,121 @@ module.exports = function createInvasions(ctx) {
       return null;
     }
     return `no gate of ${t.name} can be reached from outside`;
+  }
+
+  // ------------------------------------------------------------------ the ram, the beacons
+
+  /** The battering ram and its crew, at the edge of the camp nearest the gate. */
+  function buildRam() {
+    const g = inv.gate, ox = -g.nx, oz = -g.nz; // towards the gate
+    const spot = nearestWalkable(Math.floor(inv.sx + ox * 4), Math.floor(inv.sz + oz * 4), 3);
+    if (!spot) return;
+    const ram = spawnMonster(RAM, inv.level, spot[0] + 0.5, spot[1] + 0.5, null);
+    ram.invasion = inv.id;
+    ram.homeX = g.x; ram.homeZ = g.z;
+    ram.leash = 999;
+    ram.state = "idle";
+    ram.wanderAt = Infinity;
+    ram.ry = (Math.atan2(g.x - ram.x, g.z - ram.z) * 180) / Math.PI;
+    inv.ids.add(ram.id);
+    inv.ram = ram.id;
+    for (let i = 0; i < RAM_CREW; i++) {
+      const m = spawnOne(false);
+      if (m) { m.crew = true; m.x = ram.x + (i ? 1.2 : -1.2) * Math.abs(g.nz); m.z = ram.z + (i ? 1.2 : -1.2) * Math.abs(g.nx); if (!walkable(m.x, m.z)) { m.x = ram.x; m.z = ram.z; } }
+    }
+  }
+
+  const ramOf = () => (inv && inv.ram ? monsters.get(inv.ram) : null);
+  const crewAlive = () => { for (const id of inv.ids) { const m = monsters.get(id); if (m && m.crew && m.hp > 0) return true; } return false; };
+
+  /** The ram's turn (its own AI: no hero ever draws it off). */
+  function ramIdle(m, t) {
+    m.sieging = false;
+    if (inv.phase !== "wave" || inv.paused) { m.path = []; return true; }
+    if (!crewAlive()) {
+      if (!inv.ramStopped) {
+        inv.ramStopped = true;
+        broadcast({ t: "sys", msg: `The battering ram before ${inv.town.name} stands abandoned: its crew lies dead!` });
+        sayNear(m, "");
+      }
+      m.path = [];
+      return true;
+    }
+    const g = inv.gate, d = dist(m.x, m.z, g.x, g.z);
+    if (d < 4) {
+      m.path = [];
+      m.sieging = true;
+      m.ry = (Math.atan2(g.x - m.x, g.z - m.z) * 180) / Math.PI;
+      if (t >= m.nextAttack) { m.nextAttack = t + RAM_CD; monsterAttack(m, null, "melee", 0, g.x - g.nx * 2, g.z - g.nz * 2); }
+      return true;
+    }
+    if (!m.path.length || t >= m.repathAt) { m.repathAt = t + 3; m.path = findPath(m.x, m.z, g.x + g.nx * 2.5, g.z + g.nz * 2.5, 8000); }
+    moveAlongPath(m, RAM_SPEED);
+    return true;
+  }
+
+  /** The two braziers by the gate, inside the wall. */
+  function placeBeacons() {
+    const g = inv.gate, ax = Math.abs(g.nz), az = Math.abs(g.nx);
+    for (const off of [-BEACON_OFF, BEACON_OFF]) {
+      const spot = nearestWalkable(Math.floor(g.x - g.nx * 4 + ax * off), Math.floor(g.z - g.nz * 4 + az * off), 3);
+      if (spot && inside(inv.town, spot[0] + 0.5, spot[1] + 0.5)) inv.beacons.push({ x: spot[0] + 0.5, z: spot[1] + 0.5, lit: "" });
+    }
+  }
+
+  const litBeacons = () => (inv ? inv.beacons.filter((b) => b.lit).length : 0);
+
+  /** A speech bubble over a monster, for those near it (the warlord's taunts). */
+  function sayNear(m, text) {
+    if (!text) return;
+    const data = JSON.stringify({ t: "gev", k: "say", mid: m.id, msg: text });
+    for (const s of sessions.values()) if (s.inWorld && !s.inst && dist(s.x, s.z, m.x, m.z) < 60) safeSend(s, data);
+  }
+
+  // ------------------------------------------------------------------ fire arrows on the roofs
+
+  /** A raider archer or caster looses a fire arrow over the wall: a roof behind the gate catches. */
+  function fireArrow(t) {
+    inv.nextFire = t + FIRE_EVERY * rand(0.7, 1.3);
+    if (inv.fires.length >= FIRE_MAX) return;
+    let shooter = null;
+    for (const id of inv.ids) { const m = monsters.get(id); if (m && m.hp > 0 && m.def.ranged && !m.fleeing && dist(m.x, m.z, inv.gate.x, inv.gate.z) < 30) { shooter = m; break; } }
+    if (!shooter) return;
+    const g = inv.gate;
+    for (let tries = 0; tries < 8; tries++) {
+      const a = rand(-1.1, 1.1), r = rand(8, 24);
+      const ix = -g.nx, iz = -g.nz; // into town
+      const x = g.x + (ix * Math.cos(a) - iz * Math.sin(a)) * r, z = g.z + (iz * Math.cos(a) + ix * Math.sin(a)) * r;
+      if (!inside(inv.town, x, z)) continue;
+      startFire(x, z, 30, shooter);
+      return;
+    }
+  }
+
+  function startFire(x, z, strength, shooter) {
+    const f = { id: inv.nextFireId++, x, z, s: strength, fullAt: 0 };
+    inv.fires.push(f);
+    guardEvent({ k: "fire", id: f.id, x: r2(x), z: r2(z), ...(shooter ? { mid: shooter.id, sx: r2(shooter.x), sz: r2(shooter.z) } : {}) });
+    send();
+  }
+
+  function updateFires(t, dt) {
+    if (inv.phase === "wave" && t >= inv.nextFire) fireArrow(t);
+    let changed = false;
+    for (const f of inv.fires) {
+      const was = f.s;
+      f.s = Math.min(100, f.s + (FIRE_GROW - FIRE_BUCKETS) * dt);
+      if (f.s >= 100) {
+        if (!f.fullAt) f.fullAt = t;
+        else if (t - f.fullAt > FIRE_SPREAD_S && inv.fires.length < FIRE_MAX) {
+          f.fullAt = t;
+          const a = rand(0, Math.PI * 2), x = f.x + Math.cos(a) * 7, z = f.z + Math.sin(a) * 7;
+          if (inside(inv.town, x, z)) { startFire(x, z, 25, null); broadcast({ t: "sys", msg: `The fire in ${inv.town.name} is spreading! Douse it before it takes the whole street.` }); }
+        }
+      } else f.fullAt = 0;
+      if (Math.floor(was / 10) !== Math.floor(f.s / 10)) changed = true;
+    }
+    return changed;
   }
 
   // ------------------------------------------------------------------ the town's guards
@@ -204,8 +335,9 @@ module.exports = function createInvasions(ctx) {
         const m = nearestInvader(g.x, g.z, ARCHER_RANGE, foes);
         if (!m) continue;
         g.next = t + ARCHER_CD * rand(0.85, 1.15);
-        guardEvent({ k: "shot", id: g.id, mid: m.id, x: r2(m.x), z: r2(m.z) });
-        guardHit(m, Math.max(1, Math.round(m.maxHp * GUARD_HIT)));
+        const lit = litBeacons();
+        guardEvent({ k: "shot", id: g.id, mid: m.id, x: r2(m.x), z: r2(m.z), ...(lit ? { f: 1 } : {}) }); // f: fire arrows (a beacon is lit)
+        guardHit(m, Math.max(1, Math.round(m.maxHp * GUARD_HIT * (1 + lit * BEACON_BONUS))));
         continue;
       }
       // a soldier: steps up to an invader near his post, otherwise holds the line
@@ -282,13 +414,27 @@ module.exports = function createInvasions(ctx) {
     let count = waveSize(inv.wave);
     if (inv.wave === 1) count = Math.max(0, count - inv.massed);
     for (let i = 0; i < count; i++) spawnOne(false);
-    if (inv.wave === WAVES) spawnOne(true);
+    if (inv.wave === WAVES) {
+      const lord = spawnOne(true);
+      // the banner bearer marches at his side
+      const b = spawnOne(false);
+      if (b) {
+        if (!b.elite) makeElite(b, 1);
+        b.elite.name = "Banner Bearer";
+        b.bearer = true;
+        inv.bearer = b.id;
+        if (lord) { b.x = lord.x; b.z = lord.z; }
+      }
+      if (lord) { inv.warlord = lord.id; inv.nextTaunt = now() + 4; sayNear(lord, WARLORD_TAUNTS[0]); }
+    }
+    if (inv.wave === 1) inv.nextFire = now() + FIRE_EVERY * rand(0.5, 0.9);
     inv.waveAt = now();
     const what = inv.wave === WAVES ? "The last wave, led by a warlord, charges" : `Wave ${inv.wave} of ${WAVES} marches`;
     broadcast({ t: "sys", msg: `${what} on the ${inv.gate.name} gate of ${inv.town.name}!` });
   }
 
-  const alive = () => { let n = 0; for (const id of inv.ids) if (monsters.has(id)) n++; else inv.ids.delete(id); return n; };
+  // invaders still fighting (the ram isn't one: it never counts towards a wave, and is left behind if the town holds)
+  const alive = () => { let n = 0; for (const id of inv.ids) { const m = monsters.get(id); if (!m) inv.ids.delete(id); else if (!m.def.siege) n++; } return n; };
 
   function state() {
     if (!inv) return { phase: "none" };
@@ -297,7 +443,11 @@ module.exports = function createInvasions(ctx) {
     return { town: inv.town.name, gate: inv.gate.name, phase: inv.phase, gx: r2(inv.gate.x), gz: r2(inv.gate.z), sx: r2(inv.sx), sz: r2(inv.sz),
       n: inv.phase === "warn" ? alive() : 0, // raiders in the war camp
       wave: inv.wave, waves: WAVES, left: inv.phase === "wave" ? alive() : left, hp: Math.max(0, Math.round(inv.integrity)),
-      gd: live.map((g) => ({ i: g.id, k: g.k, x: r2(g.x), z: r2(g.z), hp: Math.ceil(g.hp), mh: g.mhp })), paused: !!inv.paused };
+      gd: live.map((g) => ({ i: g.id, k: g.k, x: r2(g.x), z: r2(g.z), hp: Math.ceil(g.hp), mh: g.mhp })), paused: !!inv.paused,
+      bc: inv.beacons.map((b) => ({ x: r2(b.x), z: r2(b.z), l: b.lit })),          // the beacons (l: who lit it, "" = unlit)
+      fr: inv.phase === "won" || inv.phase === "lost" ? [] : inv.fires.map((f) => ({ i: f.id, x: r2(f.x), z: r2(f.z), s: Math.round(f.s) })), // burning roofs
+      ram: inv.ram && monsters.has(inv.ram) ? (inv.ramStopped ? 2 : 1) : 0, // 1: the ram is coming, 2: abandoned
+      rt: inv.routed };
   }
 
   function send() {
@@ -308,6 +458,8 @@ module.exports = function createInvasions(ctx) {
 
   function end(won) {
     inv.phase = won ? "won" : "lost";
+    inv.lostFires = inv.fires.filter((f) => f.s >= 100).length; // roofs left burning (the town's stores went up with them)
+    for (const id of inv.ids) { const m = monsters.get(id); if (m && m.def.siege) { monsters.delete(id); inv.ids.delete(id); } } // the ram is hauled off as firewood
     inv.endedAt = now();
     metrics.inc({ town: inv.town.name, result: won ? "won" : "lost" });
     if (won) {
@@ -408,10 +560,18 @@ module.exports = function createInvasions(ctx) {
     }
     updateGuards(t);
     inv.guards = inv.guards.filter((g) => g.hp > 0);
+    const firesChanged = updateFires(t, dt);
+    if (inv.bearer && !inv.routed && !monsters.has(inv.bearer)) rout();
+    if (inv.warlord && t >= inv.nextTaunt) {
+      inv.nextTaunt = t + rand(14, 22);
+      const lord = monsters.get(inv.warlord);
+      if (lord) sayNear(lord, WARLORD_TAUNTS[Math.floor(rand(1, WARLORD_TAUNTS.length))]);
+    }
+    if (firesChanged) send();
     // Battering the gate
     for (const id of inv.ids) {
       const m = monsters.get(id);
-      if (m && m.sieging && m.state === "idle") inv.integrity -= SIEGE_RATE * (m.warlord ? 4 : m.def.hp >= 200 ? 2 : 1) * 0.1;
+      if (m && m.sieging && m.state === "idle") inv.integrity -= SIEGE_RATE * (m.def.siege ? RAM_HIT : m.warlord ? 4 : m.def.hp >= 200 ? 2 : 1) * 0.1;
     }
     const n = alive();
     if (inv.integrity <= 0 || t - inv.began > MAX_S) return end(false);
@@ -424,8 +584,22 @@ module.exports = function createInvasions(ctx) {
 
   /** An invader with nobody to fight: march on the gate, then batter it. */
   function idle(m, t) {
-    if (!inv || m.invasion !== inv.id || (inv.phase !== "wave" && inv.phase !== "warn")) return false;
+    if (!inv || m.invasion !== inv.id) return false;
+    if (m.def.siege) return ramIdle(m, t);
+    if (m.fleeing) { // routed: back to the camp, and away
+      if (dist(m.x, m.z, inv.sx, inv.sz) < 4) { monsters.delete(m.id); inv.ids.delete(m.id); return true; }
+      if (!m.path.length) m.path = findPath(m.x, m.z, inv.sx, inv.sz, 8000);
+      if (!m.path.length) { monsters.delete(m.id); inv.ids.delete(m.id); return true; }
+      moveAlongPath(m, speedOf(m) * 1.2);
+      return true;
+    }
+    if (inv.phase !== "wave" && inv.phase !== "warn") return false;
     if (inv.paused) { m.path = []; m.sieging = false; return true; } // nobody about: they wait where they are
+    if (m.crew && inv.phase === "wave") { // walk beside the ram, pushing
+      const ram = ramOf();
+      if (ram && !inv.ramStopped && dist(m.x, m.z, ram.x, ram.z) > 1.8) { m.path = [[ram.x + rand(-1, 1), ram.z + rand(-1, 1)]]; moveAlongPath(m, speedOf(m) * 0.8); return true; }
+      if (ram && !inv.ramStopped) { m.path = []; m.ry = ram.ry; return true; }
+    }
     if (inv.phase === "warn") { // in the war camp, waiting for the horns
       if (dist(m.x, m.z, inv.sx, inv.sz) > 7) {
         if (!m.path.length) m.path = findPath(m.x, m.z, inv.sx + rand(-3, 3), inv.sz + rand(-3, 3), 4000);
@@ -454,6 +628,24 @@ module.exports = function createInvasions(ctx) {
     return true;
   }
 
+  /** The banner falls: the raiders lose heart. Some run for the camp, the rest fight on, weaker. */
+  function rout() {
+    inv.routed = true;
+    let fled = 0;
+    for (const id of inv.ids) {
+      const m = monsters.get(id);
+      if (!m || m.def.siege || m.warlord || m.hp <= 0) continue;
+      if (Math.random() < ROUT_SHARE) {
+        m.fleeing = true; m.state = "idle"; m.target = 0; m.threat.clear(); m.path = []; m.sieging = false;
+        fled++;
+      } else m.dmg *= ROUT_DMG;
+    }
+    broadcast({ t: "sys", msg: `The raiders' banner falls before ${inv.town.name}! ${fled ? `${fled} of them turn and run; the rest` : "They"} waver.` });
+    guardEvent({ k: "rout" });
+    log(`Invasion of ${inv.town.name}: the banner fell, ${fled} fled`);
+    send();
+  }
+
   function onDamage(m, s) {
     if (inv && m.invasion === inv.id && s && s.name) inv.defenders.set(s.name, (inv.defenders.get(s.name) || 0) + 1);
     m.sieging = false;
@@ -470,6 +662,33 @@ module.exports = function createInvasions(ctx) {
       for (const k of sacks.values())
         if (inside(k.town, x, z) && dist(x, z, k.gate.x, k.gate.z) < sackRadius(k.town)) return k.town.name;
       return "";
+    },
+    /** A hero lights beacon i by the gate (within reach of it, while the town is threatened). Returns why not, or "". */
+    light(s, i) {
+      if (!inv || inv.phase === "won" || inv.phase === "lost") return "There's nothing to light a beacon for.";
+      const b = inv.beacons[i | 0];
+      if (!b) return "";
+      if (b.lit) return "That beacon is already burning.";
+      if (dist(s.x, s.z, b.x, b.z) > 4.5) return "Get closer to the beacon.";
+      b.lit = s.name;
+      inv.defenders.set(s.name, inv.defenders.get(s.name) || 0); // a part in the defence
+      broadcast({ t: "sys", msg: `${s.name} lit a beacon at the ${inv.gate.name} gate of ${inv.town.name}: the wall's archers loose fire arrows!` });
+      guardEvent({ k: "beacon", i: i | 0, by: s.name });
+      send();
+      return "";
+    },
+    /** A hero throws water on burning roof `id` (they must be near it). Returns the xp earned (0: nothing done). */
+    douseFire(s, id) {
+      if (!inv) return 0;
+      const f = inv.fires.find((x) => x.id === (id | 0));
+      if (!f || dist(s.x, s.z, f.x, f.z) > 14) return 0;
+      const t = now();
+      if (t - (s.lastDouse || 0) < 1.2) return 0;
+      s.lastDouse = t;
+      f.s -= DOUSE;
+      if (f.s <= 0) { inv.fires = inv.fires.filter((x) => x !== f); guardEvent({ k: "fireout", id: f.id, by: s.name }); }
+      send();
+      return Math.max(1, Math.round(3 * Math.pow(s.lvl || 1, 1.2)));
     },
     /** The burning town a hero stands in (anywhere inside its walls), or null. */
     sackOf(x, z) {
@@ -524,5 +743,12 @@ module.exports = function createInvasions(ctx) {
     },
     /** Tests: skip the gathering, or the gate's remaining integrity. */
     _debug: () => inv,
+    /** Admin: a fire arrow onto a roof behind the gate now (as if a raider archer loosed one). */
+    fireNow() {
+      if (!inv || inv.phase === "won" || inv.phase === "lost") return "There is no siege.";
+      const g = inv.gate, x = g.x - g.nx * 12, z = g.z - g.nz * 12;
+      startFire(x, z, 50, null);
+      return `A roof behind the ${g.name} gate of ${inv.town.name} is on fire.`;
+    },
   };
 };

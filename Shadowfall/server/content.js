@@ -41,6 +41,8 @@ const MONSTERS = {
   "The Frost Witch":   { hp: 2000, dmg: 34, speed: 3.8, range: 11,  cd: 1.6, xp: 4500, aggro: 14, armor: 35, ranged: true, boss: true },
   "The Sand Colossus": { hp: 2600, dmg: 38, speed: 3.0, range: 2.8, cd: 2.0, xp: 5000, aggro: 13, armor: 65, boss: true },
   "The Cinder Lord":   { hp: 3200, dmg: 44, speed: 4.4, range: 2.6, cd: 1.4, xp: 6500, aggro: 14, armor: 55, boss: true },
+  // Town invasions (invasion.js): the raiders' battering ram. Never fights back or chases anyone (siege)
+  "Battering Ram":     { hp: 420,  dmg: 0,  speed: 1.5, range: 1,   cd: 2.4, xp: 160,  aggro: 0,  armor: 30, siege: true },
 };
 
 // The world is 576 x 576 tiles. The original world (Hollowmere and its four zones) fills the south-west corner,

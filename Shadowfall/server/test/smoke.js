@@ -574,6 +574,24 @@ async function invasionTests(a, b) {
     "during the warning the raiders mass in a camp outside the gate and the guards take their posts");
   assert.ok(attacked.phase === "wave" && attacked.wave === 1, "then the first wave falls at once, no gathering");
   assert.strictEqual(attacked.gate, warned.gate, "on the gate that was named");
+  assert.ok(attacked.ram === 1 && attacked.bc.length === 2 && attacked.bc.every((x) => x.l === ""), "a battering ram comes with them, and the gate has two unlit beacons");
+  // Bob lights a beacon: the wall's archers shoot fire arrows
+  state(b, attacked.bc[0].x, attacked.bc[0].z);
+  await sleep(150);
+  b.ws.send(JSON.stringify({ t: "beacon", i: 0 }));
+  await sleep(250);
+  assert.strictEqual(b.all("invasion").at(-1).iv.bc[0].l, "Bob", "a hero by a beacon lights it");
+  assert.ok(b.all("sys").some((m) => /Bob lit a beacon/.test(m.msg)), "and everyone hears of it");
+  // A fire arrow sets a roof alight; buckets of water put it out
+  a.ws.send(JSON.stringify({ t: "adm", c: "invasion", fire: true }));
+  await sleep(250);
+  const fire = (b.all("invasion").at(-1).iv.fr || [])[0];
+  assert.ok(fire && fire.s >= 40, "a roof behind the gate burns");
+  state(b, fire.x, fire.z);
+  await sleep(150);
+  for (let i = 0; i < 2; i++) { b.ws.send(JSON.stringify({ t: "douse", id: fire.i })); await sleep(1300); }
+  assert.ok(b.find("doused")?.xp > 0, "throwing water on it pays a little experience");
+  assert.ok(!(b.all("invasion").at(-1).iv.fr || []).some((f) => f.i === fire.i), "two buckets put a fresh fire out");
   a.ws.send(JSON.stringify({ t: "adm", c: "invasion", stop: true }));
   await sleep(200);
 

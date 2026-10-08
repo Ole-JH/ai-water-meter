@@ -167,7 +167,7 @@ namespace Shadowfall
                     AdminTools.Send(new AdminCmd { c = "invasion", town = t.Name, gate = adminGate == 0 ? "" : adminGates[adminGate].ToLowerInvariant(), warn = adminWarn });
             }
             y += 38;
-            float hw = (w - 6) / 2f, qw = (w - 12) / 3f;
+            float hw = (w - 6) / 2f, qw = (w - 18) / 4f;
             // the town buttons above start it straight away, or (ticked) with the scouts' 90-second warning first
             var wr = new Rect(x, y, qw, 32);
             if (AdminButton(wr, (adminWarn ? "[x]" : "[ ]") + " Scouts first")) adminWarn = !adminWarn;
@@ -176,7 +176,8 @@ namespace Shadowfall
             GUI.enabled = Invasion.Current != null;
             if (AdminButton(new Rect(x + qw + 6, y, qw, 32), "Go to the gate") && Invasion.Current != null)
                 AdminTools.Send(new AdminCmd { c = "tp", x = Invasion.Current.gx, z = Invasion.Current.gz - 4f });
-            if (AdminButton(new Rect(x + 2 * (qw + 6), y, qw, 32), "End it")) AdminTools.Send(new AdminCmd { c = "invasion", stop = true });
+            if (AdminButton(new Rect(x + 2 * (qw + 6), y, qw, 32), "Fire arrow")) AdminTools.Send(new AdminCmd { c = "invasion", fire = true });
+            if (AdminButton(new Rect(x + 3 * (qw + 6), y, qw, 32), "End it")) AdminTools.Send(new AdminCmd { c = "invasion", stop = true });
             GUI.enabled = true;
             y += 38;
             // As a lost siege: the quarter behind the chosen gate burns for twelve minutes (south when "Any gate")

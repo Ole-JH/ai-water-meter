@@ -1914,6 +1914,11 @@ namespace Shadowfall
             }
         }
 
+        /// <summary>Turns to face <paramref name="at"/> (doing something there: lighting a beacon, throwing water).</summary>
+        public void FaceTowards(Vector3 at) => Factory.Face(transform, at);
+        /// <summary>The hands-busy motion (a bucket thrown, a torch put to a beacon).</summary>
+        public void PlayInteract() => view?.Interact();
+
         void UpdateGathering(float dt)
         {
             if (GatherNode == null || GatherNode.Depleted) { StopGathering(); return; }

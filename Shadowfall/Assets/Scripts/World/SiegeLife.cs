@@ -255,6 +255,21 @@ namespace Shadowfall
             b.OnArrive = null;
         }
 
+        // ------------------------------------------------------------------ the bucket line at a burning roof
+
+        /// <summary>One of the townsfolk running with a bucket from <paramref name="from"/> to <paramref name="stand"/>, throwing at <paramref name="flame"/>.</summary>
+        public Extra Bucket(Vector3 from, Vector3 stand, Vector3 flame)
+        {
+            string[] models = { "Characters/Keeper", "Characters/RogueHooded", "Characters/Rogue" };
+            string model = Pick(models);
+            var e = Extra.Make(this, "Bucket carrier", new CharacterLook { Model = model, Height = R(1.75f, 1.9f), Anims = model.EndsWith("Keeper") ? AnimSet.Kenney : AnimSet.KayKit, Tint = new Color(R(0.85f, 1f), R(0.8f, 0.95f), R(0.7f, 0.9f)) }, from, R(3.8f, 4.6f));
+            e.Delay = R(0.5f, 3f);
+            e.Walk(stand);
+            if (rng.NextDouble() < 0.5) e.Line = Pick(new[] { "Water! More water!", "Keep the buckets coming!", "Fire! Fire on the roof!", "Form a line!" });
+            e.OnArrive = x => { x.Tending = true; x.FaceAt = flame; };
+            return e;
+        }
+
         // ------------------------------------------------------------------ the extras
 
         /// <summary>One of the townsfolk (or a cart) walking a path, saying a line, maybe riding; fades away when told.</summary>
@@ -264,6 +279,7 @@ namespace Shadowfall
             public string Line;
             public System.Action<Extra> OnArrive;
             public bool Lying, Tending;
+            public Vector3? FaceAt;
             public Extra CarriedBy;
             CharacterView view;
             MountRig mount;
@@ -315,7 +331,8 @@ namespace Shadowfall
                 }
                 if (Tending)
                 {
-                    if (Time.time >= nextTend) { nextTend = Time.time + Random.Range(3f, 6f); view?.Interact(); }
+                    if (FaceAt.HasValue) Factory.Face(transform, FaceAt.Value, dt * 6f);
+                    if (Time.time >= nextTend) { nextTend = Time.time + Random.Range(FaceAt.HasValue ? 1.6f : 3f, FaceAt.HasValue ? 2.8f : 6f); view?.Interact(); }
                     view?.UpdateLocomotion(0f);
                     return;
                 }
