@@ -405,6 +405,7 @@ function spawnMonster(type, level, x, z, spawner, inst = 0) {
 }
 
 function aggro(m, sessionId) {
+  if (m.def.siege || m.fleeing) return; // a battering ram never chases anyone (nor does a routed raider), whoever alerts it
   if (m.state === "chase" && m.target) return;
   // it has seen someone: a "!" and a roar over it for those around (once a fight, not for every target switch)
   if (m.state === "idle" && now() - (m.spottedAt || 0) > 8) {

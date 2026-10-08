@@ -37,7 +37,7 @@ const GUARD_HIT = 0.025;    // share of an invader's max life per guard blow
 const ARCHER_RANGE = 22, ARCHER_CD = 2.6, SOLDIER_CD = 1.7, SOLDIER_REACH = 7, GUARD_SPEED = 3.2;
 // The battering ram: built in the war camp, pushed to the gate by its crew when the first wave charges, and much harder
 // on the gate than any raider. Kill its crew (in the camp, or on the way) and it stands where it is.
-const RAM = "Battering Ram", RAM_CREW = 2, RAM_SPEED = 1.5, RAM_CD = 2.4, RAM_HIT = 10; // RAM_HIT: as many raiders at the gate
+const RAM = "Battering Ram", RAM_CREW = 2, RAM_SPEED = 1.5, RAM_CD = 2.4, RAM_HIT = 5; // RAM_HIT: as many raiders at the gate
 // Beacons: two braziers just inside the wall either side of the gate; lit by a hero, they give the wall's archers fire
 // arrows (each lit beacon: half as much damage again)
 const BEACON_OFF = 9, BEACON_BONUS = 0.5;
