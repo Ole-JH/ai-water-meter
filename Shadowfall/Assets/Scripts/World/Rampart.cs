@@ -129,8 +129,8 @@ namespace Shadowfall
             foreach (int k in new[] { LadderAt, LadderAt + 1, LadderAt - 1, LadderAt + 2, LadderAt + 3 })
             {
                 int a = side.Mid + dir * k;
-                var foot = side.Point(a + 0.5f) - side.Out * 1.1f;
-                if (world.IsWalkable(foot) && world.IsWalkable(foot - side.Out)) { along = a; break; }
+                var foot = side.Point(a + 0.5f) - side.Out * WallWalk.FootIn;
+                if (world.IsWalkable(foot) && world.IsWalkable(foot - side.Out * 0.8f) && world.IsWalkable(foot + side.Out * 0.6f)) { along = a; break; }
             }
             if (along < 0) return;
             int reach = Mathf.Min(WalkTo, side.Half - 3);
@@ -165,7 +165,8 @@ namespace Shadowfall
             var size = s.Axis * len + s.Across * 0.95f + Vector3.up * 0.1f;
             Factory.Prim(PrimitiveType.Cube, go.transform, c + Vector3.up * (Top - 0.05f), new Vector3(Mathf.Abs(size.x), size.y, Mathf.Abs(size.z)), wood);
             for (float a = w.Min; a <= w.Max + 0.01f; a += 2f)
-                Factory.Prim(PrimitiveType.Cube, go.transform, s.Point(a) - s.Out * 0.72f + Vector3.up * (Top * 0.5f), new Vector3(0.14f, Top, 0.14f), wood * 0.8f);
+                if (Mathf.Abs(a - w.LadderAt) > 0.7f) // no post where the ladder leans
+                    Factory.Prim(PrimitiveType.Cube, go.transform, s.Point(a) - s.Out * 0.72f + Vector3.up * (Top * 0.5f), new Vector3(0.14f, Top, 0.14f), wood * 0.8f);
             go.SetActive(false);
             return go;
         }
@@ -207,7 +208,11 @@ namespace Shadowfall
         public float Outside(Vector3 p) => Vector3.Dot(p - Side.Point(Param(p)), Side.Out);
         /// <summary>Where a hero lands jumping down at <paramref name="a"/>, outside or inside.</summary>
         public Vector3 Landing(float a, bool outside) => Side.Point(Clamp(a)) + Side.Out * (outside ? 1.6f : -1.5f);
-        public Vector3 Foot => Side.Point(LadderAt) - Side.Out * 1.1f;
+        /// <summary>How far inside the wall line the ladder's foot stands.</summary>
+        public const float FootIn = 1.9f;
+        public Vector3 Foot => Side.Point(LadderAt) - Side.Out * FootIn;
+        /// <summary>Where the ladder's top rests: against the walkway's inner edge, a little above it (not through it).</summary>
+        public Vector3 LadderTop => Side.Point(LadderAt) - Side.Out * 0.86f + Vector3.up * (Rampart.Top + 0.45f);
     }
 
     /// <summary>The attacked gate: two leaves of planks that close, take damage, lose pieces and break.</summary>
@@ -453,13 +458,14 @@ namespace Shadowfall
             l.DisplayName = "Ladder";
             l.InteractRange = 1.7f;
             var wood = new Color(0.55f, 0.4f, 0.24f);
-            const float len = 3.3f;
+            var s = walk.Side;
+            var along = walk.LadderTop - walk.Foot;
+            float len = along.magnitude;
             foreach (float x in new[] { -0.26f, 0.26f })
                 Factory.Prim(PrimitiveType.Cube, go.transform, new Vector3(x, len * 0.5f, 0f), new Vector3(0.09f, len, 0.09f), wood * 0.85f);
             for (float y = 0.3f; y < len - 0.1f; y += 0.38f)
                 Factory.Prim(PrimitiveType.Cube, go.transform, new Vector3(0f, y, 0f), new Vector3(0.52f, 0.06f, 0.07f), wood);
-            var s = walk.Side;
-            l.leaning = Quaternion.LookRotation(s.Axis, (s.Out * 1.05f + Vector3.up * Rampart.Top).normalized);
+            l.leaning = Quaternion.LookRotation(s.Axis, along.normalized);
             l.carried = l.leaning;
             go.transform.position = walk.Foot;
             go.transform.rotation = l.leaning;
