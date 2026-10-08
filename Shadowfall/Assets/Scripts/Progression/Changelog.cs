@@ -24,6 +24,15 @@ namespace Shadowfall
         {
             new Entry
             {
+                Id = 76, Date = "2026-10-08", Title = "A living world",
+                Items = new[]
+                {
+                    "Townsfolk wave when you walk up to them, and villagers standing about give you a wave as you pass (now and then, not every time).",
+                    "Pigeons peck about the town squares by day and burst up when someone runs through; crows in the wilds now take off from other heroes and monsters too.",
+                },
+            },
+            new Entry
+            {
                 Id = 75, Date = "2026-10-08", Title = "The town stands with you",
                 Items = new[]
                 {

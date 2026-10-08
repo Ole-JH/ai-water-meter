@@ -305,7 +305,26 @@ namespace Shadowfall
             }
             if (faceTo != Vector3.zero && doing != Doing.Walking) Factory.Face(transform, faceTo, Time.deltaTime * 4f);
             view?.UpdateLocomotion(0f);
+            PassingWave();
             Chatter();
+        }
+
+        float waveAgain;
+        bool heroWasNear;
+
+        /// <summary>Standing about and the hero walks right by: a turn and a wave, now and then.</summary>
+        void PassingWave()
+        {
+            if (kind == Kind.Dog || view == null || doing == Doing.Sitting) return;
+            bool near = HeroWithin(3f);
+            if (near && !heroWasNear && Time.time >= waveAgain && Random.value < 0.6f)
+            {
+                waveAgain = Time.time + Random.Range(50f, 90f);
+                var p = Player.I;
+                if (p != null) Factory.Face(transform, p.transform.position);
+                view.Emote(EmoteDef.Get("wave"));
+            }
+            heroWasNear = near;
         }
 
         /// <summary>A new part of the day: set off for where it happens.</summary>

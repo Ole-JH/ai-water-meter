@@ -69,7 +69,9 @@ namespace Shadowfall
             bool day = DayNight.Night < 0.4f, wild = !WorldGenerator.InTown(hero);
             if (flock.Count == 0)
             {
-                if (!day || !wild || Time.time < nextFlock || Weather.Precip > 0.4f) return;
+                // crows out in the wilds; in town, grey pigeons on the cobbles
+                if (!day || Time.time < nextFlock || Weather.Precip > 0.4f) return;
+                flockInTown = !wild;
                 nextFlock = Time.time + Random.Range(25f, 50f);
                 // somewhere grassy a little ahead
                 var ahead = hero + p.transform.forward * Random.Range(9f, 14f) + p.transform.right * Random.Range(-5f, 5f);
@@ -79,13 +81,19 @@ namespace Shadowfall
                 for (int i = 0; i < n; i++)
                 {
                     var at = ahead + new Vector3(Random.Range(-1.5f, 1.5f), 0f, Random.Range(-1.5f, 1.5f));
-                    if (grid.IsWalkable(at)) flock.Add(MakeCrow(at));
+                    if (grid.IsWalkable(at)) flock.Add(MakeCrow(at, flockInTown));
                 }
                 return;
             }
             float dt = Time.deltaTime;
             bool spooked = false;
-            foreach (var c in flock) if (c.FlyT < 0f && c.T != null && Factory.FlatDistance(c.T.position, hero) < (p.IsMoving ? 5.5f : 2.5f)) spooked = true;
+            foreach (var c in flock)
+            {
+                if (c.FlyT >= 0f || c.T == null) continue;
+                if (Factory.FlatDistance(c.T.position, hero) < (p.IsMoving ? 5.5f : 2.5f)) spooked = true;
+                // other heroes and monsters coming by put them up too
+                else if (Time.frameCount % 10 == 0) spooked |= Disturbed(c.T.position);
+            }
             int gone = 0;
             foreach (var c in flock)
             {
@@ -114,13 +122,25 @@ namespace Shadowfall
                 if (c.Peck < 0f) { c.Peck = Random.Range(0.6f, 2f); c.T.Rotate(0f, Random.Range(-60f, 60f), 0f); }
                 c.T.localRotation = Quaternion.Euler(c.Peck < 0.25f ? 35f : 0f, c.T.localEulerAngles.y, 0f);
             }
-            if (gone == flock.Count || (!wild && !spooked)) Clear();
+            if (gone == flock.Count || (wild == flockInTown && !spooked)) Clear(); // (walked into town, or out of it)
             else if (Factory.FlatDistance(flock[0].T != null ? flock[0].T.position : hero, hero) > 45f) Clear();
         }
 
-        Crow MakeCrow(Vector3 at)
+        bool flockInTown;
+
+        /// <summary>Anyone else moving close by: another hero, or a monster.</summary>
+        static bool Disturbed(Vector3 at)
         {
-            var black = new Color(0.07f, 0.07f, 0.09f);
+            foreach (var rp in RemotePlayer.ById.Values)
+                if (rp != null && Factory.FlatDistance(rp.transform.position, at) < 4f) return true;
+            foreach (var e in Enemy.ById.Values)
+                if (e != null && !e.IsDead && Factory.FlatDistance(e.transform.position, at) < 4.5f) return true;
+            return false;
+        }
+
+        Crow MakeCrow(Vector3 at, bool pigeon = false)
+        {
+            var black = pigeon ? new Color(0.5f, 0.52f, 0.58f) : new Color(0.07f, 0.07f, 0.09f);
             var root = new GameObject("Crow").transform;
             root.position = at;
             root.rotation = Quaternion.Euler(0f, Random.Range(0f, 360f), 0f);

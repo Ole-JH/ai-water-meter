@@ -856,6 +856,7 @@ namespace Shadowfall
             var p = Player.I;
             float dist = p != null ? Factory.FlatDistance(p.transform.position, transform.position) : 999f;
             Chatter(p, dist);
+            Greet(dist);
             if (Time.time < busyUntil) return; // at the anvil for us
             if (dist < 6f)
                 Factory.Face(transform, p.transform.position, Time.deltaTime * 4f);
@@ -865,6 +866,19 @@ namespace Shadowfall
                 idleTimer = Random.Range(4f, 9f);
                 transform.rotation = Quaternion.Euler(0, Random.Range(0f, 360f), 0);
             }
+        }
+
+        float lastDist = 999f, greetAgain;
+
+        /// <summary>Someone walks up: a wave (once in a while, not every time you pass).</summary>
+        void Greet(float dist)
+        {
+            if (dist < 5f && lastDist >= 7f && Time.time >= greetAgain && Time.time >= busyUntil && view != null)
+            {
+                greetAgain = Time.time + Random.Range(40f, 70f);
+                view.Emote(EmoteDef.Get("wave"));
+            }
+            if (dist < 5f || dist >= 7f) lastDist = dist; // (in between: keep the last side, so hovering at the edge doesn't count)
         }
 
         /// <summary>What the named villagers do at their posts during their working hours (they stop when you walk up).</summary>
