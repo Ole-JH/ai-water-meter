@@ -5,7 +5,9 @@
 //
 // Messages: dreq {id} (challenge), dans {yes} (answer), dhit {id, dmg} (a hit on the opponent, forwarded to them),
 // dyield (out of health: we lost). The server sends dreq {id, name}, duel {k: count|fight|end, id, name, x, z,
-// win}, dhit {id, dmg}.
+// win}, dhit {id, dmg}. Everyone near (the duellists too) gets duelring {k: count|fight|end, id, tid (the two),
+// name "A|B", x, z, win} for the ring, the countdown and the crowd.
+const SEEN = 50;
 
 const RANGE = 20, FLEE = 45, COUNT_S = 3, MAX_S = 180, INVITE_S = 30;
 
@@ -41,12 +43,17 @@ module.exports = function createDuels(ctx) {
     duels.set(s.id, d);
     duels.set(o.id, d);
     for (const p of [s, o]) send(p, { t: "duel", k: "count", id: other(d, p).id, name: other(d, p).name, x: d.x, z: d.z, left: COUNT_S });
+    ring(d, "count");
     log(`Duel: ${s.name} vs ${o.name}`);
   }
+
+  /** The ring for everyone around: who, where, and how it stands. */
+  const ring = (d, k, win = 0) => sendNear(d.x, d.z, SEEN, { t: "duelring", k, id: d.a.id, tid: d.b.id, name: `${d.a.name}|${d.b.name}`, x: d.x, z: d.z, win });
 
   function end(d, winner, why) {
     duels.delete(d.a.id);
     duels.delete(d.b.id);
+    ring(d, "end", winner ? winner.id : 0);
     for (const p of [d.a, d.b]) send(p, { t: "duel", k: "end", id: other(d, p).id, name: other(d, p).name, win: winner ? winner.id : 0 });
     const loser = winner ? other(d, winner) : null;
     const msg = winner ? `${winner.name} has defeated ${loser.name} in a duel${why ? ` (${why})` : ""}!` : `The duel between ${d.a.name} and ${d.b.name} ends in a draw.`;
@@ -85,6 +92,7 @@ module.exports = function createDuels(ctx) {
       if (d.phase === "count" && t >= d.fightAt) {
         d.phase = "fight";
         for (const p of [d.a, d.b]) send(p, { t: "duel", k: "fight", id: other(d, p).id, name: other(d, p).name, x: d.x, z: d.z });
+        ring(d, "fight");
         continue;
       }
       for (const p of [d.a, d.b]) {

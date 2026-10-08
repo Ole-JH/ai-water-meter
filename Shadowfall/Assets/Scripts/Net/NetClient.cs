@@ -562,6 +562,7 @@ namespace Shadowfall
                 case "invasion": Invasion.Set(m.iv); break;
                 case "wboss": WorldBoss.Set(m.wb); break;
                 case "dreq": Duel.Challenged(m.id, m.name); break;
+                case "duelring": DuelRing.OnRing(m); break;
                 case "guild": Guild.Set(m.g); break;
                 case "rinfo": Rift.OnInfo(m); break;
                 case "bounties": Bounties.Set(m.items); break;

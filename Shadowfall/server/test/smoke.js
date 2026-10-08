@@ -704,6 +704,9 @@ async function duelTests(a, b) {
   assert.ok(!b.find("dhit"), "no hits before the fight starts");
   for (let i = 0; i < 25 && a.all("duel").at(-1).k !== "fight"; i++) await sleep(200);
   assert.strictEqual(a.all("duel").at(-1).k, "fight", "then the fight starts");
+  const rings = a.all("duelring");
+  assert.ok(rings.some((r) => r.k === "count" && r.name === "Alice|Bob" && Math.abs(r.x - 143) < 0.01) && rings.some((r) => r.k === "fight"),
+    "everyone near sees the ring go up and the fight start");
   a.ws.send(JSON.stringify({ t: "dhit", id: bId, dmg: 30 }));
   b.ws.send(JSON.stringify({ t: "dhit", id: 999, dmg: 30 }));
   await sleep(200);

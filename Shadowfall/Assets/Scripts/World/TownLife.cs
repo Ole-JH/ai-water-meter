@@ -242,12 +242,47 @@ namespace Shadowfall
             }
         }
 
+        // Something worth watching nearby (a duel): villagers stop, look and cheer (see Watch).
+        static Vector3 spectacle;
+        static float spectacleUntil;
+        static readonly string[] cheers = { "Go on!", "Ooh!", "Get 'em!", "Ha! Did you see that?", "Again! Again!", "Mind the stall!" };
+        float nextCheer;
+
+        /// <summary>Villagers within 22 m of <paramref name="at"/> stop to watch for <paramref name="seconds"/> (0: stop watching).</summary>
+        public static void Watch(Vector3 at, float seconds)
+        {
+            spectacle = at;
+            spectacleUntil = seconds > 0f ? Time.time + seconds : 0f;
+        }
+
+        /// <summary>All the watchers cheer at once (the end of a duel).</summary>
+        public static void Applaud()
+        {
+            foreach (var w in all)
+                if (!w.hidden && w.kind != Kind.Dog && Factory.FlatDistance(w.transform.position, spectacle) < 22f) w.view?.Cheer();
+        }
+
+        bool Watching()
+        {
+            if (Time.time >= spectacleUntil || kind == Kind.Dog || Factory.FlatDistance(transform.position, spectacle) > 22f) return false;
+            Factory.Face(transform, spectacle, Time.deltaTime * 4f);
+            view?.UpdateLocomotion(0f);
+            if (Time.time >= nextCheer)
+            {
+                nextCheer = Time.time + 3f + (float)rng.NextDouble() * 6f;
+                view?.Cheer();
+                if (rng.NextDouble() < 0.35) Speech.Say(transform, 2.2f, cheers[rng.Next(cheers.Length)]);
+            }
+            return true;
+        }
+
         void Update()
         {
             if (torch != null) torch.enabled = !hidden && DayNight.Night > 0.35f;
             string now = Plan(out var place, out var there);
             if (now != plan) Begin(now, place, there);
             if (hidden) return;
+            if (Watching()) return;
 
             float moved = Move();
             if (moved > 0f) { view?.UpdateLocomotion(moved); Chatter(); return; }

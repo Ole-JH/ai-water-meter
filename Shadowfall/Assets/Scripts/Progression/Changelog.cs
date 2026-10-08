@@ -24,6 +24,15 @@ namespace Shadowfall
         {
             new Entry
             {
+                Id = 41, Date = "2026-10-08", Title = "Duels with a crowd",
+                Items = new[]
+                {
+                    "A duel puts up a ring of pennant posts and rope that everyone nearby can see, with a big 3-2-1 countdown and a gong at each number.",
+                    "Villagers stop to watch and cheer. At the end the loser sits down in the dirt, the winner cheers under a golden banner, and the crowd applauds.",
+                },
+            },
+            new Entry
+            {
                 Id = 40, Date = "2026-10-08", Title = "Rifts with a pulse",
                 Items = new[]
                 {

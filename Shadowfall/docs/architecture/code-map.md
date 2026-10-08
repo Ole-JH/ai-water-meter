@@ -54,6 +54,7 @@
 | `World/Invasion.cs` | The client side of town invasions: state from the server, banners, the reward and achievements (tracker and map markers in `GameUI`) |
 | `World/ForgeStation.cs` | The smiths' anvils and hearths (built after the world, visual only) and the salvage and reforge shows played on them |
 | `World/RiftFx.cs` | A rift's progress orb and kill motes, the guardian's tear, and the collapse after a clear (the tier's light and fog are in `DayNight`) |
+| `Characters/DuelRing.cs` | A duel as everyone nearby sees it: the ring, the countdown, the crowd (villagers watching via `Walker.Watch`) and the winner's banner |
 | `World/Rampart.cs` | The attacked gate during an invasion (shuts, shows damage, loses pieces, breaks), the militia who put up ladders and a walkway, and the walkway heroes climb onto (`Player.ClimbWall`); the shut gate blocks cells with `WorldGrid.SetClosed`, never part of the map |
 | `Social/Auction.cs`, `UI/GameUI.Auction.cs` | The auction house as the server shows it, and its window |
 | `Progression/Bounties.cs` | Today's bounties as the server sends them, and the reward |

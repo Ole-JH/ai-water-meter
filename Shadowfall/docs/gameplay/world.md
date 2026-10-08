@@ -103,7 +103,12 @@ fight you both.
 
 Nobody dies in a duel. When a hit would drop you, you **yield** at your last hit point and lose. You also lose if you
 run more than 45 m from the flag, die to something else, enter a dungeon or log out. After three minutes it's a draw.
-The result is announced to everyone nearby. Not in dungeons. Three [achievements](achievements.md#social), one with
+The result is announced to everyone nearby. Not in dungeons.
+
+Everyone within about 50 m sees it happen. A ring of pennant posts with a rope springs up around the two of you, and
+the countdown shows in big numbers over the middle, a gong at each. Villagers nearby stop what they're doing to
+watch and cheer. At the end the loser sits down in the dirt, the winner cheers under a golden banner for a few
+seconds, the crowd applauds, and the ring comes down. Three [achievements](achievements.md#social), one with
 the title *the Duelist*.
 
 ## Dungeons
