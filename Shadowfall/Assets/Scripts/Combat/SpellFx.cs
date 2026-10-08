@@ -161,6 +161,14 @@ namespace Shadowfall
             return ps;
         }
 
+        /// <summary>Turns a looping emitter's emission on or off (what it already emitted lives out its life).</summary>
+        public static void Emitting(ParticleSystem ps, bool on)
+        {
+            if (ps == null) return;
+            var em = ps.emission;
+            if (em.enabled != on) em.enabled = on;
+        }
+
         /// <summary>A looping emitter attached to <paramref name="follow"/> (auras, idle glows); lives as long as its parent.</summary>
         public static ParticleSystem Loop(P p, Transform follow, Vector3 local)
         {

@@ -393,8 +393,8 @@ namespace Shadowfall
             }
             else if (HasAffix("Fast"))
             {
-                nextTrail = Time.time + 0.15f;
-                if (SpellFx.Ready) SpellFx.Dust(transform.position, 0.35f);
+                nextTrail = Time.time + 0.35f;
+                if (SpellFx.Ready) SpellFx.Dust(transform.position, 0.45f);
             }
         }
 

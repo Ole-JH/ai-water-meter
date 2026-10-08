@@ -67,6 +67,7 @@ namespace Shadowfall
         Vector3 riderHome;
         bool arrived;
         float hopT = -1f, nextPuff, stride;
+        ParticleSystem dust; // one looping emitter behind the hooves, its rate following the speed
 
         public MountRig(Transform owner, CharacterView rider, MountDef def)
         {
@@ -172,7 +173,8 @@ namespace Shadowfall
         /// <summary>Hoofbeats, and a puff of whatever it runs on: snow, sand, dust or grass.</summary>
         void Hooves(float speed, Vector3 at)
         {
-            if (speed < 2.5f) { stride = 0f; return; }
+            if (speed < 2.5f) { stride = 0f; SpellFx.Emitting(dust, false); return; }
+            SpellFx.Emitting(dust, true);
             stride += speed * Time.deltaTime;
             if (stride >= 1.6f)
             {
@@ -181,15 +183,24 @@ namespace Shadowfall
                 bool stone = Dungeon.Active || WorldGenerator.InTown(at);
                 Sfx.Play(snow ? "step_snow" : stone ? "step_stone" : "step_grass", at, 0.5f, 0.15f, 25f);
             }
-            if (Time.time < nextPuff || !SpellFx.Ready) return;
-            nextPuff = Time.time + Mathf.Lerp(0.2f, 0.08f, Mathf.InverseLerp(3f, 12f, speed));
-            var c = GroundDust(at);
-            var back = owner.forward * -0.6f;
-            SpellFx.Emit(new SpellFx.P
+            if (!SpellFx.Ready) return;
+            if (dust == null)
+                dust = SpellFx.Loop(new SpellFx.P
+                {
+                    Rate = 15, Duration = 1f, Life = new Vector2(0.5f, 1f), Speed = new Vector2(0.3f, 1.1f), Size = new Vector2(0.15f, 0.35f),
+                    Start = new Color(1f, 1f, 1f, 0.45f), End = new Color(1f, 1f, 1f, 0f), Gravity = 0.15f, Smoke = true, Grow = true, Radius = 0.3f, Max = 30,
+                }, owner, new Vector3(0f, 0.1f, -0.6f));
+            if (dust == null) return;
+            var em = dust.emission;
+            em.rateOverTime = Mathf.Lerp(15f, 37f, Mathf.InverseLerp(3f, 12f, speed)) * GameSettings.ParticleScale;
+            if (Time.time >= nextPuff)
             {
-                Burst = 3, Duration = 0.1f, Life = new Vector2(0.5f, 1f), Speed = new Vector2(0.3f, 1.1f), Size = new Vector2(0.15f, 0.35f),
-                Start = new Color(c.r, c.g, c.b, 0.45f), End = new Color(c.r, c.g, c.b, 0f), Gravity = 0.15f, Smoke = true, Grow = true, Radius = 0.3f,
-            }, at + back + Vector3.up * 0.1f);
+                // the ground changes under it now and then: snow, sand, grass
+                nextPuff = Time.time + 0.5f;
+                var c = GroundDust(at);
+                var main = dust.main;
+                main.startColor = new Color(c.r, c.g, c.b, 1f);
+            }
         }
 
         /// <summary>What the ground throws up here: snow white, sand gold, the ground's own colour (lightened) elsewhere.</summary>
@@ -204,6 +215,7 @@ namespace Shadowfall
         /// <summary>Off the mount: it trots away (or, <paramref name="knocked"/>, rears and bolts) and is gone.</summary>
         public void Remove(bool knocked = false)
         {
+            if (dust != null) { Object.Destroy(dust.gameObject); dust = null; }
             if (mount != null)
             {
                 var root = mount.Root.transform;

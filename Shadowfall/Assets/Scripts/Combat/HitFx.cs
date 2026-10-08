@@ -192,7 +192,7 @@ namespace Shadowfall
     {
         Color color;
         Light glow;
-        float nextSpark;
+        ParticleSystem sparks;
 
         /// <summary>Puts the right glow on <paramref name="weapon"/> (none for null colour). Cheap to call often.</summary>
         public static void Sync(Transform weapon, Color? c)
@@ -216,17 +216,21 @@ namespace Shadowfall
                 glow.range = 1.8f;
             }
             glow.color = c;
+            // one looping emitter for the sparks (not a new particle system every few frames)
+            if (sparks != null) Destroy(sparks.gameObject);
+            sparks = SpellFx.Loop(new SpellFx.P { Rate = 8, Duration = 1f, Life = new Vector2(0.35f, 0.7f), Speed = new Vector2(0.05f, 0.25f), Size = new Vector2(0.03f, 0.06f),
+                Start = Color.Lerp(c, Color.white, 0.4f), End = new Color(c.r, c.g, c.b, 0f), Velocity = Vector3.up * 0.4f, Radius = 0.12f, Max = 12 }, transform, new Vector3(0f, 0.35f, 0f));
         }
 
         void Update()
         {
             if (glow != null) glow.intensity = 1.1f + Mathf.Sin(Time.time * 3.1f) * 0.35f;
-            if (Time.time < nextSpark || !SpellFx.Ready) return;
-            nextSpark = Time.time + 0.12f;
-            SpellFx.Emit(new SpellFx.P { Burst = 1, Duration = 0.1f, Life = new Vector2(0.35f, 0.7f), Speed = new Vector2(0.05f, 0.25f), Size = new Vector2(0.03f, 0.06f),
-                Start = Color.Lerp(color, Color.white, 0.4f), End = new Color(color.r, color.g, color.b, 0f), Velocity = Vector3.up * 0.4f, Radius = 0.12f }, transform.position + transform.up * 0.35f);
         }
 
-        void OnDestroy() { if (glow != null) Destroy(glow.gameObject); }
+        void OnDestroy()
+        {
+            if (glow != null) Destroy(glow.gameObject);
+            if (sparks != null) Destroy(sparks.gameObject);
+        }
     }
 }

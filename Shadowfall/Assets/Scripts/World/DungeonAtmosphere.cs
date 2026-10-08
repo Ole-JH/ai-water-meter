@@ -12,7 +12,8 @@ namespace Shadowfall
     public class DungeonAtmosphere : MonoBehaviour
     {
         string id;
-        float nextAir;
+        Transform airHolder;
+        ParticleSystem air, air2;
         readonly List<Vector3> drips = new List<Vector3>();
         readonly List<float> dripAt = new List<float>();
 
@@ -166,30 +167,8 @@ namespace Shadowfall
             var p = Player.I;
             if (p == null || !SpellFx.Ready) return;
             var me = p.transform.position;
-            if (Time.time >= nextAir)
-            {
-                nextAir = Time.time + 0.45f;
-                var at = me + new Vector3(Random.Range(-6f, 6f), Random.Range(0.6f, 2.2f), Random.Range(-6f, 6f));
-                switch (id)
-                {
-                    case "barrow": // snow sifting down from the ice
-                        SpellFx.Emit(new SpellFx.P { Burst = 3, Duration = 0.1f, Life = new Vector2(3f, 5f), Speed = new Vector2(0f, 0.05f), Size = new Vector2(0.03f, 0.06f),
-                            Start = new Color(0.9f, 0.95f, 1f, 0.8f), End = new Color(0.9f, 0.95f, 1f, 0f), Velocity = Vector3.down * 0.35f, Radius = 2f, Max = 10 }, at + Vector3.up);
-                        break;
-                    case "citadel": // embers rising, and ash
-                        SpellFx.Emit(new SpellFx.P { Burst = 2, Duration = 0.1f, Life = new Vector2(2f, 3.5f), Speed = new Vector2(0.05f, 0.2f), Size = new Vector2(0.03f, 0.07f),
-                            Start = new Color(1f, 0.6f, 0.2f), End = new Color(1f, 0.25f, 0.05f, 0f), Velocity = Vector3.up * 0.5f, Radius = 2f, Max = 10 }, new Vector3(at.x, me.y + 0.2f, at.z));
-                        break;
-                    case "temple": // sand trickling from the cracks above
-                        SpellFx.Emit(new SpellFx.P { Burst = 6, Duration = 0.1f, Life = new Vector2(0.8f, 1.2f), Speed = new Vector2(0f, 0.1f), Size = new Vector2(0.02f, 0.04f),
-                            Start = new Color(0.85f, 0.72f, 0.5f), End = new Color(0.85f, 0.72f, 0.5f, 0f), Gravity = 0.5f, Radius = 0.08f, Max = 12 }, new Vector3(at.x, me.y + 2.3f, at.z));
-                        goto default;
-                    default: // dust motes turning slowly in the torchlight
-                        SpellFx.Emit(new SpellFx.P { Burst = 3, Duration = 0.1f, Life = new Vector2(4f, 6f), Speed = new Vector2(0.02f, 0.08f), Size = new Vector2(0.025f, 0.05f),
-                            Start = new Color(1f, 0.9f, 0.7f, 0.35f), Mid = new Color(1f, 0.9f, 0.7f, 0.5f), End = new Color(1f, 0.9f, 0.7f, 0f), Radius = 2.5f, Max = 10 }, at);
-                        break;
-                }
-            }
+            if (air == null) MakeAir();
+            if (airHolder != null) airHolder.position = me;
             // drips, each in its own time: a drop falls and the puddle splashes (a plink if you're close)
             for (int i = 0; i < drips.Count; i++)
             {
@@ -201,6 +180,33 @@ namespace Shadowfall
                     Start = new Color(0.7f, 0.85f, 1f, 0.9f), End = new Color(0.7f, 0.85f, 1f, 0.6f), Gravity = 1.9f, Radius = 0.001f, Stretch = true, Max = 2 }, d + Vector3.up * 2.3f);
                 StartCoroutine(Splash(d));
             }
+        }
+
+        /// <summary>The air around the hero: one or two looping emitters that follow them (particles stay where they're born).</summary>
+        void MakeAir()
+        {
+            airHolder = new GameObject("DungeonAir").transform;
+            airHolder.SetParent(transform, false);
+            switch (id)
+            {
+                case "barrow": // snow sifting down from the ice
+                    air = SpellFx.Loop(new SpellFx.P { Rate = 7, Duration = 1f, Life = new Vector2(3f, 5f), Speed = new Vector2(0f, 0.05f), Size = new Vector2(0.03f, 0.06f),
+                        Start = new Color(0.9f, 0.95f, 1f, 0.8f), End = new Color(0.9f, 0.95f, 1f, 0f), Velocity = Vector3.down * 0.35f, Radius = 7f, Max = 40 }, airHolder, Vector3.up * 2.3f);
+                    break;
+                case "citadel": // embers rising, and ash
+                    air = SpellFx.Loop(new SpellFx.P { Rate = 5, Duration = 1f, Life = new Vector2(2f, 3.5f), Speed = new Vector2(0.05f, 0.2f), Size = new Vector2(0.03f, 0.07f),
+                        Start = new Color(1f, 0.6f, 0.2f), End = new Color(1f, 0.25f, 0.05f, 0f), Velocity = Vector3.up * 0.5f, Radius = 7f, Max = 30,
+                        Shape = ParticleSystemShapeType.Circle }, airHolder, Vector3.up * 0.2f);
+                    break;
+                default: // dust motes turning slowly in the torchlight
+                    air = SpellFx.Loop(new SpellFx.P { Rate = 7, Duration = 1f, Life = new Vector2(4f, 6f), Speed = new Vector2(0.02f, 0.08f), Size = new Vector2(0.025f, 0.05f),
+                        Start = new Color(1f, 0.9f, 0.7f, 0.35f), Mid = new Color(1f, 0.9f, 0.7f, 0.5f), End = new Color(1f, 0.9f, 0.7f, 0f), Radius = 6f, Max = 45 }, airHolder, Vector3.up * 1.4f);
+                    break;
+            }
+            if (id == "temple") // sand trickling from the cracks above
+                air2 = SpellFx.Loop(new SpellFx.P { Rate = 12, Duration = 1f, Life = new Vector2(0.8f, 1.2f), Speed = new Vector2(0f, 0.1f), Size = new Vector2(0.02f, 0.04f),
+                    Start = new Color(0.85f, 0.72f, 0.5f), End = new Color(0.85f, 0.72f, 0.5f, 0f), Gravity = 0.5f, Radius = 6f, Max = 20,
+                    Shape = ParticleSystemShapeType.Circle }, airHolder, Vector3.up * 2.3f);
         }
 
         System.Collections.IEnumerator Splash(Vector3 at)

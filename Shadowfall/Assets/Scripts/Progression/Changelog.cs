@@ -24,6 +24,14 @@ namespace Shadowfall
         {
             new Entry
             {
+                Id = 70, Date = "2026-10-08", Title = "Lighter on the frame rate",
+                Items = new[]
+                {
+                    "Hoof dust, glowing weapons, dungeon dust and the seasons' blossom, haze and frost now come from one steady emitter each instead of a stream of new ones: smoother frame rates while riding, in dungeons and out in the wilds.",
+                },
+            },
+            new Entry
+            {
                 Id = 69, Date = "2026-10-08", Title = "Worth shouting about",
                 Items = new[]
                 {

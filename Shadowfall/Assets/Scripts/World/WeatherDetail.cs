@@ -39,7 +39,14 @@ namespace Shadowfall
         void Update()
         {
             var p = Player.I;
-            if (p == null || Dungeon.Active) { HideAll(); return; }
+            if (p == null || Dungeon.Active)
+            {
+                HideAll();
+                SpellFx.Emitting(petals, false);
+                SpellFx.Emitting(haze, false);
+                SpellFx.Emitting(glints, false);
+                return;
+            }
             var at = p.transform.position;
             Puddles(at);
             Breath(p);
@@ -48,55 +55,48 @@ namespace Shadowfall
 
         // ------------------------------------------------------------------ the seasons in the air
 
-        float nextPetals, nextGlint, nextHaze, nextDevil;
+        float nextDevil;
+        Transform seasonHolder;
+        ParticleSystem petals, haze, glints;
 
         /// <summary>Spring blossom drifting on the breeze; the Badlands' midday air shimmering, with the odd dust devil;
-        /// and on a winter morning, hoarfrost glinting on the ground.</summary>
+        /// and on a winter morning, hoarfrost glinting on the ground. Looping emitters that follow the hero, switched on
+        /// and off with the season, place and time of day.</summary>
         void SeasonAir(Vector3 at)
         {
             if (!SpellFx.Ready) return;
+            if (seasonHolder == null)
+            {
+                seasonHolder = new GameObject("SeasonAir").transform;
+                seasonHolder.SetParent(transform, false);
+                petals = SpellFx.Loop(new SpellFx.P { Rate = 5, Duration = 1f, Life = new Vector2(4f, 6f), Speed = new Vector2(0.1f, 0.3f), Size = new Vector2(0.05f, 0.09f),
+                    Start = new Color(1f, 0.8f, 0.88f), Mid = new Color(1f, 0.9f, 0.93f), End = new Color(1f, 0.85f, 0.9f, 0f), Velocity = new Vector3(0.6f, -0.7f, 0.25f),
+                    Radius = 9f, Shape = ParticleSystemShapeType.Circle, Max = 40 }, seasonHolder, Vector3.up * 4f);
+                haze = SpellFx.Loop(new SpellFx.P { Rate = 5, Duration = 1f, Life = new Vector2(1.2f, 1.8f), Speed = new Vector2(0.4f, 0.8f), Size = new Vector2(0.5f, 0.9f),
+                    Start = new Color(1f, 0.95f, 0.85f, 0f), Mid = new Color(1f, 0.95f, 0.85f, 0.07f), End = new Color(1f, 0.95f, 0.85f, 0f), Velocity = Vector3.up * 0.7f,
+                    Stretch = true, Radius = 10f, Shape = ParticleSystemShapeType.Circle, Max = 14 }, seasonHolder, Vector3.up * 0.1f);
+                glints = SpellFx.Loop(new SpellFx.P { Rate = 8, Duration = 1f, Life = new Vector2(0.25f, 0.5f), Speed = Vector2.zero, Size = new Vector2(0.06f, 0.12f),
+                    Start = new Color(0.9f, 0.97f, 1f, 0f), Mid = new Color(1f, 1f, 1f, 1f), End = new Color(0.85f, 0.95f, 1f, 0f),
+                    Radius = 8f, Shape = ParticleSystemShapeType.Circle, Max = 8 }, seasonHolder, Vector3.up * 0.06f);
+            }
+            seasonHolder.position = at;
             float t = Time.time;
             bool day = DayNight.Night < 0.3f, dry = Weather.Precip < 0.15f;
             bool badlands = Weather.InBadlands(at);
-            if (Weather.Season == Season.Spring && !badlands && !Weather.ColdAt(at) && dry && t >= nextPetals && !WorldGenerator.InTown(at))
+            SpellFx.Emitting(petals, Weather.Season == Season.Spring && !badlands && !Weather.ColdAt(at) && dry && !WorldGenerator.InTown(at));
+            bool hot = badlands && Weather.Season != Season.Winter && day && dry;
+            SpellFx.Emitting(haze, hot);
+            SpellFx.Emitting(glints, Weather.Season == Season.Winter && DayNight.Hour >= 5.5f && DayNight.Hour < 10.5f && dry && Weather.ColdAt(at));
+            if (hot && t >= nextDevil)
             {
-                nextPetals = t + 0.35f;
-                var from = at + new Vector3(Random.Range(-9f, 9f), Random.Range(3f, 5f), Random.Range(-9f, 9f));
-                var petal = Random.value < 0.6f ? new Color(1f, 0.78f, 0.86f) : new Color(1f, 0.97f, 0.95f);
-                SpellFx.Emit(new SpellFx.P { Burst = 2, Duration = 0.1f, Life = new Vector2(4f, 6f), Speed = new Vector2(0.1f, 0.3f), Size = new Vector2(0.05f, 0.09f),
-                    Start = petal, Mid = petal, End = new Color(petal.r, petal.g, petal.b, 0f), Velocity = new Vector3(0.6f, -0.7f, 0.25f), Orbital = 40f, Radius = 1.5f, Max = 6 }, from);
-            }
-            if (badlands && Weather.Season != Season.Winter && day && dry)
-            {
-                if (t >= nextHaze)
-                {
-                    // the air shimmering off the hot ground: faint, stretched, rising wisps
-                    nextHaze = t + 0.18f;
-                    var h = at + new Vector3(Random.Range(-10f, 10f), 0.1f, Random.Range(-10f, 10f));
-                    SpellFx.Emit(new SpellFx.P { Burst = 1, Duration = 0.1f, Life = new Vector2(1.2f, 1.8f), Speed = new Vector2(0.4f, 0.8f), Size = new Vector2(0.5f, 0.9f),
-                        Start = new Color(1f, 0.95f, 0.85f, 0f), Mid = new Color(1f, 0.95f, 0.85f, 0.07f), End = new Color(1f, 0.95f, 0.85f, 0f), Velocity = Vector3.up * 0.7f,
-                        Stretch = true, Radius = 1.5f, Shape = ParticleSystemShapeType.Circle, Max = 4 }, h);
-                }
-                if (t >= nextDevil)
-                {
-                    // now and then a dust devil whirls across the sand
-                    nextDevil = t + Random.Range(14f, 30f);
-                    var d = at + new Vector3(Random.Range(-14f, 14f), 0f, Random.Range(-14f, 14f));
-                    var sand = new Color(0.85f, 0.7f, 0.48f);
-                    SpellFx.Emit(new SpellFx.P { Rate = 70, Duration = 4f, Life = new Vector2(1.2f, 2f), Speed = new Vector2(0.2f, 0.6f), Size = new Vector2(0.15f, 0.4f),
-                        Start = new Color(sand.r, sand.g, sand.b, 0.35f), End = new Color(sand.r, sand.g, sand.b, 0f), Velocity = Vector3.up * 1.6f, Orbital = 420f,
-                        Smoke = true, Radius = 0.6f, Shape = ParticleSystemShapeType.Circle, Max = 160 }, d);
-                    Sfx.Play("wind_loop", d, 0.25f, 0.2f, 25f);
-                }
-            }
-            if (Weather.Season == Season.Winter && DayNight.Hour >= 5.5f && DayNight.Hour < 10.5f && dry && t >= nextGlint && Weather.ColdAt(at))
-            {
-                // hoarfrost on a winter morning: the ground glints as the low sun catches it
-                nextGlint = t + 0.12f;
-                var g = at + new Vector3(Random.Range(-8f, 8f), 0.06f, Random.Range(-8f, 8f));
-                if (WorldGrid.Instance != null && WorldGrid.Instance.IsWalkable(g))
-                    SpellFx.Emit(new SpellFx.P { Burst = 1, Duration = 0.05f, Life = new Vector2(0.25f, 0.5f), Speed = Vector2.zero, Size = new Vector2(0.06f, 0.12f),
-                        Start = new Color(0.9f, 0.97f, 1f, 0f), Mid = new Color(1f, 1f, 1f, 1f), End = new Color(0.85f, 0.95f, 1f, 0f), Radius = 0.01f, Max = 2 }, g);
+                // now and then a dust devil whirls across the sand
+                nextDevil = t + Random.Range(14f, 30f);
+                var d = at + new Vector3(Random.Range(-14f, 14f), 0f, Random.Range(-14f, 14f));
+                var sand = new Color(0.85f, 0.7f, 0.48f);
+                SpellFx.Emit(new SpellFx.P { Rate = 70, Duration = 4f, Life = new Vector2(1.2f, 2f), Speed = new Vector2(0.2f, 0.6f), Size = new Vector2(0.15f, 0.4f),
+                    Start = new Color(sand.r, sand.g, sand.b, 0.35f), End = new Color(sand.r, sand.g, sand.b, 0f), Velocity = Vector3.up * 1.6f, Orbital = 420f,
+                    Smoke = true, Radius = 0.6f, Shape = ParticleSystemShapeType.Circle, Max = 160 }, d);
+                Sfx.Play("wind_loop", d, 0.25f, 0.2f, 25f);
             }
         }
 
