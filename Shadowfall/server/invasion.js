@@ -5,7 +5,7 @@
 // down from there, and only the invaders' archers and casters can shoot back. The gate is shut while it lasts. Kill every wave, the last led by a warlord, and the town holds: everyone who hurt an invader gets
 // experience and a boss's share of loot. If the gate falls (or the siege drags on for 12 minutes), the invaders
 // plunder the town and withdraw, and nobody is rewarded. Worse: they set fire to the quarter behind the broken gate
-// (the "sack", SACK_S, 5 minutes). It burns, its people flee, and its merchants, smiths and auctioneers are gone
+// (the "sack", SACK_S, 12 minutes). It burns, its people flee, and its merchants, smiths and auctioneers are gone
 // until the fires are out: the server refuses their trade to anyone standing in the quarter (sackedAt).
 //
 // The server calls: tick(t) every simulation tick, idle(m, t) for an invader with nobody to fight, onDamage(m, s) when
@@ -28,6 +28,7 @@ const WARN_S = Number(process.env.INVASION_WARN_S ?? 90);
 // after this long with nobody about they give up and scatter, and the town isn't sacked
 const ABANDON_S = Number(process.env.INVASION_ABANDON_S ?? 180);
 const STAGING = 24;         // how far outside the gate the invaders gather
+const CREDIT_MIN = 3;       // blows on raiders (a beacon counts as much, each bucket one) to share a victory's reward
 const PLAYERS_NEAR = 110;   // players this close to a town count towards it (choosing the town, scaling the waves)
 // The town's guards: archers up on the wall walk beside the gate and soldiers holding a line outside it. They help a
 // little (a few percent of an invader's life a blow) so the heroes still do the real work; the fallen are replaced at
@@ -70,6 +71,7 @@ module.exports = function createInvasions(ctx) {
   let inv = null;
   let nextId = 1;
   let lastTick = 0;
+  let stepDt = 0.1; // this tick's length (the guards walk by it)
   let nextAt = minutes > 0 ? now() + rand(0.3, 0.6) * minutes * 60 : Infinity;
 
   const walled = TOWNS.filter((t) => t.walled);
@@ -153,6 +155,8 @@ module.exports = function createInvasions(ctx) {
 
   /** The raiders of a lost siege drag townsfolk off to their camp, guarded. */
   function takeCaptives(i) {
+    // an earlier camp still waiting: those captives are lost now, and their captors go with them
+    if (captives) giveUpCaptives();
     const n = 3 + Math.floor(Math.random() * 3);
     const ids = new Set();
     const guards = Math.min(8, 3 + i.players);
@@ -167,9 +171,50 @@ module.exports = function createInvasions(ctx) {
       if (k === 0) { makeElite(m, 1); m.elite.name = "Slaver " + m.elite.name.split(" ")[0]; }
       ids.add(m.id);
     }
+    if (!ids.size) return; // nowhere to hold them: nobody taken
     captives = { town: i.town, gate: i.gate, x: i.sx, z: i.sz, n, until: now() + CAPTIVE_S, ids, helpers: new Set() };
     broadcast({ t: "sys", msg: `The raiders dragged ${n} townsfolk from ${i.town.name} back to their camp outside the ${i.gate.name} gate! Free them within ${Math.round(CAPTIVE_S / 60)} minutes and the town will be back on its feet sooner.` });
     sendAfter();
+  }
+
+  /** Nobody freed the captives in time: the raiders carry them off into the wilds. */
+  function giveUpCaptives() {
+    const c = captives;
+    captives = null;
+    for (const id of c.ids) monsters.delete(id);
+    shiftProsperity(c.town.name, -1);
+    saveChronicle();
+    sendChronicle();
+    broadcast({ t: "sys", msg: `Nobody came for the captives of ${c.town.name}: the raiders carried them off into the wilds.` });
+  }
+
+  // What must outlive a restart (a deploy): the burning towns, the graves, and a siege cut short (recorded as spared).
+  // Saved every few seconds when it changed; times are kept as seconds left.
+  let savedState = "", nextSave = 0;
+  function saveState(t) {
+    if (!store || t < nextSave) return;
+    nextSave = t + 5;
+    const data = JSON.stringify({
+      running: inv && inv.phase !== "won" && inv.phase !== "lost" ? { k: inv.town.name, g: inv.gate.name } : null,
+      sk: [...sacks.values()].map((k) => ({ k: k.town.name, g: k.gate.name, left: Math.ceil(k.until - t) })),
+      gr: graves.map((g) => ({ k: g.town.name, g: g.gate.name, n: g.n, s: g.seed, left: Math.ceil(g.until - t) })),
+    });
+    if (data === savedState) return;
+    savedState = data;
+    store.setMeta("siege_state", data).catch((e) => log(`siege state save failed: ${e.message}`));
+  }
+  function restoreState(raw) {
+    let st;
+    try { st = JSON.parse(raw || "null"); } catch { st = null; }
+    if (!st) return;
+    const t = now();
+    const place = (k, g) => { const town = walled.find((w) => w.name === k); const gate = town && gates(town).find((x) => x.name === g); return town && gate ? { town, gate } : null; };
+    for (const k of st.sk || []) { const p = place(k.k, k.g); if (p && k.left > 0) sacks.set(p.town.name, { ...p, until: t + k.left }); }
+    for (const g of st.gr || []) { const p = place(g.k, g.g); if (p && g.left > 0) graves.push({ ...p, n: g.n, seed: g.s, until: t + g.left }); }
+    if (st.running && walled.some((w) => w.name === st.running.k)) {
+      record(st.running.k, "sp", st.running.g, null); // the server went down mid-siege: the raiders were gone when it came back
+      log(`Invasion of ${st.running.k} cut short by a restart: recorded as spared`);
+    }
   }
 
   function updateAftermath(t) {
@@ -198,13 +243,7 @@ module.exports = function createInvasions(ctx) {
         log(`Captives of ${c.town.name} freed by ${c.helpers.size}`);
         changed = true;
       } else if (t >= captives.until) {
-        const c = captives;
-        captives = null;
-        for (const id of c.ids) monsters.delete(id);
-        shiftProsperity(c.town.name, -1);
-        saveChronicle();
-        sendChronicle();
-        broadcast({ t: "sys", msg: `Nobody came for the captives of ${c.town.name}: the raiders carried them off into the wilds.` });
+        giveUpCaptives();
         changed = true;
       } else if (left !== captives.shown) { captives.shown = left; changed = true; }
     }
@@ -354,6 +393,7 @@ module.exports = function createInvasions(ctx) {
       m.path = [];
       return true;
     }
+    if (inv.ramStopped) { m.path = []; return true; } // stuck where it is
     const g = inv.gate, d = dist(m.x, m.z, g.x, g.z);
     if (d < 4) {
       m.path = [];
@@ -363,6 +403,7 @@ module.exports = function createInvasions(ctx) {
       return true;
     }
     if (!m.path.length || t >= m.repathAt) { m.repathAt = t + 3; m.path = findPath(m.x, m.z, g.x + g.nx * 2.5, g.z + g.nz * 2.5, 8000); }
+    if (!m.path.length) { inv.ramStopped = true; return true; } // no way to the gate: its crew leave it and join the attack
     moveAlongPath(m, RAM_SPEED);
     return true;
   }
@@ -483,7 +524,7 @@ module.exports = function createInvasions(ctx) {
   }
 
   function step(o, tx, tz, speed) {
-    const dx = tx - o.x, dz = tz - o.z, d = Math.hypot(dx, dz), s = speed * 0.1;
+    const dx = tx - o.x, dz = tz - o.z, d = Math.hypot(dx, dz), s = speed * stepDt;
     if (d < 0.05) return;
     const nx = d <= s ? tx : o.x + (dx / d) * s, nz = d <= s ? tz : o.z + (dz / d) * s;
     if (walkable(nx, nz)) { o.x = nx; o.z = nz; }
@@ -627,8 +668,10 @@ module.exports = function createInvasions(ctx) {
     metrics.inc({ town: inv.town.name, result: won ? "won" : "lost" });
     if (won) {
       let n = 0;
+      // the reward goes to those who did their part (a few blows, a beacon, the buckets) and are still at the town
+      const there = new Set(near(inv.town).map((s) => s.name));
       for (const s of sessions.values()) {
-        if (!s.inWorld || s.inst || !inv.defenders.has(s.name)) continue;
+        if (!s.inWorld || s.inst || (inv.defenders.get(s.name) || 0) < CREDIT_MIN || !there.has(s.name)) continue;
         n++;
         const lvl = s.lvl || 1;
         const xp = Math.round(15 * Math.pow(lvl, 1.55));
@@ -680,10 +723,12 @@ module.exports = function createInvasions(ctx) {
   function tick(t) {
     const dt = lastTick ? Math.min(1, t - lastTick) : 0;
     lastTick = t;
+    stepDt = dt || 0.1;
     let burntOut = false;
     for (const [name, k] of sacks) if (t >= k.until) { sacks.delete(name); burntOut = true; mend(k); broadcast({ t: "sys", msg: `The fires in ${name} are out. Its merchants are back at their stalls; carpenters set to work on the gate.` }); }
     if (burntOut) sendSacks();
     updateAftermath(t);
+    saveState(t);
     if (!inv) {
       if (t >= nextAt) {
         const why = WARN_S > 0 ? scout() : begin(null);
@@ -732,14 +777,15 @@ module.exports = function createInvasions(ctx) {
     if (inv.phase === "gather") {
       let marching = false;
       for (const g of inv.guards) if (g.k === "s" && march(g)) marching = true;
-      if (t >= inv.waveAt) { inv.phase = "wave"; spawnWave(); send(); }
+      if (t >= inv.waveAt) { inv.phase = "wave"; inv.began = t; spawnWave(); send(); }
       else if (t - inv.sentAt > (marching ? 0.35 : 2)) send();
       return;
     }
     updateGuards(t);
     inv.guards = inv.guards.filter((g) => g.hp > 0);
     const firesChanged = updateFires(t, dt);
-    if (inv.bearer && !inv.routed && !monsters.has(inv.bearer)) rout();
+    if (!inv.routed && inv.bearer && !monsters.has(inv.bearer)) rout("banner");
+    else if (!inv.routed && inv.warlord && !monsters.has(inv.warlord)) rout("lord");
     if (inv.warlord && t >= inv.nextTaunt) {
       inv.nextTaunt = t + rand(14, 22);
       const lord = monsters.get(inv.warlord);
@@ -749,7 +795,7 @@ module.exports = function createInvasions(ctx) {
     // Battering the gate
     for (const id of inv.ids) {
       const m = monsters.get(id);
-      if (m && m.sieging && m.state === "idle") inv.integrity -= SIEGE_RATE * (m.def.siege ? RAM_HIT : m.warlord ? 4 : m.def.hp >= 200 ? 2 : 1) * 0.1;
+      if (m && m.sieging && m.state === "idle") inv.integrity -= SIEGE_RATE * (m.def.siege ? RAM_HIT : m.warlord ? 4 : m.def.hp >= 200 ? 2 : 1) * dt;
     }
     const n = alive();
     if (inv.integrity <= 0 || t - inv.began > MAX_S) return end(false);
@@ -807,7 +853,7 @@ module.exports = function createInvasions(ctx) {
   }
 
   /** The banner falls: the raiders lose heart. Some run for the camp, the rest fight on, weaker. */
-  function rout() {
+  function rout(why) {
     inv.routed = true;
     let fled = 0;
     for (const id of inv.ids) {
@@ -818,9 +864,10 @@ module.exports = function createInvasions(ctx) {
         fled++;
       } else m.dmg *= ROUT_DMG;
     }
-    broadcast({ t: "sys", msg: `The raiders' banner falls before ${inv.town.name}! ${fled ? `${fled} of them turn and run; the rest` : "They"} waver.` });
+    const what = why === "lord" ? `The warlord falls before ${inv.town.name}!` : `The raiders' banner falls before ${inv.town.name}!`;
+    broadcast({ t: "sys", msg: `${what} ${fled ? `${fled} of them turn and run; the rest` : "They"} waver.` });
     guardEvent({ k: "rout" });
-    log(`Invasion of ${inv.town.name}: the banner fell, ${fled} fled`);
+    log(`Invasion of ${inv.town.name}: the ${why === "lord" ? "warlord" : "banner"} fell, ${fled} fled`);
     send();
   }
 
@@ -836,6 +883,7 @@ module.exports = function createInvasions(ctx) {
     async load() {
       if (!store) return;
       try { chronicle = JSON.parse((await store.getMeta("siege_chronicle")) || "{}") || {}; } catch { chronicle = {}; }
+      try { restoreState(await store.getMeta("siege_state")); } catch (e) { log(`siege state restore failed: ${e.message}`); }
     },
     sendTo(s) {
       if (inv) safeSend(s, JSON.stringify({ t: "invasion", iv: state() }));
@@ -876,7 +924,7 @@ module.exports = function createInvasions(ctx) {
       if (b.lit) return "That beacon is already burning.";
       if (dist(s.x, s.z, b.x, b.z) > 4.5) return "Get closer to the beacon.";
       b.lit = s.name;
-      inv.defenders.set(s.name, inv.defenders.get(s.name) || 0); // a part in the defence
+      inv.defenders.set(s.name, (inv.defenders.get(s.name) || 0) + CREDIT_MIN); // a real part in the defence
       broadcast({ t: "sys", msg: `${s.name} lit a beacon at the ${inv.gate.name} gate of ${inv.town.name}: the wall's archers loose fire arrows!` });
       guardEvent({ k: "beacon", i: i | 0, by: s.name });
       send();
@@ -884,13 +932,14 @@ module.exports = function createInvasions(ctx) {
     },
     /** A hero throws water on burning roof `id` (they must be near it). Returns the xp earned (0: nothing done). */
     douseFire(s, id) {
-      if (!inv) return 0;
+      if (!inv || inv.phase !== "wave") return 0;
       const f = inv.fires.find((x) => x.id === (id | 0));
       if (!f || dist(s.x, s.z, f.x, f.z) > 14) return 0;
       const t = now();
       if (t - (s.lastDouse || 0) < 1.2) return 0;
       s.lastDouse = t;
       f.s -= DOUSE;
+      inv.defenders.set(s.name, (inv.defenders.get(s.name) || 0) + 1); // fighting the fires is defending the town
       if (f.s <= 0) { inv.fires = inv.fires.filter((x) => x !== f); guardEvent({ k: "fireout", id: f.id, by: s.name }); }
       send();
       return Math.max(1, Math.round(3 * Math.pow(s.lvl || 1, 1.2)));
