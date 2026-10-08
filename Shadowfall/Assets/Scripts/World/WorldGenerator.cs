@@ -75,6 +75,57 @@ namespace Shadowfall
         /// <summary>Every town house's bounds (a lost siege sets the ones behind the broken gate on fire: Sack).</summary>
         public static readonly System.Collections.Generic.List<Bounds> HouseBounds = new System.Collections.Generic.List<Bounds>();
 
+        /// <summary>For each house (same order as HouseBounds): points on its roof and upper walls, taken from the model itself,
+        /// where a fire sits on the building (the bounds of a turned house or a windmill are much bigger than it).</summary>
+        public static readonly System.Collections.Generic.List<Vector3[]> HouseFireSpots = new System.Collections.Generic.List<Vector3[]>();
+
+        /// <summary>Six points spread over the roof (the top half of the model) and three on the upper walls, from its vertices.</summary>
+        static Vector3[] FireSpots(GameObject house, Bounds b)
+        {
+            var roof = new System.Collections.Generic.List<Vector3>();
+            var walls = new System.Collections.Generic.List<Vector3>();
+            float h = Mathf.Max(0.1f, b.size.y), side = Mathf.Min(b.size.x, b.size.z);
+            foreach (var mf in house.GetComponentsInChildren<MeshFilter>())
+            {
+                var mesh = mf.sharedMesh;
+                if (mesh == null || !mesh.isReadable) continue;
+                var vs = mesh.vertices;
+                int step = Mathf.Max(1, vs.Length / 600);
+                for (int i = 0; i < vs.Length; i += step)
+                {
+                    var p = mf.transform.TransformPoint(vs[i]);
+                    float up = (p.y - b.min.y) / h;
+                    if (up > 0.5f) roof.Add(p);
+                    else if (up > 0.2f && Factory.FlatDistance(p, b.center) > side * 0.3f) walls.Add(p);
+                }
+            }
+            var picked = new System.Collections.Generic.List<Vector3>();
+            Spread(roof, 6, picked);
+            Spread(walls, 3, picked);
+            if (picked.Count == 0) picked.Add(new Vector3(b.center.x, b.max.y * 0.7f, b.center.z));
+            return picked.ToArray();
+        }
+
+        /// <summary>Picks n of the points far apart from each other (the highest first): each next one is the point
+        /// farthest from those already picked.</summary>
+        static void Spread(System.Collections.Generic.List<Vector3> from, int n, System.Collections.Generic.List<Vector3> into)
+        {
+            if (from.Count == 0) return;
+            var near = new float[from.Count]; // squared distance to the nearest picked point
+            int first = 0;
+            for (int i = 1; i < from.Count; i++) if (from[i].y > from[first].y) first = i;
+            for (int i = 0; i < from.Count; i++) near[i] = (from[i] - from[first]).sqrMagnitude;
+            into.Add(from[first]);
+            for (int k = 1; k < n; k++)
+            {
+                int best = -1;
+                for (int i = 0; i < from.Count; i++) if (best < 0 || near[i] > near[best]) best = i;
+                if (near[best] < 0.8f * 0.8f) break; // no two fires closer than that
+                into.Add(from[best]);
+                for (int i = 0; i < from.Count; i++) near[i] = Mathf.Min(near[i], (from[i] - from[best]).sqrMagnitude);
+            }
+        }
+
         /// <summary>Town houses and gate towers next to the heroes (1 = fitted to their plot).</summary>
         const float BuildingScale = 1.25f;
 
@@ -115,6 +166,7 @@ namespace Shadowfall
             HouseDoors.Clear();
             HouseWindows.Clear();
             HouseBounds.Clear();
+            HouseFireSpots.Clear();
             var oldState = Random.state;
             Random.InitState(Seed);
             art = ArtLibrary.Available;
@@ -645,6 +697,7 @@ namespace Shadowfall
                 var hb = new Bounds(c, Vector3.zero);
                 foreach (var hr in house.GetComponentsInChildren<Renderer>()) hb.Encapsulate(hr.bounds);
                 HouseBounds.Add(hb);
+                HouseFireSpots.Add(FireSpots(house, hb));
                 // A few props in the yard (inside the blocked footprint).
                 Art(Pick("Props/barrel_large", "Props/barrel_small_stack"), new Vector3(r.xMin + 0.5f, 0, r.yMin + 0.5f), 1f, ArtLibrary.Fit.Height, VR(0, 360));
                 Art(Pick("Props/crates_stacked", "Props/box_stacked"), new Vector3(r.xMax - 0.5f, 0, r.yMax - 0.5f), 1.1f, ArtLibrary.Fit.Height, VR(0, 360));
@@ -660,6 +713,7 @@ namespace Shadowfall
                 return;
             }
             HouseBounds.Add(new Bounds(c + Vector3.up * 2f, new Vector3(r.width, 4f, r.height)));
+            HouseFireSpots.Add(new[] { c + Vector3.up * 3.6f, c + new Vector3(-r.width * 0.3f, 3f, 0f), c + new Vector3(r.width * 0.3f, 3f, 0f) });
             Factory.Prim(PrimitiveType.Cube, deco, c + Vector3.up * 1.5f, new Vector3(r.width, 3f, r.height), wall);
             float side = r.width / 1.414f;
             var roofGo = Factory.Prim(PrimitiveType.Cube, deco, c + Vector3.up * 3f, new Vector3(side, side, r.height + 0.6f), roof);
