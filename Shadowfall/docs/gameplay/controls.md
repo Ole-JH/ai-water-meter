@@ -56,6 +56,8 @@ Every time you enter the world the camera starts in the classic view.
 - **Left click** a gem, then an item with an empty socket, to socket it. Right click cancels.
 - **Shift + right click** drops an item on the ground.
 - Click an equipped item in the character window to unequip it.
+- **Drag** an item onto another slot to move it there (onto another item swaps them; onto the same potion or material tops up the stack).
+- New items sparkle until you hover them. A green arrow means a piece is better than what you wear in that slot, a red one worse (a rough guess from damage or armour, stats, sockets, sets and legendary powers).
 - **Sort** (bottom of the bags) merges stacks and orders your bags: equipment by rarity, then gems, potions and food, then materials.
 - Gold, potions and gems are picked up automatically when you walk over them.
 - Hover over an item to compare it with what you're wearing (damage per second and armor difference). Hold ++shift++ to see the equipped item's full tooltip next to it.

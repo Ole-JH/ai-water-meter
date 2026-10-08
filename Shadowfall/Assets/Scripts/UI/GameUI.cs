@@ -1568,12 +1568,29 @@ namespace Shadowfall
             Block(r);
 
             bool vendor = dialogNpc != null && dialogNpc.Role == NpcRole.Vendor;
+            var ev = Event.current;
+            int hoverSlot = -1;
             for (int i = 0; i < p.Inventory.Slots.Length; i++)
             {
                 var cr = new Rect(r.x + 20 + (i % cols) * (cell + gap), r.y + 58 + (i / cols) * (cell + gap), cell, cell);
                 var item = p.Inventory.Slots[i];
+                if (cr.Contains(ev.mousePosition)) hoverSlot = i;
                 DrawItemSlot(cr, item, p);
+                if (bagDragging && bagDrag != i && hoverSlot == i) Outline(cr, UISkin.Gold, 1f, 2f); // where it would go
                 if (item == null) continue;
+                if (bagDragging && bagDrag == i)
+                {
+                    GUI.color = new Color(0f, 0f, 0f, 0.55f);
+                    GUI.DrawTexture(new Rect(cr.x + 2, cr.y + 2, cr.width - 4, cr.height - 4), UISkin.White);
+                    GUI.color = Color.white;
+                    continue;
+                }
+                BetterOrWorse(cr, item, p);
+                if (p.NewItems.Contains(item.Signature))
+                {
+                    if (hoverSlot == i) p.NewItems.Remove(item.Signature); // seen
+                    else NewSparkle(cr, i);
+                }
                 if (i == socketGem)
                 {
                     GUI.color = new Color(1f, 1f, 1f, 0.35f + Mathf.PingPong(Time.time, 0.4f));
@@ -1591,20 +1608,12 @@ namespace Shadowfall
                     GUI.color = Color.white;
                     UISkin.Shadowed(new Rect(cr.x, cr.y + 2, cr.width, 16), "TRADE", UISkin.SmallCenter, new Color(0.6f, 1f, 0.6f));
                 }
-                if (cr.Contains(Event.current.mousePosition))
+                if (cr.Contains(Event.current.mousePosition) && !bagDragging)
                     ItemTooltip(item, p, offered ? "In the trade window" : BagHint(item, vendor));
+                // press: a click uses the item, a drag moves it to another slot
+                if (ev.type == EventType.MouseDown && ev.button == 0 && cr.Contains(ev.mousePosition)) { bagDrag = i; bagDragFrom = ev.mousePosition; bagDragging = false; ev.Use(); }
                 int click = ClickedIn(cr);
-                if (click == 0)
-                {
-                    if (socketGem >= 0 && item.Kind == ItemKind.Equipment) { p.SocketGem(socketGem, item); socketGem = -1; }
-                    else if (item.Kind == ItemKind.Gem)
-                    {
-                        socketGem = socketGem == i ? -1 : i;
-                        if (socketGem >= 0) Log("Click an item (in your bags or worn) with an empty socket. Right-click to cancel.", item.IconColor);
-                    }
-                    else p.UseItem(i);
-                }
-                else if (click == 1)
+                if (click == 1)
                 {
                     if (socketGem >= 0) socketGem = -1;
                     else if (tradeOpen) { if (!offered) NetClient.I.OfferItem(i); }
@@ -1613,6 +1622,41 @@ namespace Shadowfall
                     else if (Event.current.shift) p.DropItem(i);
                 }
             }
+            if (bagDrag >= 0)
+            {
+                var held = bagDrag < p.Inventory.Slots.Length ? p.Inventory.Slots[bagDrag] : null;
+                if (held == null) { bagDrag = -1; bagDragging = false; }
+                else
+                {
+                    if (ev.type == EventType.MouseDrag && (ev.mousePosition - bagDragFrom).sqrMagnitude > 64f)
+                    {
+                        if (!bagDragging) Sfx.Play2D("ui_click", 0.3f, 0.8f);
+                        bagDragging = true;
+                        ev.Use();
+                    }
+                    if (ev.type == EventType.MouseUp && ev.button == 0)
+                    {
+                        int from = bagDrag;
+                        bagDrag = -1;
+                        if (!bagDragging) LeftClickBag(p, from, held);
+                        else if (hoverSlot >= 0 && hoverSlot != from && !tradeOpen)
+                        {
+                            NetClient.I?.Op("move", i: from, j: hoverSlot);
+                            Sfx.Play2D(held.Kind == ItemKind.Equipment ? "equip" : "drop", 0.4f, 1.15f);
+                        }
+                        bagDragging = false;
+                        ev.Use();
+                    }
+                    if (bagDragging && ev.type == EventType.Repaint)
+                    {
+                        var at = new Rect(ev.mousePosition.x - cell * 0.5f, ev.mousePosition.y - cell * 0.5f, cell, cell);
+                        GUI.color = new Color(1f, 1f, 1f, 0.9f);
+                        DrawItemSlot(at, held, p);
+                        GUI.color = Color.white;
+                    }
+                }
+            }
+
             float fy = r.yMax - 44;
             UISkin.IconInSlot(new Rect(r.x + 20, fy, 26, 26), UISkin.Icon("gold"), Color.white, 0);
             UISkin.Shadowed(new Rect(r.x + 50, fy, 200, 26), p.Gold + " gold", UISkin.Label, new Color(1f, 0.85f, 0.3f));
@@ -1624,6 +1668,57 @@ namespace Shadowfall
                 NetClient.I?.Op("sort");
                 Sfx.Play2D("ui_click", 0.4f);
             }
+        }
+
+        int bagDrag = -1;
+        bool bagDragging;
+        Vector2 bagDragFrom;
+
+        void LeftClickBag(Player p, int i, Item item)
+        {
+            if (socketGem >= 0 && item.Kind == ItemKind.Equipment) { p.SocketGem(socketGem, item); socketGem = -1; }
+            else if (item.Kind == ItemKind.Gem)
+            {
+                socketGem = socketGem == i ? -1 : i;
+                if (socketGem >= 0) Log("Click an item (in your bags or worn) with an empty socket. Right-click to cancel.", item.IconColor);
+            }
+            else p.UseItem(i);
+        }
+
+        /// <summary>A little arrow in the corner: better (green, up) or worse (red, down) than what you wear there.</summary>
+        static void BetterOrWorse(Rect r, Item item, Player p)
+        {
+            if (item.Kind != ItemKind.Equipment || item.Slot == EquipSlot.None || item.RequiredLevel > p.Level || Event.current.type != EventType.Repaint) return;
+            var worn = p.Inventory.GetEquipped(item.Slot);
+            float d = worn == null ? 1f : item.Rating - worn.Rating;
+            if (Mathf.Abs(d) < 0.5f) return;
+            bool up = d > 0f;
+            GUI.color = up ? new Color(0.35f, 1f, 0.35f) : new Color(1f, 0.3f, 0.25f);
+            float x = r.x + 6, y = r.yMax - 15;
+            for (int k = 0; k < 5; k++) // a small triangle out of lines
+            {
+                float half = up ? k : 4 - k;
+                GUI.DrawTexture(new Rect(x + 5 - half, y + k * 2, half * 2 + 1, 2), UISkin.White);
+            }
+            GUI.color = Color.white;
+        }
+
+        /// <summary>A new item: a gold glint twinkling over its slot.</summary>
+        static void NewSparkle(Rect r, int seed)
+        {
+            if (Event.current.type != EventType.Repaint) return;
+            float t = Time.unscaledTime * 2.2f + seed * 0.7f;
+            float k = 0.5f + 0.5f * Mathf.Sin(t);
+            var gold = new Color(1f, 0.9f, 0.5f);
+            GUI.color = new Color(gold.r, gold.g, gold.b, 0.12f + 0.12f * k);
+            GUI.DrawTexture(new Rect(r.x + 3, r.y + 3, r.width - 6, r.height - 6), UISkin.White);
+            // a four-point star in the top-right corner, breathing
+            float cx = r.xMax - 11, cy = r.y + 11, len = 4f + 5f * k;
+            GUI.color = new Color(1f, 0.97f, 0.8f, 0.6f + 0.4f * k);
+            GUI.DrawTexture(new Rect(cx - len, cy - 0.75f, len * 2, 1.5f), UISkin.White);
+            GUI.DrawTexture(new Rect(cx - 0.75f, cy - len, 1.5f, len * 2), UISkin.White);
+            GUI.DrawTexture(new Rect(cx - 1.5f, cy - 1.5f, 3f, 3f), UISkin.White);
+            GUI.color = Color.white;
         }
 
         void Sell(Player p, int index)

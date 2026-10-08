@@ -157,6 +157,29 @@ namespace Shadowfall
         }
 
         /// <summary>Rich-text tooltip (IMGUI supports &lt;color&gt; and &lt;b&gt; tags).</summary>
+        /// <summary>A rough worth of a piece of gear, only for the better/worse arrows in the bags.</summary>
+        public float Rating
+        {
+            get
+            {
+                float r = Slot == EquipSlot.Weapon ? (MinDamage + MaxDamage) * AttacksPerSecond : Armor * 0.6f;
+                foreach (var m in Mods)
+                    switch (m.Stat)
+                    {
+                        case Stat.CritChance: case Stat.AttackSpeed: r += m.Value * 5f; break;
+                        case Stat.Health: case Stat.Mana: r += m.Value * 0.2f; break;
+                        case Stat.MoveSpeed: case Stat.HealthRegen: case Stat.ManaRegen: r += m.Value * 1.5f; break;
+                        default: r += m.Value * 1.4f; break;
+                    }
+                if (!string.IsNullOrEmpty(Power)) r += 30f;
+                if (!string.IsNullOrEmpty(Set)) r += 20f;
+                return r + Sockets * 8f;
+            }
+        }
+
+        /// <summary>Tells copies apart from new arrivals (same name, rarity, level and value: the same item, near enough).</summary>
+        public string Signature => Name + "|" + (int)Rarity + "|" + ItemLevel + "|" + Value + "|" + Mods.Count;
+
         public string Tooltip(Player player, Item compareTo = null)
         {
             var sb = new StringBuilder();

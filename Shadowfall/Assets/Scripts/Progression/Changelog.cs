@@ -24,6 +24,16 @@ namespace Shadowfall
         {
             new Entry
             {
+                Id = 63, Date = "2026-10-08", Title = "A tidier pack",
+                Items = new[]
+                {
+                    "Drag items between bag slots to arrange them; dropping onto the same potion tops up the stack.",
+                    "New items sparkle in your bags until you look at them.",
+                    "Green and red arrows show whether a piece is better or worse than what you're wearing.",
+                },
+            },
+            new Entry
+            {
                 Id = 62, Date = "2026-10-08", Title = "Easy on the eyes",
                 Items = new[]
                 {

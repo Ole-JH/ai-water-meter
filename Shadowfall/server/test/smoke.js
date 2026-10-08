@@ -322,6 +322,19 @@ async function economyTests(a, b) {
   await sleep(250);
   const stacks = inv().bag.filter((x) => x.Name === "Health Potion").map((x) => x.Count).sort((p, q) => q - p);
   assert.deepStrictEqual(stacks, [20, 9], "potions stack to 20");
+  {
+    // drag and drop in the bags: onto an empty slot moves, onto another item swaps
+    const bag = () => inv().bag;
+    const small = bag().findIndex((x) => x && x.Name === "Health Potion" && x.Count === 9);
+    const empty = bag().findIndex((x) => !x || !x.Name);
+    await iop("move", { i: small, j: empty });
+    assert.ok(bag()[empty]?.Count === 9 && !bag()[small]?.Name, "moving an item to an empty slot");
+    const full = bag().findIndex((x) => x && x.Name === "Health Potion" && x.Count === 20);
+    const other = bag().findIndex((x, k) => x && x.Name && x.Name !== "Health Potion" && k !== empty);
+    const otherName = bag()[other].Name;
+    await iop("move", { i: full, j: other });
+    assert.ok(bag()[other]?.Count === 20 && bag()[full]?.Name === otherName, "dropping onto another item swaps them");
+  }
 
   // Quests pay once, and collect quests need the goods.
   await iop("quest", { k: "timber" });

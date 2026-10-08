@@ -102,6 +102,9 @@ namespace Shadowfall
         HumanoidModel model;        // primitive fallback
         CharacterView view;         // animated model
         float nextBanner;
+
+        /// <summary>Signatures of items that came into the bags and haven't been looked at yet.</summary>
+        public readonly HashSet<string> NewItems = new HashSet<string>();
         bool swingSide;
         public string Look { get; private set; } = "Knight";
         Light torch;
@@ -454,7 +457,22 @@ namespace Shadowfall
             bool fullHealth = Health >= MaxHealth - 0.5f, fullMana = Mana >= MaxMana - 0.5f;
             if (ledgerLoaded && gold > Gold) GameUI.Float(transform.position + Vector3.up * 2.4f, "+" + (gold - Gold) + " gold", new Color(1f, 0.85f, 0.2f), 0.8f);
             Gold = gold;
+            // what wasn't anywhere on us before is new: it sparkles in the bags until looked at
+            var had = new Dictionary<string, int>();
+            void Count(Item it) { if (it != null) had[it.Signature] = (had.TryGetValue(it.Signature, out var c) ? c : 0) + 1; }
+            foreach (var it in Inventory.Slots) Count(it);
+            foreach (var it in Stash.Slots) Count(it);
+            foreach (var it in Inventory.Equipped.Values) Count(it);
             for (int i = 0; i < Inventory.Slots.Length; i++) Inventory.Slots[i] = bag != null && i < bag.Length ? Real(bag[i]) : null;
+            var present = new HashSet<string>();
+            foreach (var it in Inventory.Slots)
+            {
+                if (it == null || it.Kind == ItemKind.Consumable) continue;
+                present.Add(it.Signature);
+                if (had.TryGetValue(it.Signature, out var c) && c > 0) had[it.Signature] = c - 1;
+                else if (ledgerLoaded) NewItems.Add(it.Signature);
+            }
+            NewItems.IntersectWith(present);
             for (int i = 0; i < Stash.Slots.Length; i++) Stash.Slots[i] = stash != null && i < stash.Length ? Real(stash[i]) : null;
             Inventory.Equipped.Clear();
             if (worn != null)

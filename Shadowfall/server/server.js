@@ -1884,6 +1884,23 @@ const itemOps = {
     return true;
   },
   sort(s) { I.sortSlots(s.ledger.bag); return true; },
+  /** Drag and drop in the bags: swaps two slots, or tops up a stack of the same thing. */
+  move(s, m) {
+    const bag = s.ledger.bag, i = m.i | 0, j = m.j | 0;
+    if (i === j || i < 0 || j < 0 || i >= bag.length || j >= bag.length || !bag[i]) return false;
+    if (trades.has(s.id)) return ierr(s, "move", "Not while trading.");
+    const a = bag[i], b = bag[j];
+    if (b && b.Name === a.Name && b.Kind === a.Kind && (b.MaxStack | 0) > 1 && b.Count < b.MaxStack) {
+      const n = Math.min(a.Count, b.MaxStack - b.Count);
+      b.Count += n;
+      a.Count -= n;
+      if (a.Count <= 0) bag[i] = null;
+      return true;
+    }
+    bag[i] = b;
+    bag[j] = a;
+    return true;
+  },
   stash(s, m) {
     const it = bagItem(s, m.i);
     if (!it) return false;

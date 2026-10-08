@@ -24,7 +24,7 @@ namespace Shadowfall
             if (I != null && I.showStash) return "Right-click to put in your stash";
             if (vendor) return "Right-click to sell";
             if (item.Kind == ItemKind.Gem) return "Left-click, then click an item with an empty socket";
-            return "Left-click to use / equip.  Shift+Right-click to drop";
+            return "Left-click to use / equip.  Drag to move.  Shift+Right-click to drop";
         }
 
         /// <summary>Small diamonds along the bottom of a slot: filled gems and empty sockets.</summary>
