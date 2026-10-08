@@ -600,6 +600,76 @@ namespace Shadowfall
             // A big killing blow (a crit, a heavy hit) also throws chunks.
             bool overkill = lastHitBig && Time.time - LastDamagedTime < 0.6f;
             Gore.Death(Center, lastHitDir, Gore.KindOf(Def.Name), Height / 1.8f, overkill, Def.Boss);
+            if (!WorldBoss.Is(Def.Name) && model != null) StartCoroutine(DeathStyle());
+        }
+
+        /// <summary>
+        /// How the body goes, by what it's made of: a skeleton falls apart into a heap of bones, a golem crumbles into
+        /// rocks, a wraith dissolves into mist. Flesh stays and bleeds (the default).
+        /// </summary>
+        System.Collections.IEnumerator DeathStyle()
+        {
+            var kind = Gore.KindOf(Def.Name);
+            bool wraith = Def.Name.EndsWith("Wraith");
+            if (!wraith && kind != Gore.Kind.Bone && kind != Gore.Kind.Stone) yield break;
+            float scale = Mathf.Clamp(Height / 2f, 0.6f, 3f);
+            if (wraith)
+            {
+                // it thins and rises into the air, trailing mist
+                var mist = new Color(0.75f, 0.85f, 0.95f);
+                if (SpellFx.Ready)
+                    SpellFx.Emit(new SpellFx.P { Rate = 40, Duration = 1.2f, Life = new Vector2(0.8f, 1.5f), Speed = new Vector2(0.2f, 0.6f), Size = new Vector2(0.3f, 0.6f) * scale,
+                        Start = new Color(mist.r, mist.g, mist.b, 0.5f), End = new Color(mist.r, mist.g, mist.b, 0f), Velocity = Vector3.up * 1.2f, Smoke = true, Grow = true, Radius = 0.4f * scale }, Center);
+                Sfx.Play("undead_die", Center, 0.5f, 0.1f, 30f);
+                var start = model.localScale;
+                for (float t = 0f; t < 1.2f; t += Time.deltaTime)
+                {
+                    float k = t / 1.2f;
+                    model.localScale = new Vector3(start.x * (1f - k * 0.7f), start.y * (1f + k * 0.3f), start.z * (1f - k * 0.7f));
+                    model.localPosition += Vector3.up * Time.deltaTime * 0.8f;
+                    yield return null;
+                }
+                model.gameObject.SetActive(false);
+                yield break;
+            }
+            yield return new WaitForSeconds(kind == Gore.Kind.Bone ? 0.35f : 0.2f); // the start of the fall, then it goes to pieces
+            if (this == null || model == null) yield break;
+            model.gameObject.SetActive(false);
+            var at = transform.position;
+            if (kind == Gore.Kind.Bone)
+            {
+                var bone = new Color(0.86f, 0.83f, 0.74f);
+                Sfx.Play("hit_bone", at + Vector3.up, 0.7f, 0.15f, 30f);
+                Sfx.Play("rubble", at, 0.35f, 0.2f, 25f);
+                // the skull rolls, the long bones scatter and settle in a heap
+                Piece(PrimitiveType.Sphere, at + Vector3.up * 1.4f * scale, Vector3.one * 0.26f * scale, bone, 1.6f);
+                for (int i = 0; i < 9; i++)
+                    Piece(PrimitiveType.Cylinder, at + Vector3.up * Random.Range(0.3f, 1.3f) * scale, new Vector3(0.06f, Random.Range(0.18f, 0.32f), 0.06f) * scale, bone * Random.Range(0.85f, 1f), 1.1f);
+                Piece(PrimitiveType.Cube, at + Vector3.up * 0.9f * scale, new Vector3(0.3f, 0.12f, 0.18f) * scale, bone * 0.9f, 0.8f); // ribs
+            }
+            else
+            {
+                var rock = Def.Color.maxColorComponent > 0.05f ? Color.Lerp(Def.Color, new Color(0.4f, 0.37f, 0.33f), 0.5f) : new Color(0.4f, 0.37f, 0.33f);
+                Sfx.Play("rubble", at, 0.9f, 0.1f, 40f);
+                Sfx.Play("hit_stone", at + Vector3.up, 0.6f, 0.15f, 30f);
+                SpellFx.Dust(at, 1.2f * scale, new Color(0.45f, 0.4f, 0.35f));
+                int n = Mathf.RoundToInt(10 * Mathf.Sqrt(scale));
+                for (int i = 0; i < n; i++)
+                    Piece(PrimitiveType.Cube, at + Vector3.up * Random.Range(0.3f, 2f) * scale, Vector3.one * Random.Range(0.18f, 0.42f) * scale, rock * Random.Range(0.75f, 1.1f), 2f);
+                if (Height > 2.5f) CameraRig.Shake(0.12f);
+            }
+        }
+
+        /// <summary>A piece of a body flung out a little and left lying (for as long as the corpse would).</summary>
+        void Piece(PrimitiveType shape, Vector3 at, Vector3 size, Color c, float force)
+        {
+            var go = Factory.Prim(shape, null, at, size, c);
+            go.transform.rotation = Random.rotation;
+            var fall = go.AddComponent<FallingPiece>();
+            var away = lastHitDir.sqrMagnitude > 0.01f ? Factory.Flat(lastHitDir).normalized : Vector3.zero;
+            fall.Velocity = (away * 1.5f + new Vector3(Random.Range(-1f, 1f), 0f, Random.Range(-1f, 1f))) * force + Vector3.up * Random.Range(1f, 3f);
+            fall.Spin = Random.insideUnitSphere * 500f;
+            go.AddComponent<FadeAway>().Seconds = 9f;
         }
 
         protected override void Die(Combatant killer) { /* deaths are decided by the server */ }

@@ -24,6 +24,14 @@ namespace Shadowfall
         {
             new Entry
             {
+                Id = 60, Date = "2026-10-08", Title = "Every death its own",
+                Items = new[]
+                {
+                    "Skeletons fall apart into a heap of bones, golems crumble into rocks, and wraiths dissolve into mist.",
+                },
+            },
+            new Entry
+            {
                 Id = 59, Date = "2026-10-08", Title = "Arrivals",
                 Items = new[]
                 {
