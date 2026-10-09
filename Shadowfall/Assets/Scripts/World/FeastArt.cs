@@ -48,9 +48,14 @@ namespace Shadowfall
                 foreach (float x in SeatX)
                 {
                     float px = x + R(-0.05f, 0.05f), pz = side * 0.47f;
-                    A("plate-dinner", px, Top, pz, 0.36f);
-                    string h = helpings[rng.Next(helpings.Length)];
-                    A(h, px, Top + 0.02f, pz, h == "meat-sausage" ? 0.16f : 0.2f, ArtLibrary.Fit.Width, R(0f, 360f));
+                    if (rng.NextDouble() < 0.25) A("bowl-soup", px, Top, pz, 0.26f, ArtLibrary.Fit.Width, R(0f, 360f));
+                    else
+                    {
+                        A("plate-dinner", px, Top, pz, 0.36f);
+                        string h = helpings[rng.Next(helpings.Length)];
+                        A(h, px, Top + 0.02f, pz, h == "meat-sausage" ? 0.16f : 0.2f, ArtLibrary.Fit.Width, R(0f, 360f));
+                        if (rng.NextDouble() < 0.6) A(rng.NextDouble() < 0.5 ? "corn" : "carrot", px + 0.08f, Top + 0.03f, pz + side * 0.04f, 0.09f, ArtLibrary.Fit.Width, R(0f, 360f));
+                    }
                     if (rng.NextDouble() < 0.5) A("loaf-baguette", px - 0.05f, Top + 0.03f, pz - side * 0.06f, 0.16f, ArtLibrary.Fit.Width, 70f);
                     if (rng.NextDouble() < 0.65) A("mug", px + 0.3f, Top, pz - side * 0.08f, 0.17f, ArtLibrary.Fit.Height, side > 0 ? 180f : 0f);
                     else A("glass-wine", px + 0.3f, Top, pz - side * 0.08f, 0.22f, ArtLibrary.Fit.Height);
@@ -79,6 +84,112 @@ namespace Shadowfall
             {
                 if (A("candle_lit", x, Top, 0f, 0.28f, ArtLibrary.Fit.Height) != null)
                     PropFire.Add(t, at + new Vector3(x, Top + 0.3f, 0f), new Color(1f, 0.78f, 0.38f), 0.06f, false);
+            }
+            foreach (float x in new[] { -3.45f, 3.45f }) A("candle_triple", x, Top, 0.3f, 0.4f, ArtLibrary.Fit.Height, 90f);
+            // and every gap between the places filled: heaped platters, fish, bottles, fruit spilling over
+            foreach (float side in new[] { -1f, 1f })
+                for (int g = 0; g < SeatX.Length - 1; g++)
+                {
+                    float x = (SeatX[g] + SeatX[g + 1]) / 2f + R(-0.08f, 0.08f), z = side * R(0.28f, 0.36f);
+                    switch ((g + (side > 0 ? 2 : 0)) % 4)
+                    {
+                        case 0: A(rng.NextDouble() < 0.5 ? "plate_food_A" : "plate_food_B", x, Top, z, 0.36f, ArtLibrary.Fit.Width, R(0f, 360f)); break;
+                        case 1: A("plate-dinner", x, Top, z, 0.34f); A("fish", x, Top + 0.02f, z, 0.3f, ArtLibrary.Fit.Largest, 90f + R(-20f, 20f)); break;
+                        case 2:
+                            A(rng.NextDouble() < 0.5 ? "bottle_A_green" : "bottle_A_brown", x - 0.1f, Top, z, 0.3f, ArtLibrary.Fit.Height);
+                            A("cherries", x + 0.1f, Top, z, 0.08f, ArtLibrary.Fit.Height);
+                            A("strawberry", x + 0.15f, Top, z - 0.08f, 0.06f, ArtLibrary.Fit.Height);
+                            break;
+                        default:
+                            for (int k = 0; k < 4; k++) A(k % 2 == 0 ? "apple" : "orange", x + R(-0.12f, 0.12f), Top, z + R(-0.08f, 0.08f), 0.09f, ArtLibrary.Fit.Width, R(0f, 360f));
+                            A("mushroom", x + 0.16f, Top, z, 0.07f);
+                            break;
+                    }
+                }
+        }
+
+        /// <summary>
+        /// Round the table: a buffet and a sweets table, a stew bubbling in a cauldron, barrels and crates of the town's
+        /// stores, the raiders' weapons racked up as trophies and their banner thrown down, and the night's mess on the
+        /// ground. <paramref name="clear"/> says whether a spot (relative to the table) is free for something.
+        /// </summary>
+        public static void Surroundings(Transform t, Vector3 at, System.Func<Vector3, bool> clear)
+        {
+            root = t;
+            bool Ok(float x, float z) => clear(at + new Vector3(x, 0f, z));
+            // the buffet: a laden side table of roasts and pies, and the sweets on a little one
+            if (Ok(-4.8f, -1.8f) && A("table_medium_tablecloth_decorated_B", -4.8f, 0f, -1.8f, 1.6f, ArtLibrary.Fit.Width, 0f, true) != null)
+            {
+                A("plate_food_A", -5.15f, Top, -2.1f, 0.42f, ArtLibrary.Fit.Width, R(0f, 360f));
+                A("whole-ham", -4.45f, Top, -1.5f, 0.38f, ArtLibrary.Fit.Width, R(0f, 360f));
+                A("mincemeat-pie", -4.5f, Top, -2.2f, 0.36f);
+                A("loaf-round", -5.15f, Top, -1.45f, 0.3f);
+            }
+            if (Ok(4.7f, -2.3f) && A("table_small_decorated_A", 4.7f, 0f, -2.3f, 0.95f, ArtLibrary.Fit.Width, 0f, true) != null)
+            {
+                A("cake", 4.6f, Top - 0.02f, -2.2f, 0.4f);
+                A("strawberry", 4.95f, Top, -2.55f, 0.07f, ArtLibrary.Fit.Height);
+            }
+            // a cauldron of stew over its own little fire, steaming
+            if (Ok(6.6f, -0.4f))
+            {
+                var c = at + new Vector3(6.6f, 0f, -0.4f);
+                ArtLibrary.Spawn("Nature/campfire_stones", t, c - at, 1.1f, ArtLibrary.Fit.Width, 0f, false);
+                PropFire.Add(t, c + Vector3.up * 0.15f, new Color(1f, 0.55f, 0.2f), 0.45f, false);
+                foreach (float s in new[] { -0.55f, 0.55f }) P(PrimitiveType.Cube, t, c + new Vector3(s, 0.55f, 0f), new Vector3(0.06f, 1.1f, 0.06f), new Color(0.3f, 0.22f, 0.15f));
+                P(PrimitiveType.Cube, t, c + Vector3.up * 1.08f, new Vector3(1.2f, 0.05f, 0.05f), new Color(0.3f, 0.22f, 0.15f));
+                if (A("pot", 6.6f, 0.38f, -0.4f, 0.62f, ArtLibrary.Fit.Width, 90f, true) == null)
+                    P(PrimitiveType.Sphere, t, c + Vector3.up * 0.6f, new Vector3(0.6f, 0.45f, 0.6f), new Color(0.2f, 0.2f, 0.22f));
+                if (SpellFx.Ready)
+                    SpellFx.Loop(new SpellFx.P
+                    {
+                        Rate = 4, Duration = 1f, Life = new Vector2(1.5f, 2.5f), Speed = new Vector2(0.3f, 0.6f), Size = new Vector2(0.3f, 0.6f),
+                        Start = new Color(0.9f, 0.9f, 0.9f, 0.35f), End = new Color(1f, 1f, 1f, 0f), Velocity = new Vector3(0f, 0.6f, 0f), Smoke = true, Grow = true, Radius = 0.2f, Max = 20,
+                    }, t, t.InverseTransformPoint(c + Vector3.up * 0.85f));
+                A("cabbage", 6.0f, 0f, 0.35f, 0.3f); A("carrot", 6.25f, 0f, 0.5f, 0.2f, ArtLibrary.Fit.Width, 70f); A("pumpkin-basic", 7.25f, 0f, 0.3f, 0.36f);
+            }
+            // the town's stores rolled out: barrels, a stack of plates, crates with the apples on top
+            if (Ok(6.0f, 3.4f)) { ArtLibrary.Spawn("Props/barrel_small_stack", t, new Vector3(6.0f, 0f, 3.4f), 1.1f, ArtLibrary.Fit.Height, R(0f, 360f), true); A("barrel_small", 6.9f, 0f, 2.6f, 0.75f, ArtLibrary.Fit.Height, R(0f, 360f), true); }
+            if (Ok(-6.2f, 3.4f) && ArtLibrary.Spawn("Props/crates_stacked", t, new Vector3(-6.2f, 0f, 3.4f), 0.9f, ArtLibrary.Fit.Height, 15f, true) != null)
+                for (int k = 0; k < 6; k++) A(k % 3 == 0 ? "pear" : "apple", -6.2f + R(-0.25f, 0.25f), 0.9f, 3.4f + R(-0.2f, 0.2f), 0.12f, ArtLibrary.Fit.Width, R(0f, 360f));
+            if (Ok(-5.2f, 0.6f)) A("plate_stack", -5.2f, 0f, 0.6f, 0.4f);
+            // the raiders' arms racked up as trophies either side, and their banner thrown down in the dirt
+            foreach (var (x, z, broken) in new[] { (-2.6f, -3.5f, false), (2.6f, -3.5f, true) })
+            {
+                if (!Ok(x, z)) continue;
+                var c = at + new Vector3(x, 0f, z);
+                var wood = new Color(0.35f, 0.25f, 0.16f);
+                foreach (float s in new[] { -0.7f, 0.7f }) P(PrimitiveType.Cube, t, c + new Vector3(s, 0.75f, 0f), new Vector3(0.12f, 1.5f, 0.12f), wood);
+                P(PrimitiveType.Cube, t, c + Vector3.up * 1.45f, new Vector3(1.6f, 0.1f, 0.1f), wood);
+                A(broken ? "sword_shield_broken" : "sword_shield", x, 0.35f, z + 0.08f, 1.15f, ArtLibrary.Fit.Height, 180f, true);
+                ArtLibrary.Spawn("Weapons/SkeletonBlade", t, new Vector3(x + 0.9f, 0f, z + 0.3f), 0.9f, ArtLibrary.Fit.Largest, 30f, false)?.transform.Rotate(70f, 0f, 0f, Space.Self);
+                ArtLibrary.Spawn("Weapons/SkeletonShield", t, new Vector3(x - 0.95f, 0f, z + 0.25f), 0.6f, ArtLibrary.Fit.Largest, -20f, false);
+            }
+            if (Ok(0f, -4.2f))
+            {
+                var c = at + new Vector3(0f, 0f, -4.2f);
+                var pole = P(PrimitiveType.Cube, t, c + new Vector3(0f, 0.08f, 0f), new Vector3(0.1f, 0.1f, 3f), new Color(0.25f, 0.18f, 0.12f));
+                pole.transform.rotation = Quaternion.Euler(0f, 25f, 0f);
+                var cloth = P(PrimitiveType.Cube, t, c + new Vector3(0.35f, 0.04f, 0.6f), new Vector3(1.1f, 0.03f, 1.4f), new Color(0.22f, 0.08f, 0.08f));
+                cloth.transform.rotation = Quaternion.Euler(0f, 25f, 4f);
+                P(PrimitiveType.Sphere, t, c + new Vector3(0.4f, 0.06f, 0.6f), new Vector3(0.45f, 0.02f, 0.45f), new Color(0.75f, 0.7f, 0.6f)); // the skull on it, trampled
+            }
+            // the night's mess: a mug knocked over, bones thrown to the dogs, a dropped apple, a stool kicked over
+            for (int k = 0; k < 10; k++)
+            {
+                float x = R(-4f, 4f), z = R(1.7f, 2.6f) * (rng.NextDouble() < 0.5 ? -1f : 1f);
+                if (!Ok(x, z)) continue;
+                var p = at + new Vector3(x, 0f, z);
+                switch (k % 4)
+                {
+                    case 0: { var m = A("mug", x, 0.08f, z, 0.17f, ArtLibrary.Fit.Height, R(0f, 360f)); if (m != null) m.transform.rotation = Quaternion.Euler(0f, R(0f, 360f), 90f); break; }
+                    case 1:
+                        for (int b = 0; b < 2; b++)
+                            P(PrimitiveType.Capsule, t, p + new Vector3(R(-0.2f, 0.2f), 0.03f, R(-0.2f, 0.2f)), new Vector3(0.05f, 0.1f, 0.05f), new Color(0.93f, 0.9f, 0.82f)).transform.rotation = Quaternion.Euler(90f, R(0f, 360f), 0f);
+                        break;
+                    case 2: A("apple", x, 0f, z, 0.1f, ArtLibrary.Fit.Width, R(0f, 360f)); break;
+                    default: { var st = A("stool", x, 0.22f, z, BenchY, ArtLibrary.Fit.Height, 0f, true); if (st != null) st.transform.rotation = Quaternion.Euler(0f, R(0f, 360f), 90f); break; }
+                }
             }
         }
 

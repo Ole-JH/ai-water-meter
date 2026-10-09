@@ -246,6 +246,8 @@ namespace Shadowfall
             }
             foreach (var (p0, p1) in new[] { (corners[0], corners[3]), (corners[0], corners[1]), (corners[2], corners[3]), (corners[0], corners[2]), (corners[1], corners[3]) })
                 FeastArt.Bunting(t, p0 + Vector3.up * 3.8f, p1 + Vector3.up * 3.8f, flags, Factory.FlatDistance(p0, p1) > 9.5f && Factory.FlatDistance((p0 + p1) / 2f, fire) > 4f); // (no lantern over the bonfire's smoke)
+            // round the table: the buffet, the stew, the stores, the raiders' arms as trophies, the mess
+            FeastArt.Surroundings(t, at, p => (grid == null || grid.IsWalkable(p)) && Factory.FlatDistance(p, fire) > 3.8f && Factory.FlatDistance(p, square) > 2.2f);
             // hay bales by the fire to sit on
             var bales = new List<Vector3>();
             foreach (float a2 in new[] { 130f, 230f })
@@ -298,6 +300,10 @@ namespace Shadowfall
                 d.OrbitAngle = i * (Mathf.PI * 2f / 7f);
                 b.People.Add(d);
             }
+            // and the ones who've had far too much, reeling about the square
+            string[] sots = { "Characters/Barbarian", "Characters/Keeper", "Characters/Rogue", "Characters/Knight" };
+            for (int i = 0; i < 4; i++)
+                FeastDrunk.Create(t, TownLife.Walkable(cask + new Vector3(R(-3f, 3f), 0f, R(-3f, 3f))), sots[i], at, 9f, rng.Next());
             b.Root.AddComponent<FeastLife>().Init(b.People, spit, fire, minstrel, keep);
             Sfx.Play("bell", at + Vector3.up * 3f, 0.8f, 0.05f, 80f);
             return b;

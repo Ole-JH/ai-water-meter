@@ -330,7 +330,10 @@ one of the walled towns (Hollowmere, Frosthaven, Saltreach or Emberwatch), usual
     - **a victory feast** for five minutes: bells ring, two long clothed tables are laid in the square with a turkey, a ham, ribs, bread,
       cheese, fruit, pies and wine, a plate and mug at every seat, townsfolk sit on the stools along them, bunting and lanterns hang over the square, a roast turns on a spit
       over the bonfire, a barkeep pours from the ale cask, a minstrel sings, a ring of dancers goes round the fire,
-      cups are raised in toasts and fireworks burst overhead. Click the table to eat: the **Heroes'
+      cups are raised in toasts and fireworks burst overhead. Round it: a buffet and a sweets table, a stew bubbling
+      in a cauldron, the town's barrels and crates rolled out, the raiders' arms racked up as trophies and their banner
+      trampled in the dirt, and a few revellers who've had far too much reeling about the square, hiccuping, falling
+      over and being sick. Click the table to eat: the **Heroes'
       Feast**, +25% experience for fifteen minutes (it survives a reload). Each hero can eat once a feast, so it can't
       be stretched;
     - carpenters mend the gate for three minutes: three up on the scaffolding hammering, two hauling planks from the

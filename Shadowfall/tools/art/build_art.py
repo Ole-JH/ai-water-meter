@@ -114,11 +114,14 @@ MODELS = [
     # --- The Heroes' Feast after a siege: KayKit Dungeon tavern furniture and tableware, Kenney Food Kit (CC0)
     *[(f"Feast/{n}", f"{n}.gltf.glb", "dungeon", None) for n in [
         "table_long_tablecloth", "stool",
-        "plate", "keg_decorated", "candle_lit"]],
+        "plate", "keg_decorated", "candle_lit", "candle_triple", "table_medium_tablecloth_decorated_B",
+        "table_small_decorated_A", "table_small_decorated_B", "plate_food_A", "plate_food_B", "plate_stack", "bottle_A_green",
+        "bottle_A_brown", "bottle_B_green", "barrel_small", "sword_shield", "sword_shield_broken", "chair"]],
     *[(f"Feast/{n}", f"{n}.glb", "food-kit", None) for n in [
         "turkey", "whole-ham", "meat-ribs", "meat-cooked", "meat-sausage", "loaf", "loaf-round", "loaf-baguette",
         "cheese", "cheese-cut", "pie", "cake", "grapes", "apple", "pear", "orange", "watermelon", "pot-stew", "mug", "glass-wine",
-        "wine-red", "wine-white", "plate-dinner",
+        "wine-red", "wine-white", "plate-dinner", "fish", "corn", "cabbage", "carrot", "mushroom", "cherries", "strawberry",
+        "bowl-soup", "mincemeat-pie", "pot", "meat-raw", "pumpkin-basic",
         "cutting-board", "skewer"]],
     # --- Graveyard (Kenney Graveyard Kit, CC0)
     *[(f"Graveyard/{n}", f"{n}.glb", "graveyard", None) for n in [
