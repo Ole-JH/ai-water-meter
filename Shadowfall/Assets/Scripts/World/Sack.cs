@@ -234,7 +234,7 @@ namespace Shadowfall
             {
                 // dark from the roof up (not fading in high above, out of the camera's sight), rising at a pace the eye follows
                 Rate = Lite ? 4f : 7f, Duration = 1f, Life = new Vector2(7f, 10f), Speed = new Vector2(0.2f, 0.5f), Size = new Vector2(2.2f, 4f) * k,
-                Start = new Color(0.07f, 0.06f, 0.06f, 0.7f), Mid = new Color(0.11f, 0.1f, 0.1f, 0.6f), End = new Color(0.3f, 0.29f, 0.28f, 0f),
+                Start = new Color(0.2f, 0.18f, 0.17f, 0.7f), Mid = new Color(0.3f, 0.28f, 0.27f, 0.55f), End = new Color(0.45f, 0.44f, 0.43f, 0f), // sooty grey: reads by day and against a dark night or a storm
                 Velocity = new Vector3(0.5f, 1.7f, 0.2f), Smoke = true, Grow = true, Radius = size * 0.18f, Max = Lite ? 40 : 75,
             }, root, root.InverseTransformPoint(top + Vector3.up * 1.5f));
         }
