@@ -348,9 +348,11 @@ one of the walled towns (Hollowmere, Frosthaven, Saltreach or Emberwatch), usual
 - **The town is sacked** when the gate breaks, or when nobody stops the siege within 12 minutes: the invaders plunder
   the market and withdraw, and nobody is rewarded. Worse, **they set fire to the quarter behind the broken gate** (inside
   the walls, everything but the far side of town) for **twelve minutes**:
-    - its houses burn, flames all over the roofs and out of the upper walls; columns of black smoke rise high enough to
-      be seen from far off, embers drift up and ash falls over the whole quarter; every third house has partly fallen
-      in, charred beams and a slab of roof down against its side;
+    - the houses nearest the gate are ablaze: a sheet of flame over each whole roof, fire out of the upper walls and up
+      the ground floor, sparks streaming up, and over each a thick black column of smoke that rises high above the town
+      and is seen from far off; every third of them has fallen in, sunk and leaning, beams and a slab of roof down
+      against its side; the rest of the quarter is scorched and smoulders, and ash falls over all of it;
+    - every house in the quarter is charred black, and stays so until the carpenters have rebuilt the town;
     - the broken gate lies in a burning heap of stone and timber, and isn't mended until the fires are out;
     - the wreckage of the fight lies about: the gate's planks thrown inward, toppled barrels and spilled crates, charred
       timber, rubble, arrows in the ground, a fallen banner, scorch marks and burning wreckage, and a battlefield of

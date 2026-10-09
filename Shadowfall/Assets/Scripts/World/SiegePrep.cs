@@ -259,12 +259,13 @@ namespace Shadowfall
             {
                 if (h == null) yield break;
                 Speech.Say(h.transform, 2.9f, line);
+                Heard("The raiders' herald", line);
                 yield return new WaitForSeconds(3.4f);
             }
             // the answer, from the wall
             TownGuards archer = null;
             foreach (var g in TownGuards.All.Values) if (g != null && g.Archer && (archer == null || Factory.FlatDistance(g.transform.position, stand) < Factory.FlatDistance(archer.transform.position, stand))) archer = g;
-            if (archer != null) Speech.Say(archer.transform, 2.6f, "Here's our answer!");
+            if (archer != null) { Speech.Say(archer.transform, 2.6f, "Here's our answer!"); Heard("A wall archer", "Here's our answer!"); }
             yield return new WaitForSeconds(0.8f);
             if (h == null) yield break;
             var at = h.transform.position + (gate - h.transform.position).normalized * 0.8f;
@@ -316,6 +317,7 @@ namespace Shadowfall
             {
                 if (captain == null) yield break;
                 Speech.Say(captain.transform, 3.1f, speech[i]);
+                Heard("Captain Aldric", speech[i]);
                 captain.Cheer();
                 yield return new WaitForSeconds(i == speech.Length - 1 ? 0.6f : 3.4f);
                 if (i >= 2)
@@ -395,10 +397,20 @@ namespace Shadowfall
         /// <summary>An order that must be heard: the captain gives it if he's out, else the guard nearest the gate.</summary>
         void Call(string line)
         {
+            Heard(captain != null ? "Captain Aldric" : "A guard", line);
             TownGuards.Hush(4.5f);
             if (captain != null) { Speech.Say(captain.transform, 3.1f, line); captain.Cheer(); return; }
             var g = Nearest(gate);
             if (g != null) Speech.Say(g.transform, 2.6f, line);
+        }
+
+        /// <summary>
+        /// What's shouted at the gate also goes in the chat for heroes near it (the captain stands out before the soldiers,
+        /// often off the top of the screen of anyone inside the walls).
+        /// </summary>
+        void Heard(string who, string line)
+        {
+            if (Near(gate, 60f)) GameUI.Log(who + ": " + line, new Color(1f, 0.85f, 0.6f));
         }
 
         TownGuards Nearest(Vector3 p)

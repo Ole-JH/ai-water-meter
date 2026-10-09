@@ -79,6 +79,9 @@ namespace Shadowfall
         /// where a fire sits on the building (the bounds of a turned house or a windmill are much bigger than it).</summary>
         public static readonly System.Collections.Generic.List<Vector3[]> HouseFireSpots = new System.Collections.Generic.List<Vector3[]>();
 
+        /// <summary>For each house (same order as HouseBounds): its model, or null for a plain block (a sack chars and fells them).</summary>
+        public static readonly System.Collections.Generic.List<GameObject> HouseObjects = new System.Collections.Generic.List<GameObject>();
+
         /// <summary>Six points spread over the roof (the top half of the model) and three on the upper walls, from its vertices.</summary>
         static Vector3[] FireSpots(GameObject house, Bounds b)
         {
@@ -167,6 +170,7 @@ namespace Shadowfall
             HouseWindows.Clear();
             HouseBounds.Clear();
             HouseFireSpots.Clear();
+            HouseObjects.Clear();
             var oldState = Random.state;
             Random.InitState(Seed);
             art = ArtLibrary.Available;
@@ -698,6 +702,7 @@ namespace Shadowfall
                 foreach (var hr in house.GetComponentsInChildren<Renderer>()) hb.Encapsulate(hr.bounds);
                 HouseBounds.Add(hb);
                 HouseFireSpots.Add(FireSpots(house, hb));
+                HouseObjects.Add(house);
                 // A few props in the yard (inside the blocked footprint).
                 Art(Pick("Props/barrel_large", "Props/barrel_small_stack"), new Vector3(r.xMin + 0.5f, 0, r.yMin + 0.5f), 1f, ArtLibrary.Fit.Height, VR(0, 360));
                 Art(Pick("Props/crates_stacked", "Props/box_stacked"), new Vector3(r.xMax - 0.5f, 0, r.yMax - 0.5f), 1.1f, ArtLibrary.Fit.Height, VR(0, 360));
@@ -714,6 +719,7 @@ namespace Shadowfall
             }
             HouseBounds.Add(new Bounds(c + Vector3.up * 2f, new Vector3(r.width, 4f, r.height)));
             HouseFireSpots.Add(new[] { c + Vector3.up * 3.6f, c + new Vector3(-r.width * 0.3f, 3f, 0f), c + new Vector3(r.width * 0.3f, 3f, 0f) });
+            HouseObjects.Add(null);
             Factory.Prim(PrimitiveType.Cube, deco, c + Vector3.up * 1.5f, new Vector3(r.width, 3f, r.height), wall);
             float side = r.width / 1.414f;
             var roofGo = Factory.Prim(PrimitiveType.Cube, deco, c + Vector3.up * 3f, new Vector3(side, side, r.height + 0.6f), roof);
