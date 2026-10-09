@@ -156,9 +156,28 @@ namespace Shadowfall
         void DrawBuffs(Player p)
         {
             if (p.SnowCaked > 0.05f || p.SnowDepth > 0.15f) DrawSnowChip(p);
-            if (p.Buffs.Count == 0) return;
+            bool fed = SiegeAftermath.Feasting;
+            int n = p.Buffs.Count + (fed ? 1 : 0);
+            if (n == 0) return;
             const float s = 40, gap = 6;
-            float x = (VW - (p.Buffs.Count * (s + gap) - gap)) / 2f, y = VH - 58 - 46 - 12 - s - 14;
+            float x = (VW - (n * (s + gap) - gap)) / 2f, y = VH - 58 - 46 - 12 - s - 14;
+            if (fed)
+            {
+                // the Heroes' Feast: more experience for a while after eating at a victory feast
+                float left = SiegeAftermath.FeastUntil - Time.time;
+                var r = new Rect(x, y, s, s);
+                UISkin.Box(r, UISkin.Slot);
+                UISkin.IconInSlot(r, UISkin.Icon("ach_cook"), left < 30f && Mathf.PingPong(Time.time * 2f, 1f) > 0.5f ? new Color(1, 1, 1, 0.5f) : Color.white, 3);
+                UISkin.Shadowed(new Rect(r.x - 4, r.yMax - 2, r.width + 8, 18), left >= 60f ? Mathf.CeilToInt(left / 60f) + "m" : Mathf.CeilToInt(left) + "s", UISkin.SmallCenter, Color.white, 2);
+                if (r.Contains(Event.current.mousePosition))
+                {
+                    int m = Mathf.FloorToInt(left / 60f), sec = Mathf.FloorToInt(left % 60f);
+                    tooltip = "<b><color=#" + Item.Hex(UISkin.Gold) + ">Heroes' Feast</color></b>\n+" + Mathf.RoundToInt((SiegeAftermath.FeastXp - 1f) * 100f) +
+                              "% experience\nWell fed after the victory feast" + (SiegeAftermath.FeastTown != null ? " in " + SiegeAftermath.FeastTown : "") +
+                              "\n" + m + ":" + sec.ToString("00") + " left";
+                }
+                x += s + gap;
+            }
             foreach (var b in p.Buffs)
             {
                 float left = b.Until - Time.time;
