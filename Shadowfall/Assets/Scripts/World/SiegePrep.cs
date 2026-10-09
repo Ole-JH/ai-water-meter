@@ -374,11 +374,7 @@ namespace Shadowfall
                 float speed = 20f, dist = Vector3.Distance(from, to);
                 Projectile.FireVisual(from, to, speed, new Color(0.85f, 0.75f, 0.55f), 0.25f, dist + 1f).WithTrail(SpellFx.Trail.Arrow).WithShape(Projectile.Shape.Arrow);
                 StartCoroutine(Thunk(to, dist / speed, from));
-                if (i == 0)
-                {
-                    var g = Nearest(gate);
-                    if (g != null) Speech.Say(g.transform, 2.5f, "Ranging shots! Heads down!");
-                }
+                if (i == 0) Call("Ranging shots! Heads down!");
                 yield return new WaitForSeconds(R(0.8f, 1.8f));
             }
         }
@@ -387,11 +383,22 @@ namespace Shadowfall
         {
             yield return new WaitForSeconds(after);
             if (root == null) yield break;
-            var a = Factory.PrimAt(PrimitiveType.Cube, root.transform, at, new Vector3(0.03f, 0.03f, 0.75f), new Color(0.6f, 0.48f, 0.3f));
-            a.transform.rotation = Quaternion.LookRotation(at - from);
-            a.transform.position -= a.transform.forward * 0.25f; // half sunk in the timber
+            var dir = (at - from).normalized;
+            var a = Factory.PrimAt(PrimitiveType.Cube, root.transform, at - dir * 0.35f, new Vector3(0.07f, 0.07f, 1.1f), new Color(0.72f, 0.58f, 0.36f));
+            a.transform.rotation = Quaternion.LookRotation(dir); // half sunk in the timber
+            var fl = Factory.PrimAt(PrimitiveType.Cube, root.transform, at - dir * 0.85f, new Vector3(0.18f, 0.18f, 0.22f), new Color(0.95f, 0.93f, 0.88f));
+            fl.transform.rotation = Quaternion.LookRotation(dir) * Quaternion.Euler(0f, 0f, 45f);
             if (Near(at, 40f)) Sfx.Play("hit_heavy", at, 0.3f, 0.2f, 35f);
             SpellFx.Hit(at, new Color(0.6f, 0.5f, 0.35f), false, 6);
+        }
+
+        /// <summary>An order that must be heard: the captain gives it if he's out, else the guard nearest the gate.</summary>
+        void Call(string line)
+        {
+            TownGuards.Hush(4.5f);
+            if (captain != null) { Speech.Say(captain.transform, 3.1f, line); captain.Cheer(); return; }
+            var g = Nearest(gate);
+            if (g != null) Speech.Say(g.transform, 2.6f, line);
         }
 
         TownGuards Nearest(Vector3 p)
@@ -405,18 +412,18 @@ namespace Shadowfall
         IEnumerator Bar()
         {
             if (root == null) yield break;
-            var g = Nearest(gate);
-            if (g != null) Speech.Say(g.transform, 2.5f, "Bar the gate!");
+            Call("Bar the gate!");
             yield return new WaitForSeconds(1.2f);
             if (root == null) yield break;
             // the brackets either side of the gateway, inside, and the beam that drops into them
             var c = gate + inward * 0.9f;
-            var wood = new Color(0.32f, 0.22f, 0.14f);
             foreach (float s in new[] { -2.7f, 2.7f })
                 Factory.PrimAt(PrimitiveType.Cube, root.transform, c + across * s + Vector3.up * 1.5f, new Vector3(0.25f, 0.5f, 0.25f), new Color(0.25f, 0.25f, 0.28f));
-            var beam = Factory.PrimAt(PrimitiveType.Cube, root.transform, c + Vector3.up * 4f, Vector3.one, wood);
+            var beam = Factory.PrimAt(PrimitiveType.Cube, root.transform, c + Vector3.up * 4f, Vector3.one, new Color(0.62f, 0.45f, 0.27f));
             beam.transform.rotation = Quaternion.LookRotation(across);
-            beam.transform.localScale = new Vector3(0.35f, 0.35f, 6.2f);
+            beam.transform.localScale = new Vector3(0.5f, 0.5f, 6.2f);
+            foreach (float s in new[] { -2f, 0f, 2f }) // iron bands
+                Factory.Prim(PrimitiveType.Cube, beam.transform, new Vector3(0f, 0f, s / 6.2f), new Vector3(1.08f, 1.08f, 0.04f), new Color(0.2f, 0.2f, 0.22f));
             float k = 0f;
             while (k < 1f && beam != null)
             {
@@ -436,8 +443,7 @@ namespace Shadowfall
 
         void Brace()
         {
-            if (captain != null) Speech.Say(captain.transform, 3.1f, "SHIELDS! BRACE!");
-            else { var g = Nearest(gate); if (g != null) Speech.Say(g.transform, 2.5f, "Shields! Brace!"); }
+            Call("SHIELDS! BRACE!");
             TownGuards.Rally(gate, 25f);
         }
     }

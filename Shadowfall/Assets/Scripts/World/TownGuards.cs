@@ -49,6 +49,9 @@ namespace Shadowfall
             Speech.Say(who.transform, 2.5f, lines[Random.Range(0, lines.Length)]);
         }
 
+        /// <summary>No battle shouts for a while (a call that matters is being given: it mustn't be talked over).</summary>
+        public static void Hush(float seconds) => nextShout = Mathf.Max(nextShout, Time.time + seconds);
+
         /// <summary>The guards near <paramref name="at"/> raise their weapons and roar (a rallying speech, a blessing).</summary>
         public static void Rally(Vector3 at, float r)
         {
