@@ -374,6 +374,7 @@ namespace Shadowfall
             public string Line;
             public System.Action<Extra> OnArrive;
             public bool Lying, Tending;
+            public bool Planted;    // keeps to its spot (no shuffling about into the next one)
             public bool SiegeOnly;  // only there while the siege lasts (Clear takes it away)
             public bool Hidden;            // still indoors: shown (and the door swung) when Delay runs out
             public HouseDoors.Door Door;
@@ -452,7 +453,7 @@ namespace Shadowfall
             /// <summary>Standing about: now and then a glance aside, a shuffle of the feet, so nobody stands like a post.</summary>
             void Fidget()
             {
-                if (Time.time < nextFidget) return;
+                if (Time.time < nextFidget || Planted) return;
                 nextFidget = Time.time + Random.Range(4f, 11f);
                 if (FaceAt.HasValue && Random.value < 0.6f) return;
                 transform.rotation *= Quaternion.Euler(0f, Random.Range(-35f, 35f), 0f);

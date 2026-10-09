@@ -286,15 +286,20 @@ namespace Shadowfall
 
         // Something worth watching nearby (a duel): villagers stop, look and cheer (see Watch).
         static Vector3 spectacle;
-        static float spectacleUntil;
+        static float spectacleUntil, spectacleClear;
         static readonly string[] cheers = { "Go on!", "Ooh!", "Get 'em!", "Ha! Did you see that?", "Again! Again!", "Mind the stall!" };
         float nextCheer;
 
         /// <summary>Villagers within 22 m of <paramref name="at"/> stop to watch for <paramref name="seconds"/> (0: stop watching).</summary>
-        public static void Watch(Vector3 at, float seconds)
+        /// <summary>
+        /// Something to stop and watch at <paramref name="at"/> for a while. Within <paramref name="clear"/> of it the
+        /// watchers first step back out to that distance (a feast's dancers and tables are not a place to stand).
+        /// </summary>
+        public static void Watch(Vector3 at, float seconds, float clear = 0f)
         {
             spectacle = at;
             spectacleUntil = seconds > 0f ? Time.time + seconds : 0f;
+            spectacleClear = clear;
         }
 
         /// <summary>All the watchers cheer at once (the end of a duel).</summary>
@@ -307,6 +312,20 @@ namespace Shadowfall
         bool Watching()
         {
             if (Time.time >= spectacleUntil || kind == Kind.Dog || Factory.FlatDistance(transform.position, spectacle) > 22f) return false;
+            var from = Factory.Flat(transform.position - spectacle);
+            if (from.magnitude < spectacleClear)
+            {
+                // too close: back out to the edge first, then turn and watch
+                var dir = from.sqrMagnitude > 0.01f ? from.normalized : transform.forward;
+                var next = transform.position + dir * 1.8f * Time.deltaTime;
+                if (WorldGrid.Instance == null || WorldGrid.Instance.IsWalkable(next))
+                {
+                    transform.position = new Vector3(next.x, transform.position.y, next.z);
+                    transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(dir), Time.deltaTime * 6f);
+                    view?.UpdateLocomotion(1.8f);
+                    return true;
+                }
+            }
             Factory.Face(transform, spectacle, Time.deltaTime * 4f);
             view?.UpdateLocomotion(0f);
             if (Time.time >= nextCheer)

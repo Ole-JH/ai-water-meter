@@ -93,7 +93,7 @@ namespace Shadowfall
                     var who = b.People[rng.Next(b.People.Count)];
                     if (who != null) { Speech.Say(who.transform, 2.4f, cheers[rng.Next(cheers.Length)]); who.Cheer(); }
                 }
-                if (d < 40f) Walker.Watch(fire, 3f); // Hollowmere's townsfolk gather round and cheer too
+                if (d < 40f) Walker.Watch(fire, 3f, 14f); // (the table; the bonfire is a few metres off it) Hollowmere's townsfolk cheer too, from round the edge of it (not in among the dancers)
             }
             // the carpenters' hammers
             if (Time.time >= nextHammer)
@@ -247,21 +247,56 @@ namespace Shadowfall
             foreach (var (p0, p1) in new[] { (corners[0], corners[3]), (corners[0], corners[1]), (corners[2], corners[3]), (corners[0], corners[2]), (corners[1], corners[3]) })
                 FeastArt.Bunting(t, p0 + Vector3.up * 3.8f, p1 + Vector3.up * 3.8f, flags, Factory.FlatDistance(p0, p1) > 9.5f && Factory.FlatDistance((p0 + p1) / 2f, fire) > 4f); // (no lantern over the bonfire's smoke)
             // round the table: the buffet, the stew, the stores, the raiders' arms as trophies, the mess
-            FeastArt.Surroundings(t, at, p => (grid == null || grid.IsWalkable(p)) && Factory.FlatDistance(p, fire) > 3.8f && Factory.FlatDistance(p, square) > 2.2f);
-            // hay bales by the fire to sit on
-            var bales = new List<Vector3>();
-            foreach (float a2 in new[] { 130f, 230f })
+            var props = new List<Vector3>(); // where they went: nobody is put to stand in them
+            FeastArt.Surroundings(t, at, p =>
             {
-                var hb = TownLife.Walkable(fire + Quaternion.Euler(0f, a2, 0f) * Vector3.forward * 2.3f);
-                if (ArtLibrary.Spawn("Seasonal/hay-bale", t, hb - at, 0.55f, ArtLibrary.Fit.Height, a2, false) != null) bales.Add(hb);
+                bool ok = (grid == null || grid.IsWalkable(p)) && Factory.FlatDistance(p, fire) > 3.8f && Factory.FlatDistance(p, square) > 2.2f;
+                if (ok) props.Add(p);
+                return ok;
+            });
+            // hay bales by the fire to sit on
+            // Round the bonfire, in rings that don't cross: the dancers going round close in (DanceR), the bales and
+            // the onlookers further out (CrowdR), everyone kept apart (Gap) and off the table and its stools
+            const float DanceR = 2.6f, CrowdR = 4.9f, Gap = 1.3f;
+            var taken = new List<Vector3>();
+            bool Free(Vector3 p)
+            {
+                var d = p - at;
+                if (Mathf.Abs(d.x) < 4.3f && Mathf.Abs(d.z) < 2.1f) return false; // the table, the stools and the diners
+                if (Factory.FlatDistance(p, fire) < DanceR + 1.2f) return false;  // the dance ring
+                if (grid != null && !grid.IsWalkable(p)) return false;
+                foreach (var q in taken) if (Factory.FlatDistance(p, q) < Gap) return false;
+                foreach (var q in props) if (Factory.FlatDistance(p, q) < 1.6f) return false;
+                return true;
+            }
+            // the first free spot on a circle round the fire, starting from an angle
+            Vector3? Place(float angle, float r)
+            {
+                for (int k = 0; k < 24; k++)
+                    foreach (float rr in new[] { r, r + 0.8f, r + 1.6f })
+                    {
+                        var p = fire + Quaternion.Euler(0f, angle + (k % 2 == 0 ? 1 : -1) * (k / 2) * 12f, 0f) * Vector3.forward * rr;
+                        if (Free(p)) { taken.Add(p); return p; }
+                    }
+                return null;
             }
             var cask = TownLife.Walkable(at + new Vector3(5f, 0f, 1.6f));
             if (ArtLibrary.Spawn("Feast/keg_decorated", t, cask - at, 1.3f, ArtLibrary.Fit.Height, 90f, true) == null) ArtLibrary.Spawn("Props/barrel_large", t, cask - at, 1.1f, ArtLibrary.Fit.Height, 0f, false);
             ArtLibrary.Spawn("Props/barrel_small_stack", t, cask - at + new Vector3(0.9f, 0f, 0.8f), 1f, ArtLibrary.Fit.Height, 30f, false);
-            // the townsfolk: some sat at the benches, the rest dancing and cheering round the fire
+            var keepAt = TownLife.Walkable(cask + new Vector3(-0.2f, 0f, -1.1f));
+            var minstrelAt = TownLife.Walkable(at + new Vector3(-4.8f, 0f, 2.2f));
+            taken.Add(cask); taken.Add(keepAt); taken.Add(minstrelAt);
+            float away = Mathf.Atan2(fire.x - at.x, fire.z - at.z) * Mathf.Rad2Deg; // from the table to the fire
+            var bales = new List<Vector3>();
+            foreach (float a2 in new[] { 60f, -60f })
+            {
+                var hb = Place(away + a2, CrowdR);
+                if (!hb.HasValue) continue;
+                if (ArtLibrary.Spawn("Seasonal/hay-bale", t, hb.Value - at, 0.55f, ArtLibrary.Fit.Height, away + a2 + 90f, false) != null) bales.Add(hb.Value);
+            }
+            // the townsfolk: ten sat along the table facing each other, two on the bales, the rest round the fire
             var life = SiegeLife.Get();
             string[] models = { "Characters/Keeper", "Characters/RogueHooded", "Characters/Mage", "Characters/Rogue", "Characters/Knight" };
-            // ten sat along the benches facing each other, two on the bales by the fire, the rest dancing and cheering round it
             foreach (float z in new[] { -1f, 1f })
                 foreach (float x in FeastArt.SeatX)
                 {
@@ -275,29 +310,32 @@ namespace Shadowfall
             foreach (var hb in bales)
             {
                 var e = life.Person("Villager", models[rng.Next(models.Length)], hb, R(1.75f, 1.9f));
-                e.FaceAt = fire; e.Party = "sit"; e.SeatY = 0.5f;
+                e.FaceAt = fire; e.Party = "sit"; e.SeatY = 0.5f; e.Planted = true;
                 b.People.Add(e);
             }
-            for (int i = 0; i < 7; i++)
+            for (int i = 0; i < 6; i++)
             {
-                var spot = TownLife.Walkable(fire + Quaternion.Euler(0f, i * 52f + R(-10f, 10f), 0f) * Vector3.forward * R(3.6f, 4.6f));
-                var e = life.Person("Villager", models[(i + rng.Next(3)) % models.Length], spot, i == 3 ? 1.2f : R(1.75f, 1.95f));
+                var spot = Place(away + 180f + (i - 2.5f) * 34f, CrowdR + 0.4f); // on the far side of the fire from the table, mostly
+                if (!spot.HasValue) continue;
+                var e = life.Person("Villager", models[(i + rng.Next(3)) % models.Length], spot.Value, i == 3 ? 1.2f : R(1.75f, 1.95f));
                 e.FaceAt = fire;
+                e.Planted = true;
                 e.Party = rng.NextDouble() < 0.45 ? "dance" : rng.NextDouble() < 0.5 ? "cheer" : "clap";
                 b.People.Add(e);
             }
-            // the barkeep at the cask, a minstrel, and a ring of dancers going round the fire
-            var keep = life.Person("Barkeep", "Characters/Barbarian", TownLife.Walkable(cask + new Vector3(-0.2f, 0f, -1.1f)), 1.9f);
+            // the barkeep at the cask, a minstrel, and a ring of dancers going round the fire, all at one radius and pace
+            // (evenly spaced, they never catch each other up)
+            var keep = life.Person("Barkeep", "Characters/Barbarian", keepAt, 1.9f);
             keep.Tending = true; keep.FaceAt = cask; b.People.Add(keep);
-            var minstrel = life.Person("Minstrel", "Characters/Rogue", TownLife.Walkable(at + new Vector3(-4.8f, 0f, 2.2f)), 1.8f);
-            minstrel.FaceAt = at; minstrel.Party = "cheer"; b.People.Add(minstrel);
-            for (int i = 0; i < 7; i++)
+            var minstrel = life.Person("Minstrel", "Characters/Rogue", minstrelAt, 1.8f);
+            minstrel.FaceAt = at; minstrel.Party = "cheer"; minstrel.Planted = true; b.People.Add(minstrel);
+            for (int i = 0; i < 6; i++)
             {
-                var d = life.Person("Dancer", models[(i + 2) % models.Length], TownLife.Walkable(fire + Quaternion.Euler(0f, i * 51f, 0f) * Vector3.forward * 3.2f), i == 3 ? 1.2f : R(1.7f, 1.9f));
+                var d = life.Person("Dancer", models[(i + 2) % models.Length], TownLife.Walkable(fire + Quaternion.Euler(0f, i * 60f, 0f) * Vector3.forward * DanceR), i == 3 ? 1.2f : R(1.7f, 1.9f));
                 d.OrbitAbout = fire;
-                d.OrbitR = R(2.9f, 3.4f);
+                d.OrbitR = DanceR;
                 d.OrbitSpeed = 0.55f;
-                d.OrbitAngle = i * (Mathf.PI * 2f / 7f);
+                d.OrbitAngle = i * (Mathf.PI * 2f / 6f);
                 b.People.Add(d);
             }
             // and the ones who've had far too much, reeling about the square
