@@ -1,0 +1,21 @@
+{
+  "name": "shadowfall-server",
+  "version": "1.0.0",
+  "description": "Shadowfall online ARPG server: serves the Unity WebGL client and runs the shared world over WebSocket.",
+  "main": "server.js",
+  "private": true,
+  "scripts": {
+    "start": "node server.js",
+    "test": "node test/smoke.js",
+    "test:pg": "PG_TEST_URL=${PG_TEST_URL:-postgres://postgres:postgres@localhost:5432/postgres} node test/smoke.js",
+    "dev": "node --watch server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "nodemailer": "^10.0.15",
+    "pg": "^8.23.1",
+    "ws": "^8.18.0"
+  }
+}

@@ -1,0 +1,492 @@
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.Rendering;
+
+namespace Shadowfall
+{
+    /// <summary>
+    /// The client side of the Catacombs. The server generates each dungeon level and sends its layout; this
+    /// builds floors, walls, torches, props, portals and chests from it, far away from the overworld
+    /// (at <see cref="Origin"/>), and swaps the walkability grid used for pathfinding.
+    /// </summary>
+    public static class Dungeon
+    {
+        public static readonly Vector3 Origin = new Vector3(3000f, 0f, 3000f);
+        /// <summary>Which dungeon we are in (index into <see cref="DungeonDef.All"/>) and how many levels it has.</summary>
+        public static int Index { get; private set; }
+        public static DungeonDef Def => DungeonDef.Get(Index);
+        public static int Depths { get; private set; } = 3;
+
+        public static bool Active => root != null;
+        public static int Depth { get; private set; }
+        public static string Name { get; private set; } = "The Catacombs";
+        public static string ZoneName => Name + "  -  Depth " + Depth + (Difficulty > 0 ? "  (" + Difficulties.Names[Difficulty] + ")" : "");
+        /// <summary>0 Normal, 1 Veteran, 2 Nightmare, 3 Hell (see DIFFICULTIES in server/content.js).</summary>
+        public static int Difficulty { get; private set; }
+        public static Texture2D MapTexture { get; private set; }
+        public static int Width { get; private set; }
+        public static int Height { get; private set; }
+
+        static GameObject root;
+        static WorldGrid grid, overworld;
+
+        public static bool Contains(Vector3 p) => p.x > 1500f; // the overworld is 576 tiles a side
+        public static Vector3 ToWorld(float x, float z) => new Vector3(x + Origin.x, 0f, z + Origin.z);
+
+        // =====================================================================================
+        // Enter / leave
+        // =====================================================================================
+
+        public static void Enter(NetMsg m)
+        {
+            Exit();
+            Depth = m.l;
+            Index = m.d;
+            Difficulty = Mathf.Clamp(m.df, 0, Difficulties.Names.Length - 1);
+            Depths = m.n > 0 ? m.n : Def.Depths;
+            Name = string.IsNullOrEmpty(m.k) ? Def.Name : m.k;
+            Width = m.w;
+            Height = m.h;
+
+            overworld = WorldGrid.Instance;
+            grid = new WorldGrid(m.w, m.h, false) { Origin = new Vector2Int((int)Origin.x, (int)Origin.z) };
+            var bits = System.Convert.FromBase64String(m.cells ?? "");
+            var blocked = new bool[m.w * m.h];
+            for (int i = 0; i < blocked.Length; i++)
+            {
+                blocked[i] = i >> 3 < bits.Length && (bits[i >> 3] >> (i & 7) & 1) == 1;
+                grid.SetBlocked(i % m.w, i / m.w, blocked[i]);
+            }
+            WorldGrid.Instance = grid;
+
+            root = new GameObject("Dungeon");
+            BuildMap(blocked);
+            BuildGeometry(blocked);
+            var rng = new System.Random(m.seed);
+            var rooms = new List<RectInt>();
+            if (m.rooms != null)
+                for (int i = 0; i + 3 < m.rooms.Length; i += 4) rooms.Add(new RectInt(m.rooms[i], m.rooms[i + 1], m.rooms[i + 2], m.rooms[i + 3]));
+            Decorate(blocked, rooms, rng, m);
+
+            if (m.exit != null && m.exit.Length == 2) DungeonPortal.Create(root.transform, ToWorld(m.exit[0], m.exit[1]), false, Depth);
+            if (m.stairs != null && m.stairs.Length == 2) DungeonPortal.Create(root.transform, ToWorld(m.stairs[0], m.stairs[1]), true, Depth + 1);
+            if (m.chests != null)
+                for (int i = 0; i + 1 < m.chests.Length; i += 2) DungeonChest.Create(root.transform, ToWorld(m.chests[i], m.chests[i + 1]), i / 2);
+            DungeonFeatures.Build(root.transform, blocked, m.w, m.h, rooms, m.seed, m); // traps, the boss room's doors
+            DungeonAtmosphere.Build(root.transform, blocked, m.w, m.h, rooms, m.seed, Def.Id); // dust, drips, webs, bones
+        }
+
+        public static void Exit()
+        {
+            Gore.Clear(); // stains belong to the level they were made on
+            if (root != null) Object.Destroy(root);
+            root = null;
+            if (overworld != null) WorldGrid.Instance = overworld;
+            overworld = null;
+            grid = null;
+            // back in the overworld: what happened at the towns meanwhile (a siege, a sack) is laid out afresh
+            Sack.Resync();
+            Invasion.Set(Invasion.Current);
+        }
+
+        // =====================================================================================
+        // Building
+        // =====================================================================================
+
+        static bool Blocked(bool[] b, int x, int y) => x < 0 || y < 0 || x >= Width || y >= Height || b[y * Width + x];
+
+        static void BuildMap(bool[] blocked)
+        {
+            MapTexture = new Texture2D(Width, Height, TextureFormat.RGBA32, false) { filterMode = FilterMode.Point, wrapMode = TextureWrapMode.Clamp, name = "DungeonMap" };
+            var px = new Color32[Width * Height];
+            for (int y = 0; y < Height; y++)
+                for (int x = 0; x < Width; x++)
+                {
+                    bool wall = blocked[y * Width + x];
+                    bool edge = wall && (!Blocked(blocked, x + 1, y) || !Blocked(blocked, x - 1, y) || !Blocked(blocked, x, y + 1) || !Blocked(blocked, x, y - 1));
+                    px[y * Width + x] = !wall ? new Color32(92, 84, 72, 255) : edge ? new Color32(40, 34, 30, 255) : new Color32(8, 7, 7, 255);
+                }
+            MapTexture.SetPixels32(px);
+            MapTexture.Apply();
+        }
+
+        static void BuildGeometry(bool[] blocked)
+        {
+            const float wallH = 2.4f, tex = 3f;
+            var fv = new List<Vector3>(); var fuv = new List<Vector2>(); var ft = new List<int>();
+            var wv = new List<Vector3>(); var wuv = new List<Vector2>(); var wn = new List<Vector3>(); var sides = new List<int>(); var tops = new List<int>();
+
+            // Wall sides are listed outside-in, so their triangles are flipped to face the floor.
+            void Quad(List<Vector3> v, List<Vector2> uv, List<int> t, Vector3 a, Vector3 b, Vector3 c, Vector3 d, Vector2 ua, Vector2 ub, Vector2 uc, Vector2 ud, List<Vector3> n = null, Vector3 normal = default, bool flip = false)
+            {
+                int i = v.Count;
+                v.Add(a); v.Add(b); v.Add(c); v.Add(d);
+                uv.Add(ua); uv.Add(ub); uv.Add(uc); uv.Add(ud);
+                if (n != null) { n.Add(normal); n.Add(normal); n.Add(normal); n.Add(normal); }
+                if (flip) { t.Add(i); t.Add(i + 2); t.Add(i + 1); t.Add(i); t.Add(i + 3); t.Add(i + 2); }
+                else { t.Add(i); t.Add(i + 1); t.Add(i + 2); t.Add(i); t.Add(i + 2); t.Add(i + 3); }
+            }
+
+            float ox = Origin.x, oz = Origin.z;
+            for (int y = 0; y < Height; y++)
+                for (int x = 0; x < Width; x++)
+                {
+                    float x0 = x + ox, z0 = y + oz, x1 = x0 + 1f, z1 = z0 + 1f;
+                    if (!blocked[y * Width + x])
+                    {
+                        Quad(fv, fuv, ft, new Vector3(x0, 0, z0), new Vector3(x0, 0, z1), new Vector3(x1, 0, z1), new Vector3(x1, 0, z0),
+                            new Vector2(x0 / tex, z0 / tex), new Vector2(x0 / tex, z1 / tex), new Vector2(x1 / tex, z1 / tex), new Vector2(x1 / tex, z0 / tex));
+                        continue;
+                    }
+                    bool nearFloor = false;
+                    // A side face toward every neighbouring floor cell
+                    if (!Blocked(blocked, x, y - 1)) { nearFloor = true; Quad(wv, wuv, sides, new Vector3(x1, 0, z0), new Vector3(x1, wallH, z0), new Vector3(x0, wallH, z0), new Vector3(x0, 0, z0), new Vector2(x1 / tex, 0), new Vector2(x1 / tex, wallH / tex), new Vector2(x0 / tex, wallH / tex), new Vector2(x0 / tex, 0), wn, Vector3.back, true); }
+                    if (!Blocked(blocked, x, y + 1)) { nearFloor = true; Quad(wv, wuv, sides, new Vector3(x0, 0, z1), new Vector3(x0, wallH, z1), new Vector3(x1, wallH, z1), new Vector3(x1, 0, z1), new Vector2(x0 / tex, 0), new Vector2(x0 / tex, wallH / tex), new Vector2(x1 / tex, wallH / tex), new Vector2(x1 / tex, 0), wn, Vector3.forward, true); }
+                    if (!Blocked(blocked, x - 1, y)) { nearFloor = true; Quad(wv, wuv, sides, new Vector3(x0, 0, z0), new Vector3(x0, wallH, z0), new Vector3(x0, wallH, z1), new Vector3(x0, 0, z1), new Vector2(z0 / tex, 0), new Vector2(z0 / tex, wallH / tex), new Vector2(z1 / tex, wallH / tex), new Vector2(z1 / tex, 0), wn, Vector3.left, true); }
+                    if (!Blocked(blocked, x + 1, y)) { nearFloor = true; Quad(wv, wuv, sides, new Vector3(x1, 0, z1), new Vector3(x1, wallH, z1), new Vector3(x1, wallH, z0), new Vector3(x1, 0, z0), new Vector2(z1 / tex, 0), new Vector2(z1 / tex, wallH / tex), new Vector2(z0 / tex, wallH / tex), new Vector2(z0 / tex, 0), wn, Vector3.right, true); }
+                    bool cornerNear = !Blocked(blocked, x + 1, y + 1) || !Blocked(blocked, x - 1, y - 1) || !Blocked(blocked, x + 1, y - 1) || !Blocked(blocked, x - 1, y + 1);
+                    if (nearFloor || cornerNear)
+                        Quad(wv, wuv, tops, new Vector3(x0, wallH, z0), new Vector3(x0, wallH, z1), new Vector3(x1, wallH, z1), new Vector3(x1, wallH, z0),
+                            Vector2.zero, Vector2.up, Vector2.one, Vector2.right, wn, Vector3.up);
+                }
+
+            var def = Def;
+            var floorTex = Resources.Load<Texture2D>(def.FloorTex);
+            var wallTex = Resources.Load<Texture2D>(def.WallTex);
+            var floorMat = Mat.New(def.FloorTint);
+            if (floorTex != null) floorMat.mainTexture = floorTex;
+            var wallMat = Mat.New(def.WallTint);
+            if (wallTex != null) wallMat.mainTexture = wallTex;
+            var topMat = Mat.New(new Color(0.05f, 0.045f, 0.04f));
+
+            var floor = new Mesh { name = "DungeonFloor", indexFormat = IndexFormat.UInt32 };
+            floor.SetVertices(fv); floor.SetUVs(0, fuv); floor.SetTriangles(ft, 0);
+            floor.RecalculateNormals(); floor.RecalculateBounds();
+            MeshObject("Floor", floor, new[] { floorMat }, false);
+
+            var walls = new Mesh { name = "DungeonWalls", indexFormat = IndexFormat.UInt32, subMeshCount = 2 };
+            walls.SetVertices(wv); walls.SetUVs(0, wuv); walls.SetNormals(wn);
+            walls.SetTriangles(sides, 0); walls.SetTriangles(tops, 1);
+            walls.RecalculateBounds();
+            MeshObject("Walls", walls, new[] { wallMat, topMat }, true);
+        }
+
+        static void MeshObject(string name, Mesh mesh, Material[] mats, bool shadows)
+        {
+            var go = new GameObject(name);
+            go.transform.SetParent(root.transform, false);
+            go.AddComponent<MeshFilter>().sharedMesh = mesh;
+            var r = go.AddComponent<MeshRenderer>();
+            r.sharedMaterials = mats;
+            r.shadowCastingMode = shadows ? ShadowCastingMode.On : ShadowCastingMode.Off;
+        }
+
+        static void Decorate(bool[] blocked, List<RectInt> rooms, System.Random rng, NetMsg m)
+        {
+            var def = Def;
+            float R(float a, float b) => a + (float)rng.NextDouble() * (b - a);
+            GameObject Art(string path, Vector3 pos, float size, float yaw = 0f, ArtLibrary.Fit fit = ArtLibrary.Fit.Height, bool shadows = true) =>
+                ArtLibrary.Spawn(path, root.transform, pos, size, fit, yaw, shadows, true, true);
+
+            // Wall torches: on walls next to the floor, spaced out.
+            int lights = 0;
+            var used = new HashSet<Vector2Int>();
+            Vector2Int[] dirs = { Vector2Int.up, Vector2Int.down, Vector2Int.left, Vector2Int.right };
+            for (int y = 1; y < Height - 1 && lights < 30; y++)
+                for (int x = 1; x < Width - 1 && lights < 30; x++)
+                {
+                    if (blocked[y * Width + x] || (x * 7 + y * 13) % 11 != 0) continue;
+                    foreach (var d in dirs)
+                    {
+                        if (!Blocked(blocked, x + d.x, y + d.y)) continue;
+                        var cell = new Vector2Int(x / 6, y / 6);
+                        if (!used.Add(cell)) break;
+                        var c = ToWorld(x + 0.5f, y + 0.5f);
+                        var face = new Vector3(d.x, 0f, d.y);
+                        var torchPos = c + face * 0.42f;
+                        Transform torchCore = null;
+                        if (def.Id == "mine")
+                            torchCore = Factory.Prim(PrimitiveType.Sphere, root.transform, torchPos + Vector3.up * 1.7f, Vector3.one * 0.22f, def.TorchColor, false, Mat.Glow(def.TorchColor)).transform;
+                        else Art("Props/torch_mounted", torchPos + Vector3.up * 1.2f, 0.9f, Quaternion.LookRotation(-face).eulerAngles.y, ArtLibrary.Fit.Height, false);
+                        var l = new GameObject("Torch").AddComponent<Light>();
+                        l.transform.SetParent(root.transform, false);
+                        l.transform.position = c + face * 0.1f + Vector3.up * 1.9f;
+                        l.type = LightType.Point;
+                        l.color = def.TorchColor;
+                        l.range = 7.5f;
+                        l.intensity = 1.6f;
+                        l.gameObject.AddComponent<Flicker>();
+                        PropFire.Add(root.transform, torchPos + Vector3.up * (def.Id == "mine" ? 1.62f : 1.72f), def.TorchColor, 0.3f, false, null, torchCore);
+                        if (lights % 4 == 0)
+                        {
+                            var crackle = Sfx.LoopAt("fire_loop", l.transform.position, 0.35f, 8f);
+                            if (crackle != null) crackle.transform.SetParent(root.transform, true);
+                        }
+                        lights++;
+                        break;
+                    }
+                }
+
+            // Room furnishings (crypts get pillars, coffins and candles; the others their own props)
+            foreach (var r in rooms)
+            {
+                if (def.Id != "catacombs")
+                {
+                    int n = rng.Next(2, 5);
+                    for (int i = 0; i < n; i++)
+                    {
+                        var at = ToWorld(r.x + R(1.2f, r.width - 1.2f), r.y + R(1.2f, r.height - 1.2f));
+                        if (!WorldGrid.Instance.IsWalkable(at)) continue;
+                        string prop = def.RoomProps[rng.Next(def.RoomProps.Length)];
+                        if (prop.Contains("campfire"))
+                        {
+                            var ember = new Color(1f, 0.55f, 0.15f);
+                            ArtLibrary.Spawn("Nature/campfire_logs", root.transform, at, 0.75f, ArtLibrary.Fit.Width, R(0, 360), true, true, true);
+                            PropFire.Add(root.transform, at + Vector3.up * 0.12f, ember, 0.85f);
+                            var cl = new GameObject("Campfire").AddComponent<Light>();
+                            cl.transform.SetParent(root.transform, false);
+                            cl.transform.position = at + Vector3.up * 1.1f;
+                            cl.type = LightType.Point;
+                            cl.color = ember;
+                            cl.range = 6f;
+                            cl.intensity = 1.4f;
+                            cl.gameObject.AddComponent<Flicker>();
+                        }
+                        Art(prop, at, prop.Contains("Boulder") || prop.Contains("tent") ? 1.8f : prop.Contains("Pebble") ? 0.8f : 1.1f, R(0, 360));
+                    }
+                    if (def.Id == "mine" && rng.NextDouble() < 0.6)
+                    {
+                        // glowing ore crystals
+                        var at = ToWorld(r.x + R(1f, r.width - 1f), r.y + R(1f, r.height - 1f));
+                        var crystal = new Color(0.4f, 0.75f, 1f);
+                        Factory.Prim(PrimitiveType.Cube, root.transform, at + Vector3.up * 0.4f, new Vector3(0.25f, 0.8f, 0.25f), crystal, false, Mat.Glow(crystal))
+                            .transform.rotation = Quaternion.Euler(R(-20, 20), R(0, 360), R(-20, 20));
+                    }
+                    continue;
+                }
+                var center = ToWorld(r.x + r.width / 2f, r.y + r.height / 2f);
+                if (r.width >= 8 && r.height >= 8)
+                    foreach (var corner in new[] { new Vector2(1.6f, 1.6f), new Vector2(r.width - 1.6f, 1.6f), new Vector2(1.6f, r.height - 1.6f), new Vector2(r.width - 1.6f, r.height - 1.6f) })
+                        Art("Graveyard/pillar-large", ToWorld(r.x + corner.x, r.y + corner.y), 2.4f);
+                if (rng.NextDouble() < 0.45)
+                    Art("Graveyard/coffin", ToWorld(r.x + R(1.5f, r.width - 1.5f), r.y + R(1.5f, r.height - 1.5f)), 2f, R(0, 360), ArtLibrary.Fit.Width);
+                int candles = rng.Next(1, 4);
+                for (int i = 0; i < candles; i++)
+                    Art("Graveyard/candle-multiple", ToWorld(r.x + R(0.8f, r.width - 0.8f), r.y + (rng.NextDouble() < 0.5 ? 0.7f : r.height - 0.7f)), 0.55f, R(0, 360), ArtLibrary.Fit.Height, false);
+                if (rng.NextDouble() < 0.4)
+                    Art(rng.NextDouble() < 0.5 ? "Props/barrel_small_stack" : "Props/crates_stacked", ToWorld(r.x + 0.9f, r.y + r.height - 0.9f), 1f, R(0, 360));
+                if (rng.NextDouble() < 0.35)
+                    Art("Graveyard/gravestone-broken", ToWorld(r.x + R(1.5f, r.width - 1.5f), r.y + R(1.5f, r.height - 1.5f)), 1.1f, R(0, 360));
+            }
+
+            // The boss room burns red.
+            if (m.boss != null && m.boss.Length == 2)
+            {
+                var b = ToWorld(m.boss[0], m.boss[1]);
+                foreach (var off in new[] { new Vector3(-3f, 0, -3f), new Vector3(3f, 0, -3f), new Vector3(-3f, 0, 3f), new Vector3(3f, 0, 3f) })
+                {
+                    var p = b + off;
+                    if (!WorldGrid.Instance.IsWalkable(p)) continue;
+                    Art(def.Id == "mine" ? "Rocks/Boulder_3" : "Graveyard/fire-basket", p, 1.2f);
+                    var l = new GameObject("Brazier").AddComponent<Light>();
+                    l.transform.SetParent(root.transform, false);
+                    l.transform.position = p + Vector3.up * 1.6f;
+                    l.type = LightType.Point;
+                    l.color = def.BossFire;
+                    l.range = 8f;
+                    l.intensity = 2f;
+                    l.gameObject.AddComponent<Flicker>();
+                    PropFire.Add(root.transform, p + Vector3.up * (def.Id == "mine" ? 1.25f : 1.05f), def.BossFire, 0.8f);
+                }
+            }
+        }
+    }
+
+    /// <summary>Flickering torch light.</summary>
+    public class Flicker : MonoBehaviour
+    {
+        Light l;
+        float baseIntensity, seed;
+        Vector3 home;
+        bool homeSet;
+
+        void Start()
+        {
+            l = GetComponent<Light>();
+            baseIntensity = l.intensity;
+            seed = Random.value * 100f;
+        }
+
+        void Update()
+        {
+            if (l == null || !l.enabled) return; // switched off far from the hero (LightCull): nothing to flicker
+            float n = Mathf.PerlinNoise(Time.time * 5f, seed);
+            l.intensity = baseIntensity * (0.8f + n * 0.4f);
+            // the flame sways, so the shadows move a little with it
+            if (!homeSet) { home = transform.localPosition; homeSet = true; }
+            transform.localPosition = home + new Vector3(Mathf.PerlinNoise(Time.time * 2.3f, seed + 7f) - 0.5f, (n - 0.5f) * 0.5f, Mathf.PerlinNoise(seed + 3f, Time.time * 2.3f) - 0.5f) * 0.09f;
+        }
+    }
+
+    /// <summary>The way out (back to the entrance) or the stairs down to the next depth.</summary>
+    public class DungeonPortal : Interactable
+    {
+        bool down;
+        int targetDepth;
+
+        public override Color LabelColor => down ? new Color(1f, 0.55f, 0.3f) : new Color(0.55f, 0.8f, 1f);
+        public override float LabelHeight => 3.2f;
+        public override string HoverText => down ? "Descend to Depth " + targetDepth : "Return to the surface";
+
+        public static DungeonPortal Create(Transform parent, Vector3 pos, bool down, int targetDepth)
+        {
+            var go = new GameObject(down ? "Stairs" : "Exit");
+            go.transform.SetParent(parent, false);
+            go.transform.position = pos;
+            var p = go.AddComponent<DungeonPortal>();
+            p.down = down;
+            p.targetDepth = targetDepth;
+            p.DisplayName = p.HoverText;
+            p.InteractRange = 2.2f;
+            p.AddClickCollider(1f, 2.5f);
+            var c = p.LabelColor;
+            SpellFx.Emit(new SpellFx.P
+            {
+                Rate = 40, Duration = 100000f, Life = new Vector2(1f, 1.6f), Speed = new Vector2(0.05f, 0.2f),
+                Size = new Vector2(0.08f, 0.2f), Start = Color.Lerp(c, Color.white, 0.4f), End = new Color(c.r, c.g, c.b, 0f),
+                Shape = ParticleSystemShapeType.Circle, Radius = 0.9f, Velocity = new Vector3(0f, down ? -0.2f : 1.4f, 0f), Max = 300,
+            }, pos + Vector3.up * (down ? 1.4f : 0.1f), go.transform);
+            var l = new GameObject("PortalLight").AddComponent<Light>();
+            l.transform.SetParent(go.transform, false);
+            l.transform.localPosition = Vector3.up * 1.5f;
+            l.type = LightType.Point;
+            l.color = c;
+            l.range = 6f;
+            l.intensity = 2.2f;
+            if (down) ArtLibrary.Spawn("Graveyard/stone-wall-column", go.transform, new Vector3(-1.1f, 0f, 0f), 2.6f);
+            if (down) ArtLibrary.Spawn("Graveyard/stone-wall-column", go.transform, new Vector3(1.1f, 0f, 0f), 2.6f);
+            return p;
+        }
+
+        float nextRing;
+
+        void Update()
+        {
+            if (Time.time < nextRing) return;
+            nextRing = Time.time + 1.2f;
+            SpellFx.Ring(transform.position, LabelColor, 1.3f, 1.1f);
+        }
+
+        public override void Interact(Player p)
+        {
+            if (down) NetClient.I.DescendDungeon();
+            else NetClient.I.LeaveDungeon(false);
+        }
+    }
+
+    /// <summary>A treasure chest: gold and an item or two, once per hero.</summary>
+    /// <summary>
+    /// A treasure chest: iron-bound wood with a lid on hinges. Opened, the lid swings up, light and coins spill out of
+    /// it, and the server rolls what's inside (for us only); then it stands open and empty.
+    /// </summary>
+    public class DungeonChest : Interactable
+    {
+        bool opened;
+        int index;  // which chest of the level (the server knows where each one is)
+        Transform lid;
+        Light glow;
+        float openT = -1f;
+
+        public override bool CanInteract => !opened;
+        public override Color LabelColor => opened ? Color.gray : new Color(1f, 0.85f, 0.3f);
+        public override string HoverText => opened ? "Empty Chest" : "Treasure Chest";
+        public override float LabelHeight => 1.4f;
+
+        public static DungeonChest Create(Transform parent, Vector3 pos, int index)
+        {
+            var go = new GameObject("Chest");
+            go.transform.SetParent(parent, false);
+            go.transform.position = pos;
+            go.transform.rotation = Quaternion.Euler(0f, Random.Range(0, 4) * 90f + Random.Range(-15f, 15f), 0f);
+            var c = go.AddComponent<DungeonChest>();
+            c.index = index;
+            c.DisplayName = "Treasure Chest";
+            c.InteractRange = 1.8f;
+            c.AddClickCollider(0.6f, 1f);
+            var wood = new Color(0.42f, 0.27f, 0.14f);
+            var iron = new Color(0.25f, 0.25f, 0.27f);
+            var gold = new Color(1f, 0.82f, 0.35f);
+            Factory.Prim(PrimitiveType.Cube, go.transform, new Vector3(0f, 0.27f, 0f), new Vector3(0.9f, 0.54f, 0.58f), wood);
+            foreach (float x in new[] { -0.32f, 0.32f })
+                Factory.Prim(PrimitiveType.Cube, go.transform, new Vector3(x, 0.27f, 0f), new Vector3(0.07f, 0.56f, 0.6f), iron);
+            // inside: a heap of gold (seen once it's open)
+            Factory.Prim(PrimitiveType.Cube, go.transform, new Vector3(0f, 0.5f, 0f), new Vector3(0.78f, 0.06f, 0.46f), gold, false, Mat.Glow(gold * 0.5f));
+            // the lid, hinged along the back edge
+            c.lid = new GameObject("Lid").transform;
+            c.lid.SetParent(go.transform, false);
+            c.lid.localPosition = new Vector3(0f, 0.54f, -0.29f);
+            Factory.Prim(PrimitiveType.Cube, c.lid, new Vector3(0f, 0.09f, 0.29f), new Vector3(0.92f, 0.18f, 0.6f), wood * 1.1f);
+            foreach (float x in new[] { -0.32f, 0.32f })
+                Factory.Prim(PrimitiveType.Cube, c.lid, new Vector3(x, 0.09f, 0.29f), new Vector3(0.07f, 0.2f, 0.62f), iron);
+            Factory.Prim(PrimitiveType.Cube, c.lid, new Vector3(0f, 0.02f, 0.6f), new Vector3(0.14f, 0.16f, 0.04f), gold); // the lock
+            return c;
+        }
+
+        public override void Interact(Player p)
+        {
+            if (opened) return;
+            opened = true;
+            openT = 0f;
+            Sfx.Play("loot", transform.position, 0.8f);
+            Sfx.Play("hit_stone", transform.position, 0.4f, 0.2f, 20f); // the lock gives
+            NetClient.I?.Op("chest", i: index); // the server rolls what's inside, for us only
+        }
+
+        void Update()
+        {
+            if (openT < 0f || lid == null) return;
+            openT += Time.deltaTime;
+            // a jolt as the lock gives, then the lid swings up and back
+            float k = Mathf.Clamp01((openT - 0.15f) / 0.45f);
+            float jolt = openT < 0.15f ? Mathf.Sin(openT * 80f) * 3f : 0f;
+            lid.localRotation = Quaternion.Euler(-115f * (1f - (1f - k) * (1f - k)) + jolt, 0f, 0f);
+            if (openT >= 0.35f && glow == null)
+            {
+                glow = new GameObject("ChestGlow").AddComponent<Light>();
+                glow.transform.SetParent(transform, false);
+                glow.transform.localPosition = new Vector3(0f, 0.9f, 0f);
+                glow.type = LightType.Point;
+                glow.color = new Color(1f, 0.78f, 0.35f);
+                glow.range = 4f;
+                glow.shadows = LightShadows.None;
+                Sfx.Play2D("coins", 0.6f);
+                SpellFx.Hit(transform.position + Vector3.up * 0.8f, new Color(1f, 0.85f, 0.3f), false, 24);
+                if (SpellFx.Ready)
+                    SpellFx.Emit(new SpellFx.P
+                    {
+                        Burst = 18, Duration = 0.1f, Life = new Vector2(0.6f, 1.1f), Speed = new Vector2(1.5f, 3f), Size = new Vector2(0.06f, 0.1f),
+                        Start = new Color(1f, 0.85f, 0.35f), End = new Color(1f, 0.7f, 0.2f, 0f), Gravity = 1.2f, Velocity = Vector3.up * 2f,
+                    }, transform.position + Vector3.up * 0.6f);
+            }
+            if (glow != null) glow.intensity = Mathf.Max(0f, 2.2f - (openT - 0.35f) * 0.6f); // the gleam fades: it's empty now
+            if (openT > 4.5f) { if (glow != null) Destroy(glow.gameObject); openT = -1f; }
+        }
+    }
+
+    /// <summary>Dungeon difficulty tiers (must match DIFFICULTIES in server/content.js).</summary>
+    public static class Difficulties
+    {
+        public static readonly string[] Names = { "Normal", "Veteran", "Nightmare", "Hell" };
+        public static readonly string[] Blurbs =
+        {
+            "The dungeon as intended.",
+            "Monsters have 70% more life and hit 40% harder; more elites. +50% XP, better loot.",
+            "Monsters have almost 3x life and hit almost twice as hard; many elites. +120% XP, much better loot.",
+            "4.5x life, 2.6x damage, elites everywhere. For full parties in good gear. +220% XP, the best loot.",
+        };
+        public static readonly Color[] Colors =
+        {
+            new Color(0.85f, 0.85f, 0.8f), new Color(0.55f, 0.75f, 1f), new Color(0.85f, 0.45f, 1f), new Color(1f, 0.35f, 0.25f),
+        };
+    }
+}

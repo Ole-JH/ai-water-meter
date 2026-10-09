@@ -1,0 +1,368 @@
+services:
+  shadowfall:
+    build: .
+    container_name: shadowfall
+    restart: unless-stopped
+    ports:
+      # The only port the game needs (web page + game connection on /ws).
+      # Change the host side with SHADOWFALL_PORT, e.g. SHADOWFALL_PORT=9000 docker compose up -d
+      - "${SHADOWFALL_PORT:-7341}:7341"
+    volumes:
+      - ./data:/data         # accounts, characters and the world map
+      - ./public:/app/public:ro   # the Unity WebGL build
+    environment:
+      # Comma-separated account names with admin rights (admin panel: F10 in game, or /a in chat).
+      # Set it in server/.env, e.g.  ADMINS=YourAccount
+      ADMINS: ${ADMINS:-}
+      # Real minutes per season (spring, summer, autumn, winter). Default 120: the year comes round every 8 hours.
+      SEASON_MINUTES: ${SEASON_MINUTES:-120}
+      # About how often monsters attack a walled town (minutes; 0 = never, admins can still start one).
+      INVASION_MINUTES: ${INVASION_MINUTES:-45}
+      # About how often a world boss rises (minutes; 0 = never, admins can still raise one).
+      WORLD_BOSS_MINUTES: ${WORLD_BOSS_MINUTES:-90}
+      # Prometheus metrics on a private port (only reachable from the monitoring containers).
+      METRICS_PORT: "9464"
+      # Accounts and characters (see docs/deployment/accounts.md). Characters in ./data from older versions are
+      # imported on the first start.
+      DATABASE_URL: postgres://shadowfall:${POSTGRES_PASSWORD:-shadowfall}@postgres:5432/shadowfall
+      # Optional: password reset emails, e.g. SMTP_URL=smtps://you%40gmail.com:app-password@smtp.gmail.com:465
+      SMTP_URL: ${SMTP_URL:-}
+      MAIL_FROM: ${MAIL_FROM:-}
+      PUBLIC_URL: ${PUBLIC_URL:-}       # the game's address, for the link in reset emails
+      TRUST_PROXY: ${TRUST_PROXY:-0}    # 1 behind a reverse proxy (client addresses for login rate limits)
+      # The auto-deploy posts its progress here and the server tells the players in chat (tools/autodeploy.sh writes
+      # one into server/.env the first time it runs). Empty: no update messages.
+      DEPLOY_STATUS_TOKEN: ${DEPLOY_STATUS_TOKEN:-}
+    expose:
+      - "9464"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    stop_grace_period: 10s
+    labels:
+      # The Homepage dashboard (see the homepage service below). PUBLIC_HOST: the name you reach this machine by.
+      homepage.group: Shadowfall
+      homepage.name: Shadowfall
+      homepage.icon: mdi-sword-cross
+      homepage.href: http://${PUBLIC_HOST:-${DEFAULT_PUBLIC_HOST:-localhost}}:${SHADOWFALL_PORT:-7341}
+      homepage.description: The game
+      homepage.weight: "0"
+      homepage.widget.type: customapi
+      homepage.widget.url: http://shadowfall:7341/healthz
+      homepage.widget.refreshInterval: "15000"
+      homepage.widget.mappings[0].label: Online
+      homepage.widget.mappings[0].field: online
+      homepage.widget.mappings[0].format: number
+      homepage.widget.mappings[1].label: In dungeons
+      homepage.widget.mappings[1].field: dungeons
+      homepage.widget.mappings[1].format: number
+      homepage.widget.mappings[2].label: Monsters
+      homepage.widget.mappings[2].field: monsters
+      homepage.widget.mappings[2].format: number
+      homepage.widget.mappings[3].label: Build
+      homepage.widget.mappings[3].field: build
+
+  # The account database. Not published to the host; `task db:psql` opens a prompt, `task backup` dumps it.
+  postgres:
+    image: postgres:17
+    container_name: shadowfall-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: shadowfall
+      POSTGRES_USER: shadowfall
+      # Only used when the database is first created. Set it in server/.env (letters and digits).
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-shadowfall}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U shadowfall -d shadowfall"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    stop_grace_period: 30s
+    labels:
+      homepage.group: Infrastructure
+      homepage.name: PostgreSQL
+      homepage.icon: postgres.png
+      homepage.description: Accounts and characters (task db:psql)
+
+  # The documentation site on http://localhost:7344 (DOCS_PORT). Serves ../docs live: a git pull shows up
+  # without restarting. Only the docs and mkdocs.yml are mounted, read-only.
+  docs:
+    image: squidfunk/mkdocs-material:9
+    container_name: shadowfall-docs
+    restart: unless-stopped
+    command: ["serve", "--dev-addr=0.0.0.0:8000"]
+    volumes:
+      - ../mkdocs.yml:/docs/mkdocs.yml:ro
+      - ../docs:/docs/docs:ro
+    ports:
+      - "${DOCS_BIND:-0.0.0.0}:${DOCS_PORT:-7344}:8000"
+    labels:
+      homepage.group: Shadowfall
+      homepage.name: Documentation
+      homepage.icon: mdi-book-open-page-variant
+      homepage.href: http://${PUBLIC_HOST:-${DEFAULT_PUBLIC_HOST:-localhost}}:${DOCS_PORT:-7344}
+      homepage.description: How to play, run and extend it
+      homepage.weight: "1"
+
+  # ---------------------------------------------------------------- monitoring
+  # Grafana on http://localhost:7343 (GRAFANA_PORT), dashboards: Shadowfall, Node Exporter Full, cAdvisor.
+  # See docs/deployment/monitoring.md. Leave it out with:  docker compose up -d shadowfall
+
+  prometheus:
+    image: prom/prometheus:v3.13.4
+    container_name: shadowfall-prometheus
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=${PROMETHEUS_RETENTION:-30d}
+      - --web.enable-lifecycle
+    volumes:
+      - ./monitoring/prometheus:/etc/prometheus:ro
+      - prometheus-data:/prometheus
+    ports:
+      # This machine only by default (no login): PROMETHEUS_BIND=0.0.0.0 opens it to your network.
+      - "${PROMETHEUS_BIND:-127.0.0.1}:${PROMETHEUS_PORT:-19090}:9090"
+    labels:
+      homepage.group: Monitoring
+      homepage.name: Prometheus
+      homepage.icon: prometheus.png
+      homepage.href: http://${PUBLIC_HOST:-${DEFAULT_PUBLIC_HOST:-localhost}}:${PROMETHEUS_PORT:-19090}
+      homepage.description: Metrics and alert rules
+      homepage.weight: "1"
+      homepage.widget.type: prometheus
+      homepage.widget.url: http://prometheus:9090
+
+  alertmanager:
+    image: prom/alertmanager:v0.34.1
+    container_name: shadowfall-alertmanager
+    restart: unless-stopped
+    # start.sh builds the config from the template and these (set them in server/.env); see docs/deployment/monitoring.md.
+    entrypoint: ["/bin/sh", "/etc/alertmanager/start.sh"]
+    environment:
+      DISCORD_WEBHOOK_URL: ${DISCORD_WEBHOOK_URL:-}
+      PUSHOVER_USER_KEY: ${PUSHOVER_USER_KEY:-}
+      PUSHOVER_TOKEN: ${PUSHOVER_TOKEN:-}
+    volumes:
+      - ./monitoring/alertmanager:/etc/alertmanager:ro
+      - alertmanager-data:/alertmanager
+    ports:
+      # This machine only by default (no login): ALERTMANAGER_BIND=0.0.0.0 opens it to your network.
+      - "${ALERTMANAGER_BIND:-127.0.0.1}:${ALERTMANAGER_PORT:-19093}:9093"
+    labels:
+      homepage.group: Monitoring
+      homepage.name: Alertmanager
+      homepage.icon: mdi-bell-alert
+      homepage.href: http://${PUBLIC_HOST:-${DEFAULT_PUBLIC_HOST:-localhost}}:${ALERTMANAGER_PORT:-19093}
+      homepage.description: Where alerts go (Discord, Pushover)
+      homepage.weight: "2"
+
+  grafana:
+    image: grafana/grafana:13.2.3
+    container_name: shadowfall-grafana
+    restart: unless-stopped
+    depends_on: [prometheus, loki]
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /var/lib/grafana/dashboards/shadowfall.json
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    ports:
+      - "${GRAFANA_BIND:-0.0.0.0}:${GRAFANA_PORT:-7343}:3000"
+    labels:
+      homepage.group: Monitoring
+      homepage.name: Grafana
+      homepage.icon: grafana.png
+      homepage.href: http://${PUBLIC_HOST:-${DEFAULT_PUBLIC_HOST:-localhost}}:${GRAFANA_PORT:-7343}
+      homepage.description: Dashboards, logs and alerts
+      homepage.weight: "0"
+      homepage.widget.type: grafana
+      homepage.widget.version: "2"
+      homepage.widget.url: http://grafana:3000
+      homepage.widget.username: ${GRAFANA_ADMIN_USER:-admin}
+      homepage.widget.password: ${GRAFANA_ADMIN_PASSWORD:-admin}
+
+  loki:
+    image: grafana/loki:3.7.8
+    container_name: shadowfall-loki
+    restart: unless-stopped
+    labels:
+      homepage.group: Infrastructure
+      homepage.name: Loki
+      homepage.icon: mdi-text-box-search-outline
+      homepage.description: Logs (search them in Grafana)
+    command: ["-config.file=/etc/loki/loki.yml"]
+    volumes:
+      - ./monitoring/loki/loki.yml:/etc/loki/loki.yml:ro
+      - loki-data:/loki
+
+  alloy:
+    image: grafana/alloy:v1.20.1
+    container_name: shadowfall-alloy
+    restart: unless-stopped
+    depends_on: [loki]
+    command: ["run", "--storage.path=/var/lib/alloy/data", "/etc/alloy/config.alloy"]
+    volumes:
+      - ./monitoring/alloy/config.alloy:/etc/alloy/config.alloy:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:v0.20.1
+    container_name: shadowfall-postgres-exporter
+    restart: unless-stopped
+    depends_on: [postgres]
+    environment:
+      DATA_SOURCE_NAME: postgresql://shadowfall:${POSTGRES_PASSWORD:-shadowfall}@postgres:5432/shadowfall?sslmode=disable
+
+  node-exporter:
+    image: prom/node-exporter:v1
+    container_name: shadowfall-node-exporter
+    restart: unless-stopped
+    pid: host
+    command:
+      - --path.procfs=/host/proc
+      - --path.sysfs=/host/sys
+      - --path.rootfs=/host/root
+      - --collector.filesystem.mount-points-exclude=^/(dev|proc|sys|run|var/lib/docker/.+)($$|/)
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/host/root:ro,rslave
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.55.1
+    container_name: shadowfall-cadvisor
+    restart: unless-stopped
+    labels:
+      homepage.group: Infrastructure
+      homepage.name: cAdvisor
+      homepage.icon: mdi-docker
+      homepage.description: Container metrics
+    privileged: true
+    devices:
+      - /dev/kmsg
+    command: ["--docker_only=true", "--housekeeping_interval=15s", "--store_container_labels=true"]
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+
+  # ---------------------------------------------------------------- dashboard
+
+  # Homepage (https://gethomepage.dev): one page with links to the game, the docs, Grafana, Prometheus and Alertmanager,
+  # whether each container is up, and live numbers (players online, Grafana alerts, Prometheus targets).
+  # http://<server>:7342 (HOMEPAGE_PORT). It finds the services by their homepage.* labels, through the Docker socket
+  # (read-only). Links use PUBLIC_HOST (default: this machine's name, set by task up).
+  homepage:
+    image: ghcr.io/gethomepage/homepage:v2.4.0
+    container_name: shadowfall-homepage
+    restart: unless-stopped
+    environment:
+      # Host names (with port) the page may be opened under; * allows any. e.g. HOMEPAGE_ALLOWED_HOSTS=docker2:7342,192.168.1.20:7342
+      HOMEPAGE_ALLOWED_HOSTS: ${HOMEPAGE_ALLOWED_HOSTS:-*}
+      LOG_TARGETS: stdout
+    volumes:
+      - ./homepage/settings.yaml:/app/config/settings.yaml:ro
+      - ./homepage/docker.yaml:/app/config/docker.yaml:ro
+      - ./homepage/services.yaml:/app/config/services.yaml:ro
+      - ./homepage/widgets.yaml:/app/config/widgets.yaml:ro
+      - ./homepage/bookmarks.yaml:/app/config/bookmarks.yaml:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    ports:
+      - "${HOMEPAGE_BIND:-0.0.0.0}:${HOMEPAGE_PORT:-7342}:3000"
+
+  # Builds the Unity WebGL client in Docker and writes it to ./public (no local Unity needed).
+  # Only runs on demand: task client:build   (or: docker compose --profile build run --rm client-builder)
+  client-builder:
+    profiles: ["build"]
+    image: unityci/editor:ubuntu-${UNITY_VERSION:-6000.0.23f1}-webgl-3
+    working_dir: /project
+    entrypoint: ["bash", "/project/tools/docker-build-client.sh"]
+    environment:
+      UNITY_LICENSE: ${UNITY_LICENSE:-}
+      UNITY_SERIAL: ${UNITY_SERIAL:-}
+      UNITY_EMAIL: ${UNITY_EMAIL:-}
+      UNITY_PASSWORD: ${UNITY_PASSWORD:-}
+      HOST_UID: ${HOST_UID:-1000}
+      HOST_GID: ${HOST_GID:-1000}
+      # Where the build goes, relative to Shadowfall/ (default server/public; auto-deploy uses server/public-next)
+      SF_BUILD_OUT: ${SF_BUILD_OUT:-}
+    volumes:
+      - ..:/project                          # the Unity project (Shadowfall/)
+      - unity-library:/project/Library       # import cache: makes rebuilds much faster
+
+  # Pre-deploy browser check (task check:browser; auto-deploy runs it on every new client build before it goes live).
+  # Only runs on demand (profile "check"). check-server is a throwaway copy of the game server: the build in CHECK_PUBLIC
+  # (default public), accounts in JSON files on a tmpfs (no DATABASE_URL), no published port, gone after the check.
+  check-server:
+    profiles: ["check"]
+    build: .
+    volumes:
+      - ./${CHECK_PUBLIC:-public}:/app/public:ro
+    tmpfs:
+      - /data
+    environment:
+      DATA_DIR: /data
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:7341/healthz"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+  # Headless Chromium (Playwright) playing the build on check-server: tools/browser-check. Screenshots and result.json
+  # go to CHECK_OUT (default ../.autodeploy/check).
+  browser-check:
+    profiles: ["check"]
+    build: ../tools/browser-check
+    image: shadowfall-browser-check
+    depends_on:
+      check-server:
+        condition: service_healthy
+    environment:
+      CHECK_URL: http://check-server:7341/
+      OUT_DIR: /out
+      TIMEOUT_S: ${CHECK_TIMEOUT_S:-480}
+    user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
+    shm_size: "1gb"      # Chromium needs more shared memory than Docker's 64 MB default
+    volumes:
+      - ${CHECK_OUT:-../.autodeploy/check}:/out
+
+  # One-time helper: Unity Hub in a container, shown in your browser via noVNC, to get a free
+  # Unity Personal license file into ../unity-license. Run: task license:activate
+  license-helper:
+    profiles: ["license"]
+    build: ../tools/license-helper
+    image: shadowfall-license-helper
+    shm_size: "1gb"
+    ports:
+      # Set LICENSE_HELPER_BIND=127.0.0.1 to reach it only through an SSH tunnel.
+      - "${LICENSE_HELPER_BIND:-0.0.0.0}:${LICENSE_HELPER_PORT:-6080}:6080"
+    environment:
+      HOST_UID: ${HOST_UID:-1000}
+      HOST_GID: ${HOST_GID:-1000}
+      VNC_PASSWORD: ${VNC_PASSWORD:-}
+      LICENSE_HELPER_PORT: ${LICENSE_HELPER_PORT:-6080}
+    volumes:
+      - ../unity-license:/out
+
+volumes:
+  unity-library:
+    name: shadowfall-unity-library
+  postgres-data:
+    name: shadowfall-postgres-data
+  prometheus-data:
+    name: shadowfall-prometheus-data
+  alertmanager-data:
+    name: shadowfall-alertmanager-data
+  grafana-data:
+    name: shadowfall-grafana-data
+  loki-data:
+    name: shadowfall-loki-data

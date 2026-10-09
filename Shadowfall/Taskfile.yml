@@ -1,0 +1,507 @@
+# Shadowfall task runner — https://taskfile.dev
+# Install: https://taskfile.dev/installation/   then run `task` to list everything.
+version: "3"
+
+# Per-machine settings (DEPLOY_HOST, DEPLOY_DIR...) can go in .deploy.env next to this file (not in git).
+dotenv: [".deploy.env"]
+
+vars:
+  SERVER_DIR: server
+  # Path to the Unity editor binary, e.g.
+  #   macOS:   /Applications/Unity/Hub/Editor/6000.0.23f1/Unity.app/Contents/MacOS/Unity
+  #   Windows: C:/Program Files/Unity/Hub/Editor/6000.0.23f1/Editor/Unity.exe
+  #   Linux:   ~/Unity/Hub/Editor/6000.0.23f1/Editor/Unity
+  UNITY: '{{.UNITY_PATH | default "unity"}}'
+  MKDOCS_IMAGE: squidfunk/mkdocs-material:9
+  # Port for the local docs preview (task docs:serve). The docs container started by `task up` is on 7344.
+  DOCS_PORT: '{{.DOCS_PORT | default "8000"}}'
+  # The Docker stack's host ports (game 7341, dashboard 7342, Grafana 7343, docs 7344) are set in server/.env
+  # (SHADOWFALL_PORT, HOMEPAGE_PORT, GRAFANA_PORT, DOCS_PORT) or the environment; compose reads them, and this
+  # prints a port the way compose sees it (tools/port-of.sh): the environment, then server/.env, then the default.
+  #   usage (in server/):  {{.PORT_OF}} GRAFANA_PORT 7343
+  PORT_OF: sh ../tools/port-of.sh
+  # Remote deploys (task release / deploy:remote / remote): the SSH host running the server, and the Shadowfall folder
+  # of its git checkout there. Override per run (DEPLOY_HOST=myhost task release) or in .deploy.env.
+  DEPLOY_HOST: '{{.DEPLOY_HOST | default "docker2"}}'
+  DEPLOY_DIR: '{{.DEPLOY_DIR | default "~/ai-water-meter/Shadowfall"}}'
+  # Runs Task on the deploy host: its ./bin/task (here or in the repo root) if there is one, else task on the PATH.
+  REMOTE_TASK: 'cd {{.DEPLOY_DIR | default "~/ai-water-meter/Shadowfall"}} && T=task; for t in ./bin/task ../bin/task; do [ -x "$t" ] && T=$t && break; done; $T'
+  # Unity version for the Docker build image, read from the project
+  UNITY_VERSION:
+    sh: "sed -n 's/^m_EditorVersion: *//p' ProjectSettings/ProjectVersion.txt | tr -d '\\r'"
+
+tasks:
+  default:
+    desc: List all tasks
+    silent: true
+    cmds:
+      - task --list
+
+  # ---------------------------------------------------------------- setup
+
+  setup:
+    desc: Install everything needed for local development (server deps)
+    cmds:
+      - task: server:install
+
+  # ---------------------------------------------------------------- server
+
+  server:install:
+    desc: Install the Node.js server dependencies
+    dir: "{{.SERVER_DIR}}"
+    sources: [package.json, package-lock.json]
+    cmds:
+      - npm ci
+
+  server:dev:
+    desc: Run the game server locally with auto-reload (http://localhost:7341)
+    dir: "{{.SERVER_DIR}}"
+    deps: [server:install]
+    env:
+      PORT: '{{.PORT | default "7341"}}'
+      DATA_DIR: ./data
+    cmds:
+      - npm run dev
+
+  server:test:
+    desc: Run the server end-to-end smoke test (spins up a throwaway server, accounts in files)
+    dir: "{{.SERVER_DIR}}"
+    deps: [server:install]
+    cmds:
+      - npm test
+
+  gamedata:
+    desc: Extract quest rewards and companion prices from the C# sources into server/gamedata.json
+    cmds:
+      - node tools/gamedata/extract.js
+
+  server:test:pg:
+    desc: The same smoke test against PostgreSQL (a throwaway postgres:17 container, or PG_TEST_URL)
+    dir: "{{.SERVER_DIR}}"
+    deps: [server:install]
+    cmds:
+      - |
+        if [ -n "$PG_TEST_URL" ]; then npm run test:pg; exit $?; fi
+        docker run -d --rm --name shadowfall-test-pg -e POSTGRES_PASSWORD=postgres -p 127.0.0.1:55432:5432 postgres:17 >/dev/null
+        trap 'docker stop shadowfall-test-pg >/dev/null' EXIT
+        until docker exec shadowfall-test-pg pg_isready -U postgres >/dev/null 2>&1; do sleep 1; done
+        sleep 1
+        PG_TEST_URL=postgres://postgres:postgres@127.0.0.1:55432/postgres npm run test:pg
+
+  # ---------------------------------------------------------------- client (Unity)
+
+  client:check:
+    desc: Compile the game scripts with the .NET SDK (no Unity needed)
+    cmds:
+      - dotnet build tools/compile-check -nologo -clp:NoSummary
+
+  client:build:
+    desc: Build the WebGL client in Docker into server/public (needs a Unity license, see docs)
+    dir: "{{.SERVER_DIR}}"
+    env:
+      UNITY_VERSION: "{{.UNITY_VERSION}}"
+      HOST_UID:
+        sh: id -u
+      HOST_GID:
+        sh: id -g
+    cmds:
+      - docker compose --profile build run --rm client-builder
+
+  client:build:local:
+    desc: Build the WebGL client with a locally installed Unity editor (set UNITY_PATH)
+    cmds:
+      - '"{{.UNITY}}" -batchmode -quit -nographics -projectPath "{{.ROOT_DIR}}" -buildTarget WebGL -executeMethod Shadowfall.EditorTools.ShadowfallBuild.BuildWebGL -logFile -'
+
+  license:activate:
+    desc: Get a free Unity Personal license in your browser (temporary Unity Hub on port 6080)
+    dir: "{{.SERVER_DIR}}"
+    env:
+      HOST_UID:
+        sh: id -u
+      HOST_GID:
+        sh: id -g
+    cmds:
+      - docker compose --profile license build license-helper
+      - docker compose --profile license run --rm --service-ports license-helper
+
+  update:
+    desc: "Everything on one machine: git pull, build the client in Docker, then (re)start the server"
+    cmds:
+      - git pull
+      - task: deploy
+
+  check:browser:
+    desc: "Play the WebGL build in headless Chromium against a throwaway server: register, create a hero, walk to the well and the waystone (screenshots in .autodeploy/check)"
+    dir: "{{.SERVER_DIR}}"
+    env:
+      # Which build to check, relative to server/ (auto-deploy checks public-next before swapping it in)
+      CHECK_PUBLIC: '{{.CHECK_PUBLIC | default "public"}}'
+      HOST_UID:
+        sh: id -u
+      HOST_GID:
+        sh: id -g
+    preconditions:
+      - sh: test -f {{.CHECK_PUBLIC | default "public"}}/build.json
+        msg: "No WebGL build to check: build the client first (task client:build)."
+    cmds:
+      - mkdir -p ../.autodeploy/check
+      - docker compose --profile check build -q check-server browser-check
+      - |
+        rc=0
+        docker compose --profile check run --rm browser-check || rc=$?
+        docker compose --profile check rm -sf check-server >/dev/null 2>&1 || true
+        echo "Screenshots and result.json: .autodeploy/check/"
+        exit $rc
+
+  # ---------------------------------------------------------------- auto-deploy (on the server host)
+
+  autodeploy:
+    desc: "Deploy once if origin has new commits: client build when the Unity project changed, then task up (what the cron job runs)"
+    cmds:
+      - sh tools/autodeploy.sh
+
+  autodeploy:install:
+    desc: "On the server host: check origin every INTERVAL minutes (default 5) and deploy new commits automatically (cron)"
+    vars:
+      INTERVAL: '{{.INTERVAL | default "5"}}'
+    cmds:
+      - mkdir -p .autodeploy
+      - |
+        line='*/{{.INTERVAL}} * * * * cd {{.ROOT_DIR}} && PATH="'"$PATH"'" TASK="{{.TASK_EXE}}" sh tools/autodeploy.sh >> .autodeploy/log 2>&1 # shadowfall-autodeploy'
+        { crontab -l 2>/dev/null | grep -v '# shadowfall-autodeploy'; echo "$line"; } | crontab -
+      - 'echo "Auto-deploy on: every {{.INTERVAL}} min this checkout follows origin/$(git rev-parse --abbrev-ref HEAD). Log: task autodeploy:log  -  off: task autodeploy:uninstall"'
+
+  autodeploy:uninstall:
+    desc: Stop auto-deploying (removes the cron job)
+    cmds:
+      - '{ crontab -l 2>/dev/null | grep -v "# shadowfall-autodeploy"; } | crontab -'
+      - echo "Auto-deploy off."
+
+  autodeploy:log:
+    desc: Show the auto-deploy log (and the cron job, if installed)
+    cmds:
+      - 'crontab -l 2>/dev/null | grep "# shadowfall-autodeploy" || echo "(auto-deploy is not installed: task autodeploy:install)"'
+      - tail -n {{.LINES | default "40"}} .autodeploy/log 2>/dev/null || echo "(no log yet)"
+
+  # ---------------------------------------------------------------- build here, run there
+
+  release:
+    desc: "git pull, build the WebGL client on this machine, then deploy it with that commit to DEPLOY_HOST (default docker2)"
+    cmds:
+      # Fast-forward only: stops if this checkout has diverged from the remote (sort that out by hand first).
+      - git pull --ff-only
+      - task: deploy:check
+      - task: '{{if eq .CLIENT_BUILD "local"}}client:build:local{{else}}client:build{{end}}'
+      - task: deploy:remote
+
+  deploy:check:
+    desc: Check this commit can be deployed (server code committed and pushed, the deploy host reachable)
+    internal: true
+    vars:
+      BRANCH:
+        sh: git rev-parse --abbrev-ref HEAD
+    cmds:
+      - cmd: |
+          if ! git diff --quiet HEAD -- server ':(exclude)server/public'; then
+            echo "Uncommitted changes in server/: commit and push them first (the deploy host takes the server code from git)."; exit 1
+          fi
+      - git fetch -q origin {{.BRANCH}}
+      - cmd: |
+          if ! git merge-base --is-ancestor HEAD origin/{{.BRANCH}}; then
+            echo "This commit isn't on origin/{{.BRANCH}} yet: git push first."; exit 1
+          fi
+      - ssh -o BatchMode=yes -o ConnectTimeout=10 {{.DEPLOY_HOST}} true
+
+  deploy:remote:
+    desc: "Deploy the WebGL build in server/public and the current commit to DEPLOY_HOST, and restart it there (no client build)"
+    vars:
+      BRANCH:
+        sh: git rev-parse --abbrev-ref HEAD
+      SHA:
+        sh: git rev-parse HEAD
+    preconditions:
+      - sh: test -f {{.SERVER_DIR}}/public/build.json
+        msg: "There is no WebGL build in server/public: run task client:build first (or task release, which does both)."
+    cmds:
+      - task: deploy:check
+      - echo "Updating the checkout on {{.DEPLOY_HOST}} to {{.BRANCH}} @ {{.SHA}}..."
+      - |
+        # Exactly the commit built here (the branch may have moved on since); --keep refuses to throw away local edits there.
+        ssh {{.DEPLOY_HOST}} "cd {{.DEPLOY_DIR}} && git fetch -q origin {{.BRANCH}} && git checkout -q {{.BRANCH}} && git reset -q --keep {{.SHA}} \
+          && [ \"\$(git rev-parse HEAD)\" = {{.SHA}} ] || { echo 'Could not move the checkout on {{.DEPLOY_HOST}} to {{.SHA}}: it has local changes to files that differ (see git status there).'; exit 1; }"
+      - echo "Copying the WebGL build..."
+      - rsync -az --delete --info=stats1 {{.SERVER_DIR}}/public/ {{.DEPLOY_HOST}}:{{.DEPLOY_DIR}}/{{.SERVER_DIR}}/public/
+      - echo "Restarting on {{.DEPLOY_HOST}}..."
+      - ssh {{.DEPLOY_HOST}} '{{.REMOTE_TASK}} up'
+      - |
+        echo "Deployed {{.SHA}} with build $(sed -n 's/.*"build" *: *"\([^"]*\)".*/\1/p' {{.SERVER_DIR}}/public/build.json) to {{.DEPLOY_HOST}}."
+
+  remote:
+    desc: "Run any task on DEPLOY_HOST: task remote -- data:reset   (or logs, ps, backup, accounts...)"
+    interactive: true
+    cmds:
+      - ssh -t {{.DEPLOY_HOST}} '{{.REMOTE_TASK}} {{.CLI_ARGS}}'
+
+  client:clean-cache:
+    desc: Delete the Docker build's Unity import cache (next build re-imports everything)
+    cmds:
+      - docker volume rm shadowfall-unity-library
+
+  # ---------------------------------------------------------------- art
+
+  art:fetch:
+    desc: Download the CC0 source art packs into .art-cache (needs git, curl, unzip, pip install gdown)
+    cmds:
+      - tools/art/fetch_sources.sh .art-cache
+
+  art:build:
+    desc: Rebuild Assets/Resources/Art/*.glb from .art-cache (trims animations, embeds textures)
+    cmds:
+      - python3 tools/art/build_art.py .art-cache
+
+  art:ground:
+    desc: Regenerate the procedural ground textures in Assets/Resources/Ground (needs numpy and Pillow)
+    cmds:
+      - python3 tools/art/make_ground.py
+
+  audio:fetch:
+    desc: Download the CC0 sound packs into .art-cache/audio
+    cmds:
+      - bash tools/audio/fetch_sources.sh .art-cache/audio
+
+  music:build:
+    desc: Download the CC0 music from OpenGameArt and rebuild Assets/Resources/Music and its playlist (needs ffmpeg)
+    cmds:
+      - python3 tools/audio/build_music.py .art-cache/music
+
+  audio:build:
+    desc: Rebuild Assets/Resources/Audio from .art-cache/audio plus synthesized sounds (needs numpy and ffmpeg)
+    cmds:
+      - python3 tools/audio/build_audio.py .art-cache/audio
+
+  ui:skin:
+    desc: Regenerate the dark UI skin textures in Assets/Resources/UI/Gothic (needs numpy and Pillow)
+    cmds:
+      - python3 tools/ui/make_skin.py
+
+  ui:icons:
+    desc: Re-render the UI icons from a game-icons.net checkout (ICONS_DIR, needs playwright-core + CHROMIUM_PATH)
+    cmds:
+      - node tools/ui/render_icons.js "{{.ICONS_DIR | default ".art-cache/icons"}}"
+
+  # ---------------------------------------------------------------- docker
+
+  up:
+    desc: Build and start the server, the docs, the monitoring stack and the dashboard (game :7341, dashboard :7342, Grafana :7343, docs :7344)
+    dir: "{{.SERVER_DIR}}"
+    env:
+      # The dashboard's links use this machine's name unless PUBLIC_HOST is set (in server/.env).
+      DEFAULT_PUBLIC_HOST:
+        sh: hostname
+    cmds:
+      # Which ports, and where each comes from (environment, server/.env or default): a clash is easy to trace.
+      - |
+        echo "Ports: game $({{.PORT_OF}} --why SHADOWFALL_PORT 7341), dashboard $({{.PORT_OF}} --why HOMEPAGE_PORT 7342), grafana $({{.PORT_OF}} --why GRAFANA_PORT 7343), docs $({{.PORT_OF}} --why DOCS_PORT 7344)"
+      - docker compose up -d --build --remove-orphans
+      - |
+        h="$(hostname)"
+        echo "Shadowfall is running on http://$h:$({{.PORT_OF}} SHADOWFALL_PORT 7341)  -  Grafana on http://$h:$({{.PORT_OF}} GRAFANA_PORT 7343)  -  docs on http://$h:$({{.PORT_OF}} DOCS_PORT 7344)"
+        echo "Everything in one place - the dashboard on http://$h:$({{.PORT_OF}} HOMEPAGE_PORT 7342)"
+
+  down:
+    desc: Stop the server container
+    dir: "{{.SERVER_DIR}}"
+    cmds:
+      - docker compose down
+
+  restart:
+    desc: Restart the game server container (e.g. after a new WebGL build)
+    dir: "{{.SERVER_DIR}}"
+    cmds:
+      - docker compose restart shadowfall
+
+  logs:
+    desc: Follow the game server logs
+    dir: "{{.SERVER_DIR}}"
+    cmds:
+      - docker compose logs -f --tail=100 shadowfall
+
+  ps:
+    desc: Show container status and health
+    dir: "{{.SERVER_DIR}}"
+    cmds:
+      - docker compose ps
+      - curl -fsS "http://localhost:$({{.PORT_OF}} SHADOWFALL_PORT 7341)/healthz" && echo
+
+  docker:build:
+    desc: Build the server image only (tag shadowfall-server:latest)
+    dir: "{{.SERVER_DIR}}"
+    cmds:
+      - docker build -t shadowfall-server:latest .
+
+  deploy:
+    desc: Full release - build the WebGL client in Docker, then rebuild and restart the server
+    cmds:
+      - task: client:build
+      - task: up
+
+  # ---------------------------------------------------------------- monitoring
+
+  monitoring:up:
+    desc: Start (or update) only the monitoring stack - Prometheus, Grafana, Loki, Alloy, node-exporter, cAdvisor, Alertmanager
+    dir: "{{.SERVER_DIR}}"
+    cmds:
+      - docker compose up -d prometheus alertmanager grafana loki alloy node-exporter cadvisor postgres-exporter
+      - echo "Grafana on http://$(hostname):$({{.PORT_OF}} GRAFANA_PORT 7343) (first login admin / admin unless GRAFANA_ADMIN_PASSWORD is set)"
+
+  monitoring:down:
+    desc: Stop the monitoring stack (the game keeps running; collected data is kept)
+    dir: "{{.SERVER_DIR}}"
+    cmds:
+      - docker compose stop prometheus alertmanager grafana loki alloy node-exporter cadvisor postgres-exporter
+
+  monitoring:test-alert:
+    desc: Send a test alert through Alertmanager (to Discord / Pushover, if configured in server/.env)
+    dir: "{{.SERVER_DIR}}"
+    cmds:
+      # From inside the container, so it works whatever host port Alertmanager is published on.
+      - |
+        docker compose exec -T alertmanager wget -qO- --header 'Content-Type: application/json' \
+          --post-data '[{"labels":{"alertname":"ShadowfallTestAlert","severity":"critical"},"annotations":{"summary":"Test alert from task monitoring:test-alert","description":"If you can read this, alerts reach you."}}]' \
+          http://localhost:9093/api/v2/alerts
+      - echo "Sent. It should arrive within a few seconds (and a resolved message about 5 minutes later)."
+
+  monitoring:reload:
+    desc: Reload Prometheus and Alertmanager after editing server/monitoring (no restart needed)
+    dir: "{{.SERVER_DIR}}"
+    cmds:
+      # From inside the containers, so it works whatever host ports they are published on.
+      - docker compose exec -T prometheus wget -qO- --post-data '' http://localhost:9090/-/reload
+      - docker compose exec -T alertmanager wget -qO- --post-data '' http://localhost:9093/-/reload
+      - echo "Reloaded. Grafana picks up dashboard file changes by itself within a minute."
+
+  monitoring:dashboard:
+    desc: Regenerate the Shadowfall Grafana dashboard from tools/monitoring/shadowfall_dashboard.py
+    cmds:
+      - python3 tools/monitoring/shadowfall_dashboard.py
+
+  metrics:
+    desc: Print the game server's current Prometheus metrics
+    dir: "{{.SERVER_DIR}}"
+    cmds:
+      - docker compose exec shadowfall node -e "fetch('http://localhost:9464/metrics').then(r=>r.text()).then(t=>process.stdout.write(t))"
+
+  # ---------------------------------------------------------------- data
+
+  world:reset:
+    desc: Forget the stored world map (rarely needed - a new build's map replaces it automatically)
+    prompt: This deletes server/data/world.json. Characters are kept. Continue?
+    cmds:
+      - rm -f {{.SERVER_DIR}}/data/world.json
+      - echo "World map removed. Restart the server; the next client to log in uploads the new map."
+
+  data:reset:
+    desc: "Wipe ALL game data - every account, character, stash and the world map (backs up first). On the deploy host: task remote -- data:reset"
+    dir: "{{.SERVER_DIR}}"
+    prompt: "This deletes EVERY account and character (the database and server/data) and the world map, for a fresh start. A backup goes to backups/ first. Continue?"
+    cmds:
+      - task: backup
+      - docker compose stop shadowfall
+      - docker compose up -d --wait postgres
+      # Drop every table; the server recreates the schema when it starts.
+      - docker compose exec -T postgres psql -q -v ON_ERROR_STOP=1 -U shadowfall shadowfall -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
+      # server/data too: the world map, and old account files the server would otherwise import again (as root, it owns them).
+      - docker compose run --rm --no-deps --entrypoint "" shadowfall sh -c 'rm -rf /data/* /data/.[!.]*'
+      - docker compose up -d shadowfall
+      - echo "All game data wiped. The first player to log in uploads the world map."
+      - echo "Register your admin account (the name in ADMINS) right away - until you do, anyone who registers that name becomes admin."
+
+  backup:
+    desc: Back up the account database (pg_dump) and server/data (world map, old character files) into backups/
+    vars:
+      STAMP:
+        sh: date +%Y%m%d-%H%M%S
+    cmds:
+      - mkdir -p backups
+      - tar -czf backups/shadowfall-data-{{.STAMP}}.tar.gz -C {{.SERVER_DIR}} data
+      - |
+        if (cd {{.SERVER_DIR}} && docker compose ps --status running --services 2>/dev/null | grep -qx postgres); then
+          (cd {{.SERVER_DIR}} && docker compose exec -T postgres pg_dump -U shadowfall --clean --if-exists shadowfall) | gzip > backups/shadowfall-db-{{.STAMP}}.sql.gz
+          echo "Wrote backups/shadowfall-db-{{.STAMP}}.sql.gz"
+        else
+          echo "The postgres container isn't running: only server/data was backed up."
+        fi
+      - echo "Wrote backups/shadowfall-data-{{.STAMP}}.tar.gz"
+
+  db:restore:
+    desc: "Restore the account database from a backup: task db:restore -- backups/shadowfall-db-<stamp>.sql.gz"
+    dir: "{{.SERVER_DIR}}"
+    prompt: This replaces every account and character in the database with the backup. Continue?
+    cmds:
+      - docker compose stop shadowfall
+      - gunzip -c "{{.USER_WORKING_DIR}}/{{.CLI_ARGS}}" | docker compose exec -T postgres psql -q -U shadowfall shadowfall
+      - docker compose start shadowfall
+      - echo "Restored {{.CLI_ARGS}}."
+
+  db:psql:
+    desc: Open a SQL prompt on the account database
+    dir: "{{.SERVER_DIR}}"
+    interactive: true
+    cmds:
+      - docker compose exec postgres psql -U shadowfall shadowfall
+
+  # ---------------------------------------------------------------- accounts
+
+  account:reset:
+    desc: "One-time password reset code for a player: task account:reset -- <account or character name>"
+    dir: "{{.SERVER_DIR}}"
+    cmds:
+      - docker compose exec shadowfall node admin-cli.js reset-code {{.CLI_ARGS}}
+
+  account:admin:
+    desc: "Give or take admin rights: task account:admin -- <account> on|off"
+    dir: "{{.SERVER_DIR}}"
+    cmds:
+      - docker compose exec shadowfall node admin-cli.js admin {{.CLI_ARGS}}
+
+  accounts:
+    desc: "List accounts and their characters (optional filter: task accounts -- ali)"
+    dir: "{{.SERVER_DIR}}"
+    cmds:
+      - docker compose exec shadowfall node admin-cli.js accounts {{.CLI_ARGS}}
+
+  # ---------------------------------------------------------------- docs
+
+  docs:serve:
+    desc: Preview the documentation site with live reload (http://localhost:8000)
+    cmds:
+      - |
+        if command -v mkdocs >/dev/null 2>&1; then
+          mkdocs serve -a 0.0.0.0:{{.DOCS_PORT}}
+        else
+          docker run --rm -it -p {{.DOCS_PORT}}:8000 -v "{{.ROOT_DIR}}:/docs" {{.MKDOCS_IMAGE}}
+        fi
+
+  docs:build:
+    desc: Build the static documentation site into site/
+    cmds:
+      - |
+        if command -v mkdocs >/dev/null 2>&1; then
+          mkdocs build --strict
+        else
+          docker run --rm -v "{{.ROOT_DIR}}:/docs" {{.MKDOCS_IMAGE}} build --strict
+        fi
+
+  docs:install:
+    desc: Install mkdocs-material locally with pip (optional - docs tasks fall back to Docker)
+    cmds:
+      - pip install -r docs/requirements.txt
+
+  # ---------------------------------------------------------------- CI
+
+  ci:
+    desc: Everything that can run without Unity - server tests, C# compile check, docs build
+    cmds:
+      - task: server:test
+      - task: client:check
+      - task: docs:build

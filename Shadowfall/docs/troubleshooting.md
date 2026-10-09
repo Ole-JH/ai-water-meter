@@ -1,0 +1,61 @@
+# Troubleshooting
+
+??? question "The browser shows *“the game client hasn't been built yet”*"
+    `server/public` only contains the placeholder page. Build the client with `task client:build` (Docker; see [Building the client in Docker](deployment/docker-client-build.md)) or **Shadowfall → Build WebGL** in Unity, then refresh. With Docker Compose the folder is mounted, so you don't need to restart.
+
+??? question "*“A new version of Shadowfall is out”* (or the page reloads by itself)"
+    Your browser had an older build than the server serves, so the page reloads into the new one; that's normal after an update.
+    If it then says *"your browser keeps loading the old one"*, clear the site's cached files (or hard-refresh with ++ctrl+shift+r++).
+
+??? question "*“Could not connect: could not reach the game server”*"
+    - In the editor, check the **Server** field on the login screen (default `ws://localhost:7341/ws`).
+    - Behind a reverse proxy, make sure `/ws` forwards the `Upgrade` and `Connection` headers. See [HTTPS & reverse proxy](deployment/reverse-proxy.md).
+    - Pages served over HTTPS need the proxy to terminate TLS, because the client uses `wss://` on HTTPS pages.
+
+??? question "The page loads forever or fails with a decompression error"
+    The build must be served with `Content-Encoding: gzip`. `server.js` does this. If another web server or CDN sits in front, make sure it doesn't strip or double-apply the encoding for `/Build/*.gz`.
+
+??? question "Monsters walk through walls, or get stuck"
+    The server paths monsters on its stored map. If the server log says *"World mismatch within build"*, a client built a different
+    map than the server's (a determinism bug in the world generator); that player plays on the server's map. `task world:reset` and a
+    restart make the next player's map the stored one.
+
+??? question "Pink / magenta objects"
+    You switched render pipelines after materials were created. Restart Play mode. Materials are always cloned from the active pipeline's default material.
+
+??? question "Models are all white (no textures)"
+    glTFast decodes the models' PNG/JPG textures with Unity's built-in **Image Conversion** module. If that module is disabled (it is listed in `Packages/manifest.json`), the build log says *"Jpeg/PNG textures failed because required built-in packages ... are not enabled"* and every model renders white. Make sure `com.unity.modules.imageconversion` and `com.unity.modules.unitywebrequesttexture` are in the manifest and rebuild; the build re-imports the models once by itself. If they are still white, clear the import cache with `task client:clean-cache` and build again.
+
+??? question "Build fails with *"Source file '.../Library/PackageCache/...' could not be found"*"
+    Unity's cached script compilation still refers to an older version of a package. The Docker build clears those caches by itself whenever `Packages/manifest.json` changes; if it still happens, run `task client:clean-cache` and build again.
+
+??? question "Glow or fog missing in the WebGL build only"
+    Run **Shadowfall → Open Main Scene** once (the build menu does this too). It creates `Assets/Resources/ShadowfallVariants.mat` and enables fog in the scene, so those shader variants are kept in the build.
+
+??? question "I forgot my password"
+    On the login screen choose **Forgot password?**. With your recovery code: **I have a code**. With an email address on the account (and a server that can send mail): **Email Me a Code**. Otherwise an admin can give you a one-time code with `/a resetpw <name>` or `task account:reset -- <name>`. See [Accounts & passwords](deployment/accounts.md#resetting-a-password).
+
+??? question "*“... is a character name. Log in with the name of its account.”* / *“No account with that name”*"
+    You log in with your **account** name, which may differ from your heroes' names. Characters from before accounts were imported as accounts with the same name and password, so for those the old character name works. `task accounts -- <part of the name>` shows which account a character belongs to.
+
+??? question "*“Too many wrong attempts. Try again in ...”*"
+    After 5 wrong passwords in 10 minutes an account is locked for 2 minutes; after 25 failures from one address in 15 minutes the address is blocked for 15 minutes. Wait, or restart the game server (`task restart`) to clear the counters. If **everyone** gets this behind a reverse proxy, set `TRUST_PROXY=1`. See [Accounts → Rate limits](deployment/accounts.md#rate-limits).
+
+??? question "*“You logged in from another location.”*"
+    The same account (or the same hero) was logged in somewhere else, which logs out the older session. If that wasn't you, change your password (++esc++ → **Account**): that logs out every other session.
+
+??? question "The server doesn't start: *“Could not open the database”* / *“password authentication failed”*"
+    The game server waits up to about 30 seconds for PostgreSQL and then exits. Check `docker compose logs postgres` (in `server/`) and `task ps`.
+
+    - *password authentication failed*: `POSTGRES_PASSWORD` in `server/.env` was changed after the database was created. Put the old one back, or change it in the database too; see [Accounts → Database password](deployment/accounts.md#password).
+    - The `postgres` container is restarting: often a full disk (`df -h`).
+    - With `npm start` or `task server:dev`, leave `DATABASE_URL` unset to store accounts in files, or point it at a running PostgreSQL server.
+
+??? question "Docker client build: *“No Unity license found”* or activation errors"
+    See [Building the client in Docker → License](deployment/docker-client-build.md#1-provide-a-unity-license). The easiest fix is `task license:activate`. If Unity rejects an existing license file, get a fresh one the same way.
+
+??? question "Build fails with *“Machine bindings don't match”* / *“'com.unity.editor.headless' was not found”*"
+    The license was activated for a different machine id than the build container's. This happens with licenses from older versions of the license helper, or `.ulf` files copied from a normal Unity Hub install. Pull the latest code, run `task license:activate` again, copy the **whole** `unity-license/` folder (including `licenses/`) to the build machine, and rebuild.
+
+??? question "`task license:activate`: the sign-in doesn't come back to Unity Hub"
+    After you sign in, Firefox (inside the desktop) has to open a `unityhub://` link. If it shows a dialog, choose **Open link** / **Unity Hub**. If nothing happens, close Firefox and click **Sign in** in the Hub again. Unity Hub's log is at `/tmp/unityhub.log` in the container (`docker exec -it <container> cat /tmp/unityhub.log`).

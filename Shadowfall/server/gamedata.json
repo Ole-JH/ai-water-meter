@@ -1,0 +1,915 @@
+{
+ "generatedFrom": "Assets/Scripts (tools/gamedata/extract.js)",
+ "quests": {
+  "wolves": {
+   "type": "Kill",
+   "target": "Dire Wolf",
+   "count": 6,
+   "minLevel": 1,
+   "gold": 40,
+   "xp": 150,
+   "itemLevel": 3,
+   "rarity": 1
+  },
+  "goblins": {
+   "type": "Kill",
+   "target": "Goblin",
+   "count": 10,
+   "minLevel": 3,
+   "gold": 90,
+   "xp": 400,
+   "itemLevel": 7,
+   "rarity": 1
+  },
+  "bones": {
+   "type": "Kill",
+   "target": "Skeleton",
+   "count": 10,
+   "minLevel": 6,
+   "gold": 160,
+   "xp": 900,
+   "itemLevel": 11,
+   "rarity": 2
+  },
+  "lich": {
+   "type": "Kill",
+   "target": "Lich King",
+   "count": 1,
+   "minLevel": 12,
+   "gold": 750,
+   "xp": 4000,
+   "itemLevel": 20,
+   "rarity": 3
+  },
+  "timber": {
+   "type": "Collect",
+   "target": "Oak Logs",
+   "count": 5,
+   "minLevel": 1,
+   "gold": 30,
+   "xp": 120,
+   "itemLevel": 0,
+   "rarity": 0
+  },
+  "fish": {
+   "type": "Collect",
+   "target": "Cooked Trout",
+   "count": 4,
+   "minLevel": 1,
+   "gold": 45,
+   "xp": 220,
+   "itemLevel": 5,
+   "rarity": 1
+  },
+  "willow": {
+   "type": "Collect",
+   "target": "Willow Logs",
+   "count": 6,
+   "minLevel": 4,
+   "gold": 120,
+   "xp": 600,
+   "itemLevel": 10,
+   "rarity": 2
+  },
+  "thomas_harvest": {
+   "type": "Kill",
+   "target": "Bandit",
+   "count": 6,
+   "minLevel": 2,
+   "gold": 60,
+   "xp": 300,
+   "itemLevel": 5,
+   "rarity": 1
+  },
+  "jenkins_logs": {
+   "type": "Collect",
+   "target": "Oak Logs",
+   "count": 5,
+   "minLevel": 1,
+   "gold": 25,
+   "xp": 120,
+   "itemLevel": 0,
+   "rarity": 0
+  },
+  "jenkins_scaling": {
+   "type": "Kill",
+   "target": "Dire Wolf",
+   "count": 8,
+   "minLevel": 2,
+   "gold": 45,
+   "xp": 220,
+   "itemLevel": 0,
+   "rarity": 0
+  },
+  "jenkins_containers": {
+   "type": "Collect",
+   "target": "Raw Trout",
+   "count": 5,
+   "minLevel": 2,
+   "gold": 50,
+   "xp": 260,
+   "itemLevel": 0,
+   "rarity": 0
+  },
+  "jenkins_hotfix": {
+   "type": "Collect",
+   "target": "Cooked Trout",
+   "count": 3,
+   "minLevel": 3,
+   "gold": 60,
+   "xp": 300,
+   "itemLevel": 4,
+   "rarity": 1
+  },
+  "jenkins_pipeline": {
+   "type": "Kill",
+   "target": "Goblin Shaman",
+   "count": 4,
+   "minLevel": 4,
+   "gold": 110,
+   "xp": 520,
+   "itemLevel": 8,
+   "rarity": 2
+  },
+  "jenkins_bluegreen": {
+   "type": "Collect",
+   "target": "Mana Potion",
+   "count": 3,
+   "minLevel": 4,
+   "gold": 80,
+   "xp": 360,
+   "itemLevel": 0,
+   "rarity": 0
+  },
+  "jenkins_cache": {
+   "type": "Kill",
+   "target": "Bandit",
+   "count": 6,
+   "minLevel": 5,
+   "gold": 100,
+   "xp": 480,
+   "itemLevel": 0,
+   "rarity": 0
+  },
+  "jenkins_build": {
+   "type": "Collect",
+   "target": "Copper Ore",
+   "count": 6,
+   "minLevel": 5,
+   "gold": 90,
+   "xp": 420,
+   "itemLevel": 0,
+   "rarity": 0
+  },
+  "jenkins_kill9": {
+   "type": "Kill",
+   "target": "Zombie",
+   "count": 9,
+   "minLevel": 6,
+   "gold": 140,
+   "xp": 700,
+   "itemLevel": 9,
+   "rarity": 2
+  },
+  "jenkins_rotation": {
+   "type": "Collect",
+   "target": "Willow Logs",
+   "count": 6,
+   "minLevel": 7,
+   "gold": 150,
+   "xp": 760,
+   "itemLevel": 0,
+   "rarity": 0
+  },
+  "jenkins_postmortem": {
+   "type": "Kill",
+   "target": "Skeleton",
+   "count": 8,
+   "minLevel": 7,
+   "gold": 170,
+   "xp": 900,
+   "itemLevel": 0,
+   "rarity": 0
+  },
+  "jenkins_monolith": {
+   "type": "Kill",
+   "target": "Rock Golem",
+   "count": 5,
+   "minLevel": 9,
+   "gold": 240,
+   "xp": 1300,
+   "itemLevel": 12,
+   "rarity": 2
+  },
+  "jenkins_leastprivilege": {
+   "type": "Kill",
+   "target": "Goblin Warchief",
+   "count": 1,
+   "minLevel": 10,
+   "gold": 320,
+   "xp": 1800,
+   "itemLevel": 13,
+   "rarity": 2
+  },
+  "jenkins_chaos": {
+   "type": "Kill",
+   "target": "Crypt Lord",
+   "count": 1,
+   "minLevel": 12,
+   "gold": 600,
+   "xp": 3200,
+   "itemLevel": 16,
+   "rarity": 3
+  },
+  "copper": {
+   "type": "Collect",
+   "target": "Copper Ore",
+   "count": 6,
+   "minLevel": 1,
+   "gold": 40,
+   "xp": 150,
+   "itemLevel": 4,
+   "rarity": 1
+  },
+  "iron": {
+   "type": "Collect",
+   "target": "Iron Ore",
+   "count": 6,
+   "minLevel": 5,
+   "gold": 150,
+   "xp": 700,
+   "itemLevel": 12,
+   "rarity": 2
+  },
+  "pine_wolves": {
+   "type": "Kill",
+   "target": "Frost Wolf",
+   "count": 10,
+   "minLevel": 12,
+   "gold": 220,
+   "xp": 1600,
+   "itemLevel": 14,
+   "rarity": 1
+  },
+  "pine_yew": {
+   "type": "Collect",
+   "target": "Yew Logs",
+   "count": 6,
+   "minLevel": 12,
+   "gold": 200,
+   "xp": 1400,
+   "itemLevel": 14,
+   "rarity": 1
+  },
+  "frost_wraiths": {
+   "type": "Kill",
+   "target": "Ice Wraith",
+   "count": 8,
+   "minLevel": 14,
+   "gold": 300,
+   "xp": 2200,
+   "itemLevel": 16,
+   "rarity": 1
+  },
+  "frost_giants": {
+   "type": "Kill",
+   "target": "Frost Giant",
+   "count": 4,
+   "minLevel": 15,
+   "gold": 420,
+   "xp": 3000,
+   "itemLevel": 17,
+   "rarity": 2
+  },
+  "frost_jarl": {
+   "type": "Kill",
+   "target": "Jarl Frostborn",
+   "count": 1,
+   "minLevel": 17,
+   "gold": 900,
+   "xp": 6000,
+   "itemLevel": 20,
+   "rarity": 3
+  },
+  "salt_raiders": {
+   "type": "Kill",
+   "target": "Desert Raider",
+   "count": 10,
+   "minLevel": 13,
+   "gold": 280,
+   "xp": 2000,
+   "itemLevel": 15,
+   "rarity": 1
+  },
+  "salt_golems": {
+   "type": "Kill",
+   "target": "Sand Golem",
+   "count": 5,
+   "minLevel": 15,
+   "gold": 400,
+   "xp": 2800,
+   "itemLevel": 17,
+   "rarity": 2
+  },
+  "salt_warlord": {
+   "type": "Kill",
+   "target": "Raider Warlord",
+   "count": 1,
+   "minLevel": 17,
+   "gold": 900,
+   "xp": 6000,
+   "itemLevel": 20,
+   "rarity": 3
+  },
+  "ash_ghouls": {
+   "type": "Kill",
+   "target": "Ash Ghoul",
+   "count": 12,
+   "minLevel": 17,
+   "gold": 450,
+   "xp": 3200,
+   "itemLevel": 19,
+   "rarity": 1
+  },
+  "ash_skeletons": {
+   "type": "Kill",
+   "target": "Ember Skeleton",
+   "count": 10,
+   "minLevel": 18,
+   "gold": 520,
+   "xp": 3800,
+   "itemLevel": 20,
+   "rarity": 2
+  },
+  "ash_golems": {
+   "type": "Kill",
+   "target": "Cinder Golem",
+   "count": 5,
+   "minLevel": 19,
+   "gold": 600,
+   "xp": 4500,
+   "itemLevel": 21,
+   "rarity": 2
+  },
+  "ash_king": {
+   "type": "Kill",
+   "target": "The Ashen King",
+   "count": 1,
+   "minLevel": 21,
+   "gold": 1500,
+   "xp": 9000,
+   "itemLevel": 24,
+   "rarity": 3
+  }
+ },
+ "companions": {
+  "hound": {
+   "price": 300,
+   "level": 1
+  },
+  "squire": {
+   "price": 800,
+   "level": 4
+  },
+  "witch": {
+   "price": 1400,
+   "level": 7
+  },
+  "ranger": {
+   "price": 2000,
+   "level": 10
+  },
+  "acolyte": {
+   "price": 2800,
+   "level": 12
+  },
+  "golem": {
+   "price": 5000,
+   "level": 15
+  },
+  "mount:horse": {
+   "price": 1500,
+   "level": 8
+  },
+  "mount:warhorse": {
+   "price": 6000,
+   "level": 15
+  },
+  "mount:stag": {
+   "price": 15000,
+   "level": 20
+  }
+ },
+ "achievements": {
+  "first_blood": {
+   "name": "First Blood",
+   "title": "",
+   "points": 5
+  },
+  "slayer_100": {
+   "name": "Monster Slayer",
+   "title": "",
+   "points": 10
+  },
+  "slayer_1000": {
+   "name": "Scourge of the Wilds",
+   "title": "the Slayer",
+   "points": 25
+  },
+  "slayer_5000": {
+   "name": "Unstoppable",
+   "title": "the Unstoppable",
+   "points": 50
+  },
+  "wolves": {
+   "name": "Wolfbane",
+   "title": "Wolfbane",
+   "points": 10
+  },
+  "goblins": {
+   "name": "Goblin Smasher",
+   "title": "",
+   "points": 10
+  },
+  "undead": {
+   "name": "Bone Collector",
+   "title": "Bonebreaker",
+   "points": 10
+  },
+  "bandits": {
+   "name": "Law of Hollowmere",
+   "title": "",
+   "points": 10
+  },
+  "golems": {
+   "name": "Rockbreaker",
+   "title": "",
+   "points": 10
+  },
+  "elite_1": {
+   "name": "Champion Slayer",
+   "title": "",
+   "points": 10
+  },
+  "elite_50": {
+   "name": "Champion Hunter",
+   "title": "Champion Hunter",
+   "points": 25
+  },
+  "boss_warchief": {
+   "name": "Warchief's End",
+   "title": "",
+   "points": 10
+  },
+  "boss_lich": {
+   "name": "Lichbane",
+   "title": "Lichbane",
+   "points": 25
+  },
+  "boss_crypt_lord": {
+   "name": "Rest in Pieces",
+   "title": "",
+   "points": 10
+  },
+  "boss_bandit_lord": {
+   "name": "Hideout Raided",
+   "title": "",
+   "points": 10
+  },
+  "boss_goblin_king": {
+   "name": "Regicide",
+   "title": "",
+   "points": 10
+  },
+  "boss_colossus": {
+   "name": "Colossus Toppled",
+   "title": "",
+   "points": 10
+  },
+  "boss_all": {
+   "name": "Kingslayer",
+   "title": "Kingslayer",
+   "points": 50
+  },
+  "boss_jarl": {
+   "name": "Giant Slayer",
+   "title": "",
+   "points": 25
+  },
+  "boss_warlord": {
+   "name": "Warlord Down",
+   "title": "",
+   "points": 25
+  },
+  "boss_ashen": {
+   "name": "Ashes to Ashes",
+   "title": "the Unburnt",
+   "points": 50
+  },
+  "boss_frost_witch": {
+   "name": "Thaw",
+   "title": "",
+   "points": 25
+  },
+  "boss_sand_colossus": {
+   "name": "Sand in the Gears",
+   "title": "",
+   "points": 25
+  },
+  "boss_cinder_lord": {
+   "name": "Snuffed Out",
+   "title": "the Fireproof",
+   "points": 50
+  },
+  "boss_nine": {
+   "name": "Crownbreaker",
+   "title": "Crownbreaker",
+   "points": 100
+  },
+  "boss_twelve": {
+   "name": "Nothing Left Standing",
+   "title": "the Undefeated",
+   "points": 150
+  },
+  "auction_buy": {
+   "name": "Going Once",
+   "title": "",
+   "points": 5
+  },
+  "auction_list_25": {
+   "name": "Open for Business",
+   "title": "the Merchant",
+   "points": 10
+  },
+  "guild_join": {
+   "name": "Sworn In",
+   "title": "",
+   "points": 5
+  },
+  "duel_first": {
+   "name": "Honour Satisfied",
+   "title": "",
+   "points": 10
+  },
+  "duel_25": {
+   "name": "Duelist",
+   "title": "the Duelist",
+   "points": 25
+  },
+  "duel_foes": {
+   "name": "Open Challenge",
+   "title": "",
+   "points": 25
+  },
+  "salvage_50": {
+   "name": "Scrapper",
+   "title": "",
+   "points": 10
+  },
+  "reforge_first": {
+   "name": "Second Opinion",
+   "title": "",
+   "points": 5
+  },
+  "reforge_25": {
+   "name": "Never Satisfied",
+   "title": "the Perfectionist",
+   "points": 10
+  },
+  "bounty_10": {
+   "name": "Bounty Hunter",
+   "title": "",
+   "points": 10
+  },
+  "bounty_days_7": {
+   "name": "Regular",
+   "title": "the Bounty Hunter",
+   "points": 25
+  },
+  "rift_1": {
+   "name": "Through the Tear",
+   "title": "",
+   "points": 10
+  },
+  "rift_10": {
+   "name": "Riftwalker",
+   "title": "the Riftwalker",
+   "points": 25
+  },
+  "rift_25": {
+   "name": "Beyond the Veil",
+   "title": "",
+   "points": 50
+  },
+  "worldboss_first": {
+   "name": "Giant Slayer",
+   "title": "",
+   "points": 10
+  },
+  "worldboss_all": {
+   "name": "Bane of Giants",
+   "title": "the Giantsbane",
+   "points": 50
+  },
+  "defend_first": {
+   "name": "Hold the Gate",
+   "title": "",
+   "points": 10
+  },
+  "defend_10": {
+   "name": "Shield of the Realm",
+   "title": "the Defender",
+   "points": 25
+  },
+  "wall_jump": {
+   "name": "Over the Wall",
+   "title": "",
+   "points": 10
+  },
+  "beacon": {
+   "name": "Light the Beacons",
+   "title": "",
+   "points": 5
+  },
+  "buckets": {
+   "name": "Bucket Brigade",
+   "title": "",
+   "points": 10
+  },
+  "ram": {
+   "name": "Splinters",
+   "title": "",
+   "points": 10
+  },
+  "banner": {
+   "name": "Strike the Colours",
+   "title": "",
+   "points": 10
+  },
+  "rescue": {
+   "name": "No One Left Behind",
+   "title": "",
+   "points": 15
+  },
+  "feast": {
+   "name": "Guest of Honour",
+   "title": "",
+   "points": 5
+  },
+  "defend_all": {
+   "name": "Warden of the Walls",
+   "title": "",
+   "points": 25
+  },
+  "dungeon_first": {
+   "name": "Into the Dark",
+   "title": "",
+   "points": 5
+  },
+  "dungeon_all": {
+   "name": "Delver",
+   "title": "",
+   "points": 10
+  },
+  "dungeon_seven": {
+   "name": "Underworld Tourist",
+   "title": "",
+   "points": 25
+  },
+  "dungeon_bottom": {
+   "name": "Rock Bottom",
+   "title": "",
+   "points": 10
+  },
+  "dungeon_veteran": {
+   "name": "Veteran",
+   "title": "",
+   "points": 10
+  },
+  "dungeon_nightmare": {
+   "name": "Nightmare Walker",
+   "title": "Nightmare Walker",
+   "points": 25
+  },
+  "dungeon_hell": {
+   "name": "Through Hell",
+   "title": "the Hellborn",
+   "points": 50
+  },
+  "four_seasons": {
+   "name": "Four Seasons",
+   "title": "",
+   "points": 25
+  },
+  "explore_25": {
+   "name": "Pathfinder",
+   "title": "",
+   "points": 10
+  },
+  "explore_75": {
+   "name": "Cartographer",
+   "title": "Cartographer",
+   "points": 25
+  },
+  "zones_all": {
+   "name": "Wanderer",
+   "title": "the Wanderer",
+   "points": 25
+  },
+  "zones_outer": {
+   "name": "World Walker",
+   "title": "the World Walker",
+   "points": 50
+  },
+  "waystones_all": {
+   "name": "Attuned",
+   "title": "",
+   "points": 25
+  },
+  "mount_first": {
+   "name": "Saddled Up",
+   "title": "",
+   "points": 10
+  },
+  "mount_all": {
+   "name": "Stable Master",
+   "title": "the Rider",
+   "points": 25
+  },
+  "waystone_trips": {
+   "name": "Frequent Traveller",
+   "title": "",
+   "points": 10
+  },
+  "level_5": {
+   "name": "Adventurer",
+   "title": "",
+   "points": 5
+  },
+  "level_10": {
+   "name": "Seasoned",
+   "title": "",
+   "points": 10
+  },
+  "level_20": {
+   "name": "Veteran Hero",
+   "title": "",
+   "points": 25
+  },
+  "level_30": {
+   "name": "Living Legend",
+   "title": "the Legendary",
+   "points": 50
+  },
+  "paragon_1": {
+   "name": "Beyond the Peak",
+   "title": "",
+   "points": 10
+  },
+  "paragon_25": {
+   "name": "Ascendant",
+   "title": "",
+   "points": 25
+  },
+  "paragon_100": {
+   "name": "Paragon",
+   "title": "the Paragon",
+   "points": 50
+  },
+  "quests_10": {
+   "name": "Helping Hand",
+   "title": "",
+   "points": 10
+  },
+  "quests_all": {
+   "name": "Hero of Hollowmere",
+   "title": "Hero of Hollowmere",
+   "points": 25
+  },
+  "gold_1000": {
+   "name": "Well-Off",
+   "title": "",
+   "points": 10
+  },
+  "gold_25000": {
+   "name": "Dragon's Hoard",
+   "title": "the Wealthy",
+   "points": 25
+  },
+  "legendary_1": {
+   "name": "Legendary!",
+   "title": "",
+   "points": 10
+  },
+  "legendary_10": {
+   "name": "Hoarder of Legends",
+   "title": "",
+   "points": 25
+  },
+  "set_1": {
+   "name": "Part of a Set",
+   "title": "",
+   "points": 10
+  },
+  "socket_10": {
+   "name": "Jeweler",
+   "title": "",
+   "points": 10
+  },
+  "deaths_10": {
+   "name": "Death's Regular",
+   "title": "Death's Regular",
+   "points": 5
+  },
+  "woodcutting_10": {
+   "name": "Lumberjack",
+   "title": "",
+   "points": 10
+  },
+  "woodcutting_25": {
+   "name": "Timberlord",
+   "title": "",
+   "points": 25
+  },
+  "mining_10": {
+   "name": "Prospector",
+   "title": "",
+   "points": 10
+  },
+  "mining_25": {
+   "name": "Deep Delver",
+   "title": "",
+   "points": 25
+  },
+  "fishing_10": {
+   "name": "Angler",
+   "title": "",
+   "points": 10
+  },
+  "fishing_25": {
+   "name": "Master Angler",
+   "title": "",
+   "points": 25
+  },
+  "smithing_10": {
+   "name": "Apprentice Smith",
+   "title": "",
+   "points": 10
+  },
+  "smithing_25": {
+   "name": "Master Smith",
+   "title": "Master Smith",
+   "points": 25
+  },
+  "cooking_10": {
+   "name": "Camp Cook",
+   "title": "",
+   "points": 10
+  },
+  "cooking_25": {
+   "name": "Master Chef",
+   "title": "Master Chef",
+   "points": 25
+  },
+  "crafted_50": {
+   "name": "Busy Hands",
+   "title": "",
+   "points": 10
+  },
+  "hooligan": {
+   "name": "Hooligan",
+   "title": "the Hooligan",
+   "points": 5
+  },
+  "party_1": {
+   "name": "Better Together",
+   "title": "",
+   "points": 5
+  },
+  "trade_1": {
+   "name": "Fair Deal",
+   "title": "",
+   "points": 5
+  },
+  "trade_25": {
+   "name": "Merchant Prince",
+   "title": "Merchant Prince",
+   "points": 25
+  },
+  "emotes_all": {
+   "name": "Life of the Party",
+   "title": "Life of the Party",
+   "points": 10
+  },
+  "companion_1": {
+   "name": "A Loyal Friend",
+   "title": "",
+   "points": 5
+  },
+  "companion_all": {
+   "name": "Beastmaster",
+   "title": "Beastmaster",
+   "points": 25
+  }
+ }
+}

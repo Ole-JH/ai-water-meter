@@ -1,0 +1,94 @@
+groups:
+  - name: shadowfall
+    rules:
+      - alert: ShadowfallDown
+        expr: up{job="shadowfall"} == 0
+        for: 2m
+        labels: { severity: critical }
+        annotations:
+          summary: The Shadowfall game server is not responding
+          description: Prometheus has not been able to scrape the game server for 2 minutes. Check `task logs`.
+      - alert: ShadowfallSlowTick
+        expr: histogram_quantile(0.95, sum by (le) (rate(shadowfall_tick_duration_seconds_bucket[5m]))) > 0.05
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: The world simulation is lagging
+          description: 95% of ticks take longer than 50 ms (a tick runs every 100 ms). Monsters will feel sluggish.
+      - alert: ShadowfallEventLoopLag
+        expr: nodejs_eventloop_lag_p99_seconds{job="shadowfall"} > 0.1
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: The game server's event loop is blocked for more than 100 ms
+      - alert: ShadowfallHandlerErrors
+        expr: sum(increase(shadowfall_handler_errors_total[10m])) > 0
+        labels: { severity: warning }
+        annotations:
+          summary: The game server threw errors while handling client messages
+          description: "Look for 'handler error' in the server logs (Grafana: Shadowfall dashboard, Server log panel)."
+      - alert: ShadowfallClientExceptions
+        expr: sum(increase(shadowfall_client_errors_total{kind=~"exception|load"}[15m])) > 10
+        labels: { severity: warning }
+        annotations:
+          summary: Players' games are failing to load or throwing exceptions
+          description: "Each message counts once per page load, so this is many players or many different errors. See the Client errors panel on the Shadowfall dashboard."
+      - alert: ShadowfallLoginAttack
+        expr: sum(increase(shadowfall_logins_total{result=~"bad_password|locked"}[15m])) > 100
+        labels: { severity: warning }
+        annotations:
+          summary: Many failed logins in the last 15 minutes
+          description: Someone may be guessing passwords. Accounts lock briefly after 5 wrong tries; see the account events.
+      - alert: ShadowfallWorldMismatch
+        expr: sum(increase(shadowfall_world_mismatches_total[1h])) > 0
+        labels: { severity: warning }
+        annotations:
+          summary: A game client built a different world map than the server's within the same build
+          description: "The world generator isn't deterministic (players still get in, on the server's map). Look for 'World mismatch within build' in the log."
+      - alert: ShadowfallSaveErrors
+        expr: sum(increase(shadowfall_character_saves_total{result="error"}[10m])) > 0
+        labels: { severity: critical }
+        annotations:
+          summary: Characters could not be saved to disk
+          description: Check that the database is up (PostgresDown) and the game server's log.
+      - alert: ShadowfallHighMemory
+        expr: process_resident_memory_bytes{job="shadowfall"} > 1.5e9
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: The game server uses more than 1.5 GB of memory
+  - name: database
+    rules:
+      - alert: PostgresDown
+        expr: pg_up == 0 or up{job="postgres"} == 0
+        for: 2m
+        labels: { severity: critical }
+        annotations:
+          summary: The account database is not reachable
+          description: Players can't log in or save. Check `docker compose logs postgres` in server/.
+      - alert: PostgresTooManyConnections
+        expr: sum(pg_stat_database_numbackends) / max(pg_settings_max_connections) > 0.8
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: The database is using more than 80% of its connections
+  - name: host
+    rules:
+      - alert: HostDiskAlmostFull
+        expr: (node_filesystem_avail_bytes{fstype!~"tmpfs|overlay|squashfs"} / node_filesystem_size_bytes{fstype!~"tmpfs|overlay|squashfs"}) < 0.1
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: "Less than 10% disk space left on {{ $labels.mountpoint }}"
+      - alert: HostHighCpu
+        expr: 1 - avg(rate(node_cpu_seconds_total{mode="idle"}[5m])) > 0.9
+        for: 15m
+        labels: { severity: warning }
+        annotations:
+          summary: The host's CPU has been above 90% for 15 minutes
+      - alert: HostLowMemory
+        expr: node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes < 0.1
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: Less than 10% of the host's memory is available

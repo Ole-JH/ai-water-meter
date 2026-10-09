@@ -1,0 +1,19 @@
+# Alertmanager: groups and routes the alerts from prometheus/alerts.yml (and Grafana-managed alerts).
+# This is a template: start.sh fills in the receiver and adds the receivers (Discord and/or Pushover) from server/.env:
+#
+#   DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/...
+#   PUSHOVER_USER_KEY=...   PUSHOVER_TOKEN=...
+#
+# then: task monitoring:up (or docker compose up -d alertmanager). With neither set, alerts only show in Grafana.
+route:
+  receiver: "__RECEIVER__"
+  group_by: [alertname]
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+  routes:
+    # Critical alerts (the game or the database down, saves failing) go out at once and repeat every hour.
+    - matchers: [severity="critical"]
+      receiver: "__RECEIVER__"
+      group_wait: 5s
+      repeat_interval: 1h

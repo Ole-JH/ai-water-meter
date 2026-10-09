@@ -1,0 +1,374 @@
+using System.Collections.Generic;
+using UnityEngine;
+
+namespace Shadowfall
+{
+    /// <summary>A companion for hire at Beastmaster Orla's.</summary>
+    public class CompanionDef
+    {
+        public string Id, Name, Role, Description, Icon;
+        public int Price, RequiredLevel;
+        public CharacterLook Look;
+        public float Damage;            // per attack at hero level 1 (grows 12% per level)
+        public float Cooldown = 1.2f, Range = 1.8f, Speed = 6.4f;
+        public bool Ranged;
+        public float Aoe;               // > 0: hits everything within this radius of the target
+        public Color Color = Color.white;
+        public string Special;          // "slow", "stun", "heal", "volley"
+
+        public static readonly CompanionDef[] All =
+        {
+            new CompanionDef
+            {
+                Id = "hound", Name = "War Hound", Role = "Fast melee", Icon = "companion_hound", Price = 300, RequiredLevel = 1,
+                Description = "A loyal mastiff that bites hard and hamstrings its prey (slows on hit).",
+                Look = new CharacterLook { Model = "Monsters/Wolf", Height = 1.05f, Anims = AnimSet.Wolf, RunSpeed = 6f, Tint = new Color(0.75f, 0.55f, 0.38f) },
+                Damage = 5f, Cooldown = 0.9f, Range = 1.5f, Speed = 7.2f, Special = "slow", Color = new Color(0.8f, 0.6f, 0.4f),
+            },
+            new CompanionDef
+            {
+                Id = "squire", Name = "Squire Edric", Role = "Sword & shield", Icon = "companion_squire", Price = 800, RequiredLevel = 4,
+                Description = "A sworn squire in his father's mail. Every few seconds he bashes a foe senseless (stun).",
+                Look = new CharacterLook { Model = "Characters/Knight", Height = 1.75f, Tint = new Color(0.8f, 0.85f, 0.95f), Weapon = "sword", Headgear = true, Parts = new[] { "Round_Shield" } },
+                Damage = 8f, Cooldown = 1.2f, Range = 1.8f, Special = "stun", Color = new Color(0.8f, 0.85f, 1f),
+            },
+            new CompanionDef
+            {
+                Id = "witch", Name = "Hedge Witch Nell", Role = "Fire magic", Icon = "companion_witch", Price = 1400, RequiredLevel = 7,
+                Description = "She hurls fire from a safe distance. Her fireballs burn everything around the target.",
+                Look = new CharacterLook { Model = "Characters/Mage", Height = 1.85f, Tint = new Color(0.75f, 1f, 0.7f), Weapon = "staff", Headgear = true },
+                Damage = 9f, Cooldown = 1.6f, Range = 9f, Ranged = true, Aoe = 1.8f, Color = new Color(1f, 0.45f, 0.1f),
+            },
+            new CompanionDef
+            {
+                Id = "ranger", Name = "Ranger Kestrel", Role = "Archer", Icon = "companion_ranger", Price = 2000, RequiredLevel = 10,
+                Description = "A hooded scout who never misses twice. Fires two arrows at a time.",
+                Look = new CharacterLook { Model = "Characters/RogueHooded", Height = 1.85f, Tint = new Color(0.8f, 0.95f, 0.8f), Weapon = "crossbow", Parts = new[] { "Knife_Offhand" } },
+                Damage = 7f, Cooldown = 1.1f, Range = 11f, Ranged = true, Special = "volley", Color = new Color(0.9f, 0.9f, 0.8f),
+            },
+            new CompanionDef
+            {
+                Id = "acolyte", Name = "Acolyte Mira", Role = "Healer", Icon = "companion_acolyte", Price = 2800, RequiredLevel = 12,
+                Description = "A novice of the Light. Heals you for 10% of your life when you are hurt, and smites with holy bolts.",
+                Look = new CharacterLook { Model = "Characters/Mage", Height = 1.8f, Tint = new Color(1.2f, 1.15f, 1.05f), Weapon = "wand", Parts = new[] { "Spellbook_open" } },
+                Damage = 5f, Cooldown = 1.5f, Range = 9f, Ranged = true, Special = "heal", Color = new Color(1f, 0.88f, 0.45f),
+            },
+            new CompanionDef
+            {
+                Id = "golem", Name = "Stone Golem", Role = "Heavy brawler", Icon = "companion_golem", Price = 5000, RequiredLevel = 15,
+                Description = "A quarry golem bound with runes. Slow, but every slam shakes the ground around it.",
+                Look = new CharacterLook { Model = "Monsters/Golem", Height = 2.3f, Anims = AnimSet.Big, RunSpeed = 4f, Tint = new Color(0.6f, 0.65f, 0.75f) },
+                Damage = 16f, Cooldown = 2f, Range = 2.2f, Speed = 5.6f, Aoe = 2.6f, Color = new Color(0.6f, 0.7f, 0.9f),
+            },
+        };
+
+        public static CompanionDef Get(string id)
+        {
+            foreach (var d in All) if (d.Id == id) return d;
+            return null;
+        }
+
+        public float DamageAt(int heroLevel) => Damage * (1f + 0.12f * (heroLevel - 1));
+    }
+
+    /// <summary>
+    /// A hired companion following a hero. For the local hero it fights (its hits count as the hero's);
+    /// following another player it is purely cosmetic.
+    /// </summary>
+    public class Companion : MonoBehaviour
+    {
+        public CompanionDef Def { get; private set; }
+        Transform owner;
+        bool fights;
+        CharacterView view;
+        readonly List<Vector3> path = new List<Vector3>();
+        float repathAt, nextAttack, nextSpecial, nextHeal, speed, nextBark, nextPick;
+        Enemy target;
+        static readonly List<Combatant> buffer = new List<Combatant>();
+
+        public static Companion Spawn(CompanionDef def, Transform owner, bool fights)
+        {
+            var go = new GameObject("Companion " + def.Name);
+            go.transform.position = owner.position - owner.forward * 1.5f + owner.right * 1.2f;
+            var c = go.AddComponent<Companion>();
+            c.Def = def;
+            c.owner = owner;
+            c.fights = fights;
+            c.view = CharacterView.Create(go.transform, def.Look);
+            if (c.view == null)
+                Factory.Prim(PrimitiveType.Capsule, go.transform, new Vector3(0, def.Look.Height * 0.5f, 0), new Vector3(0.6f, def.Look.Height * 0.5f, 0.6f), def.Color);
+            c.Arrive(go.transform.position);
+            c.Dress();
+            return c;
+        }
+
+        public void Dismiss()
+        {
+            SpellFx.Column(transform.position, Def.Color, 0.7f, 3.5f, 0.5f);
+            SpellFx.Dust(transform.position, 0.8f);
+            Destroy(gameObject);
+        }
+
+        /// <summary>A summoning flourish: a rune circle, a pillar of light and a swirl in the companion's colour.</summary>
+        void Arrive(Vector3 at)
+        {
+            SpellFx.CastCircle(at, Def.Color, 1.4f, 0.8f);
+            SpellFx.Column(at, Def.Color, 0.7f, 4f, 0.6f);
+            SpellFx.Swirl(at + Vector3.up * 0.6f, null, Def.Color, 1f, 0.6f, 60f, false);
+        }
+
+        /// <summary>Idle effects that give each companion its own presence (fire in the witch's hand, the golem's runes...).</summary>
+        void Dress()
+        {
+            if (!SpellFx.Ready) return;
+            float h = Def.Look.Height;
+            switch (Def.Id)
+            {
+                case "witch":
+                    // a little fire burning in her hand
+                    if (view != null)
+                        SpellFx.Loop(new SpellFx.P
+                        {
+                            Rate = 18, Life = new Vector2(0.25f, 0.5f), Speed = new Vector2(0.05f, 0.2f), Size = new Vector2(0.1f, 0.2f),
+                            Start = new Color(1f, 0.9f, 0.5f), Mid = Def.Color, End = new Color(0.6f, 0.1f, 0f, 0f), Radius = 0.06f, Velocity = new Vector3(0f, 0.9f, 0f), Max = 40,
+                        }, view.Hand, Vector3.up * 0.15f);
+                    Glow(new Color(1f, 0.55f, 0.2f), 0.9f, 4f, h * 0.6f);
+                    break;
+                case "acolyte":
+                    // motes of light circling her
+                    var motes = SpellFx.Loop(new SpellFx.P
+                    {
+                        Rate = 10, Life = new Vector2(1f, 1.6f), Speed = new Vector2(0f, 0.05f), Size = new Vector2(0.05f, 0.1f),
+                        Start = Color.white, Mid = Def.Color, End = new Color(1f, 0.8f, 0.4f, 0f), Shape = ParticleSystemShapeType.Circle, Radius = 0.7f,
+                        Orbital = 2f, Velocity = new Vector3(0f, 0.5f, 0f), Max = 30,
+                    }, transform, Vector3.up * 0.3f);
+                    if (motes != null) { var main = motes.main; main.simulationSpace = ParticleSystemSimulationSpace.Local; }
+                    Glow(Def.Color, 0.8f, 4f, h * 0.7f);
+                    break;
+                case "golem":
+                    // rune sparks rising from its core
+                    SpellFx.Loop(new SpellFx.P
+                    {
+                        Rate = 8, Life = new Vector2(0.8f, 1.4f), Speed = new Vector2(0.1f, 0.3f), Size = new Vector2(0.06f, 0.12f),
+                        Start = new Color(0.8f, 0.95f, 1f), Mid = new Color(0.4f, 0.7f, 1f), End = new Color(0.2f, 0.4f, 1f, 0f), Radius = 0.5f,
+                        Velocity = new Vector3(0f, 0.8f, 0f), Max = 30,
+                    }, transform, Vector3.up * h * 0.55f);
+                    Glow(new Color(0.45f, 0.7f, 1f), 1.2f, 5f, h * 0.6f);
+                    break;
+                case "squire":
+                    break;
+                case "ranger":
+                    // drifting leaves
+                    SpellFx.Loop(new SpellFx.P
+                    {
+                        Rate = 2, Life = new Vector2(1.5f, 2.5f), Speed = new Vector2(0.1f, 0.3f), Size = new Vector2(0.06f, 0.1f),
+                        Start = new Color(0.5f, 0.8f, 0.3f, 0.9f), End = new Color(0.4f, 0.6f, 0.2f, 0f), Radius = 0.5f, Gravity = 0.05f, Smoke = true, Max = 10,
+                    }, transform, Vector3.up * h * 0.8f);
+                    break;
+            }
+        }
+
+        void Glow(Color c, float intensity, float range, float y)
+        {
+            var l = new GameObject("CompanionGlow").AddComponent<Light>();
+            l.transform.SetParent(transform, false);
+            l.transform.localPosition = new Vector3(0f, y, 0.3f);
+            l.type = LightType.Point;
+            l.color = c;
+            l.intensity = intensity;
+            l.range = range;
+            l.shadows = LightShadows.None;
+        }
+
+        float nextStep;
+
+        /// <summary>Heavy companions kick up dust as they run.</summary>
+        void Footfalls()
+        {
+            if (speed <= 0.1f || Time.time < nextStep || (Def.Id != "golem" && Def.Id != "hound")) return;
+            bool heavy = Def.Id == "golem";
+            nextStep = Time.time + (heavy ? 0.45f : 0.3f);
+            SpellFx.Dust(transform.position - transform.forward * 0.3f, heavy ? 0.5f : 0.22f);
+        }
+
+        Vector3 FollowSpot => owner.position - owner.forward * 1.6f + owner.right * 1.3f;
+
+        void Update()
+        {
+            if (owner == null) { Destroy(gameObject); return; }
+            float dt = Time.deltaTime;
+            var pos = transform.position;
+            float toOwner = Factory.FlatDistance(pos, owner.position);
+            // Lost behind (dungeon change, teleport, respawn): catch up instantly.
+            if (toOwner > 24f)
+            {
+                transform.position = new Vector3(FollowSpot.x, 0f, FollowSpot.z);
+                path.Clear();
+                target = null;
+                Arrive(transform.position);
+                return;
+            }
+
+            var hero = Player.I;
+            bool combat = fights && hero != null && !hero.IsDead && !WorldGenerator.InTown(owner.position);
+            if (!combat) target = null;
+            else if (Time.time >= nextPick || (target != null && target.IsDead)) { nextPick = Time.time + 0.25f; PickTarget(hero); }
+
+            Vector3? goal = null;
+            float stopAt = 0.4f;
+            if (target != null)
+            {
+                float d = Factory.FlatDistance(pos, target.transform.position) - target.Radius;
+                if (d > Def.Range || (Def.Ranged && !WorldGrid.Instance.LineOfSight(pos, target.transform.position)))
+                {
+                    goal = target.transform.position;
+                    stopAt = Def.Range * 0.8f;
+                }
+                else
+                {
+                    path.Clear();
+                    Factory.Face(transform, target.transform.position, 0.3f);
+                    if (Time.time >= nextAttack) Attack(hero);
+                }
+            }
+            else if (toOwner > 3f) goal = FollowSpot;
+
+            if (combat && Def.Special == "heal" && Time.time >= nextHeal && hero.Health < hero.MaxHealth * 0.7f)
+            {
+                nextHeal = Time.time + 6f;
+                hero.Heal(hero.MaxHealth * 0.1f);
+                view?.Cast();
+                if (view != null) SpellFx.CastGlow(view.Hand, Def.Color, 0.5f);
+                SpellFx.HolyLight(hero.transform.position);
+                SpellFx.Column(hero.transform.position, Def.Color, 0.8f, 4f, 0.7f);
+                SpellFx.Swirl(hero.transform.position + Vector3.up * 0.4f, hero.transform, Def.Color, 0.9f, 0.8f, 50f, false);
+                Sfx.Play("holy_cast", hero.transform.position, 0.5f, 0.05f);
+            }
+
+            speed = 0f;
+            if (goal.HasValue)
+            {
+                if (Time.time >= repathAt || path.Count == 0)
+                {
+                    repathAt = Time.time + 0.4f;
+                    WorldGrid.Instance.FindPath(pos, goal.Value, path, 3000);
+                }
+                float run = toOwner > 8f ? Def.Speed * 1.35f : Def.Speed;
+                if (path.Count > 0 && Factory.FlatDistance(pos, goal.Value) > stopAt)
+                {
+                    var next = path[0];
+                    var to = Factory.Flat(next - pos);
+                    float step = run * dt;
+                    if (to.magnitude <= step) { transform.position = new Vector3(next.x, 0f, next.z); path.RemoveAt(0); }
+                    else transform.position += to.normalized * step;
+                    if (to.sqrMagnitude > 0.001f) transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(to), dt * 12f);
+                    speed = run;
+                }
+            }
+            else if (target == null) Factory.Face(transform, owner.position + owner.forward * 3f, 0.05f);
+            view?.UpdateLocomotion(speed);
+            Footfalls();
+
+            if (fights && Time.time >= nextBark && target != null)
+            {
+                nextBark = Time.time + Random.Range(20f, 40f);
+                if (Def.Id == "hound") Sfx.Play("wolf_attack", transform.position, 0.5f, 0.1f);
+            }
+        }
+
+        void PickTarget(Player hero)
+        {
+            if (target != null && (target.IsDead || Factory.FlatDistance(target.transform.position, hero.transform.position) > 14f)) target = null;
+            if (hero.AttackTarget is Enemy focus && !focus.IsDead && Factory.FlatDistance(focus.transform.position, hero.transform.position) < 14f)
+            {
+                target = focus;
+                return;
+            }
+            if (target != null) return;
+            float best = 9f;
+            foreach (var c in Combatant.All)
+            {
+                if (!(c is Enemy e) || e.IsDead) continue;
+                if (Factory.FlatDistance(e.transform.position, hero.transform.position) > 10f) continue;
+                float d = Factory.FlatDistance(e.transform.position, transform.position);
+                if (d < best) { best = d; target = e; }
+            }
+        }
+
+        void Attack(Player hero)
+        {
+            nextAttack = Time.time + Def.Cooldown * Random.Range(0.9f, 1.1f);
+            float dmg = Def.DamageAt(hero.Level) * Random.Range(0.85f, 1.15f);
+            var from = transform.position + Vector3.up * 1.1f + transform.forward * 0.5f;
+            var at = target.transform.position + Vector3.up * 1f;
+            if (Def.Ranged)
+            {
+                if (Def.Id == "witch")
+                {
+                    view?.Cast();
+                    if (view != null) SpellFx.CastGlow(view.Hand, Def.Color, 0.35f);
+                    SpellFx.CastCircle(transform.position, Def.Color, 0.9f, 0.45f);
+                    Sfx.Play("fire_cast", transform.position, 0.4f, 0.1f);
+                    Projectile.Fire(hero, from, at, 18f, dmg, Def.Color, 0.4f, Def.Aoe, Def.Range + 4f).WithTrail(SpellFx.Trail.Fire);
+                }
+                else if (Def.Id == "acolyte")
+                {
+                    view?.Cast();
+                    if (view != null) SpellFx.CastGlow(view.Hand, Def.Color, 0.35f);
+                    SpellFx.CastCircle(transform.position, Def.Color, 0.9f, 0.45f);
+                    Projectile.Fire(hero, from, at, 20f, dmg, Def.Color, 0.35f, 0f, Def.Range + 4f).WithTrail(SpellFx.Trail.Magic);
+                }
+                else
+                {
+                    view?.Shoot();
+                    Sfx.Play("bow", transform.position, 0.4f, 0.12f);
+                    SpellFx.Hit(from, new Color(0.8f, 1f, 0.7f), false, 6);
+                    int arrows = Def.Special == "volley" ? 2 : 1;
+                    for (int i = 0; i < arrows; i++)
+                    {
+                        var side = transform.right * (i - (arrows - 1) * 0.5f) * 0.6f;
+                        Projectile.Fire(hero, from + side, at + side, 26f, dmg, Def.Color, 0.22f, 0f, Def.Range + 4f).WithTrail(SpellFx.Trail.Arrow).WithShape(Projectile.Shape.Arrow);
+                    }
+                }
+                return;
+            }
+
+            view?.Attack(0.5f);
+            Sfx.Play(Def.Id == "hound" ? "wolf_attack" : Def.Id == "golem" ? "boom" : "swing", transform.position + Vector3.up, Def.Id == "golem" ? 0.5f : 0.45f, 0.15f);
+            if (Def.Aoe > 0f)
+            {
+                Combatant.Overlap(target.transform.position, Def.Aoe, Faction.Player, buffer);
+                foreach (var c in buffer.ToArray()) c.TakeDamage(dmg, hero, false);
+                SpellFx.Shockwave(target.transform.position, Def.Color, Def.Aoe);
+                SpellFx.Dust(target.transform.position, Def.Aoe * 0.5f);
+                CameraRig.Shake(0.1f);
+            }
+            else
+            {
+                target.TakeDamage(dmg, hero, false);
+                var facing = Quaternion.LookRotation(Factory.Flat(target.transform.position - transform.position).normalized + transform.forward * 0.001f);
+                if (Def.Id == "hound")
+                {
+                    // a snapping bite: two claw arcs and blood
+                    SpellFx.CrossSlash(transform.position + Vector3.down * 0.5f, facing, 1.3f, new Color(0.9f, 0.3f, 0.2f));
+                    SpellFx.Hit(target.Center, new Color(0.55f, 0.03f, 0.03f), true, 8);
+                }
+                else
+                {
+                    SpellFx.Cleave(transform.position, facing, 2f, AbilityFx.Steel);
+                    SpellFx.Hit(target.Center, AbilityFx.Steel, false, 8);
+                }
+            }
+
+            if (Def.Special == "slow" && Random.value < 0.35f) target.Slow(2f);
+            if (Def.Special == "stun" && Time.time >= nextSpecial)
+            {
+                nextSpecial = Time.time + 7f;
+                target.Stun(1.2f);
+                SpellFx.Hit(target.Center, new Color(1f, 0.9f, 0.5f), false, 20);
+                SpellFx.Shockwave(target.transform.position, AbilityFx.Gold, 1.2f);
+                Sfx.Play("hit_armor", target.Center, 0.5f, 0.1f);
+            }
+        }
+    }
+}

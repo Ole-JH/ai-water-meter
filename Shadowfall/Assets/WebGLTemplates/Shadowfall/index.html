@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#07060a">
+  <title>{{{ PRODUCT_NAME }}}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=EB+Garamond:ital@0;1&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #07060a; --ink: #e8dcc0; --muted: #a8977a; --gold: #f0c45a; --ember: #ff7a2e; --blood: #8a1f12;
+      --title: "Cinzel", "Trajan Pro", Georgia, serif; --body: "EB Garamond", Georgia, "Times New Roman", serif;
+    }
+    html, body { margin: 0; height: 100%; background: var(--bg); overflow: hidden; color: var(--ink); }
+    #unity-canvas { width: 100%; height: 100%; display: block; background: var(--bg); outline: none; }
+
+    /* ---- the loading screen */
+    #loading { position: fixed; inset: 0; overflow: hidden; background: radial-gradient(ellipse at 50% 18%, #1d1a2c 0%, #0c0b12 55%, #050407 100%);
+               transition: opacity 1.2s ease, visibility 1.2s; z-index: 10; }
+    #loading.done { opacity: 0; visibility: hidden; }
+    #scene { position: absolute; inset: 0; width: 100%; height: 100%; }
+    #embers { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+    .fog { position: absolute; left: -50%; width: 200%; height: 38%; bottom: 0; pointer-events: none; opacity: .55;
+           background: radial-gradient(ellipse at 30% 70%, rgba(120,110,140,.22), transparent 60%),
+                       radial-gradient(ellipse at 75% 80%, rgba(90,80,110,.25), transparent 55%);
+           animation: drift 60s linear infinite alternate; }
+    .fog.two { bottom: -6%; opacity: .4; animation-duration: 90s; animation-direction: alternate-reverse; }
+    @keyframes drift { from { transform: translateX(-8%); } to { transform: translateX(8%); } }
+    .vignette { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(ellipse at center, transparent 45%, rgba(0,0,0,.75) 100%); }
+
+    .panel { position: absolute; left: 50%; top: 44%; transform: translate(-50%, -50%); width: min(640px, calc(100vw - 32px));
+             text-align: center; }
+    .crest { width: 74px; height: 74px; margin: 0 auto 6px; filter: drop-shadow(0 0 14px rgba(240,196,90,.35)); animation: breathe 5s ease-in-out infinite; }
+    @keyframes breathe { 50% { filter: drop-shadow(0 0 22px rgba(255,140,60,.55)); } }
+    h1 { font: 900 clamp(30px, 8.4vw, 70px)/1.1 var(--title); letter-spacing: .12em; margin: 0; padding-left: .12em; white-space: nowrap;
+         background: linear-gradient(180deg, #fff3cf 0%, #f0c45a 45%, #a2581c 100%); -webkit-background-clip: text; background-clip: text; color: transparent;
+         text-shadow: 0 0 40px rgba(255,150,60,.18); filter: drop-shadow(0 3px 0 rgba(0,0,0,.6)); }
+    .tagline { font: italic 400 clamp(15px, 2.6vw, 19px)/1.4 var(--body); color: var(--muted); margin: 10px 0 34px; letter-spacing: .02em; }
+    .rule { display: flex; align-items: center; gap: 12px; color: #6d5a3a; margin: 0 auto 26px; width: 70%; }
+    .rule::before, .rule::after { content: ""; flex: 1; height: 1px; background: linear-gradient(90deg, transparent, #6d5a3a, transparent); }
+
+    /* progress */
+    .bar { position: relative; height: 16px; margin: 0 6px; border: 1px solid #6d5a3a; border-radius: 9px; background: #120f0c;
+           box-shadow: inset 0 2px 6px rgba(0,0,0,.8), 0 0 0 3px #0b0908, 0 0 0 4px #3a2f20; }
+    .bar::before, .bar::after { content: "\25C6"; position: absolute; top: 50%; transform: translateY(-50%); color: #8c7448; font-size: 14px; }
+    .bar::before { left: -14px; } .bar::after { right: -14px; }
+    #fill { position: absolute; inset: 2px auto 2px 2px; width: 0; border-radius: 6px; transition: width .35s ease;
+            background: linear-gradient(90deg, #5c140b, #b2401a 45%, #f08c2e 85%, #ffd27a);
+            box-shadow: 0 0 12px rgba(255,120,40,.55); overflow: hidden; }
+    #fill::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, rgba(255,255,255,.35), transparent);
+                   transform: translateX(-100%); animation: sheen 2.2s ease-in-out infinite; }
+    @keyframes sheen { to { transform: translateX(100%); } }
+    .status { display: flex; justify-content: space-between; margin: 12px 4px 0; font: 500 13px/1 var(--title); letter-spacing: .12em;
+              text-transform: uppercase; color: var(--muted); }
+    #pct { color: var(--gold); }
+
+    .tip { min-height: 3.2em; margin: 30px auto 0; max-width: 470px; font: 400 17px/1.55 var(--body); color: #cdbf9f; transition: opacity .6s; }
+    .tip b { font: 700 12px/1 var(--title); letter-spacing: .16em; color: var(--gold); display: block; margin-bottom: 8px; }
+    .tip kbd { font: 600 13px/1 var(--title); color: #fff1cc; border: 1px solid #6d5a3a; border-bottom-width: 2px; border-radius: 4px;
+               padding: 2px 6px; background: #1c1712; }
+    .tip.fade { opacity: 0; }
+
+    #error { display: none; margin: 26px auto 0; max-width: 460px; padding: 14px 18px; border: 1px solid var(--blood); border-radius: 6px;
+             background: rgba(60,10,6,.55); font: 16px/1.5 var(--body); color: #ffd7c8; }
+    #error button { margin-top: 12px; font: 700 13px/1 var(--title); letter-spacing: .12em; color: #fff1cc; background: #5c140b;
+                    border: 1px solid #b2401a; border-radius: 4px; padding: 10px 18px; cursor: pointer; }
+    .loading-failed .bar, .loading-failed .status, .loading-failed .tip { display: none; }
+    .loading-failed #error { display: block; }
+    .foot { position: absolute; bottom: 14px; left: 0; right: 0; text-align: center; font: 12px var(--body); color: #5d5140; letter-spacing: .04em; }
+
+    @media (max-height: 560px) { .crest { display: none; } .tagline { margin-bottom: 18px; } .tip { margin-top: 18px; } }
+    @media (prefers-reduced-motion: reduce) { .fog, .crest, #fill::after { animation: none; } }
+  </style>
+</head>
+<body>
+  <canvas id="unity-canvas" tabindex="-1"></canvas>
+
+  <div id="loading">
+    <!-- A night over the hills: moon, mountains, Hollowmere's towers -->
+    <svg id="scene" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
+      <defs>
+        <radialGradient id="moonGlow" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stop-color="#ffe9b8" stop-opacity=".55"/>
+          <stop offset="40%" stop-color="#e7a85a" stop-opacity=".12"/>
+          <stop offset="100%" stop-color="#e7a85a" stop-opacity="0"/>
+        </radialGradient>
+        <mask id="crescent"><rect width="1600" height="900" fill="#fff"/><circle cx="1206" cy="196" r="58" fill="#000"/></mask>
+        <linearGradient id="far" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2a2540"/><stop offset="1" stop-color="#14111f"/></linearGradient>
+        <linearGradient id="near" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#151221"/><stop offset="1" stop-color="#08070c"/></linearGradient>
+      </defs>
+      <g fill="#fff" opacity=".7">
+        <circle cx="120" cy="90" r="1.2"/><circle cx="260" cy="160" r="1"/><circle cx="410" cy="60" r="1.4"/><circle cx="560" cy="140" r=".9"/>
+        <circle cx="720" cy="40" r="1.1"/><circle cx="930" cy="110" r="1"/><circle cx="1080" cy="50" r="1.3"/><circle cx="1240" cy="150" r=".9"/>
+        <circle cx="1380" cy="80" r="1.2"/><circle cx="1500" cy="190" r="1"/><circle cx="330" cy="250" r=".8"/><circle cx="1010" cy="230" r=".8"/>
+      </g>
+      <circle cx="1180" cy="210" r="230" fill="url(#moonGlow)"/>
+      <circle cx="1180" cy="210" r="62" fill="#f6e2b0" mask="url(#crescent)"/>
+      <path fill="url(#far)" d="M0 640 L120 560 L210 600 L330 480 L420 540 L520 450 L640 560 L760 500 L860 570 L980 470 L1090 540 L1210 460 L1330 560 L1440 500 L1600 580 L1600 900 L0 900Z"/>
+      <path fill="#1b1729" opacity=".9" d="M0 700 L160 640 L300 690 L470 620 L620 690 L800 640 L980 700 L1150 630 L1320 690 L1480 650 L1600 690 L1600 900 L0 900Z"/>
+      <!-- the village on its hill, a few windows lit -->
+      <g fill="url(#near)">
+        <path d="M0 780 Q 420 690 800 735 T 1600 760 L1600 900 L0 900Z"/>
+        <path d="M560 735 L560 640 L575 620 L590 640 L590 735Z"/>
+        <path d="M605 735 L605 600 L622 572 L639 600 L639 735Z"/>
+        <path d="M655 735 L655 670 L700 670 L700 735Z"/>
+        <path d="M715 735 L715 655 L737 630 L759 655 L759 735Z"/>
+        <path d="M775 735 L775 680 L830 680 L830 735Z"/>
+        <path d="M842 735 L842 610 L858 585 L874 610 L874 735Z"/>
+        <path d="M890 738 L890 672 L935 672 L935 738Z"/>
+      </g>
+      <g fill="#ffb347" opacity=".85">
+        <rect x="619" y="612" width="5" height="8" rx="1"/><rect x="733" y="668" width="5" height="7" rx="1"/>
+        <rect x="855" y="626" width="5" height="8" rx="1"/><rect x="796" y="698" width="5" height="6" rx="1"/>
+      </g>
+    </svg>
+    <canvas id="embers"></canvas>
+    <div class="fog"></div><div class="fog two"></div>
+    <div class="vignette"></div>
+
+    <div class="panel" id="panel">
+      <svg class="crest" viewBox="0 0 64 64" aria-hidden="true">
+        <defs><linearGradient id="cg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff0c4"/><stop offset="1" stop-color="#b26a22"/></linearGradient></defs>
+        <path d="M32 3 L56 13 L56 32 C56 47 45 56 32 61 C19 56 8 47 8 32 L8 13Z" fill="#140f0b" stroke="url(#cg)" stroke-width="2.5"/>
+        <path d="M32 14 L35 40 L32 46 L29 40Z" fill="url(#cg)"/><rect x="23" y="38" width="18" height="3" rx="1.5" fill="url(#cg)"/>
+        <rect x="30.5" y="41" width="3" height="9" fill="url(#cg)"/><circle cx="32" cy="52" r="2.4" fill="url(#cg)"/>
+      </svg>
+      <h1>SHADOWFALL</h1>
+      <div class="tagline">The dark gathers beyond the walls of Hollowmere.</div>
+      <div class="rule">&#10022;</div>
+      <div class="bar" role="progressbar" aria-label="Loading" aria-valuemin="0" aria-valuemax="100"><div id="fill"></div></div>
+      <div class="status"><span id="stage">Opening the gates</span><span id="pct">0%</span></div>
+      <div class="tip" id="tip"></div>
+      <div id="error"><div id="errmsg"></div><button type="button" onclick="location.reload()">Try again</button></div>
+    </div>
+    <div class="foot">Best in a desktop browser with a mouse and keyboard</div>
+  </div>
+
+  <script>
+    // ---- tips, stages and embers while the game loads
+    var TIPS = [
+      ["Waystones", "Walk up to a town's waystone to attune to it, then travel between attuned waystones from any of them."],
+      ["Mounts", "Beastmaster Orla in Hollowmere sells horses. Press <kbd>V</kbd> to ride; a hit throws you off."],
+      ["Potions", "Potions are an emergency, not a habit: <kbd>Q</kbd> heals a third of your life, then waits fifteen seconds."],
+      ["Recall", "Press <kbd>R</kbd> to recall to the nearest town you know, and <kbd>R</kbd> again in town to step back."],
+      ["Elites", "Champions with a name and a blue glow hit harder and carry better loot. Bring friends."],
+      ["The outer lands", "Beyond the ridge lie the Frostpeak Wilds, the Sunscar Badlands and the Ashen Reach. Level twelve, at least."],
+      ["Loot", "Monsters in the wilds rarely drop more than magic gear. Rares, sets and legendaries come from bosses and the deep places."],
+      ["Dungeons", "Seven dungeons hide in the wilds, unmarked. Each opens fresh for your party, on Normal, Veteran, Nightmare or Hell."],
+      ["Parties", "Right-click another hero to invite them. Everyone who hits a monster gets full credit and their own loot."],
+      ["Snow", "Deep snow slows you down and cakes your boots. The streets of the towns are kept clear."],
+      ["Stash", "Every walled town has a stash chest. They all open the same stash."],
+      ["Talents", "From level two you earn a talent point every level. Press <kbd>T</kbd>."],
+    ];
+    var STAGES = [[0, "Opening the gates"], [0.2, "Gathering the world"], [0.5, "Waking the townsfolk"], [0.75, "Stoking the forges"],
+                  [0.9, "Raising the dead"], [0.98, "Lighting the torches"]];
+    var tipEl = document.getElementById("tip"), tipAt = Math.floor(Math.random() * TIPS.length);
+    function showTip() {
+      var t = TIPS[tipAt++ % TIPS.length];
+      tipEl.classList.add("fade");
+      setTimeout(function () { tipEl.innerHTML = "<b>" + t[0] + "</b>" + t[1]; tipEl.classList.remove("fade"); }, 600);
+    }
+    tipEl.innerHTML = "<b>" + TIPS[tipAt][0] + "</b>" + TIPS[tipAt++][1];
+    var tipTimer = setInterval(showTip, 7000);
+
+    var shown = 0, target = 0;
+    function setProgress(p) {
+      target = Math.max(target, p);
+      var stage = STAGES[0][1];
+      for (var i = 0; i < STAGES.length; i++) if (target >= STAGES[i][0]) stage = STAGES[i][1];
+      document.getElementById("stage").textContent = stage;
+    }
+
+    var reduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    var ec = document.getElementById("embers"), ex = ec.getContext("2d"), embers = [], running = true, dpr = Math.min(window.devicePixelRatio || 1, 2);
+    function resize() { ec.width = innerWidth * dpr; ec.height = innerHeight * dpr; }
+    resize();
+    addEventListener("resize", resize);
+    function spawn(initial) {
+      return { x: Math.random() * ec.width, y: initial ? Math.random() * ec.height : ec.height + 10, r: (0.6 + Math.random() * 1.8) * dpr,
+               vy: (0.25 + Math.random() * 0.7) * dpr, ph: Math.random() * 6.28, life: 0.4 + Math.random() * 0.6 };
+    }
+    for (var i = 0; i < (reduced ? 0 : 70); i++) embers.push(spawn(true));
+    function frame() {
+      if (!running) return;
+      // the bar and the percentage ease toward the real progress
+      shown += (target - shown) * 0.08;
+      document.getElementById("fill").style.width = (shown * 100).toFixed(2) + "%";
+      document.getElementById("pct").textContent = Math.floor(shown * 100 + 0.2) + "%";
+      ex.clearRect(0, 0, ec.width, ec.height);
+      ex.globalCompositeOperation = "lighter";
+      for (var i = 0; i < embers.length; i++) {
+        var e = embers[i];
+        e.y -= e.vy; e.ph += 0.02; e.x += Math.sin(e.ph) * 0.4 * dpr;
+        var a = Math.max(0, Math.min(1, e.y / ec.height)) * e.life;
+        if (e.y < -10) { embers[i] = spawn(false); continue; }
+        var g = ex.createRadialGradient(e.x, e.y, 0, e.x, e.y, e.r * 4);
+        g.addColorStop(0, "rgba(255,200,120," + a + ")");
+        g.addColorStop(0.4, "rgba(255,110,40," + (a * 0.5) + ")");
+        g.addColorStop(1, "rgba(255,80,20,0)");
+        ex.fillStyle = g;
+        ex.beginPath(); ex.arc(e.x, e.y, e.r * 4, 0, 6.283); ex.fill();
+      }
+      requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+
+    // Errors go to the server (POST /client-error), which logs and counts them (Grafana: Shadowfall dashboard).
+    // The game reports its own exceptions through this too (ShadowfallReport.jslib). Each message once per page,
+    // at most 20; the browser check (?sfcheck=1) doesn't report: it has its own report.
+    var started = Date.now(), reported = {}, reportCount = 0, checking = location.search.indexOf("sfcheck=1") >= 0;
+    window.sfReport = function (kind, msg, stack) {
+      try {
+        msg = String(msg || "").slice(0, 500);
+        if (checking || !msg || reported[kind + msg] || reportCount >= 20) return;
+        reported[kind + msg] = 1; reportCount++;
+        var body = JSON.stringify({ kind: kind, msg: msg, stack: String(stack || "").slice(0, 2000),
+          build: {{{ JSON.stringify(PRODUCT_VERSION) }}}, ua: navigator.userAgent.slice(0, 200), page: (Date.now() - started) / 1000 | 0 });
+        if (navigator.sendBeacon) navigator.sendBeacon("client-error", new Blob([body], { type: "application/json" }));
+        else fetch("client-error", { method: "POST", body: body, headers: { "Content-Type": "application/json" }, keepalive: true });
+      } catch (e) {}
+    };
+    window.addEventListener("error", function (e) { sfReport("js", e.message, e.error && e.error.stack ? e.error.stack : (e.filename || "") + ":" + (e.lineno || 0)); });
+    window.addEventListener("unhandledrejection", function (e) { var r = e.reason || {}; sfReport("js", r.message || String(r), r.stack); });
+
+    function fail(message) {
+      sfReport("load", message);
+      document.getElementById("panel").classList.add("loading-failed");
+      document.getElementById("errmsg").textContent = message;
+      clearInterval(tipTimer);
+    }
+    function done() {
+      setProgress(1);
+      clearInterval(tipTimer);
+      setTimeout(function () {
+        document.getElementById("loading").classList.add("done");
+        setTimeout(function () { running = false; document.getElementById("loading").style.display = "none"; }, 1300);
+      }, 300);
+    }
+
+    // ---- Frame cap (Settings > Graphics > Frame rate, SF_SetFrameCap in ShadowfallDisplay.jslib)
+    // The game always runs on the browser's animation frames (Unity's own frame-rate cap times frames with setTimeout,
+    // which misses the screen's refresh and on a 60 Hz screen often lands at 30). A cap skips whole screen refreshes
+    // instead: 30 on a 60 Hz screen draws every other one, 60 on a 120 Hz screen likewise.
+    window.sfFrameCap = 0;
+    (function () {
+      var raf = window.requestAnimationFrame.bind(window), last = 0;
+      window.requestAnimationFrame = function (cb) {
+        return raf(function step(t) {
+          var cap = window.sfFrameCap;
+          if (cap > 0 && last > 0 && t - last < 750 / cap) return raf(step); // too soon: wait for the next refresh
+          last = t;
+          cb(t);
+        });
+      };
+    })();
+
+    // ---- Clipboard (Clipboard.cs, ShadowfallClipboard.jslib)
+    // The game takes every key, which also stops the browser pasting: let Ctrl/Cmd+V through to the browser (registered
+    // here, before the game's own key handling) and keep what it pastes for the game to pick up.
+    window.sfClipboard = { pasted: "" };
+    window.addEventListener("keydown", function (e) {
+      if (!(e.ctrlKey || e.metaKey) || e.altKey || (e.key !== "v" && e.key !== "V")) return;
+      e.stopImmediatePropagation();
+      // Some browsers (Safari) don't send a paste event to the game's canvas: then ask the clipboard directly
+      window.sfClipboard.waiting = true;
+      setTimeout(function () {
+        if (!window.sfClipboard.waiting) return;
+        window.sfClipboard.waiting = false;
+        if (navigator.clipboard && navigator.clipboard.readText)
+          navigator.clipboard.readText().then(function (t) { if (t) window.sfClipboard.pasted += t; }).catch(function () {});
+      }, 80);
+    }, true);
+    document.addEventListener("paste", function (e) {
+      window.sfClipboard.waiting = false;
+      var t = (e.clipboardData || window.clipboardData).getData("text");
+      if (t) window.sfClipboard.pasted += t;
+      e.preventDefault();
+    });
+
+    // ---- Unity
+    var config = {
+      dataUrl: "Build/{{{ DATA_FILENAME }}}",
+      frameworkUrl: "Build/{{{ FRAMEWORK_FILENAME }}}",
+#if USE_WASM
+      codeUrl: "Build/{{{ CODE_FILENAME }}}",
+#endif
+#if MEMORY_FILENAME
+      memoryUrl: "Build/{{{ MEMORY_FILENAME }}}",
+#endif
+#if SYMBOLS_FILENAME
+      symbolsUrl: "Build/{{{ SYMBOLS_FILENAME }}}",
+#endif
+      streamingAssetsUrl: "StreamingAssets",
+      companyName: {{{ JSON.stringify(COMPANY_NAME) }}},
+      productName: {{{ JSON.stringify(PRODUCT_NAME) }}},
+      productVersion: {{{ JSON.stringify(PRODUCT_VERSION) }}},
+      // The in-game Resolution setting (Settings > Graphics), remembered here. Default: one game pixel per page pixel,
+      // not the screen's 2x on a Retina display, which is four times the pixels to draw.
+      devicePixelRatio: renderRatio(),
+      // Laptops with two graphics chips: ask for the fast one.
+      webglContextAttributes: { powerPreference: "high-performance" },
+    };
+    function renderRatio() {
+      var scale = 1;
+      try { var v = parseFloat(localStorage.getItem("sf_render_scale")); if (v > 0) scale = v; } catch (e) {}
+      return Math.min(window.devicePixelRatio || 1, scale);
+    }
+    var canvas = document.getElementById("unity-canvas");
+    var hasWebGL = (function () { try { var c = document.createElement("canvas"); return !!(c.getContext("webgl2") || c.getContext("webgl")); } catch (e) { return false; } })();
+    if (!hasWebGL) {
+      fail("Your browser can't run the game: WebGL is turned off or not supported. Try a recent Chrome, Firefox, Edge or Safari, with hardware acceleration on.");
+    } else {
+      var script = document.createElement("script");
+      script.src = "Build/{{{ LOADER_FILENAME }}}";
+      script.onload = function () {
+        createUnityInstance(canvas, config, setProgress).then(function (instance) {
+          // The game changes the resolution live (Settings > Graphics) through this.
+          window.sfSetPixelRatio = function (ratio) { try { instance.Module.devicePixelRatio = ratio; } catch (e) {} };
+          done();
+          canvas.focus();
+        }).catch(function (message) {
+          fail("The game failed to load: " + message);
+        });
+      };
+      // Say why: the server answered without the file (the build is missing there), or didn't answer at all.
+      script.onerror = function () {
+        fetch(script.src, { method: "HEAD", cache: "no-store" }).then(function (r) {
+          fail(r.ok ? "The game files couldn't be loaded. Try again in a moment."
+                    : "The game files are missing on the server (" + r.status + "). The server needs a new client build.");
+        }).catch(function () {
+          fail("The game server isn't answering. It may be restarting: try again in a minute.");
+        });
+      };
+      document.body.appendChild(script);
+    }
+    // Stop the browser's context menu so right-click can cast spells.
+    canvas.addEventListener("contextmenu", function (e) { e.preventDefault(); });
+  </script>
+</body>
+</html>

@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Shadowfall</title>
+  <style>
+    :root { color-scheme: dark; }
+    body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #0d0c10; color: #e8dcc0; font: 16px/1.5 system-ui, sans-serif; }
+    main { max-width: 34rem; padding: 2rem 1rem; }
+    h1 { color: #ffbf4d; letter-spacing: .1em; margin: 0 0 .5rem; }
+    li { margin: .4rem 0; }
+    code { background: #221f1a; padding: .1rem .35rem; border-radius: 4px; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>SHADOWFALL</h1>
+    <p>The server is running, but the game client hasn't been built yet. Build it one of two ways, then refresh this page:</p>
+    <ul>
+      <li><strong>With Docker</strong> (no Unity install needed): run <code>task license:activate</code> once to get a free
+        Unity license in your browser, then <code>task client:build</code>.</li>
+      <li><strong>With the Unity editor</strong>: open the <code>Shadowfall</code> folder and choose
+        <code>Shadowfall &gt; Build WebGL</code> from the menu bar.</li>
+    </ul>
+    <p>Either way, the build is written to <code>server/public</code>. See <code>docs/deployment/docker-client-build.md</code>.</p>
+  </main>
+</body>
+</html>

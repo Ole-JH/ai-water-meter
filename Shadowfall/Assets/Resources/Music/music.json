@@ -1,0 +1,100 @@
+{
+ "contexts": [
+  {
+   "name": "login",
+   "tracks": [
+    {
+     "clip": "dark_intro",
+     "loop": false
+    }
+   ]
+  },
+  {
+   "name": "town",
+   "tracks": [
+    {
+     "clip": "a_new_town",
+     "loop": false
+    },
+    {
+     "clip": "minstrel_dance",
+     "loop": false
+    }
+   ]
+  },
+  {
+   "name": "wilds",
+   "tracks": [
+    {
+     "clip": "dark_forest",
+     "loop": false
+    },
+    {
+     "clip": "la_citadelle",
+     "loop": false
+    }
+   ]
+  },
+  {
+   "name": "graveyard",
+   "tracks": [
+    {
+     "clip": "death_waltz",
+     "loop": false
+    },
+    {
+     "clip": "dark_forest",
+     "loop": false
+    }
+   ]
+  },
+  {
+   "name": "dungeon",
+   "tracks": [
+    {
+     "clip": "dungeon_ambience",
+     "loop": false
+    },
+    {
+     "clip": "dark_shrine",
+     "loop": false
+    },
+    {
+     "clip": "dark_cavern",
+     "loop": false
+    },
+    {
+     "clip": "cold_silence",
+     "loop": false
+    }
+   ]
+  },
+  {
+   "name": "combat",
+   "tracks": [
+    {
+     "clip": "determined_pursuit",
+     "loop": true
+    },
+    {
+     "clip": "battle_theme_a",
+     "loop": true
+    },
+    {
+     "clip": "ghosts_and_heroes",
+     "loop": true
+    }
+   ]
+  },
+  {
+   "name": "boss",
+   "tracks": [
+    {
+     "clip": "boss_battle_2",
+     "loop": true,
+     "intro": "boss_battle_2_intro"
+    }
+   ]
+  }
+ ]
+}
