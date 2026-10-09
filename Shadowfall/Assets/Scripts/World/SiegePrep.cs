@@ -232,7 +232,7 @@ namespace Shadowfall
             foreach (var en in Enemy.ById.Values)
                 if (en != null && !en.IsDead && en.Def != null && Factory.FlatDistance(en.transform.position, camp) < 12f) { look = CharacterLook.ForMonster(en.Def.Name); if (look != null) break; }
             if (look == null) look = new CharacterLook { Model = "Characters/Barbarian", Height = 2f, Tint = new Color(0.55f, 0.45f, 0.4f) };
-            var stand = W(gate - inward * 9f);
+            var stand = W(gate - inward * 17f); // well out beyond the soldiers before the gate, in bowshot of the wall
             var h = SiegeLife.Extra.Make(SiegeLife.Get(), "Raider Herald", look, W(camp + (stand - camp).normalized * 4f), 2.2f);
             h.SiegeOnly = true;
             crew.Add(h);
