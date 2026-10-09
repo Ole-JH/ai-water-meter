@@ -222,7 +222,7 @@ namespace Shadowfall
             SpellFx.Loop(new SpellFx.P
             {
                 Rate = (Lite ? 22 : 40) * k, Duration = 1f, Life = new Vector2(0.7f, 1.3f), Speed = new Vector2(0.2f, 0.6f), Size = new Vector2(1.3f, 2.6f) * k,
-                Start = new Color(1f, 0.85f, 0.45f, 1f), Mid = new Color(1f, 0.45f, 0.1f, 0.9f), End = new Color(0.45f, 0.08f, 0.02f, 0f),
+                Start = new Color(1f, 0.62f, 0.2f, 1f), Mid = new Color(0.95f, 0.32f, 0.06f, 0.85f), End = new Color(0.35f, 0.06f, 0.02f, 0f),
                 Velocity = new Vector3(0f, 2.6f, 0f), Radius = size * 0.3f, Max = Lite ? 60 : 110,
             }, root, root.InverseTransformPoint(roof));
             SpellFx.Loop(new SpellFx.P
@@ -232,9 +232,10 @@ namespace Shadowfall
             }, root, root.InverseTransformPoint(roof + Vector3.up));
             SpellFx.Loop(new SpellFx.P
             {
-                Rate = Lite ? 2.5f : 4.5f, Duration = 1f, Life = new Vector2(10f, 15f), Speed = new Vector2(0.2f, 0.5f), Size = new Vector2(3f, 5.5f) * k,
-                Start = new Color(0.1f, 0.09f, 0.08f, 0f), Mid = new Color(0.12f, 0.11f, 0.1f, 0.62f), End = new Color(0.3f, 0.29f, 0.28f, 0f),
-                Velocity = new Vector3(0.7f, 3.2f, 0.25f), Smoke = true, Grow = true, Radius = size * 0.2f, Max = Lite ? 40 : 70,
+                // dark from the roof up (not fading in high above, out of the camera's sight), rising at a pace the eye follows
+                Rate = Lite ? 4f : 7f, Duration = 1f, Life = new Vector2(7f, 10f), Speed = new Vector2(0.2f, 0.5f), Size = new Vector2(2.2f, 4f) * k,
+                Start = new Color(0.07f, 0.06f, 0.06f, 0.7f), Mid = new Color(0.11f, 0.1f, 0.1f, 0.6f), End = new Color(0.3f, 0.29f, 0.28f, 0f),
+                Velocity = new Vector3(0.5f, 1.7f, 0.2f), Smoke = true, Grow = true, Radius = size * 0.18f, Max = Lite ? 40 : 75,
             }, root, root.InverseTransformPoint(top + Vector3.up * 1.5f));
         }
 
@@ -401,12 +402,12 @@ namespace Shadowfall
             }
 
             // Inside the walls: the street behind the gate and the quarter
-            for (int i = 0; i < 340; i++)
+            for (int i = 0; i < 170; i++)
             {
                 var p = Spot(2f, b.Radius * 0.9f, true);
                 if (float.IsInfinity(p.x)) continue;
                 double roll = rng.NextDouble();
-                if (roll < 0.32) Plank(p, rng.NextDouble() < 0.5);
+                if (roll < 0.15) Plank(p, rng.NextDouble() < 0.5);
                 else if (roll < 0.47)
                 {
                     // rubble: a little heap of stones
@@ -428,7 +429,7 @@ namespace Shadowfall
                     var crate = ArtLibrary.Spawn(rng.NextDouble() < 0.5 ? "Props/box_stacked" : "Props/crates_stacked", root, p, R(0.6f, 0.9f), ArtLibrary.Fit.Height, R(0f, 360f), false);
                     if (crate != null) crate.transform.rotation = Quaternion.Euler(R(-25f, 25f), R(0f, 360f), R(-25f, 25f));
                 }
-                else if (roll < 0.8) Arrow(root, p, rng);
+                else if (roll < 0.72) Arrow(root, p, rng);
                 else if (roll < 0.89)
                 {
                     if (!Lite || rng.NextDouble() < 0.4) PropFire.Add(root, p + Vector3.up * 0.1f, Flame, R(0.35f, 0.75f), rng.NextDouble() < 0.3); // burning wreckage in the street
