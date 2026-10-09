@@ -49,6 +49,22 @@ namespace Shadowfall
             Speech.Say(who.transform, 2.5f, lines[Random.Range(0, lines.Length)]);
         }
 
+        /// <summary>The guards near <paramref name="at"/> raise their weapons and roar (a rallying speech, a blessing).</summary>
+        public static void Rally(Vector3 at, float r)
+        {
+            foreach (var g in All.Values)
+                if (g != null && g.dieAt < 0f && g.view != null && Factory.FlatDistance(g.transform.position, at) < r) g.view.Cheer();
+        }
+
+        /// <summary>The standing soldiers (not the archers) near <paramref name="at"/>.</summary>
+        public static List<TownGuards> SoldiersNear(Vector3 at, float r)
+        {
+            var list = new List<TownGuards>();
+            foreach (var g in All.Values)
+                if (g != null && !g.Archer && g.dieAt < 0f && Factory.FlatDistance(g.transform.position, at) < r) list.Add(g);
+            return list;
+        }
+
         /// <summary>A guard near <paramref name="at"/> that's still standing (to call out a fall).</summary>
         static TownGuards Nearest(Vector3 at)
         {

@@ -269,6 +269,13 @@ one of the walled towns (Hollowmere, Frosthaven, Saltreach or Emberwatch), usual
   ("Raiders sighted!") and the tracker under the minimap counts down. Time to head over, or ride a waystone.
 - **Refugees run in** from the raiders' side, farmers and a laden cart, and a wounded scout gallops through the gate to
   the town crier with the news.
+- **The town gets ready** through the countdown: the alarm bell rings and doors slam up and down the streets as
+  mothers call their children in; labourers haul crates, barrels and a tipped-over cart into a barricade behind the
+  gate, piece by piece, and boys run bundles of arrows to the archers' ladder. At about a minute a **raider herald**
+  walks up under a black banner and demands the town's surrender; an archer answers with an arrow at his feet and he
+  runs back to the jeering camp. Then **the captain's speech** before the soldiers (they roar after each line), a
+  priest blessing each of them down the line, **ranging shots** thudding into the wall, the gate **barred** with a
+  great beam, and "Shields! Brace!" before the horns.
 - **The raiders make camp** outside the named gate meanwhile: tents, a fire and red war banners, and the first wave
   marching in a few at a time to the beat of war drums (the tracker counts them). They wait there for the horns, so
   you can **strike the camp before they're ready**: every raider killed there is one fewer in the first wave, and

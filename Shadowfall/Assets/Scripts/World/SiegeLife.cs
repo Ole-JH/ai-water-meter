@@ -373,8 +373,10 @@ namespace Shadowfall
             public float Speed, Delay;
             public string Line;
             public System.Action<Extra> OnArrive;
+            public System.Action<Extra> Delivered; // a shuttle's load set down at the far end
             public bool Lying, Tending;
             public bool Planted;    // keeps to its spot (no shuffling about into the next one)
+            public CharacterView View => view;
             public bool SiegeOnly;  // only there while the siege lasts (Clear takes it away)
             public bool Hidden;            // still indoors: shown (and the door swung) when Delay runs out
             public HouseDoors.Door Door;
@@ -445,6 +447,7 @@ namespace Shadowfall
                         y.view?.Interact();
                         y.Delay = Random.Range(1f, 2.2f);
                         y.load.SetActive(false);
+                        y.Delivered?.Invoke(y);
                         y.Shuttle(from, to);
                     };
                 };

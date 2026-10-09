@@ -27,6 +27,7 @@ namespace Shadowfall
             Current = iv == null || iv.phase == "none" ? null : iv;
             Rampart.Sync(); // the gate, the ladders and the helpers
             WarCamp.Sync(); // the raiders' camp outside the gate
+            SiegePrep.Ensure(); // the town getting ready in the warning
             SiegeLife.Sync(); // refugees, the scout, the wounded
             SiegeWorks.Sync(); // the beacons and burning roofs
             TownGuards.Sync(Current != null ? Current.gd : null, Current == null || Current.phase == "won" || Current.phase == "lost" || Dungeon.Active); // (in a dungeon they just go: nobody died)
