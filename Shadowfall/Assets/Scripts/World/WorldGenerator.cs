@@ -82,6 +82,9 @@ namespace Shadowfall
         /// <summary>For each house (same order as HouseBounds): its model, or null for a plain block (a sack chars and fells them).</summary>
         public static readonly System.Collections.Generic.List<GameObject> HouseObjects = new System.Collections.Generic.List<GameObject>();
 
+        /// <summary>The town walls' pieces by cell (a sack breaches the wall beside the broken gate: Sack).</summary>
+        public static readonly System.Collections.Generic.Dictionary<Vector2Int, GameObject> WallPieces = new System.Collections.Generic.Dictionary<Vector2Int, GameObject>();
+
         /// <summary>Six points spread over the roof (the top half of the model) and three on the upper walls, from its vertices.</summary>
         static Vector3[] FireSpots(GameObject house, Bounds b)
         {
@@ -171,6 +174,7 @@ namespace Shadowfall
             HouseBounds.Clear();
             HouseFireSpots.Clear();
             HouseObjects.Clear();
+            WallPieces.Clear();
             var oldState = Random.state;
             Random.InitState(Seed);
             art = ArtLibrary.Available;
@@ -684,8 +688,9 @@ namespace Shadowfall
             float shade = LR(0.85f, 1.05f);
             grid.SetBlocked(x, y, true);
             // Town/wall-wood is a 1-unit wall piece running along Z.
-            if (ArtBox("Town/wall-wood", new Vector3(x + 0.5f, 0, y + 0.5f), new Vector3(0.45f, 2.6f, 1.04f), alongX ? 90f : 0f) != null) return;
-            Factory.Prim(PrimitiveType.Cube, deco, new Vector3(x + 0.5f, 1.4f, y + 0.5f), new Vector3(0.9f, 2.8f, 0.9f), wood * shade);
+            var piece = ArtBox("Town/wall-wood", new Vector3(x + 0.5f, 0, y + 0.5f), new Vector3(0.45f, 2.6f, 1.04f), alongX ? 90f : 0f);
+            if (piece == null) piece = Factory.Prim(PrimitiveType.Cube, deco, new Vector3(x + 0.5f, 1.4f, y + 0.5f), new Vector3(0.9f, 2.8f, 0.9f), wood * shade);
+            WallPieces[new Vector2Int(x, y)] = piece;
         }
 
         void House(RectInt r, Color wall, Color roof, string model, float yaw)

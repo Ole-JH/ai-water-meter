@@ -559,8 +559,9 @@ namespace Shadowfall
             grid.SetBlocked(x, y, true);
             float shade = LR(0.85f, 1.05f);
             // Graveyard/stone-wall is a 1-unit wall piece running along X.
-            if (ArtBox("Graveyard/stone-wall", new Vector3(x + 0.5f, 0, y + 0.5f), new Vector3(1.05f, 2.8f, 0.7f), alongX ? 0f : 90f) != null) return;
-            Factory.Prim(PrimitiveType.Cube, deco, new Vector3(x + 0.5f, 1.5f, y + 0.5f), new Vector3(1f, 3f, 1f), new Color(0.33f, 0.31f, 0.32f) * shade);
+            var piece = ArtBox("Graveyard/stone-wall", new Vector3(x + 0.5f, 0, y + 0.5f), new Vector3(1.05f, 2.8f, 0.7f), alongX ? 0f : 90f);
+            if (piece == null) piece = Factory.Prim(PrimitiveType.Cube, deco, new Vector3(x + 0.5f, 1.5f, y + 0.5f), new Vector3(1f, 3f, 1f), new Color(0.33f, 0.31f, 0.32f) * shade);
+            WallPieces[new Vector2Int(x, y)] = piece;
         }
 
         /// <summary>Pinecrest: a woodcutters' hamlet on the north road, no wall, a few houses either side and log piles.</summary>

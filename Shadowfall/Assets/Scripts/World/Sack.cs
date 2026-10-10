@@ -24,9 +24,32 @@ namespace Shadowfall
             // (sunk and leaning): all put back when the town is rebuilt
             public readonly List<(Renderer r, Material[] orig, Material[] made)> Charred = new List<(Renderer, Material[], Material[])>();
             public readonly List<(Transform t, Vector3 pos, Quaternion rot)> Slumped = new List<(Transform, Vector3, Quaternion)>();
+            // the wall breached beside the broken gate: pieces knocked out (hidden) until the masons have rebuilt them
+            public readonly List<Breach> Breaches = new List<Breach>();
+            public readonly List<GameObject> Knocked = new List<GameObject>();
         }
 
+        /// <summary>A gap knocked in a town's wall: its middle on the ground, the way into town, and along the wall.</summary>
+        public class Breach { public Vector3 At, Inward, Axis; public float Width; }
+
         static readonly Dictionary<string, Burning> burning = new Dictionary<string, Burning>();
+
+        /// <summary>Whether a town's knocked-out wall is stone (the small towns' grey walls) rather than timber.</summary>
+        public static bool KnockedLooksStone(string town)
+        {
+            Burning b = null;
+            if (town == null || (!burning.TryGetValue(town, out b) && !rebuilding.TryGetValue(town, out b))) return false;
+            foreach (var go in b.Knocked) if (go != null) return go.name.Contains("stone");
+            return false;
+        }
+
+        /// <summary>The gaps in a town's wall from a sack, while it burns or is rebuilt (where the masons go), or null.</summary>
+        public static List<Breach> BreachesOf(string town)
+        {
+            if (town != null && burning.TryGetValue(town, out var b)) return b.Breaches;
+            if (town != null && rebuilding.TryGetValue(town, out var r)) return r.Breaches;
+            return null;
+        }
         // fires out, ruins still standing while the town is rebuilt (SiegeAftermath's workers), then cleared away
         static readonly Dictionary<string, Burning> rebuilding = new Dictionary<string, Burning>();
 
@@ -177,6 +200,7 @@ namespace Shadowfall
             }
             Pall(b);
             WallFires(b, s, rng);
+            Breaches(b, s, rng);
             Debris(b, s, rng);
             // The reeve, on the far side of town from the fire, asking for help with the rebuilding
             var town = WorldGenerator.TownAt(b.At - Factory.Flat(b.At - CenterOf(s.k)).normalized * 6f);
@@ -282,6 +306,8 @@ namespace Shadowfall
             b.Charred.Clear();
             foreach (var (t, pos, rot) in b.Slumped) if (t != null) t.SetPositionAndRotation(pos, rot);
             b.Slumped.Clear();
+            foreach (var go in b.Knocked) if (go != null) go.SetActive(true);
+            b.Knocked.Clear();
         }
 
         /// <summary>
@@ -339,16 +365,64 @@ namespace Shadowfall
                 PropFire.Add(root, p + Vector3.up * (Rampart.Top + R(-0.2f, 0.4f)), Flame, big ? R(1.8f, 2.8f) : R(1f, 1.6f), big);
                 if (rng.NextDouble() < 0.5) PropFire.Add(root, p - side.Out * 0.7f + Vector3.up * R(0.5f, 1.6f), Flame, R(0.9f, 1.5f), false); // up the inside face
                 ImpactMarks.Place(p - side.Out * 1.2f, ImpactMarks.Kind.Scorch, R(1.2f, 2f), s.left);
-                if (rng.NextDouble() < 0.15)
-                {
-                    // a breach: the palisade's timbers down in a burning heap at its foot
-                    for (int k = 0; k < 6; k++)
+            }
+        }
+
+        /// <summary>
+        /// The raiders tore down the wall beside the gate in places: two or three gaps a few pieces wide, either side of
+        /// it, the pieces gone (hidden, back when the masons are done), the ones at the edges leaning out, and a burning
+        /// heap of the wall's timber or stone across each gap. Only a look: the wall still keeps everyone out.
+        /// </summary>
+        static void Breaches(Burning b, NetSack s, System.Random rng)
+        {
+            var town = WorldGenerator.TownNamed(s.k);
+            if (town == null) return;
+            float R(float a, float c) => a + (float)rng.NextDouble() * (c - a);
+            var side = Rampart.SideOf(town, s.g);
+            int reach = Mathf.Min(18, side.Half - 3);
+            var picks = new List<int>();
+            int want = Lite ? 2 : 3;
+            for (int tries = 0; tries < 40 && picks.Count < want; tries++)
+            {
+                int a = side.Mid + (rng.NextDouble() < 0.5 ? -1 : 1) * rng.Next(6, Mathf.Max(7, reach));
+                bool clear = true;
+                foreach (int q in picks) if (Mathf.Abs(q - a) < 6) clear = false;
+                if (clear) picks.Add(a);
+            }
+            var stoneWall = new Color(0.4f, 0.38f, 0.37f);
+            foreach (int a in picks)
+            {
+                int width = rng.NextDouble() < 0.5 ? 2 : 3;
+                bool any = false;
+                for (int k = 0; k < width; k++)
+                    if (WorldGenerator.WallPieces.TryGetValue(side.Cell(a + k), out var go) && go != null && go.activeSelf)
                     {
-                        var beam = Factory.Prim(PrimitiveType.Cube, root, p - side.Out * R(0.8f, 2.2f) + side.Axis * R(-1f, 1f) + Vector3.up * R(0.2f, 0.6f), new Vector3(0.28f, 0.28f, R(1.8f, 2.8f)), Charred);
-                        beam.transform.rotation = Quaternion.Euler(R(-30f, 30f), R(0f, 360f), R(-30f, 30f));
+                        go.SetActive(false);
+                        b.Knocked.Add(go);
+                        any = true;
                     }
-                    PropFire.Add(root, p - side.Out * 1.4f + Vector3.up * 0.4f, Flame, R(1.4f, 2.2f), true);
+                if (!any) continue;
+                // the pieces either side of the gap, cracked and leaning out
+                foreach (int k in new[] { -1, width })
+                    if (WorldGenerator.WallPieces.TryGetValue(side.Cell(a + k), out var edge) && edge != null && edge.activeSelf)
+                    {
+                        var t = edge.transform;
+                        b.Slumped.Add((t, t.position, t.rotation));
+                        t.rotation = Quaternion.AngleAxis(R(10f, 18f), side.Axis * (k < 0 ? -1f : 1f)) * t.rotation;
+                        t.position += Vector3.down * 0.25f;
+                    }
+                var mid = side.Point(a + width * 0.5f);
+                b.Breaches.Add(new Breach { At = new Vector3(mid.x, 0f, mid.z), Inward = -side.Out, Axis = side.Axis, Width = width });
+                // its timbers and stones down across the gap, some of it still burning
+                bool stone = !WorldGenerator.WallPieces.TryGetValue(side.Cell(a), out var sample) || sample == null || sample.name.Contains("stone");
+                for (int k = 0; k < 7; k++)
+                {
+                    var p = mid + side.Axis * R(-width * 0.5f, width * 0.5f) + side.Out * R(-1.2f, 1.2f);
+                    var piece = Factory.Prim(PrimitiveType.Cube, b.Root, p + Vector3.up * R(0.15f, 0.5f), stone ? Vector3.one * R(0.35f, 0.7f) : new Vector3(0.3f, 0.3f, R(1.6f, 2.6f)), stone ? stoneWall * R(0.7f, 1f) : Charred);
+                    piece.transform.rotation = Quaternion.Euler(R(-35f, 35f), R(0f, 360f), R(-35f, 35f));
                 }
+                PropFire.Add(b.Root, mid + Vector3.up * 0.4f, Flame, R(1.2f, 1.8f), true);
+                ImpactMarks.Place(mid, ImpactMarks.Kind.Scorch, 2.2f, s.left);
             }
         }
 

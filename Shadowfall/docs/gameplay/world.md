@@ -354,6 +354,10 @@ one of the walled towns (Hollowmere, Frosthaven, Saltreach or Emberwatch), usual
       against its side; the rest of the quarter is scorched and smoulders, and ash falls over all of it;
     - every house in the quarter is charred black, and stays so until the carpenters have rebuilt the town;
     - the broken gate lies in a burning heap of stone and timber, and isn't mended until the fires are out;
+    - the wall is breached either side of the gate: two or three gaps a few pieces wide, the pieces either side leaning
+      out and a burning heap of the wall's timber or stone across each (only a look: the wall still keeps everyone
+      out). Once the fires are out, masons put up a scaffold at each gap and build the wall back up in fresh timber or
+      stone, one up on the deck, one at its foot and a labourer bringing more; the wall is whole again when they're done;
     - the wreckage of the fight lies about: the gate's planks thrown inward, toppled barrels and spilled crates, charred
       timber, rubble, arrows in the ground, a fallen banner, scorch marks and burning wreckage, and a battlefield of
       arrows and broken timber outside the gate;

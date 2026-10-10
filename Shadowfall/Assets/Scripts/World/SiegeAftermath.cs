@@ -552,6 +552,48 @@ namespace Shadowfall
             b.People.Add(boss);
             b.Talkers.Add(boss);
 
+            // the gaps knocked in the wall: a scaffold at each, the wall going back up in fresh timber or stone, a mason up
+            // on the deck and a labourer bringing more
+            var gaps = Sack.BreachesOf(town);
+            if (gaps != null)
+                foreach (var g in gaps)
+                {
+                    float half = g.Width * 0.5f + 0.45f;
+                    var c = g.At + g.Inward * 0.9f;
+                    foreach (float s2 in new[] { -half, half })
+                        foreach (float d in new[] { 0f, 1f })
+                            Factory.PrimAt(PrimitiveType.Cube, tr, c + g.Axis * s2 + g.Inward * d + Vector3.up * 1.6f, new Vector3(0.16f, 3.2f, 0.16f), wood);
+                    foreach (float h in new[] { 1.2f, 2.4f })
+                        Factory.PrimAt(PrimitiveType.Cube, tr, c + g.Inward * 0.5f + Vector3.up * h, Abs(g.Axis * (half * 2f + 0.2f) + g.Inward * 1.1f) + Vector3.up * 0.09f, wood * 0.9f);
+                    var brace = Factory.PrimAt(PrimitiveType.Cube, tr, c + Vector3.up * 1.2f, Abs(g.Axis * (half * 2.2f)) + new Vector3(0.07f, 0.07f, 0.07f), wood * 0.8f);
+                    brace.transform.rotation = Quaternion.AngleAxis(25f, g.Inward) * brace.transform.rotation;
+                    // the wall going back up: fresh courses of pale timber (or stone), higher at one end than the other
+                    var sample = Sack.KnockedLooksStone(town);
+                    var freshWall = sample ? new Color(0.68f, 0.66f, 0.62f) : new Color(0.86f, 0.72f, 0.5f);
+                    for (int k = 0; k < Mathf.RoundToInt(g.Width); k++)
+                    {
+                        float off = -g.Width * 0.5f + 0.5f + k;
+                        float hgt = Mathf.Lerp(2.2f, 0.8f, g.Width > 1 ? k / (g.Width - 1f) : 0f);
+                        Factory.PrimAt(PrimitiveType.Cube, tr, g.At + g.Axis * off + Vector3.up * hgt / 2f, Abs(g.Axis * 0.98f + g.Inward * (sample ? 0.7f : 0.45f)) + Vector3.up * hgt, freshWall * (k % 2 == 0 ? 1f : 0.94f));
+                    }
+                    var pileAt = TownLife.Walkable(g.At + g.Inward * 5f + g.Axis * 2f);
+                    for (int i = 0; i < 5; i++)
+                        Factory.PrimAt(PrimitiveType.Cube, tr, pileAt + Vector3.up * (0.08f + i * 0.12f), sample ? Vector3.one * 0.45f + Vector3.right * 0.3f : Abs(g.Axis * 2f) + new Vector3(0.25f, 0.1f, 0.25f), freshWall * 0.95f);
+                    var mason = life.Person("Mason", M(), TownLife.Walkable(c + g.Inward * 0.5f), R(1.8f, 1.95f));
+                    mason.FaceAt = g.At;
+                    mason.Tending = true;
+                    mason.RaiseTo = 2.4f;
+                    b.People.Add(mason);
+                    b.Hammers.Add(g.At + Vector3.up * 2f);
+                    var bringer = life.Person("Labourer", M(), pileAt, R(1.75f, 1.9f));
+                    bringer.Shuttle(TownLife.Walkable(pileAt - g.Axis * 0.8f), TownLife.Walkable(c + g.Inward * 1.6f));
+                    b.People.Add(bringer);
+                    var helper = life.Person("Mason", M(), TownLife.Walkable(c + g.Inward * 1.4f + g.Axis * 0.6f), R(1.8f, 1.95f));
+                    helper.FaceAt = g.At;
+                    helper.Tending = true;
+                    b.People.Add(helper);
+                }
+
             // around the town after a sack: crews at the fallen-in houses, timber hauled from a lumber pile
             var ruins = Sack.RuinsOf(town);
             if (ruins != null && ruins.Count > 0)
